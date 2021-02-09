@@ -146,7 +146,7 @@ export default {
             }
 
             this.assetSelectionModal = Craft.createElementSelectorModal('craft\\elements\\Asset', {
-                storageKey: 'RedactorInput.ChooseImage',
+                storageKey: 'VizyInput.ChooseImage',
                 multiSelect: true,
                 sources: this.volumes,
                 criteria,

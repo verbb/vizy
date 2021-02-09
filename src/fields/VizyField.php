@@ -604,7 +604,7 @@ class VizyField extends Field
 
         if (!empty($sectionSources)) {
             $linkOptions[] = [
-                'optionTitle' => Craft::t('redactor', 'Link to an entry'),
+                'optionTitle' => Craft::t('vizy', 'Link to an entry'),
                 'elementType' => Entry::class,
                 'refHandle' => Entry::refHandle(),
                 'sources' => $sectionSources,
@@ -614,7 +614,7 @@ class VizyField extends Field
 
         if (!empty($this->_getVolumeKeys())) {
             $linkOptions[] = [
-                'optionTitle' => Craft::t('redactor', 'Link to an asset'),
+                'optionTitle' => Craft::t('vizy', 'Link to an asset'),
                 'elementType' => Asset::class,
                 'refHandle' => Asset::refHandle(),
                 'sources' => $this->_getVolumeKeys(),
@@ -623,7 +623,7 @@ class VizyField extends Field
 
         if (!empty($categorySources)) {
             $linkOptions[] = [
-                'optionTitle' => Craft::t('redactor', 'Link to a category'),
+                'optionTitle' => Craft::t('vizy', 'Link to a category'),
                 'elementType' => Category::class,
                 'refHandle' => Category::refHandle(),
                 'sources' => $categorySources,
