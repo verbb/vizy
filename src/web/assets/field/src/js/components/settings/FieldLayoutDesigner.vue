@@ -250,6 +250,8 @@ export default {
 
     created() {
         this.$events.$on('vizy:fldUpdate', this.serializeLayout);
+
+        this.proxyValue = this.value;
     },
 
     mounted() {
@@ -272,23 +274,23 @@ export default {
         var data = {
             fieldIds,
             layoutUid: this.layoutUid,
+            ...this.proxyValue,
         };
 
-        fetch(Craft.getActionUrl('vizy/field/layout-designer', data))
-            .then((response) => response.json())
-            .then((json) => {
-                this.$el.innerHTML = json.html;
-                Craft.appendFootHtml(json.footHtml);
+        this.$axios.post(Craft.getActionUrl('vizy/field/layout-designer'), data).then((response) => {
+            if (response.data.html) {
+                this.$el.innerHTML = response.data.html;
+                Craft.appendFootHtml(response.data.footHtml);
 
                 this.mounted = true;
-            })
-            .catch((error) => {
-                this.error = true;
-                this.errorMessage = error;
-            })
-            .finally(() => {
-                this.loading = false;
-            });
+            } else {
+                throw new Error(response.data);
+            }
+        }).catch(error => {
+            this.error = true;
+            this.errorMessage = error;
+            this.loading = false;
+        });
     },
 
     methods: {
