@@ -1,0 +1,472 @@
+<template>
+    <div>
+        <div class="vui-rich-text">
+            <menu-bar v-if="editor && buttons.length" ref="toolbar" :buttons="buttons" :editor="editor" :field="this" />
+            <code-editor v-if="editor" v-model="codeEditorHtml" :visible="showCodeEditor" :editor="editor" :field="this" />
+            <editor-content :class="{ 'code-view': showCodeEditor }" class="vui-editor" :editor="editor" />
+            <block-picker v-if="editor" :editor="editor" :field="this" :block-groups="settings.blockGroups" />
+        </div>
+
+        <div v-if="$isDebug" class="input text" style="margin-top: 20px;">{{ jsonContent }}</div>
+        <input type="hidden" :name="name" :value="jsonContent">
+    </div>
+</template>
+
+<script>
+import find from 'lodash/find';
+
+import { Editor } from '@tiptap/core';
+import { EditorContent } from '@tiptap/vue';
+
+// TipTap - Marks
+import Bold from '@tiptap/extension-bold';
+import Code from '@tiptap/extension-code';
+import Highlight from '@tiptap/extension-highlight';
+import Italic from '@tiptap/extension-italic';
+import Strike from '@tiptap/extension-strike';
+import Underline from '@tiptap/extension-underline';
+
+// TipTap - Nodes
+import Blockquote from '@tiptap/extension-blockquote';
+import BulletList from '@tiptap/extension-bullet-list';
+import CodeBlock from '@tiptap/extension-code-block';
+import Document from '@tiptap/extension-document';
+import HardBreak from '@tiptap/extension-hard-break';
+import Heading from '@tiptap/extension-heading';
+import HorizontalRule from '@tiptap/extension-horizontal-rule';
+import ListItem from '@tiptap/extension-list-item';
+import OrderedList from '@tiptap/extension-ordered-list';
+import Paragraph from '@tiptap/extension-paragraph';
+import Text from '@tiptap/extension-text';
+
+// TipTap - Extensions
+import Dropcursor from '@tiptap/extension-dropcursor';
+import Gapcursor from '@tiptap/extension-dropcursor';
+import History from '@tiptap/extension-history';
+import TextAlign from '@tiptap/extension-text-align';
+
+// TipTap - Custom
+import VizyBlock from './input/VizyBlock';
+import Link from './input/link/Link';
+import Image from './input/image/Image';
+
+import MenuBar from './input/MenuBar.vue';
+import BlockPicker from './input/BlockPicker.vue';
+import CodeEditor from './input/CodeEditor.vue';
+
+export default {
+    name: 'VizyInput',
+
+    components: {
+        EditorContent,
+        MenuBar,
+        BlockPicker,
+        CodeEditor,
+    },
+
+    props: {
+        name: {
+            type: String,
+            required: true,
+            default: '',
+        },
+
+        value: {
+            type: [String, Array],
+            required: true,
+            default: '',
+        },
+    },
+
+    data() {
+        return {
+            settings: {},
+            isLivePreview: false,
+            mounted: false,
+            buttons: ['bold', 'italic'],
+            showCodeEditor: false,
+            codeEditorHtml: '',
+            editor: null,
+            json: null,
+            html: null,
+            cachedFieldHtml: {},
+            cachedFieldJs: {},
+        };
+    },
+
+    computed: {
+        jsonContent() {
+            return this.contentToValue(this.json);
+        },
+
+        toolbarFixed() {
+            return this.settings.vizyConfig.toolbarFixed;
+        },
+    },
+
+    mounted() {
+        // Setup config for editor, from field config
+        this.editor = new Editor({
+            extensions: this.getExtensions(),
+            content: this.valueToContent(clone(this.value)),
+            autoFocus: false,
+            onUpdate: () => {
+                this.json = this.editor.getJSON().content;
+                this.html = this.editor.getHTML();
+            },
+        });
+
+        this.json = this.editor.getJSON().content;
+        this.html = this.editor.getHTML();
+
+        // Prepare all vizy blocks be caching their HTML/JS
+        this.json.forEach(block => {
+            if (block.type === 'vizyBlock') {
+                var { id } = block.attrs;
+                var value = find(this.settings.blocks, { id });
+
+                if (value) {
+                    this.setCachedFieldHtml(id, value.fieldsHtml);
+                    this.setCachedFieldJs(id, value.footHtml);
+                }
+            }
+        });
+
+        this.$nextTick(() => {
+            this.mounted = true;
+
+            // Setup listeners for fixed toolbar option
+            if (this.settings.vizyConfig.toolbarFixed) {
+                window.addEventListener('scroll', this.updateFixedToolbar);
+                window.addEventListener('resize', this.updateFixedToolbar);
+
+                Garnish.on(Craft.Preview, 'open', this.openLivePreviewCallback);
+                Garnish.on(Craft.LivePreview, 'enter', this.openLivePreviewCallback);
+
+                Garnish.on(Craft.Preview, 'close', this.closeLivePreviewCallback);
+                Garnish.on(Craft.LivePreview, 'exit', this.closeLivePreviewCallback);
+            }
+
+            // Setup listener for when toggling the code editor
+            this.editor.on('vui:code-editor-toggle', this.setCodeEditor);
+
+            // Disable Craft delta-handling, which messes up saving the field in our case.
+            this.cleanDeltas();
+        });
+    },
+
+    created() {
+        this.settings = this.$root.settings;
+
+        // Populate the buttons from config - allow an empty array to remove buttons
+        if (this.settings.vizyConfig.buttons) {
+            this.buttons = this.settings.vizyConfig.buttons;
+        }
+    },
+
+    beforeDestroy() {
+        this.editor.destroy();
+    },
+
+    methods: {
+        getFormattingOptions() {
+            var options = ['paragraph', 'code', 'quote', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6'];
+
+            if (this.settings.vizyConfig.formatting && this.settings.vizyConfig.formatting.length) {
+                options = this.settings.vizyConfig.formatting; 
+            }
+
+            return options;
+        },
+
+        getExtensions() {
+            let extensions = [
+                // Core Extensions
+                Document,
+                Dropcursor,
+                Gapcursor,
+                HardBreak,
+                Paragraph,
+                Text,
+                VizyBlock.configure({ field: this }),
+            ];
+
+            const { buttons } = this;
+
+            if (buttons.includes('blockquote')) {
+                extensions.push(Blockquote);
+            }
+
+            if (buttons.includes('bold')) {
+                extensions.push(Bold);
+            }
+
+            if (buttons.includes('ordered-list') || buttons.includes('unordered-list')) {
+                extensions.push(ListItem);
+
+                if (buttons.includes('ordered-list')) {
+                    extensions.push(OrderedList);
+                }
+
+                if (buttons.includes('unordered-list')) {
+                    extensions.push(BulletList);
+                }
+            }
+
+            if (buttons.includes('code')) {
+                extensions.push(Code);
+            }
+
+            if (buttons.includes('code-block')) {
+                extensions.push(CodeBlock);
+            }
+
+            if (buttons.includes('h1') || buttons.includes('h2') || buttons.includes('h3') || buttons.includes('h4') || buttons.includes('h5') || buttons.includes('h6')) {
+                extensions.push(Heading.configure({ levels: [1, 2, 3, 4, 5, 6] }));
+            }
+
+            if (buttons.includes('highlight')) {
+                extensions.push(Highlight);
+            }
+
+            if (buttons.includes('history')) {
+                extensions.push(History);
+            }
+
+            if (buttons.includes('hr')) {
+                extensions.push(HorizontalRule);
+            }
+
+            if (buttons.includes('image')) {
+                extensions.push(Image);
+            }
+
+            if (buttons.includes('italic')) {
+                extensions.push(Italic);
+            }
+
+            if (buttons.includes('link')) {
+                extensions.push(Link.configure({ openOnClick: false }));
+            }
+
+            if (buttons.includes('strike')) {
+                extensions.push(Strike);
+            }
+
+            if (buttons.includes('align-left') || buttons.includes('align-right') || buttons.includes('align-center') || buttons.includes('align-justify')) {
+                extensions.push(TextAlign);
+            }
+
+            if (buttons.includes('underline')) {
+                extensions.push(Underline);
+            }
+
+            return extensions;
+        },
+
+        setCodeEditor() {
+            if (this.showCodeEditor) {
+                this.editor.chain().setContent(this.codeEditorHtml).run();
+            } else {
+                this.codeEditorHtml = this.editor.getHTML();
+            }
+
+            this.showCodeEditor = !this.showCodeEditor;
+        },
+
+        valueToContent(value) {
+            if (!value) {
+                return null;
+            }
+
+            // If already an array, easy.
+            if (!Array.isArray(value)) {
+                try {
+                    value = JSON.parse(value);
+                } catch (e) {
+                    console.log(e);
+                }
+            }
+
+            return value.length ? { type: 'doc', content: value } : null;
+        },
+
+        contentToValue(content) {
+            return JSON.stringify(content);
+        },
+
+        getParsedBlockHtml(html, id) {
+            if (typeof html === 'string') {
+                return html.replace(new RegExp(`__BLOCK_TYPE_${this.settings.placeholderKey}__`, 'g'), id);
+            } else {
+                return '';
+            }
+        },
+
+        getCachedFieldHtml(blockId) {
+            var html = this.cachedFieldHtml[blockId];
+
+            return this.getParsedBlockHtml(html, blockId);
+        },
+
+        setCachedFieldHtml(blockId, value) {
+            this.cachedFieldHtml[blockId] = value;
+        },
+
+        getCachedFieldJs(blockId) {
+            var html = this.cachedFieldJs[blockId];
+
+            return this.getParsedBlockHtml(html, blockId);
+        },
+
+        setCachedFieldJs(blockId, value) {
+            this.cachedFieldJs[blockId] = value;
+        },
+
+        // updateCachedFieldHtml() {
+        //     var blockFields = this.editor.view.dom.querySelectorAll('.vizyblock-fields');
+
+        //     blockFields.forEach(blockField => {
+        //         var blockId = blockField.getAttribute('data-id');
+        //         var html = $(blockField).htmlize();
+
+        //         // console.log(id);
+        //         // console.log(html);
+
+        //         this.cachedFieldHtml[blockId] = html;
+        //     });
+        // },
+
+        openLivePreviewCallback() {
+            this.isLivePreview = true;
+        },
+
+        closeLivePreviewCallback() {
+            this.isLivePreview = false;
+        },
+
+        updateFixedToolbar(event) {
+            let headerBuffer = $('body.fixed-header #header').length ? $('body.fixed-header #header').outerHeight() : 0;
+
+            if (this.isLivePreview) {
+                headerBuffer = $('.lp-editor-container header.flex').length ? $('.lp-editor-container header.flex').outerHeight() : 0;
+            }
+                
+            this.$refs.toolbar.$el.style.position = 'sticky';
+            this.$refs.toolbar.$el.style.top = this.$el.scrollTop + headerBuffer + 'px';
+        },
+
+        cleanDeltas() {
+            var fieldHandle = `fields[${this.settings.fieldHandle}]`;
+
+            // Clean up deltas for this field, which would normally be helpful, but not so much for this field.
+            // Otherwise we end up sending partial data for just the inner fields (which are namespaced)
+            // which will mess up saving. We could add handling like Matrix does, but get's tricky handling
+            // things like block order, and other things. Much easier and more reliable to just send
+            // the full field value on each save.
+            Craft.deltaNames.forEach((name) => {
+                var index = Craft.deltaNames.indexOf(name);
+
+                // Strip out everything apart from the top-level field handle, which is all we want.
+                if (name.includes(fieldHandle) && name !== fieldHandle) {
+                    Craft.deltaNames.splice(index);
+                }
+            });
+        },
+    },
+
+};
+
+</script>
+
+<style lang="scss">
+@import '~craftcms-sass/mixins';
+
+// ==========================================================================
+// Editor
+// ==========================================================================
+
+.vui-rich-text {
+    position: relative;
+    border-radius: 3px;
+    border: 1px solid rgba(96, 125, 159, 0.25);
+
+    // Override tiptap
+    .ProseMirror {
+        outline: none;
+        word-wrap: normal;
+        overflow: hidden;
+        padding: 16px;
+        min-height: 10rem;
+        background-color: #fbfcfe;
+        background-clip: padding-box;
+
+        [data-is-showing-errors="true"] & {
+            border-color: $errorColor;
+        }
+    }
+}
+
+.vui-editor {
+    &,
+    & * {
+        box-sizing: border-box;
+    }
+
+    ul, ol {
+        padding-left: 0 !important;
+        margin-left: 24px;
+    }
+
+    ul {
+        list-style-type: disc;
+    }
+
+    blockquote {
+        border-left: 5px solid #edf2fc;
+        border-radius: 2px;
+        color: #606266;
+        margin: 10px 0;
+        padding-left: 1em;
+    }
+
+    pre {
+        background: #0d0d0d;
+        color: #fff;
+        font-family: JetBrainsMono,monospace;
+        padding: .75rem 1rem;
+        border-radius: .5rem;
+    }
+
+    a {
+        color: #3397ff;
+        text-decoration: underline;
+    }
+
+    &.code-view {
+        opacity: 0;
+        visibility: hidden;
+        pointer-events: none;
+    }
+}
+   
+.vui-editor-img-wrap {
+    display: block;
+    outline: 0;
+
+    img {
+        outline: 2px solid transparent !important;
+        transition: 0.3s outline ease;
+        max-width: 100%;
+        pointer-events: none;
+    }
+
+    &.ProseMirror-selectednode {
+        img {
+            outline: 2px solid #3397ff !important;
+        }
+    }
+}
+
+
+</style>

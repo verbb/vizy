@@ -1,0 +1,9 @@
+{% extends 'vizy/_layouts' %}
+
+{% import '_includes/forms' as forms %}
+{% import 'verbb-base/_macros' as macros %}
+
+{% set crumbs = [
+    { label: 'Vizy' | t('vizy'), url: url('vizy') },
+    { label: 'Settings' | t('app'), url: url('vizy/settings') },
+] %}

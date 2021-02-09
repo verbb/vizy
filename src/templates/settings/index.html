@@ -1,0 +1,36 @@
+{% extends 'vizy/_layouts/settings' %}
+
+{% do view.registerAssetBundle("craft\\web\\assets\\vue\\VueAsset") %}
+
+{% import '_includes/forms' as forms %}
+{% import 'verbb-base/_macros' as macros %}
+
+{% set crumbs = [
+    { label: 'Vizy' | t('vizy'), url: url('vizy/settings') },
+    { label: 'Settings' | t('app'), url: url('vizy/settings') }
+] %}
+
+{% set selectedTab = 'settings' %}
+{% set fullPageForm = true %}
+
+{% block content %}
+
+<h2>{{ 'General Settings' | t('vizy') }}</h2>
+
+<input type="hidden" name="action" value="plugins/save-plugin-settings">
+<input type="hidden" name="pluginHandle" value="vizy">
+
+{% namespace 'settings' %}
+
+{{ forms.textField({
+    label: 'Icons Path' | t('vizy'),
+    instructions: 'Provide the full path to your icon files. Aliases are also supported.' | t('vizy'),
+    name: 'iconsPath',
+    value: settings.iconsPath,
+    errors: settings.getErrors('iconsPath'),
+    warning: macros.configWarning('iconsPath', 'vizy'),
+}) }}
+    
+{% endnamespace %}
+
+{% endblock %}
