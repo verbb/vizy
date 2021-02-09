@@ -17,7 +17,7 @@ export default {
 
     created() {
         // Apply our dynamically provided template, rendered via Craft.
-        this.$options.template = this.template;
+        this.$options.template = '<div>' + this.template + '</div>';
     },
 
     mounted() {
@@ -39,9 +39,13 @@ export default {
             });
 
             $(this.$el).find('.elementselect').each((index, element) => {
-                $(element).data('elementSelect').on('selectElements removeElements', () => {
-                    this.emitUpdate();
-                });
+                var elementSelect = $(element).data('elementSelect');
+
+                if (elementSelect) {
+                    elementSelect.on('selectElements removeElements', () => {
+                        this.emitUpdate();
+                    });
+                }
             });
 
             // Special case for Matrix blocks.
