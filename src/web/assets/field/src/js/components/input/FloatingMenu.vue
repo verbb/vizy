@@ -46,7 +46,7 @@ export default {
     },
 
     beforeDestroy() {
-        this.editor.unregisterPlugin('floatingMenu');
+        // this.editor.unregisterPlugin('floatingMenu');
     },
 
     render() {

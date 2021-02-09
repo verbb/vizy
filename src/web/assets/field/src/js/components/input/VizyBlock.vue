@@ -9,7 +9,7 @@
     >
         <div class="vizyblock-header">
             <div class="titlebar">
-                <div class="blocktype"><span v-if="$isDebug">{{ uid }} </span>{{ blockType.name }}</div>
+                <div class="blocktype"><span v-if="$isDebug">{{ uid }} {{ node.attrs.id }} </span>{{ blockType.name }}</div>
 
                 <div v-if="collapsed" class="preview" v-html="preview"></div>
             </div>
@@ -55,7 +55,7 @@
 
         <span v-if="$isDebug" v-show="!collapsed" style="font-size: 10px;line-height: 13px;">{{ node.attrs.values.content }}</span>
 
-        <div v-show="!collapsed" ref="fields" class="vizyblock-fields" v-html="fieldsHtml"></div>
+        <vizy-block-fields v-if="fieldsHtml" v-show="!collapsed" ref="fields" class="vizyblock-fields" :template="fieldsHtml" @update="onFieldUpdate" />
     </node-view-wrapper>
 </template>
 
@@ -70,6 +70,7 @@ import 'tippy.js/dist/tippy.css';
 import 'tippy.js/themes/light-border.css';
 
 import LightswitchField from '../settings/LightswitchField.vue';
+import VizyBlockFields from './VizyBlockFields.vue';
 
 import htmlize from '@utils/htmlize';
 import { getClosest } from '@utils/dom';
@@ -79,6 +80,7 @@ export default {
 
     components: {
         LightswitchField,
+        VizyBlockFields,
     },
 
     props: {
@@ -180,7 +182,7 @@ export default {
             var previewHtml = '';
 
             if (this.mounted) {
-                var $fields = $(this.$refs.fields).children().children();
+                var $fields = $(this.$refs.fields.$el).children().children();
 
                 for (var i = 0; i < $fields.length; i++) {
                     var $field = $($fields[i]),
@@ -240,9 +242,7 @@ export default {
 
     watch: {
         'node.attrs.enabled'(newValue, oldValue) {
-            // if (newValue) {
             this.collapsed = !newValue;
-            // }
         },
         'node.attrs.id'(newValue, oldValue) {
             // When blocks are moved, they'll be re-ordered and re-rendered in their new order, But this really messes
@@ -259,28 +259,16 @@ export default {
     },
 
     created() {
-        // Whenever an inner field in the block is modified, changed or otherwise, fire an event
-        // so that all blocks can be notified of when _any_ content changes withing _any_ block.
-        // This is important for nested blocks and bubbling up this change to all blocks.
-        this.$events.$on('vizy-blocks:updatedField', this.onUpdatedField);
-
         // Listen to an even raised (when moving a block) to serialize the DOM content of this block.
         // This is because Vue will re-render all blocks from scratch, and we'll loose our block content.
         // So save it before we re-render, after which, it'll render the saved HTML on-render.
         this.$events.$on('vizy-blocks:updateDOM', this.onUpdateDOM);
 
-        // Listen to when blocks are deleted. For nested fields, we need the parent to update
-        // the serialized content of the nested block just deleted.
-        this.$events.$on('vizy-blocks:deleteBlock', this.onDeletedBlock);
-
-        // Listen to when blocks are added. For nested fields, we need the parent to update
-        // the serialized content of the nested block just added.
-        this.$events.$on('vizy-blocks:addedBlock', this.onAddedBlock);
+        // Set the HTML for the block's fields
+        this.fieldsHtml = this.vizyField.getCachedFieldHtml(this.node.attrs.id);
     },
 
     mounted() {
-        this.fieldsHtml = this.vizyField.getCachedFieldHtml(this.node.attrs.id);
-
         this.$nextTick(() => {
             this.appendJs();
 
@@ -307,112 +295,29 @@ export default {
                     hideOnClick: true,
                 });
             }
-
-            // Ensure any Craft fields are prepped
-            Craft.initUiElements(this.$refs.fields);
-
-            // Watch all field content for changes to serialize them to our text inputs that are stored in JSON blocks.
-            this.watchFieldChanges();
         });
     },
 
     beforeDestroy() {
         // Destroy event listeners for this block
-        this.$events.$off('vizy-blocks:updatedField', this.onUpdatedField);
         this.$events.$off('vizy-blocks:updateDOM', this.onUpdateDOM);
-        this.$events.$off('vizy-blocks:deleteBlock', this.onDeletedBlock);
-        this.$events.$off('vizy-blocks:addedBlock', this.onAddedBlock);
     },
 
     methods: {
         onUpdateDOM() {
             this.$nextTick(() => {
                 if (this.$refs.fields) {
-                    var fieldsHtml = $(this.$refs.fields.childNodes).htmlize();
+                    var fieldsHtml = $(this.$refs.fields.$el.childNodes).htmlize();
 
                     this.vizyField.setCachedFieldHtml(this.node.attrs.id, fieldsHtml);
                 }
             });
         },
 
-        onDeletedBlock(block) {
-            // Don't act on when this is the deleted block
-            if (this.uid !== block.uid) {
-                this.serializeFieldContent();
-            }
-        },
-
-        onAddedBlock() {
-            this.serializeFieldContent();
-        },
-
-        onUpdatedField() {
-            this.serializeFieldContent();
-        },
-
-        forceUpdateBlocks() {
-            this.serializeFieldContent();
-
-            // Special case for matrix blocks, where for nested fields, we face a dilemma.
-            // The outer field will serialize their content inward, meaning the outer field
-            // values will be invalid. So fire another round of updates a little afterward.
-            setTimeout(() => {
-                // This event triggers all blocks to update their content, which we need
-                // in order to get nested fields to trickle down their updates.
-                this.$events.$emit('vizy-blocks:updatedField');
-            }, 50);
-        },
-
-        watchFieldChanges() {
-            // Using jQuery to handle dynamically-added DOM content.
-            // For some reason, doesn't lightswitch fields behave differently...
-            $(this.$el).on('input change', 'input, textarea, select, .lightswitch', () => {
-                this.serializeFieldContent();
-            });
-
-            $(this.$el).find('.elementselect').each((index, element) => {
-                $(element).data('elementSelect').on('selectElements removeElements', () => {
-                    this.forceUpdateBlocks();
-                });
-            });
-
-            // Special case for Matrix blocks.
-            $(this.$el).find('.matrix').each((index, element) => {
-                // Watch for all the different types of change events from Matrix. Too difficult to listen to all events
-                // and not to mention, unreliable
-                const observer = new MutationObserver((mutationsList, observer) => {
-                    // Use traditional 'for loops' for IE 11
-                    for (const mutation of mutationsList) {
-                        if (mutation.type === 'childList' && (mutation.target.classList.contains('blocks') || mutation.target.classList.contains('preview'))) {
-                            this.forceUpdateBlocks();
-                        }
-                    }
-                });
-
-                observer.observe(element, { childList: true, subtree: true });
-            });
-
-            // Special case for Super Table blocks.
-            $(this.$el).find('.superTableContainer').each((index, element) => {
-                // Watch for all the different types of change events from Super Table. Too difficult to listen to all events
-                // and not to mention, unreliable
-                const observer = new MutationObserver((mutationsList, observer) => {
-                    // Use traditional 'for loops' for IE 11
-                    for (const mutation of mutationsList) {
-                        if (mutation.type === 'childList' && (mutation.target.classList.contains('rowLayoutContainer') || mutation.target.classList.contains('matrixLayoutContainer') || mutation.target.classList.contains('preview') || mutation.target instanceof HTMLTableSectionElement)) {
-                            this.forceUpdateBlocks();
-                        }
-                    }
-                });
-
-                observer.observe(element, { childList: true, subtree: true });
-            });
-        },
-
         clickTab(index) {
             this.activeTab = index;
 
-            var $tabs = this.$refs.fields.querySelectorAll('[id^="fields-tab-"]');
+            var $tabs = this.$refs.fields.$el.querySelectorAll('[id^="fields-tab-"]');
 
             $tabs.forEach($tab => {
                 if ($tab.getAttribute('id') === ('fields-' + this.activeTab)) {
@@ -451,11 +356,6 @@ export default {
             this.editor.chain().focus().deleteRange(range).run();
 
             this.tippy.destroy();
-
-            // Tell other blocks about this deletion, after waiting a sec.
-            setTimeout(() => {
-                this.$events.$emit('vizy-blocks:deleteBlock', this);
-            }, 50);
         },
 
         collapseBlock() {
@@ -476,18 +376,24 @@ export default {
             this.$events.$emit('vizy-blocks:updateDOM');
         },
 
+        onFieldUpdate() {
+            this.serializeFieldContent();
+        },
+
         findContentBlocksForBlock(content) {
             var foundContent = {};
 
             if (!isEmpty(content)) {
                 Object.entries(content.fields).forEach(([fieldHandle, fieldBlocks]) => {
-                    Object.entries(fieldBlocks.blocks).forEach(([blockId, blockFields]) => {
-                        if (blockId === this.node.attrs.id) {
-                            foundContent = blockFields;
-                        } else {
-                            foundContent = this.findContentBlocksForBlock(blockFields);
-                        }
-                    });
+                    if (!isEmpty(fieldBlocks.blocks)) {
+                        Object.entries(fieldBlocks.blocks).forEach(([blockId, blockFields]) => {
+                            if (blockId === this.node.attrs.id) {
+                                foundContent = blockFields;
+                            } else {
+                                foundContent = this.findContentBlocksForBlock(blockFields);
+                            }
+                        });
+                    }
                 });
             }
 
@@ -495,7 +401,7 @@ export default {
         },
 
         serializeFieldContent() {
-            var postData = Garnish.getPostData(this.$refs.fields);
+            var postData = Garnish.getPostData(this.$refs.fields.$el);
             var content = Craft.expandPostArray(postData);
             var fieldContent = this.findContentBlocksForBlock(content);
 

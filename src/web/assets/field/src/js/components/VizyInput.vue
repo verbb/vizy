@@ -71,6 +71,11 @@ export default {
             default: '',
         },
 
+        settings: {
+            type: Object,
+            default: () => {},
+        },
+
         value: {
             type: [String, Array],
             required: true,
@@ -80,7 +85,6 @@ export default {
 
     data() {
         return {
-            settings: {},
             isLivePreview: false,
             mounted: false,
             buttons: ['bold', 'italic'],
@@ -101,6 +105,12 @@ export default {
 
         toolbarFixed() {
             return this.settings.vizyConfig.toolbarFixed;
+        },
+    },
+
+    watch: {
+        jsonContent(newValue) {
+            this.$emit('content-update', newValue);
         },
     },
 
@@ -135,6 +145,8 @@ export default {
         this.$nextTick(() => {
             this.mounted = true;
 
+            this.$emit('init', this);
+
             // Setup listeners for fixed toolbar option
             if (this.settings.vizyConfig.toolbarFixed) {
                 window.addEventListener('scroll', this.updateFixedToolbar);
@@ -156,8 +168,6 @@ export default {
     },
 
     created() {
-        this.settings = this.$root.settings;
-
         // Populate the buttons from config - allow an empty array to remove buttons
         if (this.settings.vizyConfig.buttons) {
             this.buttons = this.settings.vizyConfig.buttons;

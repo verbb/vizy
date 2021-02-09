@@ -146,18 +146,22 @@ class VizyField extends Field
             'fieldHandle' => $this->handle,
         ];
 
-        $view->registerAssetBundle(VizyAsset::class);
-        $view->registerJs('var vizyInput = new Craft.Vizy.Input(' .
-            '"' . $view->namespaceInputId($id) . '", ' .
-            '"' . $view->namespaceInputName($this->handle) . '", ' .
-            Json::encode($settings, JSON_UNESCAPED_UNICODE) . 
-        ');');
+        // No need to output JS for any nested fields, all settings are rendered in the template
+        // as Vue takes over and processes the props.
+        if (!$element instanceof BlockElement) {
+            $view->registerAssetBundle(VizyAsset::class);
+            $view->registerJs('new Craft.Vizy.Input(' .
+                '"' . $view->namespaceInputId($id) . '", ' .
+                '"' . $view->namespaceInputName($this->handle) . '"' .
+            ');');
+        }
 
         return $view->renderTemplate('vizy/field/input', [
             'id' => $id,
             'name' => $this->handle,
-            'value' => $value->getRawNodes(),
             'field' => $this,
+            'value' => Json::encode($value->getRawNodes(), JSON_UNESCAPED_UNICODE),
+            'settings' => Json::encode($settings, JSON_UNESCAPED_UNICODE),
         ]);
     }
 

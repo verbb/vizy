@@ -20,7 +20,7 @@ import VizyInput from './components/VizyInput.vue';
 import VizySettings from './components/VizySettings.vue';
 
 Craft.Vizy.Input = Garnish.Base.extend({
-    init(idPrefix, namePrefix, settings) {
+    init(idPrefix, namePrefix) {
         new Vue({
             el: '#' + idPrefix + '-field',
             delimiters: ['${', '}'],
@@ -29,10 +29,11 @@ Craft.Vizy.Input = Garnish.Base.extend({
                 VizyInput,
             },
 
-            data() {
-                return {
-                    settings,
-                };
+            methods: {
+                onInputInit() {
+                    // Not used here at root level, only for nested fields.
+                    // Omitting would produce an error as it's referenced in template calls.
+                },
             },
         });
     },
