@@ -25,8 +25,8 @@ class FieldController extends Controller
 
         $fieldLayoutUid = $request->getParam('layoutUid');
         $fieldIds = $request->getParam('fieldIds');
-        $elementPlacements = $request->getParam('elementPlacements');
-        $elementConfigs = $request->getParam('elementConfigs');
+        $elementPlacements = $request->getParam('elementPlacements', []);
+        $elementConfigs = $request->getParam('elementConfigs', []);
 
         $fieldLayout = null;
 
