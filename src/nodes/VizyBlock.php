@@ -37,6 +37,9 @@ class VizyBlock extends Node
                 // Save as shortcut to the blocktype handle, for templating ease
                 $this->handle = $this->_blockType->handle;
 
+                // Add in the blocktype enabled/disabled state, independant on the block enabled/disabled
+                $this->node['attrs']['values']['typeEnabled'] = $this->_blockType->enabled;
+
                 if ($this->_fieldLayout) {
                     foreach ($this->_fieldLayout->getFields() as $key => $field) {
                         $this->_fieldsByHandle[$field->handle] = $this->_fieldLayout->getFieldByHandle($field->handle);
@@ -81,10 +84,35 @@ class VizyBlock extends Node
         return $this->_fieldLayout;
     }
 
+    public function getEnabled()
+    {
+        return $this->node['attrs']['enabled'] ?? true;
+    }
+
+    public function getBlockTypeEnabled()
+    {
+        return $this->node['attrs']['values']['typeEnabled'] ?? true;
+    }
+
+    public function isDeleted()
+    {
+        // BlockType has likely been deleted, bail
+        if (!$this->_blockType) {
+            return true;
+        }
+
+        return parent::isDeleted();
+    }
+
     public function renderNode()
     {
         // If a template has been defined on the block, use that to render
         if (!$this->_blockType->template) {
+            return null;
+        }
+
+        // Is the blocktype, or this block itself disabled?
+        if (!$this->getBlockTypeEnabled() || !$this->getEnabled()) {
             return null;
         }
 

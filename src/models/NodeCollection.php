@@ -33,6 +33,10 @@ class NodeCollection extends Model
                 $renderClass = new $class($field, $node);
 
                 if ($renderClass->matching()) {
+                    if ($renderClass->isDeleted()) {
+                        break;
+                    }
+
                     $this->nodes[] = $renderClass;
                     break;
                 }

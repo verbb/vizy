@@ -84,7 +84,9 @@ class Nodes extends Component
 
         if (isset($node['content'])) {
             foreach ($node['content'] as $nestedNode) {
-                $html[] = $this->renderNode($field, $nestedNode);
+                if ($nodeHtml = $this->renderNode($field, $nestedNode)) {
+                    $html[] = $nodeHtml;
+                }
             }
         } elseif (isset($node['text'])) {
             $html[] = htmlentities($node['text'], ENT_QUOTES);

@@ -111,7 +111,7 @@ export default {
 
     methods: {
         addBlock(blockType) {
-            const id = 'vizy-block-' + getId();
+            const id = getId('vizy-block-');
             const values = { type: blockType.id };
             const { fieldsHtml, footHtml } = blockType;
 

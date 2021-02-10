@@ -42,6 +42,11 @@ class Node extends Component
         return false;
     }
 
+    public function isDeleted()
+    {
+        return false;
+    }
+
     public function getTag()
     {
         return $this->tagName;
@@ -60,6 +65,11 @@ class Node extends Component
     public function getType()
     {
         return $this->type;
+    }
+
+    public function getAttrs()
+    {
+        return $this->node['attrs'] ?? [];
     }
 
     public function text()

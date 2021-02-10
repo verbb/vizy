@@ -398,6 +398,9 @@ class VizyField extends Field
                 $fieldLayout = $blockType->getFieldLayout();
 
                 if (!$fieldLayout) {
+                    // Discard the blocktype
+                    unset($data[$groupKey]['blockTypes'][$blockTypeKey]);
+
                     continue;
                 }
 

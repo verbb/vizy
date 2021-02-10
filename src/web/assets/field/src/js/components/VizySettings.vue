@@ -340,7 +340,7 @@ export default {
             }
 
             group.blockTypes.push({
-                id: getId('type'),
+                id: getId('type-'),
                 enabled: true,
             });
 
@@ -352,7 +352,7 @@ export default {
 
             if (name) {
                 this.fieldData.push({
-                    id: getId('group'),
+                    id: getId('group-'),
                     name,
                     blockTypes: [],
                 });
@@ -360,7 +360,7 @@ export default {
         },
 
         deleteBlockType() {
-            const confirmationMessage = Craft.t('vizy', 'Are you sure you want to delete “{name}”?', { name: this.selectedBlockType.name });
+            const confirmationMessage = Craft.t('vizy', 'Are you sure you want to delete “{name}”? This will permanently delete all content created with this block type.', { name: this.selectedBlockType.name });
 
             if (confirm(confirmationMessage)) {
                 for (var i = 0; this.fieldData.length; i++) {
@@ -377,7 +377,7 @@ export default {
         },
 
         deleteGroup(group) {
-            const confirmationMessage = Craft.t('vizy', 'Are you sure you want to delete “{name}”?', { name: group.name });
+            const confirmationMessage = Craft.t('vizy', 'Are you sure you want to delete “{name}”? This will permanently delete all content created with any of these block types.', { name: group.name });
 
             if (confirm(confirmationMessage)) {
                 var index = this.fieldData.indexOf(group);

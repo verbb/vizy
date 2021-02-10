@@ -1,61 +1,56 @@
 <template>
-    <node-view-wrapper
-        class="vizyblock"
-        contenteditable="false"
-        :class="{ 'active': selected }"
-        @copy.stop
-        @paste.stop
-        @cut.stop
-    >
-        <div class="vizyblock-header">
-            <div class="titlebar">
-                <div class="blocktype"><span v-if="$isDebug">{{ uid }} {{ node.attrs.id }} </span>{{ blockType.name }}</div>
+    <node-view-wrapper contenteditable="false" @copy.stop @paste.stop @cut.stop>
+        <div v-if="!isEmpty(blockType)" class="vizyblock" :class="{ 'active': selected }">
+            <div class="vizyblock-header">
+                <div class="titlebar">
+                    <div class="blocktype"><span v-if="$isDebug">{{ uid }} {{ node.attrs.id }} </span>{{ blockType.name }}</div>
 
-                <div v-if="collapsed" class="preview" v-html="preview"></div>
-            </div>
-
-            <div class="actions-tabs">
-                <div v-if="Object.keys(tabs).length > 1" class="titlebar-tabs">
-                    <a v-for="(tab, index) in tabs" :key="index" class="tab" :class="{ 'active': index === activeTab }" @click.prevent="clickTab(index)">
-                        {{ tab.label }}
-                    </a>
+                    <div v-if="collapsed" class="preview" v-html="preview"></div>
                 </div>
 
-                <div class="actions">
-                    <lightswitch-field v-model="enabled" :extra-small="true" />
-                    <a
-                        class="settings icon" title="Actions" aria-label="Actions" role="button" tabindex="0"
-                        aria-haspopup="listbox" aria-expanded="false"
-                    ></a>
-                    <a
-                        class="move icon" title="Reorder" aria-label="Reorder" data-drag-handle role="button"
-                        @mousedown="clickMove"
-                    ></a>
-                </div>
+                <div class="actions-tabs">
+                    <div v-if="Object.keys(tabs).length > 1" class="titlebar-tabs">
+                        <a v-for="(tab, index) in tabs" :key="index" class="tab" :class="{ 'active': index === activeTab }" @click.prevent="clickTab(index)">
+                            {{ tab.label }}
+                        </a>
+                    </div>
 
-                <div id="vizy-block-settings-template" class="vizy-menu" style="display: none;">
-                    <ul class="padded" role="listbox" aria-hidden="true">
-                        <li v-if="collapsed">
-                            <a data-icon="expand" role="option" tabindex="-1" @click.prevent="expandBlock">Expand</a>
-                        </li>
+                    <div class="actions">
+                        <lightswitch-field v-model="enabled" :extra-small="true" />
+                        <a
+                            class="settings icon" title="Actions" aria-label="Actions" role="button" tabindex="0"
+                            aria-haspopup="listbox" aria-expanded="false"
+                        ></a>
+                        <a
+                            class="move icon" title="Reorder" aria-label="Reorder" data-drag-handle role="button"
+                            @mousedown="clickMove"
+                        ></a>
+                    </div>
 
-                        <li v-else>
-                            <a data-icon="collapse" role="option" tabindex="-1" @click.prevent="collapseBlock">Collapse</a>
-                        </li>
+                    <div id="vizy-block-settings-template" class="vizy-menu" style="display: none;">
+                        <ul class="padded" role="listbox" aria-hidden="true">
+                            <li v-if="collapsed">
+                                <a data-icon="expand" role="option" tabindex="-1" @click.prevent="expandBlock">Expand</a>
+                            </li>
 
-                        <hr>
+                            <li v-else>
+                                <a data-icon="collapse" role="option" tabindex="-1" @click.prevent="collapseBlock">Collapse</a>
+                            </li>
 
-                        <li>
-                            <a class="error" data-icon="remove" role="option" tabindex="-1" @click.prevent="deleteBlock">Delete</a>
-                        </li>
-                    </ul>
+                            <hr>
+
+                            <li>
+                                <a class="error" data-icon="remove" role="option" tabindex="-1" @click.prevent="deleteBlock">Delete</a>
+                            </li>
+                        </ul>
+                    </div>
                 </div>
             </div>
+
+            <span v-if="$isDebug" v-show="!collapsed" style="font-size: 10px;line-height: 13px;">{{ node.attrs.values.content }}</span>
+
+            <vizy-block-fields v-if="fieldsHtml" v-show="!collapsed" ref="fields" class="vizyblock-fields" :template="fieldsHtml" @update="onFieldUpdate" />
         </div>
-
-        <span v-if="$isDebug" v-show="!collapsed" style="font-size: 10px;line-height: 13px;">{{ node.attrs.values.content }}</span>
-
-        <vizy-block-fields v-if="fieldsHtml" v-show="!collapsed" ref="fields" class="vizyblock-fields" :template="fieldsHtml" @update="onFieldUpdate" />
     </node-view-wrapper>
 </template>
 
@@ -147,13 +142,15 @@ export default {
         },
 
         blockType() {
-            if (isEmpty(this.blockGroups)) {
-                return {};
+            let blockType = {};
+
+            if (!isEmpty(this.blockGroups)) {
+                this.blockGroups.forEach((blockGroup) => {
+                    blockType = find(blockGroup.blockTypes, { id: this.values.type }) || {};
+                });
             }
 
-            return this.blockGroups.reduce(blockGroup => {
-                return find(blockGroup.blockTypes, { id: this.values.type }) || {};
-            });
+            return blockType;
         },
 
         tabs() {
@@ -162,7 +159,7 @@ export default {
 
         enabled: {
             get() {
-                return this.node.attrs.enabled;
+                return this.node.attrs.enabled && this.blockType.enabled;
             },
             set(enabled) {
                 return this.updateAttributes({ enabled });
@@ -304,6 +301,10 @@ export default {
     },
 
     methods: {
+        isEmpty(value) {
+            return isEmpty(value);
+        },
+
         onUpdateDOM() {
             this.$nextTick(() => {
                 if (this.$refs.fields) {
