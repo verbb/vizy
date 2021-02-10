@@ -22,11 +22,13 @@ export default {
 
     mounted() {
         this.$nextTick(() => {
-            // Watch all field content for changes to serialize them to our text inputs that are stored in JSON blocks.
-            this.watchFieldChanges();
-
             // Ensure any Craft fields are prepped.
             Craft.initUiElements(this.$el);
+
+            this.$nextTick(() => {
+                // Watch all field content for changes to serialize them to our text inputs that are stored in JSON blocks.
+                this.watchFieldChanges();
+            });
         });
     },
 
