@@ -442,7 +442,7 @@ export default {
             const [ blockTypeData ] = this.fieldData[sourceGroupIndex].blockTypes.splice(sourceBlockTypeIndex, 1);
 
             // Add the new row
-            this.fieldData[groupIndex].blockTypes.splice(blockIndex, 0, blockTypeData);
+            this.fieldData[groupIndex].blockTypes.splice(blockTypeIndex, 0, blockTypeData);
         },
     },
 };
