@@ -142,11 +142,15 @@ export default {
         },
 
         blockType() {
-            let blockType = {};
+            var blockType = {};
 
             if (!isEmpty(this.blockGroups)) {
                 this.blockGroups.forEach((blockGroup) => {
-                    blockType = find(blockGroup.blockTypes, { id: this.values.type }) || {};
+                    var foundBlockType = find(blockGroup.blockTypes, { id: this.values.type });
+
+                    if (foundBlockType) {
+                        blockType = foundBlockType;
+                    }
                 });
             }
 
