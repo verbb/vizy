@@ -322,10 +322,10 @@ export default {
         clickTab(index) {
             this.activeTab = index;
 
-            var $tabs = this.$refs.fields.$el.querySelectorAll('[id^="fields-tab-"]');
+            var $tabs = this.$refs.fields.$el.querySelectorAll('.vizyblock-fields > div');
 
             $tabs.forEach($tab => {
-                if ($tab.getAttribute('id') === ('fields-' + this.activeTab)) {
+                if ($tab.getAttribute('id').includes(this.activeTab)) {
                     $tab.classList.remove('hidden');
                 } else {
                     $tab.classList.add('hidden');
