@@ -1,5 +1,5 @@
 import { Node, mergeAttributes } from '@tiptap/core';
-import { VueNodeViewRenderer } from '@tiptap/vue';
+import { VueNodeViewRenderer } from '@tiptap/vue-2';
 import { Plugin, PluginKey, NodeSelection } from 'prosemirror-state';
 
 import VizyBlockView from './VizyBlock.vue';

@@ -16,7 +16,7 @@
 import find from 'lodash/find';
 
 import { Editor } from '@tiptap/core';
-import { EditorContent } from '@tiptap/vue';
+import { EditorContent } from '@tiptap/vue-2';
 
 // TipTap - Marks
 import Bold from '@tiptap/extension-bold';
@@ -41,6 +41,7 @@ import Text from '@tiptap/extension-text';
 
 // TipTap - Extensions
 import Dropcursor from '@tiptap/extension-dropcursor';
+import Focus from '@tiptap/extension-focus';
 import Gapcursor from '@tiptap/extension-dropcursor';
 import History from '@tiptap/extension-history';
 import TextAlign from '@tiptap/extension-text-align';
@@ -119,7 +120,7 @@ export default {
         this.editor = new Editor({
             extensions: this.getExtensions(),
             content: this.valueToContent(clone(this.value)),
-            autoFocus: false,
+            autofocus: false,
             onUpdate: () => {
                 this.json = this.editor.getJSON().content;
                 this.html = this.editor.getHTML();
@@ -199,6 +200,7 @@ export default {
                 Paragraph,
                 Text,
                 VizyBlock.configure({ field: this }),
+                Focus.configure({ className: 'has-focus', mode: 'deepest' }),
             ];
 
             const { buttons } = this;
@@ -471,7 +473,7 @@ export default {
         pointer-events: none;
     }
 
-    &.ProseMirror-selectednode {
+    &.has-focus {
         img {
             outline: 2px solid #3397ff !important;
         }

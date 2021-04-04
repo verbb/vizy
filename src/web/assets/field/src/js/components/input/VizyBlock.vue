@@ -1,6 +1,11 @@
 <template>
-    <div
-        v-if="!isEmpty(blockType)" class="vizyblock" :class="{ 'active': selected }" contenteditable="false" @copy.stop @paste.stop
+    <node-view-wrapper 
+        v-if="!isEmpty(blockType)"
+        class="vizyblock"
+        :class="{ 'active': selected }"
+        contenteditable="false"
+        @copy.stop
+        @paste.stop
         @cut.stop
     >
         <div class="vizyblock-header">
@@ -49,10 +54,12 @@
             </div>
         </div>
 
-        <span v-if="$isDebug" v-show="!collapsed" style="font-size: 10px;line-height: 13px;">{{ node.attrs.values.content }}</span>
+        <slide-up-down :active="!collapsed" :duration="300">
+            <span v-if="$isDebug" style="font-size: 10px;line-height: 13px;">{{ node.attrs.values.content }}</span>
 
-        <vizy-block-fields v-if="fieldsHtml" v-show="!collapsed" ref="fields" class="vizyblock-fields" :template="fieldsHtml" @update="onFieldUpdate" />
-    </div>
+            <vizy-block-fields v-if="fieldsHtml" ref="fields" :key="updateFieldsHtml" class="vizyblock-fields" :template="fieldsHtml" @update="onFieldUpdate" />
+        </slide-up-down>
+    </node-view-wrapper>
 </template>
 
 <script>
@@ -65,8 +72,11 @@ import tippy from 'tippy.js';
 import 'tippy.js/dist/tippy.css';
 import 'tippy.js/themes/light-border.css';
 
+import { NodeViewWrapper } from '@tiptap/vue-2';
+
 import LightswitchField from '../settings/LightswitchField.vue';
 import VizyBlockFields from './VizyBlockFields.vue';
+import SlideUpDown from './SlideUpDown.vue';
 
 import htmlize from '@utils/htmlize';
 import { getClosest } from '@utils/dom';
@@ -75,8 +85,10 @@ export default {
     name: 'VizyBlock',
 
     components: {
+        NodeViewWrapper,
         LightswitchField,
         VizyBlockFields,
+        SlideUpDown,
     },
 
     props: {
@@ -122,6 +134,7 @@ export default {
             tippy: null,
             fieldsHtml: '',
             mounted: false,
+            updateFieldsHtml: 0,
         };
     },
 
@@ -251,6 +264,9 @@ export default {
             // up our DOM handling for fields. So keep track of when the ID changes to detect when blocks have been
             // updated by moving. We then need to fetch the cached HTML, and re-init any JS.
             this.fieldsHtml = this.vizyField.getCachedFieldHtml(newValue);
+
+            // Trigger the fields to update, manually by changing the update variable (which is keyed to the component)
+            this.updateFieldsHtml += 1;
 
             this.$nextTick(() => {
                 this.appendJs();
@@ -415,9 +431,6 @@ export default {
             let values = Object.assign({}, this.values);
 
             values.content = fieldContent;
-
-            // console.log(this.uid);
-            // console.log(fieldContent);
             
             this.updateAttributes({ values });
         },
@@ -474,6 +487,7 @@ export default {
 .vizyblock-header .titlebar {
     display: flex;
     align-items: center;
+    overflow: hidden;
 }
 
 .vizyblock-header .blocktype {
@@ -485,6 +499,9 @@ export default {
 
 .vizyblock-header .preview {
     margin-left: 7px;
+    max-width: 50%;
+    text-overflow: ellipsis;
+    overflow: hidden;
 }
 
 .vizyblock-header .actions-tabs {
@@ -496,6 +513,10 @@ export default {
     float: none !important;
     display: flex;
     align-items: center;
+
+    a {
+        text-decoration: none;
+    }
 }
 
 .vizyblock-header .actions .lightswitch {
@@ -549,6 +570,7 @@ export default {
 
 .vizyblock-fields {
     padding-top: 14px;
+    overflow: hidden;
 }
 
 .vizyblock-fields .field > .heading > label {
