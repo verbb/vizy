@@ -328,6 +328,11 @@ export default {
         getCachedFieldJs(blockId) {
             var html = this.cachedFieldJs[blockId];
 
+            // When serialized, htmlentities are used, so decode them
+            html = html.replace(/&#(\d+);/g, (match, dec) => {
+                return String.fromCharCode(dec);
+            });
+
             return this.getParsedBlockHtml(html, blockId);
         },
 
