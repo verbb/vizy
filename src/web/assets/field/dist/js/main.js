@@ -20838,6 +20838,21 @@ function _arrayWithHoles(arr) { if (Array.isArray(arr)) return arr; }
 //
 //
 //
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
 
 
 
@@ -21053,6 +21068,10 @@ function _arrayWithHoles(arr) { if (Array.isArray(arr)) return arr; }
           _this$fieldData$sourc2 = _slicedToArray(_this$fieldData$sourc, 1),
           blockTypeData = _this$fieldData$sourc2[0]; // Add the new row
 
+
+      if (!this.fieldData[groupIndex].blockTypes) {
+        this.fieldData[groupIndex].blockTypes = [];
+      }
 
       this.fieldData[groupIndex].blockTypes.splice(blockTypeIndex, 0, blockTypeData);
     }
@@ -25065,7 +25084,7 @@ exports = module.exports = __webpack_require__(/*! ../../../../../../../node_mod
 
 
 // module
-exports.push([module.i, "#main-content {\n  overflow-x: auto;\n}\n.vizy-configurator {\n  display: flex;\n  align-items: stretch;\n  position: relative;\n  border-radius: 3px;\n  border: 1px solid rgba(96, 125, 159, 0.25);\n  background-color: #fbfcfe;\n  background-clip: padding-box;\n  overflow: hidden;\n  min-height: 500px;\n}\n.vui-workspace {\n  padding: 24px;\n  border-radius: 3px;\n  display: flex;\n  flex: 1;\n  background-color: #f3f7fc;\n  background-image: linear-gradient(to right, #ecf2f9 1px, transparent 0px), linear-gradient(to bottom, #ecf2f9 1px, transparent 1px);\n  background-size: 24px 24px;\n  background-position: -1px -1px;\n  box-shadow: inset 0 1px 3px -1px #acbed2;\n}\n.vizy-configurator .vui-popover {\n  width: 310px;\n  z-index: 1;\n}\n.vizy-configurator .vui-popover .vui-popover-inner {\n  background: #fff;\n  color: #000;\n  padding: 12px;\n  border-radius: 4px;\n  box-shadow: 0 0 0 1px rgba(96, 125, 159, 0.05), 0 0 0 1px rgba(96, 125, 159, 0.05), 0 2px 10px 1px rgba(96, 125, 159, 0.12);\n}\n.vizy-configurator .vui-block-items {\n  margin: 0 -5px -5px;\n}\n.vizy-configurator .vui-popover hr {\n  margin: 16px 0 !important;\n}\n.vizy-configurator .vui-block-item {\n  position: relative;\n  border: 1px transparent dashed;\n  width: 30%;\n  margin: 0 1% 5px;\n}\n.vizy-configurator .vui-block-item.active {\n  border-color: #0d99f2;\n  border-style: solid;\n  background-color: #f0f9fe;\n}\n.vizy-configurator .vui-block-item.has-error {\n  border-color: #CF1124;\n  border-style: solid;\n  color: #CF1124;\n}\n.vizy-configurator .vui-block-item .vui-block-item-status {\n  position: absolute;\n  top: 5px;\n  right: 5px;\n  width: 5px;\n  height: 5px;\n  border: 1px solid transparent;\n  border-radius: 100%;\n  border-color: rgba(96, 125, 159, 0.8);\n}\n.vizy-configurator .vui-block-item .vui-block-item-status.on {\n  border-color: transparent;\n  background-color: #27AB83;\n}\n.vizy-configurator .vui-block-new-item {\n  border-color: #b8c3d4;\n  transition: all 0.3s ease;\n  color: #99a9c0;\n  background-color: #fff;\n}\n.vizy-configurator .vui-block-new-item:hover {\n  background-color: #f0f9fe;\n  border-color: #0d99f2;\n  border-style: solid;\n  color: #0d99f2;\n}\n.vizy-configurator .vui-block-new-item .vui-block-item-heading {\n  color: inherit;\n}\n.vizy-configurator .vui-block-new-group {\n  width: 100%;\n  margin: 0;\n}\n.vizy-configurator .vui-block-items-header {\n  display: flex;\n  justify-content: space-between;\n}\n.vui-block-items-header-actions {\n  display: flex;\n  align-items: center;\n}\n.vizy-configurator .vui-block-items-header-delete {\n  color: #CF1124;\n  text-transform: none;\n  font-weight: 500;\n  opacity: 0;\n  visibility: hidden;\n  transition: all 0.3s ease;\n  border: 0;\n  margin: 0;\n  padding: 0;\n  background: transparent;\n  -webkit-appearance: none;\n     -moz-appearance: none;\n          appearance: none;\n  cursor: pointer;\n  outline: none;\n}\n.vizy-configurator .vui-block-group:hover .vui-block-items-header-delete,\n.vizy-configurator .vui-block-group:hover .vui-block-items-header-move {\n  opacity: 1;\n  visibility: visible;\n}\n.vui-block-items-header-move {\n  width: 13px;\n  height: 13px;\n  opacity: 0;\n  visibility: hidden;\n  transition: all 0.3s ease;\n  border: 0;\n  margin: 0 8px 0 0;\n  padding: 0;\n  background: transparent;\n  -webkit-appearance: none;\n     -moz-appearance: none;\n          appearance: none;\n  cursor: pointer;\n  outline: none;\n}\n.vui-block-items-header-move svg {\n  width: 100%;\n  height: 100%;\n  display: block;\n}\n.vui-block-items-header-text {\n  min-width: 50px;\n  padding: 0 5px;\n  margin-left: -5px;\n  border-radius: 4px;\n  border: 1px transparent dashed;\n  transition: all 0.3s ease;\n}\n.vui-block-items-header-text:hover {\n  border-color: #0d99f2;\n}\n.dropzone-vertical-left {\n  position: absolute;\n  top: 0;\n  left: -5px;\n}\n.dropzone-vertical-right {\n  position: absolute;\n  top: 0;\n  right: -5px;\n}\n.dropzone-vertical {\n  position: absolute;\n  z-index: 2;\n  top: -10px;\n  left: -15px;\n  width: 30px;\n  height: 80px;\n}\n.dashed-dropzone-vertical {\n  width: 2px;\n  height: 60px;\n}\n.dashed-dropzone {\n  border-radius: 1px;\n  background-color: #0d99f2;\n  opacity: 0;\n  visibility: hidden;\n  transition: all 0.2s ease;\n}\n.is-active .dashed-dropzone {\n  opacity: 1;\n  visibility: visible;\n}\n.vui-block-editor {\n  overflow: auto;\n  background: #fff;\n  color: #000;\n  padding: 20px;\n  border-radius: 4px;\n  flex: 1;\n  margin-left: 24px;\n  box-shadow: 0 0 0 1px rgba(96, 125, 159, 0.05), 0 0 0 1px rgba(96, 125, 159, 0.05), 0 2px 10px 1px rgba(96, 125, 159, 0.12);\n}\n.vui-block-titlebar {\n  color: #596673;\n  margin: -20px;\n  padding: 10px 14px;\n  font-size: 13px;\n  font-weight: 500;\n  border-radius: 4px 4px 0 0;\n  border-bottom: 1px #c8dbea solid;\n  display: flex;\n  align-items: center;\n  justify-content: space-between;\n  margin-bottom: 20px;\n  background-color: #f3f7fc;\n  background-image: linear-gradient(rgba(51, 64, 77, 0), rgba(51, 64, 77, 0.05));\n}\n.vui-block-titlebar-actions {\n  display: flex;\n  align-items: center;\n}\n.vui-block-titlebar-delete {\n  color: #CF1124;\n  text-transform: none;\n  font-weight: 500;\n  opacity: 0;\n  visibility: hidden;\n  transition: all 0.3s ease;\n  margin-right: 10px;\n  border: 0;\n  background: transparent;\n  -webkit-appearance: none;\n     -moz-appearance: none;\n          appearance: none;\n  cursor: pointer;\n  outline: none;\n}\n.vui-block-editor:hover .vui-block-titlebar-delete {\n  opacity: 1;\n  visibility: visible;\n}\n.vui-loading-pane,\n.vui-error-pane {\n  margin: auto;\n}\n.vui-block-editor-empty {\n  overflow: auto;\n  color: #000;\n  padding: 20px;\n  flex: 1;\n  margin-left: 24px;\n  display: flex;\n  justify-content: center;\n  font-size: 2em;\n  font-weight: 400;\n  opacity: 0.4;\n  color: #265275;\n  margin-top: 3rem;\n  position: relative;\n}\n.vui-block-editor-empty svg {\n  position: absolute;\n  top: 4rem;\n  left: 50%;\n  width: 170px;\n  height: auto;\n  margin-left: -85px;\n  -webkit-transform: rotate(7deg) translateX(-50%);\n          transform: rotate(7deg) translateX(-50%);\n}", ""]);
+exports.push([module.i, "#main-content {\n  overflow-x: auto;\n}\n.vizy-configurator {\n  display: flex;\n  align-items: stretch;\n  position: relative;\n  border-radius: 3px;\n  border: 1px solid rgba(96, 125, 159, 0.25);\n  background-color: #fbfcfe;\n  background-clip: padding-box;\n  overflow: hidden;\n  min-height: 500px;\n}\n.vui-workspace {\n  padding: 24px;\n  border-radius: 3px;\n  display: flex;\n  flex: 1;\n  background-color: #f3f7fc;\n  background-image: linear-gradient(to right, #ecf2f9 1px, transparent 0px), linear-gradient(to bottom, #ecf2f9 1px, transparent 1px);\n  background-size: 24px 24px;\n  background-position: -1px -1px;\n  box-shadow: inset 0 1px 3px -1px #acbed2;\n}\n.vizy-configurator .vui-popover {\n  width: 310px;\n  z-index: 1;\n}\n.vizy-configurator .vui-popover .vui-popover-inner {\n  background: #fff;\n  color: #000;\n  padding: 12px;\n  border-radius: 4px;\n  box-shadow: 0 0 0 1px rgba(96, 125, 159, 0.05), 0 0 0 1px rgba(96, 125, 159, 0.05), 0 2px 10px 1px rgba(96, 125, 159, 0.12);\n}\n.vizy-configurator .vui-block-items {\n  margin: 0 -5px -5px;\n}\n.vizy-configurator .vui-popover hr {\n  margin: 16px 0 !important;\n}\n.vizy-configurator .vui-block-item {\n  position: relative;\n  border: 1px transparent dashed;\n  width: 30%;\n  margin: 0 1% 5px;\n}\n.vizy-configurator .vui-block-item.active {\n  border-color: #0d99f2;\n  border-style: solid;\n  background-color: #f0f9fe;\n}\n.vizy-configurator .vui-block-item.has-error {\n  border-color: #CF1124;\n  border-style: solid;\n  color: #CF1124;\n}\n.vizy-configurator .vui-block-item .vui-block-item-status {\n  position: absolute;\n  top: 5px;\n  right: 5px;\n  width: 5px;\n  height: 5px;\n  border: 1px solid transparent;\n  border-radius: 100%;\n  border-color: rgba(96, 125, 159, 0.8);\n}\n.vizy-configurator .vui-block-item .vui-block-item-status.on {\n  border-color: transparent;\n  background-color: #27AB83;\n}\n.vizy-configurator .vui-block-new-item {\n  border-color: #b8c3d4;\n  transition: all 0.3s ease;\n  color: #99a9c0;\n  background-color: #fff;\n}\n.vizy-configurator .vui-block-new-item:hover {\n  background-color: #f0f9fe;\n  border-color: #0d99f2;\n  border-style: solid;\n  color: #0d99f2;\n}\n.vizy-configurator .vui-block-new-item .vui-block-item-heading {\n  color: inherit;\n}\n.vizy-configurator .vui-block-new-group {\n  width: 100%;\n  margin: 0;\n}\n.vizy-configurator .vui-block-items-header {\n  display: flex;\n  justify-content: space-between;\n}\n.vui-block-items-header-actions {\n  display: flex;\n  align-items: center;\n}\n.vizy-configurator .vui-block-items-header-delete {\n  color: #CF1124;\n  text-transform: none;\n  font-weight: 500;\n  opacity: 0;\n  visibility: hidden;\n  transition: all 0.3s ease;\n  border: 0;\n  margin: 0;\n  padding: 0;\n  background: transparent;\n  -webkit-appearance: none;\n     -moz-appearance: none;\n          appearance: none;\n  cursor: pointer;\n  outline: none;\n}\n.vizy-configurator .vui-block-group:hover .vui-block-items-header-delete,\n.vizy-configurator .vui-block-group:hover .vui-block-items-header-move {\n  opacity: 1;\n  visibility: visible;\n}\n.vui-block-items-header-move {\n  width: 13px;\n  height: 13px;\n  opacity: 0;\n  visibility: hidden;\n  transition: all 0.3s ease;\n  border: 0;\n  margin: 0 8px 0 0;\n  padding: 0;\n  background: transparent;\n  -webkit-appearance: none;\n     -moz-appearance: none;\n          appearance: none;\n  cursor: pointer;\n  outline: none;\n}\n.vui-block-items-header-move svg {\n  width: 100%;\n  height: 100%;\n  display: block;\n}\n.vui-block-items-header-text {\n  min-width: 50px;\n  padding: 0 5px;\n  margin-left: -5px;\n  border-radius: 4px;\n  border: 1px transparent dashed;\n  transition: all 0.3s ease;\n}\n.vui-block-items-header-text:hover {\n  border-color: #0d99f2;\n}\n.dropzone-vertical-left {\n  position: absolute;\n  top: 0;\n  left: -5px;\n}\n.dropzone-vertical-right {\n  position: absolute;\n  top: 0;\n  right: -5px;\n}\n.dropzone-vertical {\n  position: absolute;\n  z-index: 2;\n  top: -10px;\n  left: -15px;\n  width: 30px;\n  height: 80px;\n}\n.dashed-dropzone-vertical {\n  width: 2px;\n  height: 60px;\n}\n.dashed-dropzone {\n  border-radius: 1px;\n  background-color: #0d99f2;\n  opacity: 0;\n  visibility: hidden;\n  transition: all 0.2s ease;\n}\n.is-active .dashed-dropzone {\n  opacity: 1;\n  visibility: visible;\n}\n.vui-block-editor {\n  overflow: auto;\n  background: #fff;\n  color: #000;\n  padding: 20px;\n  border-radius: 4px;\n  flex: 1;\n  margin-left: 24px;\n  box-shadow: 0 0 0 1px rgba(96, 125, 159, 0.05), 0 0 0 1px rgba(96, 125, 159, 0.05), 0 2px 10px 1px rgba(96, 125, 159, 0.12);\n}\n.vui-block-titlebar {\n  color: #596673;\n  margin: -20px;\n  padding: 10px 14px;\n  font-size: 13px;\n  font-weight: 500;\n  border-radius: 4px 4px 0 0;\n  border-bottom: 1px #c8dbea solid;\n  display: flex;\n  align-items: center;\n  justify-content: space-between;\n  margin-bottom: 20px;\n  background-color: #f3f7fc;\n  background-image: linear-gradient(rgba(51, 64, 77, 0), rgba(51, 64, 77, 0.05));\n}\n.vui-block-titlebar-actions {\n  display: flex;\n  align-items: center;\n}\n.vui-block-titlebar-delete {\n  color: #CF1124;\n  text-transform: none;\n  font-weight: 500;\n  transition: all 0.3s ease;\n  margin-right: 10px;\n  border: 0;\n  background: transparent;\n  -webkit-appearance: none;\n     -moz-appearance: none;\n          appearance: none;\n  cursor: pointer;\n  outline: none;\n}\n.vui-loading-pane,\n.vui-error-pane {\n  margin: auto;\n}\n.vui-block-editor-empty {\n  overflow: auto;\n  color: #000;\n  padding: 20px;\n  flex: 1;\n  margin-left: 24px;\n  display: flex;\n  justify-content: center;\n  font-size: 2em;\n  font-weight: 400;\n  opacity: 0.4;\n  color: #265275;\n  margin-top: 3rem;\n  position: relative;\n}\n.vui-block-editor-empty svg {\n  position: absolute;\n  top: 4rem;\n  left: 50%;\n  width: 170px;\n  height: auto;\n  margin-left: -85px;\n  -webkit-transform: rotate(7deg) translateX(-50%);\n          transform: rotate(7deg) translateX(-50%);\n}", ""]);
 
 // exports
 
@@ -57163,6 +57182,35 @@ var render = function() {
                         }
                       },
                       [
+                        !group.blockTypes || !group.blockTypes.length
+                          ? _c("div", [
+                              _c(
+                                "div",
+                                { staticClass: "dropzone-vertical-left" },
+                                [
+                                  _c("drop", {
+                                    staticClass: "dropzone-vertical",
+                                    attrs: {
+                                      "data-group": groupIndex,
+                                      "data-block": 0
+                                    },
+                                    on: {
+                                      drop: _vm.dragDrop,
+                                      dragenter: _vm.dragEnter,
+                                      dragleave: _vm.dragLeave
+                                    }
+                                  }),
+                                  _vm._v(" "),
+                                  _c("div", {
+                                    staticClass:
+                                      "dashed-dropzone dashed-dropzone-vertical"
+                                  })
+                                ],
+                                1
+                              )
+                            ])
+                          : _vm._e(),
+                        _vm._v(" "),
                         _c(
                           "svg",
                           {

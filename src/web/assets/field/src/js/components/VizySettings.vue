@@ -738,8 +738,6 @@ export default {
     color: #CF1124;
     text-transform: none;
     font-weight: 500;
-    opacity: 0;
-    visibility: hidden;
     transition: all 0.3s ease;
     margin-right: 10px;
     border: 0;
@@ -747,11 +745,6 @@ export default {
     appearance: none;
     cursor: pointer;
     outline: none;
-}
-
-.vui-block-editor:hover .vui-block-titlebar-delete {
-    opacity: 1;
-    visibility: visible;
 }
 
 .vui-loading-pane,
