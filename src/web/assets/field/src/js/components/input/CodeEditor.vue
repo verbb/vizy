@@ -1,11 +1,20 @@
 <template>
-    <textarea v-if="visible" ref="textarea" v-model="proxyValue" class="vui-code-editor"></textarea>
+    <codemirror v-if="visible" v-model="proxyValue" class="vui-code-editor" :options="options" />
 </template>
 
 <script>
+import { codemirror } from 'vue-codemirror-lite';
+import beautify from 'js-beautify';
+
+import 'codemirror/mode/vue/vue';
+import 'codemirror/theme/material.css';
 
 export default {
     name: 'CodeEditor',
+
+    components: {
+        codemirror,
+    },
 
     props: {
         field: {
@@ -32,13 +41,22 @@ export default {
     data() {
         return {
             proxyValue: '',
+            options: {
+                theme: 'material',
+                mode: 'htmlmixed',
+                htmlMode: true,
+                lineNumbers: true,
+                lineWrapping: true,
+                indentUnit: 4,
+            },
         };
     },
 
     watch: {
         visible(newValue) {
             if (newValue) {
-                this.proxyValue = this.value;
+                // eslint-disable-next-line
+                this.proxyValue = beautify.html(this.value, { indent_size: 4 });
             }
 
             this.resizeHandler();
@@ -60,10 +78,8 @@ export default {
                 this.$nextTick(() => {
                     const { width, height } = this.editor.view.dom.getBoundingClientRect();
 
-                    if (this.$refs.textarea) {
-                        this.$refs.textarea.style.width = width + 'px';
-                        this.$refs.textarea.style.height = height + 'px';
-                    }
+                    this.$el.style.width = width + 'px';
+                    this.$el.style.height = height + 'px';
                 });
             }
         },
@@ -76,22 +92,14 @@ export default {
 
 .vui-code-editor {
     position: absolute;
-    width: 100%;
-    height: 100%;
-    background: #252525;
-    color: #ccc;
-    font-family: SFMono-Regular,Consolas,"Liberation Mono",Menlo,Courier,monospace;
-    font-size: .9em!important;
-    padding: 20px;
-    display: block;
-    margin: 0;
-    border: none;
-    box-shadow: none;
-    border-radius: 0;
-    outline: 0;
+    font-size: 12px;
     line-height: 1.5;
-    resize: vertical;
+    width: 100%;
     box-sizing: border-box;
+
+    .CodeMirror {
+        height: 100%;
+    }
 }
- 
+
 </style>
