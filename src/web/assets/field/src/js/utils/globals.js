@@ -10,7 +10,7 @@ global.clone = function(value) {
     return JSON.parse(JSON.stringify(value));
 };
 
-global.t = function(category = 'formie', string) {
+global.t = function(category = 'vizy', string) {
     return Craft.t(category, string);
 };
 
