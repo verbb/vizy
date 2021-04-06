@@ -1,10 +1,10 @@
+import { isNodeEmpty } from '@tiptap/core';
 import { Plugin, PluginKey } from 'prosemirror-state';
 
 class Menu {
     constructor({ options, editorView }) {
         this.options = {
             ...{
-                resizeObserver: true,
                 element: null,
                 onUpdate: () => false,
             },
@@ -16,78 +16,60 @@ class Menu {
         this.isActive = false;
         this.top = 0;
 
-        // the mousedown event is fired before blur so we can prevent it
-        this.mousedownHandler = this.handleClick.bind(this);
-        this.options.element.addEventListener('mousedown', this.mousedownHandler, { capture: true });
-
-        this.focusHandler = () => {
-            this.update(this.options.editor.view);
-        };
-
-        this.options.editor.on('focus', this.focusHandler);
-
-        this.blurHandler = ({ event }) => {
-            if (this.preventHide) {
-                this.preventHide = false;
-                return;
-            }
-
-            this.hide(event);
-        };
-
-        this.options.editor.on('blur', this.blurHandler);
-
-        // sometimes we have to update the position
-        // because of a loaded images for example
-        if (this.options.resizeObserver && window.ResizeObserver) {
-            this.resizeObserver = new ResizeObserver(() => {
-                if (this.isActive) {
-                    this.update(this.editorView);
-                }
-            });
-
-            this.resizeObserver.observe(this.editorView.dom);
-        }
+        this.options.element.addEventListener('mousedown', this.mousedownHandler.bind(this), { capture: true });
+        this.options.editor.on('focus', this.focusHandler.bind(this));
+        this.options.editor.on('blur', this.blurHandler.bind(this));
+        this.options.editor.on('resize', this.resizeHandler.bind(this));
     }
 
-    handleClick() {
+    mousedownHandler() {
         this.preventHide = true;
     }
 
-    update(view, lastState) {
-        const { state } = view;
+    focusHandler() {
+        this.update(this.options.editor.view);
+    }
 
-        // Don't do anything if the document/selection didn't change
-        if (lastState && lastState.doc.eq(state.doc) && lastState.selection.eq(state.selection)) {
+    blurHandler(event) {
+        if (this.preventHide) {
+            this.preventHide = false;
             return;
         }
 
-        if (!state.selection.empty) {
-            this.hide();
+        this.hide(event);
+    }
+
+    resizeHandler() {
+        if (this.isActive) {
+            this.update(this.options.editor.view);
+        }
+    }
+
+    update(view, oldState) {
+        const { state, composing } = view;
+        const { doc, selection } = state;
+        const isSame = oldState && oldState.doc.eq(doc) && oldState.selection.eq(selection);
+
+        if (composing || isSame) {
             return;
         }
 
-        const currentDom = view.domAtPos(state.selection.anchor);
-
-        const isActive = currentDom.node.innerHTML === '<br>'
-      && currentDom.node.tagName === 'P'
-      && currentDom.node.parentNode === view.dom;
-
-        if (!isActive) {
-            this.hide();
-            return;
-        }
-
+        const { $anchor, anchor, empty } = selection;
         const parent = this.options.element.offsetParent;
+        const isRootDepth = $anchor.depth === 1;
+        const isDefaultNodeType = $anchor.parent.type === state.doc.type.contentMatch.defaultType;
+        const isDefaultNodeEmpty = isNodeEmpty(selection.$anchor.parent);
+        const isActive = isRootDepth && isDefaultNodeType && isDefaultNodeEmpty;
 
-        if (!parent) {
+        if (!empty || !parent || !isActive) {
             this.hide();
+
             return;
         }
 
-        const editorBoundings = parent.getBoundingClientRect();
-        const cursorBoundings = view.coordsAtPos(state.selection.anchor);
-        const top = cursorBoundings.top - editorBoundings.top;
+        const parentBox = parent.getBoundingClientRect();
+        const cursorCoords = view.coordsAtPos(anchor);
+        const top = cursorCoords.top - parentBox.top;
 
         this.isActive = true;
         this.top = top;
@@ -103,11 +85,7 @@ class Menu {
     }
 
     hide(event) {
-        if (event
-      && event.relatedTarget
-      && this.options.element.parentNode
-      && this.options.element.parentNode.contains(event.relatedTarget)
-        ) {
+        if (event && event.relatedTarget && this.options.element.parentNode && this.options.element.parentNode.contains(event.relatedTarget)) {
             return;
         }
 
@@ -117,13 +95,9 @@ class Menu {
 
     destroy() {
         this.options.element.removeEventListener('mousedown', this.mousedownHandler);
-
-        if (this.resizeObserver) {
-            this.resizeObserver.unobserve(this.editorView.dom);
-        }
-
         this.options.editor.off('focus', this.focusHandler);
         this.options.editor.off('blur', this.blurHandler);
+        this.options.editor.off('resize', this.resizeHandler);
     }
 
 }
