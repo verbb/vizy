@@ -2,12 +2,14 @@
     "name": "verbb/vizy",
     "description": "A flexible visual editor field for Craft CMS.",
     "type": "craft-plugin",
-    "version": "0.9.0",
+    "version": "1.0.0",
     "keywords": [
         "craft",
         "cms",
         "craftcms",
         "craft-plugin",
+        "tiptap",
+        "prosemirror",
         "vizy"
     ],
     "support": {
@@ -25,7 +27,7 @@
         }
     ],
     "require": {
-        "craftcms/cms": "^3.5.0",
+        "craftcms/cms": "^3.6.0",
         "verbb/base": "^1.0.0",
         "yii2mod/yii2-array-query": "^1.4"
     },
