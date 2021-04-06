@@ -570,7 +570,6 @@ export default {
 
 .vizyblock-fields {
     padding-top: 14px;
-    overflow: hidden;
 }
 
 .vizyblock-fields .field > .heading > label {

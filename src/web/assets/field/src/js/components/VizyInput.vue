@@ -41,7 +41,7 @@ import Text from '@tiptap/extension-text';
 
 // TipTap - Extensions
 import Dropcursor from '@tiptap/extension-dropcursor';
-import Focus from '@tiptap/extension-focus';
+// import Focus from '@tiptap/extension-focus';
 import Gapcursor from '@tiptap/extension-dropcursor';
 import History from '@tiptap/extension-history';
 import TextAlign from '@tiptap/extension-text-align';
@@ -120,7 +120,7 @@ export default {
         this.editor = new Editor({
             extensions: this.getExtensions(),
             content: this.valueToContent(clone(this.value)),
-            autofocus: false,
+            // autofocus: false,
             onUpdate: () => {
                 this.json = this.editor.getJSON().content;
                 this.html = this.editor.getHTML();
@@ -181,7 +181,7 @@ export default {
 
     methods: {
         getFormattingOptions() {
-            var options = ['paragraph', 'code', 'quote', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6'];
+            var options = ['paragraph', 'code', 'blockquote', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6'];
 
             if (this.settings.vizyConfig.formatting && this.settings.vizyConfig.formatting.length) {
                 options = this.settings.vizyConfig.formatting; 
@@ -200,7 +200,7 @@ export default {
                 Paragraph,
                 Text,
                 VizyBlock.configure({ field: this }),
-                Focus.configure({ className: 'has-focus', mode: 'deepest' }),
+                // Focus.configure({ className: 'has-focus', mode: 'deepest' }),
             ];
 
             const { buttons } = this;

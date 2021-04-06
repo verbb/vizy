@@ -1,5 +1,5 @@
 <template>
-    <textarea v-if="visible" v-model="proxyValue" class="vui-code-editor"></textarea>
+    <textarea v-if="visible" ref="textarea" v-model="proxyValue" class="vui-code-editor"></textarea>
 </template>
 
 <script>
@@ -40,10 +40,32 @@ export default {
             if (newValue) {
                 this.proxyValue = this.value;
             }
+
+            this.resizeHandler();
         },
 
         proxyValue(newValue) {
             this.$emit('input', newValue);
+        },
+    },
+
+    created() {
+        this.editor.on('resize', this.resizeHandler.bind(this));
+    },
+
+    methods: {
+        resizeHandler() {
+            // Sync the height of the code editor with the editor
+            if (this.visible) {
+                this.$nextTick(() => {
+                    const { width, height } = this.editor.view.dom.getBoundingClientRect();
+
+                    if (this.$refs.textarea) {
+                        this.$refs.textarea.style.width = width + 'px';
+                        this.$refs.textarea.style.height = height + 'px';
+                    }
+                });
+            }
         },
     },
 };
@@ -69,6 +91,7 @@ export default {
     outline: 0;
     line-height: 1.5;
     resize: vertical;
+    box-sizing: border-box;
 }
  
 </style>
