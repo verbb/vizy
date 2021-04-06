@@ -105,13 +105,17 @@ class VizyField extends Field
             'suggestions' => (new Cp())->getTemplateSuggestions(),
         ];
 
+        $idPrefix = StringHelper::randomString(10);
+
         $view->registerAssetBundle(VizyAsset::class);
         $view->registerJs('new Craft.Vizy.Settings(' .
+            Json::encode($idPrefix, JSON_UNESCAPED_UNICODE) . ', ' .
             Json::encode($fieldData, JSON_UNESCAPED_UNICODE) . ', ' .
             Json::encode($settings, JSON_UNESCAPED_UNICODE) .
         ');');
 
         return $view->renderTemplate('vizy/field/settings', [
+            'idPrefix' => $idPrefix,
             'field' => $this,
             'vizyConfigOptions' => $this->_getCustomConfigOptions('vizy'),
         ]);

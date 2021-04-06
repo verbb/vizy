@@ -40,9 +40,9 @@ Craft.Vizy.Input = Garnish.Base.extend({
 });
 
 Craft.Vizy.Settings = Garnish.Base.extend({
-    init(fieldData, settings) {
+    init(idPrefix, fieldData, settings) {
         new Vue({
-            el: '.vizy-configurator',
+            el: '.' + idPrefix + '-vizy-configurator',
             delimiters: ['${', '}'],
 
             components: {

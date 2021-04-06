@@ -74900,9 +74900,9 @@ Craft.Vizy.Input = Garnish.Base.extend({
   }
 });
 Craft.Vizy.Settings = Garnish.Base.extend({
-  init: function init(fieldData, settings) {
+  init: function init(idPrefix, fieldData, settings) {
     new vue__WEBPACK_IMPORTED_MODULE_0___default.a({
-      el: '.vizy-configurator',
+      el: '.' + idPrefix + '-vizy-configurator',
       delimiters: ['${', '}'],
       components: {
         VizySettings: _components_VizySettings_vue__WEBPACK_IMPORTED_MODULE_3__["default"]
