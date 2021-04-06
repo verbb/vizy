@@ -20452,7 +20452,7 @@ __webpack_require__.r(__webpack_exports__);
         extensions.push(_tiptap_extension_highlight__WEBPACK_IMPORTED_MODULE_5__["default"]);
       }
 
-      if (buttons.includes('history')) {
+      if (buttons.includes('undo') || buttons.includes('redo')) {
         extensions.push(_tiptap_extension_history__WEBPACK_IMPORTED_MODULE_21__["default"]);
       }
 

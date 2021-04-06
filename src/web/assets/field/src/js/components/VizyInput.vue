@@ -241,7 +241,7 @@ export default {
                 extensions.push(Highlight);
             }
 
-            if (buttons.includes('history')) {
+            if (buttons.includes('undo') || buttons.includes('redo')) {
                 extensions.push(History);
             }
 
