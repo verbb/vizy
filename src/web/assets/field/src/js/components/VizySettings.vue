@@ -70,6 +70,21 @@
                         </div>
 
                         <div class="vui-block-item vui-block-new-item" @click.prevent="addBlockType(group)">
+                            <div v-if="!group.blockTypes || !group.blockTypes.length">
+                                <div class="dropzone-vertical-left">
+                                    <drop
+                                        :data-group="groupIndex"
+                                        :data-block="0"
+                                        class="dropzone-vertical"
+                                        @drop="dragDrop"
+                                        @dragenter="dragEnter"
+                                        @dragleave="dragLeave"
+                                    />
+
+                                    <div class="dashed-dropzone dashed-dropzone-vertical"></div>
+                                </div>
+                            </div>
+
                             <!-- eslint-disable-next-line -->
                             <svg aria-hidden="true" focusable="false" data-prefix="far" data-icon="plus" role="img" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 384 512" class="svg-inline--fa fa-plus fa-w-12"><path fill="currentColor" d="M368 224H224V80c0-8.84-7.16-16-16-16h-32c-8.84 0-16 7.16-16 16v144H16c-8.84 0-16 7.16-16 16v32c0 8.84 7.16 16 16 16h144v144c0 8.84 7.16 16 16 16h32c8.84 0 16-7.16 16-16V288h144c8.84 0 16-7.16 16-16v-32c0-8.84-7.16-16-16-16z" /></svg>
                             <span class="vui-block-item-heading">{{ 'Add Block' | t('vizy') }}</span>
@@ -442,6 +457,10 @@ export default {
             const [ blockTypeData ] = this.fieldData[sourceGroupIndex].blockTypes.splice(sourceBlockTypeIndex, 1);
 
             // Add the new row
+            if (!this.fieldData[groupIndex].blockTypes) {
+                this.fieldData[groupIndex].blockTypes = [];
+            }
+
             this.fieldData[groupIndex].blockTypes.splice(blockTypeIndex, 0, blockTypeData);
         },
     },
