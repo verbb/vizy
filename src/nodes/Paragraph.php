@@ -20,7 +20,12 @@ class Paragraph extends Node
     public function getTag()
     {
         // Don't include certain attributes in rendering
-        ArrayHelper::remove($this->attrs, 'textAlign');
+        $align = ArrayHelper::remove($this->attrs, 'textAlign');
+
+        // Add instead as a class, `text-left`, `text-right`, etc.
+        if ($align && $align !== 'start') {
+            $this->attrs['class'] = ($this->attrs['class'] ?? '') . ' text-' . $align;
+        }
 
         return parent::getTag();
     }
