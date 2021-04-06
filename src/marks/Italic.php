@@ -8,7 +8,7 @@ class Italic extends Mark
     // Properties
     // =========================================================================
 
-    protected $type = 'italic';
-    protected $tagName = 'em';
+    public static $type = 'italic';
+    public $tagName = 'em';
     
 }

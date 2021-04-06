@@ -5,6 +5,8 @@ use verbb\vizy\Vizy;
 
 use Craft;
 use craft\base\Model;
+use craft\helpers\ArrayHelper;
+use craft\helpers\Component as ComponentHelper;
 use craft\helpers\Template;
 
 use yii2mod\query\ArrayQuery;
@@ -14,8 +16,12 @@ class NodeCollection extends Model
     // Properties
     // =========================================================================
 
-    protected $field;
-    protected $nodes = [];
+    private $field;
+    private $nodes = [];
+    private $rawNodes = [];
+
+    private $_registeredNodesByType = [];
+    private $_registeredMarksByType = [];
 
 
     // Public Methods
@@ -24,24 +30,14 @@ class NodeCollection extends Model
     public function __construct($field, $nodes = [])
     {
         $this->field = $field;
+        $this->rawNodes = $nodes;
 
-        $registeredNodes = Vizy::$plugin->getNodes()->getRegisteredNodes();
+        // Save here as we're recursively populating nodes/marks
+        $this->_registeredNodesByType = Vizy::$plugin->getNodes()->getRegisteredNodesByType();
+        $this->_registeredMarksByType = Vizy::$plugin->getNodes()->getRegisteredMarksByType();
 
-        // Create node objects for all items
-        foreach ($nodes as $node) {
-            foreach ($registeredNodes as $class) {
-                $renderClass = new $class($field, $node);
-
-                if ($renderClass->matching()) {
-                    if ($renderClass->isDeleted()) {
-                        break;
-                    }
-
-                    $this->nodes[] = $renderClass;
-                    break;
-                }
-            }
-        }
+        // Prepare node/mark classes for the collection
+        $this->nodes = $this->_populateNodes($nodes);
     }
 
     public function __toString()
@@ -59,11 +55,37 @@ class NodeCollection extends Model
         return $this->field;
     }
 
-    public function renderHtml()
+    public function getRawNodes()
+    {
+        return $this->rawNodes;
+    }
+
+    public function renderHtml($config = [])
     {
         $html = [];
 
         foreach ($this->getNodes() as $node) {
+            // Apply any node config set in templates
+            foreach ($config as $type => $nodeConfig) {
+                if ($node->getType() === $type) {
+                    // Extract any mark config and apply to all marks of matching type
+                    // Also remove it from the config so it doesn't clash with the `marks` prop.
+                    $marksConfig = ArrayHelper::remove($nodeConfig, 'marks');
+
+                    foreach ($node->content as $nodeContent) {
+                        foreach ($nodeContent->marks as $mark) {
+                            $markConfig = $marksConfig[$mark->getType()] ?? [];
+
+                            if ($markConfig) {
+                                Craft::configure($mark, $markConfig);
+                            }
+                        }
+                    }
+                    
+                    Craft::configure($node, $nodeConfig);
+                }
+            }
+
             $html[] = $node->renderHtml();
         }
 
@@ -79,18 +101,61 @@ class NodeCollection extends Model
 
     public function query()
     {
-        return (new ArrayQuery())->from($this->getNodes());
+        $arrayQuery = new ArrayQuery();
+        $arrayQuery->primaryKeyName = 'type';
+
+        return $arrayQuery->from($this->getNodes());
     }
 
-    public function getRawNodes()
-    {
-        $data = [];
 
-        foreach ($this->getNodes() as $node) {
-            $data[] = $node->node;
+    // Private Methods
+    // =========================================================================
+
+    private function _populateNodes($nodes)
+    {
+        $result = [];
+
+        foreach ($nodes as $nodeKey => $node) {
+            // Drill into any nested nodes first
+            if (isset($node['content'])) {
+                $node['content'] = $this->_populateNodes($node['content']);
+            }
+
+            // Handle initalizing nested marks
+            if (isset($node['marks'])) {
+                foreach ($node['marks'] as $markKey => $mark) {
+                    if ($class = ($this->_registeredMarksByType[$mark['type']] ?? null)) {
+                        unset($mark['type']);
+
+                        $node['marks'][$markKey] = Craft::createObject(array_merge($mark, [
+                            'class' => $class,
+                            'field' => $this->field,
+                        ]));
+                    } else {
+                        // If an un-registered mark, drop it
+                        unset($node['marks'][$markKey]);
+                    }
+                }
+            }
+
+            if ($class = ($this->_registeredNodesByType[$node['type']] ?? null)) {
+                unset($node['type']);
+                
+                $nodeClass = Craft::createObject(array_merge($node, [
+                    'class' => $class,
+                    'field' => $this->field,
+                ]));
+
+                if (!$nodeClass->isDeleted()) {
+                    $result[] = $nodeClass;
+                }
+            } else {
+                // If an un-registered node, drop it
+                unset($nodes[$nodeKey]);
+            }
         }
 
-        return $data;
+        return $result;
     }
 
 }

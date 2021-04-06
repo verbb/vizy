@@ -20,18 +20,19 @@ class Nodes
         }
 
         return join('', array_map(function($item) {
-            if (is_string($item)) {
-                return "<{$item}>";
-            }
+            $tags = (array)$item['tag'];
 
-            $attrs = '';
-            if (isset($item['attrs'])) {
-                foreach ($item['attrs'] as $attribute => $value) {
-                    $attrs .= " {$attribute}=\"{$value}\"";
+            return join('', array_map(function($tag) use ($item) {
+                $attrs = '';
+
+                if (isset($item['attrs'])) {
+                    foreach ($item['attrs'] as $attribute => $value) {
+                        $attrs .= " {$attribute}=\"{$value}\"";
+                    }
                 }
-            }
 
-            return "<{$item['tag']}{$attrs}>";
+                return "<{$tag}{$attrs}>";
+            }, $tags));
         }, $tags));
     }
 
@@ -45,11 +46,11 @@ class Nodes
         }
 
         return join('', array_map(function($item) {
-            if (is_string($item)) {
-                return "</{$item}>";
-            }
+            $tags = (array)$item['tag'];
 
-            return "</{$item['tag']}>";
+            return join('', array_map(function($tag) use ($item) {
+                return "</{$tag}>";
+            }, $tags));
         }, $tags));
     }
     

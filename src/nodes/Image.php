@@ -11,8 +11,8 @@ class Image extends Node
     // Properties
     // =========================================================================
 
-    protected $type = 'image';
-    protected $tagName = 'img';
+    public static $type = 'image';
+    public $tagName = 'img';
 
     
     // Public Methods
@@ -25,12 +25,11 @@ class Image extends Node
 
     public function renderNode()
     {
-        if (isset($this->node['attrs']['url'])) {
+        if (isset($this->attrs['url'])) {
             $renderClass = new Link([
-                'type' => 'link',
                 'attrs' => [
-                    'href' => $this->node['attrs']['url'] ?? '',
-                    'target' => $this->node['attrs']['target'] ?? '',
+                    'href' => $this->attrs['url'] ?? '',
+                    'target' => $this->attrs['target'] ?? '',
                 ],
             ]);
 
@@ -47,16 +46,11 @@ class Image extends Node
     public function getTag()
     {
         // Don't include certain attributes in rendering
-        ArrayHelper::remove($this->node['attrs'], 'id');
-        ArrayHelper::remove($this->node['attrs'], 'url');
-        ArrayHelper::remove($this->node['attrs'], 'target');
-        ArrayHelper::remove($this->node['attrs'], 'transform');
+        ArrayHelper::remove($this->attrs, 'id');
+        ArrayHelper::remove($this->attrs, 'url');
+        ArrayHelper::remove($this->attrs, 'target');
+        ArrayHelper::remove($this->attrs, 'transform');
 
-        return [
-            [
-                'tag' => $this->tagName,
-                'attrs' => $this->node['attrs'],
-            ],
-        ];
+        return parent::getTag();
     }
 }

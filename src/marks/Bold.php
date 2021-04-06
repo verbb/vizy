@@ -8,7 +8,7 @@ class Bold extends Mark
     // Properties
     // =========================================================================
 
-    protected $type = 'bold';
-    protected $tagName = 'strong';
+    public static $type = 'bold';
+    public $tagName = 'strong';
     
 }

@@ -12,7 +12,7 @@ class Settings extends Model
     // Properties
     // =========================================================================
 
-    public $iconsPath = '';
+    public $iconsPath = '@webroot/icons/';
 
 
     // Public Methods

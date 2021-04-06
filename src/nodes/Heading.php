@@ -8,7 +8,7 @@ class Heading extends Node
     // Properties
     // =========================================================================
 
-    protected $type = 'heading';
+    public static $type = 'heading';
 
 
     // Public Methods
@@ -16,7 +16,7 @@ class Heading extends Node
 
     public function getTag()
     {
-        return "h{$this->node['attrs']['level']}";
+        return "h{$this->attrs['level']}";
     }
 
 }

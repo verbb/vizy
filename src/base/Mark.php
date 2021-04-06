@@ -2,61 +2,88 @@
 namespace verbb\vizy\base;
 
 use verbb\vizy\Vizy;
+use verbb\vizy\events\ModifyMarkTagEvent;
 use verbb\vizy\helpers\Nodes;
 
 use Craft;
+use craft\base\Component;
 use craft\helpers\Template;
 
-class Mark
+class Mark extends Component
 {
+    // Constants
+    // =========================================================================
+
+    const EVENT_MODIFY_TAG = 'modifyTag';
+
+
     // Properties
     // =========================================================================
 
-    protected $mark;
-    protected $type;
-    protected $tagName = null;
+    public static $type;
+
+    public $tagName = null;
+    public $attrs = [];
+    
+    private $field;
 
 
     // Public Methods
     // =========================================================================
 
-    public function __construct($mark)
-    {
-        $this->mark = $mark;
-    }
-
-    public function matching()
-    {
-        if (isset($this->mark['type'])) {
-            return $this->mark['type'] === $this->type;
-        }
-        
-        return false;
-    }
-
-    public function getMark()
-    {
-        return $this->mark;
-    }
-
     public function getType()
     {
-        return $this->type;
+        return static::$type;
+    }
+
+    public function getField()
+    {
+        return $this->field;
+    }
+
+    public function setField($value)
+    {
+        $this->field = $value;
     }
 
     public function getTag()
     {
-        return $this->tagName;
+        return [
+            [
+                'tag' => $this->tagName,
+                'attrs' => $this->attrs,
+            ],
+        ];
     }
 
     public function renderOpeningTag()
     {
-        return Nodes::renderOpeningTag($this->getTag());
+        $tag = $this->getTag();
+
+        $event = new ModifyMarkTagEvent([
+            'tag' => $tag,
+            'mark' => $this,
+            'opening' => true,
+        ]);
+
+        $this->trigger(self::EVENT_MODIFY_TAG, $event);
+
+        return Nodes::renderOpeningTag($event->tag);
     }
 
     public function renderClosingTag()
     {
-        return Nodes::renderClosingTag($this->getTag());
+        $tag = $this->getTag();
+
+        $event = new ModifyMarkTagEvent([
+            'tag' => $tag,
+            'mark' => $this,
+            'closing' => true,
+        ]);
+
+        $this->trigger(self::EVENT_MODIFY_TAG, $event);
+
+        return Nodes::renderClosingTag($event->tag);
     }
     
 }

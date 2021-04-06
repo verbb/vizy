@@ -8,7 +8,7 @@ class Table extends Node
     // Properties
     // =========================================================================
 
-    protected $type = 'table';
-    protected $tagName = ['table', 'tbody'];
+    public static $type = 'table';
+    public $tagName = ['table', 'tbody'];
 
 }

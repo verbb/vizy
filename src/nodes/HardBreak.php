@@ -8,8 +8,8 @@ class HardBreak extends Node
     // Properties
     // =========================================================================
 
-    protected $type = 'hardBreak';
-    protected $tagName = 'br';
+    public static $type = 'hardBreak';
+    public $tagName = 'br';
 
     // Public Methods
     // =========================================================================

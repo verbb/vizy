@@ -8,7 +8,7 @@ class BulletList extends Node
     // Properties
     // =========================================================================
 
-    protected $type = 'bulletList';
-    protected $tagName = 'ul';
+    public static $type = 'bulletList';
+    public $tagName = 'ul';
 
 }

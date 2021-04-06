@@ -8,7 +8,7 @@ class Underline extends Mark
     // Properties
     // =========================================================================
 
-    protected $type = 'underline';
-    protected $tagName = 'u';
+    public static $type = 'underline';
+    public $tagName = 'u';
     
 }

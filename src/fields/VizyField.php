@@ -446,8 +446,8 @@ class VizyField extends Field
         if ($value && $value instanceof NodeCollection) {
             foreach ($value->getNodes() as $key => $block) {
                 if ($block instanceof VizyBlock) {
-                    $blockId = $block->node['attrs']['id'];
-                    $fieldData = $block->node['attrs']['values']['content']['fields'] ?? [];
+                    $blockId = $block->attrs['id'];
+                    $fieldData = $block->attrs['values']['content']['fields'] ?? [];
 
                     $fieldLayout = $block->getFieldLayout();
 

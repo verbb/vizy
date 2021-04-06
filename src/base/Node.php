@@ -2,6 +2,7 @@
 namespace verbb\vizy\base;
 
 use verbb\vizy\Vizy;
+use verbb\vizy\events\ModifyNodeTagEvent;
 use verbb\vizy\helpers\Nodes;
 
 use Craft;
@@ -10,32 +11,28 @@ use craft\helpers\Template;
 
 class Node extends Component
 {
+    // Constants
+    // =========================================================================
+
+    const EVENT_MODIFY_TAG = 'modifyTag';
+
+
     // Properties
     // =========================================================================
 
-    protected $field;
-    protected $node;
-    protected $type;
-    protected $tagName = null;
+    public static $type;
+
+    public $tagName = null;
+    public $content = [];
+    public $attrs = [];
+    public $marks = [];
+    public $text = null;
+
+    private $field;
 
 
     // Public Methods
     // =========================================================================
-
-    public function __construct($field, $node)
-    {
-        $this->field = $field;
-        $this->node = $node;
-    }
-
-    public function matching()
-    {
-        if (isset($this->node['type'])) {
-            return $this->node['type'] === $this->type;
-        }
-
-        return false;
-    }
 
     public function selfClosing()
     {
@@ -49,12 +46,27 @@ class Node extends Component
 
     public function getTag()
     {
-        return $this->tagName;
+        return [
+            [
+                'tag' => $this->tagName,
+                'attrs' => $this->attrs,
+            ],
+        ];
     }
 
-    public function getNode()
+    public function getType()
     {
-        return $this->node;
+        return static::$type;
+    }
+
+    public function getMarks()
+    {
+        return $this->marks;
+    }
+
+    public function getContent()
+    {
+        return $this->content;
     }
 
     public function getField()
@@ -62,24 +74,24 @@ class Node extends Component
         return $this->field;
     }
 
-    public function getType()
+    public function setField($value)
     {
-        return $this->type;
+        $this->field = $value;
     }
 
     public function getAttrs()
     {
-        return $this->node['attrs'] ?? [];
+        return $this->attrs;
     }
 
-    public function text()
+    public function getText()
     {
-        return null;
+        return $this->text;
     }
 
     public function renderNode()
     {
-        return Vizy::$plugin->getNodes()->renderNode($this->field, $this->node);
+        return Vizy::$plugin->getNodes()->renderNode($this);
     }
 
     public function renderHtml()
@@ -89,11 +101,31 @@ class Node extends Component
 
     public function renderOpeningTag()
     {
-        return Nodes::renderOpeningTag($this->getTag());
+        $tag = $this->getTag();
+
+        $event = new ModifyNodeTagEvent([
+            'tag' => $tag,
+            'node' => $this,
+            'opening' => true,
+        ]);
+
+        $this->trigger(self::EVENT_MODIFY_TAG, $event);
+
+        return Nodes::renderOpeningTag($event->tag);
     }
 
     public function renderClosingTag()
     {
-        return Nodes::renderClosingTag($this->getTag());
+        $tag = $this->getTag();
+
+        $event = new ModifyNodeTagEvent([
+            'tag' => $tag,
+            'node' => $this,
+            'closing' => true,
+        ]);
+
+        $this->trigger(self::EVENT_MODIFY_TAG, $event);
+
+        return Nodes::renderClosingTag($event->tag);
     }
 }

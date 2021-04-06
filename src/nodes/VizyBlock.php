@@ -11,7 +11,7 @@ class VizyBlock extends Node
     // Properties
     // =========================================================================
 
-    protected $type = 'vizyBlock';
+    public static $type = 'vizyBlock';
     protected $handle;
 
     private $_fieldLayout;
@@ -22,11 +22,11 @@ class VizyBlock extends Node
     // Public Methods
     // =========================================================================
 
-    public function __construct($field, $node)
+    public function __construct($config = [])
     {
-        parent::__construct($field, $node);
+        parent::__construct($config);
 
-        $blockTypeId = $this->node['attrs']['values']['type'] ?? '';
+        $blockTypeId = $this->attrs['values']['type'] ?? '';
 
         if ($blockTypeId) {
             $this->_blockType = $this->field->getBlockTypeById($blockTypeId);
@@ -38,7 +38,7 @@ class VizyBlock extends Node
                 $this->handle = $this->_blockType->handle;
 
                 // Add in the blocktype enabled/disabled state, independant on the block enabled/disabled
-                $this->node['attrs']['values']['typeEnabled'] = $this->_blockType->enabled;
+                $this->attrs['values']['typeEnabled'] = $this->_blockType->enabled;
 
                 if ($this->_fieldLayout) {
                     foreach ($this->_fieldLayout->getFields() as $key => $field) {
@@ -86,12 +86,12 @@ class VizyBlock extends Node
 
     public function getEnabled()
     {
-        return $this->node['attrs']['enabled'] ?? true;
+        return $this->attrs['enabled'] ?? true;
     }
 
     public function getBlockTypeEnabled()
     {
-        return $this->node['attrs']['values']['typeEnabled'] ?? true;
+        return $this->attrs['values']['typeEnabled'] ?? true;
     }
 
     public function isDeleted()
@@ -142,7 +142,7 @@ class VizyBlock extends Node
 
     private function _getRawFieldContent($handle)
     {
-        return $this->node['attrs']['values']['content']['fields'][$handle] ?? null;
+        return $this->attrs['values']['content']['fields'][$handle] ?? null;
     }
 
 }

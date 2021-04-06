@@ -8,7 +8,7 @@ class ListItem extends Node
     // Properties
     // =========================================================================
 
-    protected $type = 'listItem';
-    protected $tagName = 'li';
+    public static $type = 'listItem';
+    public $tagName = 'li';
 
 }

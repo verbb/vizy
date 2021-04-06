@@ -8,7 +8,7 @@ class CodeBlock extends Node
     // Properties
     // =========================================================================
 
-    protected $type = 'codeBlock';
-    protected $tagName = ['pre', 'code'];
+    public static $type = 'codeBlock';
+    public $tagName = ['pre', 'code'];
 
 }

@@ -8,8 +8,8 @@ class Link extends Mark
     // Properties
     // =========================================================================
 
-    protected $type = 'link';
-    protected $tagName = 'a';
+    public static $type = 'link';
+    public $tagName = 'a';
 
 
     // Public Methods
@@ -19,15 +19,15 @@ class Link extends Mark
     {
         $attrs = [];
 
-        if (isset($this->mark['attrs']['target'])) {
-            $attrs['target'] = $this->mark['attrs']['target'];
+        if (isset($this->attrs['target'])) {
+            $attrs['target'] = $this->attrs['target'];
         }
 
-        if (isset($this->mark['attrs']['rel'])) {
-            $attrs['rel'] = $this->mark['attrs']['rel'];
+        if (isset($this->attrs['rel'])) {
+            $attrs['rel'] = $this->attrs['rel'];
         }
 
-        $attrs['href'] = $this->mark['attrs']['href'];
+        $attrs['href'] = $this->attrs['href'];
 
         return [
             [
