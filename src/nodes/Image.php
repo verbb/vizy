@@ -30,6 +30,7 @@ class Image extends Node
                 'attrs' => [
                     'href' => $this->attrs['url'] ?? '',
                     'target' => $this->attrs['target'] ?? '',
+                    'class' => $this->attrs['linkClass'] ?? '',
                 ],
             ]);
 
@@ -50,6 +51,7 @@ class Image extends Node
         ArrayHelper::remove($this->attrs, 'url');
         ArrayHelper::remove($this->attrs, 'target');
         ArrayHelper::remove($this->attrs, 'transform');
+        ArrayHelper::remove($this->attrs, 'linkClass');
 
         return parent::getTag();
     }

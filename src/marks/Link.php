@@ -17,23 +17,11 @@ class Link extends Mark
 
     public function getTag()
     {
-        $attrs = [];
-
         if (isset($this->attrs['target'])) {
-            $attrs['target'] = $this->attrs['target'];
+            if ($this->attrs['target'] === '_blank') {
+                $this->attrs['rel'] = 'noopener noreferrer nofollow';
+            }
         }
-
-        if (isset($this->attrs['rel'])) {
-            $attrs['rel'] = $this->attrs['rel'];
-        }
-
-        $attrs['href'] = $this->attrs['href'];
-
-        return [
-            [
-                'tag' => $this->tagName,
-                'attrs' => $attrs,
-            ],
-        ];
+        return parent::getTag();
     }
 }

@@ -56,7 +56,6 @@
                     v-model="value.target"
                     type="checkbox"
                     class="checkbox"
-                    value="_blank"
                 >
                 <label :for="targetId">
                     {{ 'Open link in new tab' | t('vizy') }}
@@ -152,7 +151,7 @@ export default {
                 return;
             }
 
-            const data = { href: this.value.url, target: this.value.target };
+            const data = { href: this.value.url, target: this.value.target ? '_blank' : '' };
 
             // Save the cursor position so we can restore it afterwards
             const { selection } = this.editor.state.tr;

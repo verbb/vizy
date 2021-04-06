@@ -81,8 +81,11 @@ class NodeCollection extends Model
                             }
                         }
                     }
-                    
-                    Craft::configure($node, $nodeConfig);
+
+                    // Check if we want to merge attributes, instead of replace. Useful for attrs.
+                    $merge = ArrayHelper::remove($nodeConfig, 'merge');
+
+                    self::configure($node, $nodeConfig, $merge);
                 }
             }
 
@@ -110,6 +113,19 @@ class NodeCollection extends Model
 
     // Private Methods
     // =========================================================================
+
+    private static function configure($object, $properties, $merge)
+    {
+        foreach ($properties as $name => $value) {
+            if ($merge) {
+                $value = array_merge($object->$name, $value);
+            }
+
+            $object->$name = $value;
+        }
+
+        return $object;
+    }
 
     private function _populateNodes($nodes)
     {

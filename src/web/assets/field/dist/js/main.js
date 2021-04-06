@@ -23272,7 +23272,6 @@ var _this = undefined;
 //
 //
 //
-//
 
 
 
@@ -23368,7 +23367,10 @@ var _this = undefined;
 
       this.errors = [];
 
-      var url = this._removeTransformFromUrl(this.value.src.split('#')[0]);
+      var url = this._removeTransformFromUrl(this.value.src.split('#')[0]); // Set the target value properly
+
+
+      this.value.target = this.value.target ? '_blank' : '';
 
       if (this.value.transform) {
         this._getTransformUrl(this.value.id, this.value.transform, function (url) {
@@ -23839,7 +23841,6 @@ var _this = undefined;
 //
 //
 //
-//
 
 
 
@@ -23914,7 +23915,7 @@ var _this = undefined;
 
       var data = {
         href: this.value.url,
-        target: this.value.target
+        target: this.value.target ? '_blank' : ''
       }; // Save the cursor position so we can restore it afterwards
 
       var selection = this.editor.state.tr.selection;
@@ -58781,10 +58782,10 @@ var render = function() {
                   }
                 ],
                 staticClass: "checkbox",
-                attrs: { id: _vm.targetId, type: "checkbox", value: "_blank" },
+                attrs: { id: _vm.targetId, type: "checkbox" },
                 domProps: {
                   checked: Array.isArray(_vm.value.target)
-                    ? _vm._i(_vm.value.target, "_blank") > -1
+                    ? _vm._i(_vm.value.target, null) > -1
                     : _vm.value.target
                 },
                 on: {
@@ -58793,7 +58794,7 @@ var render = function() {
                       $$el = $event.target,
                       $$c = $$el.checked ? true : false
                     if (Array.isArray($$a)) {
-                      var $$v = "_blank",
+                      var $$v = null,
                         $$i = _vm._i($$a, $$v)
                       if ($$el.checked) {
                         $$i < 0 &&
@@ -59334,10 +59335,10 @@ var render = function() {
                 }
               ],
               staticClass: "checkbox",
-              attrs: { id: _vm.targetId, type: "checkbox", value: "_blank" },
+              attrs: { id: _vm.targetId, type: "checkbox" },
               domProps: {
                 checked: Array.isArray(_vm.value.target)
-                  ? _vm._i(_vm.value.target, "_blank") > -1
+                  ? _vm._i(_vm.value.target, null) > -1
                   : _vm.value.target
               },
               on: {
@@ -59346,7 +59347,7 @@ var render = function() {
                     $$el = $event.target,
                     $$c = $$el.checked ? true : false
                   if (Array.isArray($$a)) {
-                    var $$v = "_blank",
+                    var $$v = null,
                       $$i = _vm._i($$a, $$v)
                     if ($$el.checked) {
                       $$i < 0 &&

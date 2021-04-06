@@ -74,7 +74,6 @@
                         v-model="value.target"
                         type="checkbox"
                         class="checkbox"
-                        value="_blank"
                     >
                     <label :for="targetId">
                         {{ 'Open link in new tab' | t('vizy') }}
@@ -213,6 +212,9 @@ export default {
             this.errors = [];
 
             let url = this._removeTransformFromUrl(this.value.src.split('#')[0]);
+
+            // Set the target value properly
+            this.value.target = this.value.target ? '_blank' : '';
 
             if (this.value.transform) {
                 this._getTransformUrl(this.value.id, this.value.transform, (url) => {
