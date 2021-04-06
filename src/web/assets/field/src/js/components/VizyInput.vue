@@ -478,6 +478,7 @@ export default {
         pointer-events: none;
     }
 
+    &.ProseMirror-selectednode,
     &.has-focus {
         img {
             outline: 2px solid #3397ff !important;

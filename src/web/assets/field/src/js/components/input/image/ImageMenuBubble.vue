@@ -115,7 +115,8 @@ export default {
         edit() {
             this.showEditModal = true;
 
-            this.destroyBubble();
+            // Don't destroy, takes focus away from image
+            // this.destroyBubble();
 
             this.editor.chain().blur().run();
         },

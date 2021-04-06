@@ -23092,8 +23092,9 @@ function _defineProperty(obj, key, value) { if (key in obj) { Object.definePrope
       }
     },
     edit: function edit() {
-      this.showEditModal = true;
-      this.destroyBubble();
+      this.showEditModal = true; // Don't destroy, takes focus away from image
+      // this.destroyBubble();
+
       this.editor.chain().blur().run();
     },
     closeModal: function closeModal() {
@@ -25045,7 +25046,7 @@ exports = module.exports = __webpack_require__(/*! ../../../../../../../node_mod
 
 
 // module
-exports.push([module.i, ".vui-rich-text {\n  position: relative;\n  border-radius: 3px;\n  border: 1px solid rgba(96, 125, 159, 0.25);\n}\n.vui-rich-text .ProseMirror {\n  outline: none;\n  word-wrap: normal;\n  overflow: hidden;\n  padding: 16px;\n  min-height: 10rem;\n  background-color: #fbfcfe;\n  background-clip: padding-box;\n}\n[data-is-showing-errors=true] .vui-rich-text .ProseMirror {\n  border-color: #CF1124;\n}\n.vui-editor, .vui-editor * {\n  -moz-box-sizing: border-box;\n       box-sizing: border-box;\n}\n.vui-editor ul, .vui-editor ol {\n  padding-left: 0 !important;\n  margin-left: 24px;\n}\n.vui-editor ul {\n  list-style-type: disc;\n}\n.vui-editor blockquote {\n  border-left: 5px solid #edf2fc;\n  border-radius: 2px;\n  color: #606266;\n  margin: 10px 0;\n  padding-left: 1em;\n}\n.vui-editor pre {\n  background: #0d0d0d;\n  color: #fff;\n  font-family: JetBrainsMono, monospace;\n  padding: 0.75rem 1rem;\n  border-radius: 0.5rem;\n}\n.vui-editor a {\n  color: #3397ff;\n  text-decoration: underline;\n}\n.vui-editor.code-view {\n  opacity: 0;\n  visibility: hidden;\n  pointer-events: none;\n}\n.vui-editor-img-wrap {\n  display: block;\n  outline: 0;\n}\n.vui-editor-img-wrap img {\n  outline: 2px solid transparent !important;\n  transition: 0.3s outline ease;\n  max-width: 100%;\n  pointer-events: none;\n}\n.vui-editor-img-wrap.has-focus img {\n  outline: 2px solid #3397ff !important;\n}", ""]);
+exports.push([module.i, ".vui-rich-text {\n  position: relative;\n  border-radius: 3px;\n  border: 1px solid rgba(96, 125, 159, 0.25);\n}\n.vui-rich-text .ProseMirror {\n  outline: none;\n  word-wrap: normal;\n  overflow: hidden;\n  padding: 16px;\n  min-height: 10rem;\n  background-color: #fbfcfe;\n  background-clip: padding-box;\n}\n[data-is-showing-errors=true] .vui-rich-text .ProseMirror {\n  border-color: #CF1124;\n}\n.vui-editor, .vui-editor * {\n  -moz-box-sizing: border-box;\n       box-sizing: border-box;\n}\n.vui-editor ul, .vui-editor ol {\n  padding-left: 0 !important;\n  margin-left: 24px;\n}\n.vui-editor ul {\n  list-style-type: disc;\n}\n.vui-editor blockquote {\n  border-left: 5px solid #edf2fc;\n  border-radius: 2px;\n  color: #606266;\n  margin: 10px 0;\n  padding-left: 1em;\n}\n.vui-editor pre {\n  background: #0d0d0d;\n  color: #fff;\n  font-family: JetBrainsMono, monospace;\n  padding: 0.75rem 1rem;\n  border-radius: 0.5rem;\n}\n.vui-editor a {\n  color: #3397ff;\n  text-decoration: underline;\n}\n.vui-editor.code-view {\n  opacity: 0;\n  visibility: hidden;\n  pointer-events: none;\n}\n.vui-editor-img-wrap {\n  display: block;\n  outline: 0;\n}\n.vui-editor-img-wrap img {\n  outline: 2px solid transparent !important;\n  transition: 0.3s outline ease;\n  max-width: 100%;\n  pointer-events: none;\n}\n.vui-editor-img-wrap.ProseMirror-selectednode img, .vui-editor-img-wrap.has-focus img {\n  outline: 2px solid #3397ff !important;\n}", ""]);
 
 // exports
 
