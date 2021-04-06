@@ -1,0 +1,48 @@
+[
+    {
+        "title": "Get Started",
+        "collapsable": false,
+        "children": [
+            "get-started/installation-setup",
+            "get-started/requirements",
+            "get-started/configuration"
+        ]
+    },
+    {
+        "title": "Feature Tour",
+        "collapsable": false,
+        "children": [
+            "feature-tour/what-is-vizy",
+            "feature-tour/field-settings",
+            "feature-tour/block-based-editor"
+        ]
+    },
+    {
+        "title": "Template Guides",
+        "collapsable": false,
+        "children": [
+            "template-guides/rendering-content",
+            "template-guides/modify-nodes",
+            "template-guides/querying-nodes",
+            "template-guides/modular-templates",
+            "template-guides/block-type-templates"
+        ]
+    },
+    {
+        "title": "Developers",
+        "collapsable": false,
+        "children": [
+            "developers/events",
+            "developers/node",
+            "developers/mark",
+            "developers/node-collection"
+        ]
+    },
+    {
+        "title": "Support",
+        "collapsable": false,
+        "children": [
+            "support/get-support"
+        ]
+    }
+]
