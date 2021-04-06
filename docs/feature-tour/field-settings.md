@@ -1,5 +1,5 @@
 # Field Settings
-Create a new Vizy field by going to Settings → Fields → New Field. Provide a name and select "Vizy" as the **Field Tyoe**.
+Create a new Vizy field by going to Settings → Fields → New Field. Provide a name and select "Vizy" as the **Field Type**.
 
 ## Editor Config
 You can select a configuration file for the editor, which define which buttons and other functionality the field should have. Consult the [Configuration](docs:get-started/configuration) for further information. You can also provide your configuration JSON specifically for this field.
