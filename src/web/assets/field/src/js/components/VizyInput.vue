@@ -149,7 +149,7 @@ export default {
             this.$emit('init', this);
 
             // Setup listeners for fixed toolbar option
-            if (this.settings.vizyConfig.toolbarFixed) {
+            if (this.toolbarFixed) {
                 window.addEventListener('scroll', this.updateFixedToolbar);
                 window.addEventListener('resize', this.updateFixedToolbar);
 
@@ -363,12 +363,12 @@ export default {
         },
 
         updateFixedToolbar(event) {
-            let headerBuffer = $('body.fixed-header #header').length ? $('body.fixed-header #header').outerHeight() : 0;
+            let headerBuffer = document.querySelector('body.fixed-header #header') ? document.querySelector('body.fixed-header #header').offsetHeight : 0;
 
             if (this.isLivePreview) {
-                headerBuffer = $('.lp-editor-container header.flex').length ? $('.lp-editor-container header.flex').outerHeight() : 0;
+                headerBuffer = document.querySelector('.lp-editor-container header.flex') ? document.querySelector('.lp-editor-container header.flex').offsetHeight : 0;
             }
-                
+
             this.$refs.toolbar.$el.style.position = 'sticky';
             this.$refs.toolbar.$el.style.top = this.$el.scrollTop + headerBuffer + 'px';
         },
@@ -486,5 +486,9 @@ export default {
     }
 }
 
+// Fix fixed toolbar + position: sticky
+#main-content {
+    overflow-x: visible !important;
+}
 
 </style>
