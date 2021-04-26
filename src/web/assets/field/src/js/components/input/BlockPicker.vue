@@ -144,7 +144,7 @@ export default {
 
 .vui-editor-insert {
     position: absolute;
-    z-index: 1;
+    z-index: 5;
     visibility: hidden;
     opacity: 0;
     background: #fff;

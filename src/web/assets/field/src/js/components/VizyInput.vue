@@ -1,6 +1,6 @@
 <template>
     <div>
-        <div class="vui-rich-text">
+        <div class="vui-rich-text" :class="{ 'has-focus': editor ? editor.isFocused : false }">
             <menu-bar v-if="editor && buttons.length" ref="toolbar" :buttons="buttons" :editor="editor" :field="this" />
             <code-editor v-if="editor" v-model="codeEditorHtml" :visible="showCodeEditor" :editor="editor" :field="this" />
             <editor-content :class="{ 'code-view': showCodeEditor }" class="vui-editor" :editor="editor" />
@@ -41,7 +41,7 @@ import Text from '@tiptap/extension-text';
 
 // TipTap - Extensions
 import Dropcursor from '@tiptap/extension-dropcursor';
-// import Focus from '@tiptap/extension-focus';
+import Focus from '@tiptap/extension-focus';
 import Gapcursor from '@tiptap/extension-dropcursor';
 import History from '@tiptap/extension-history';
 import TextAlign from '@tiptap/extension-text-align';
@@ -200,7 +200,7 @@ export default {
                 Paragraph,
                 Text,
                 VizyBlock.configure({ field: this }),
-                // Focus.configure({ className: 'has-focus', mode: 'deepest' }),
+                Focus.configure({ className: 'has-focus', mode: 'deepest' }),
             ];
 
             const { buttons } = this;
@@ -266,7 +266,7 @@ export default {
             }
 
             if (buttons.includes('align-left') || buttons.includes('align-right') || buttons.includes('align-center') || buttons.includes('align-justify')) {
-                extensions.push(TextAlign);
+                extensions.push(TextAlign.configure({ defaultAlignment: 'start' }));
             }
 
             if (buttons.includes('underline')) {
@@ -408,6 +408,10 @@ export default {
     border-radius: 3px;
     border: 1px solid rgba(96, 125, 159, 0.25);
 
+    &.has-focus {
+        box-shadow: 0 0 0 1px #127fbf, 0 0 0 3px rgb(18 127 191 / 50%);
+    }
+
     // Override tiptap
     .ProseMirror {
         outline: none;
@@ -420,6 +424,10 @@ export default {
 
         [data-is-showing-errors="true"] & {
             border-color: $errorColor;
+        }
+
+        &:focus {
+            box-shadow: none;
         }
     }
 }

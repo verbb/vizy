@@ -452,8 +452,8 @@ export default {
     background-color: #fff;
     border: 1px solid #cdd9e4;
 
-    &.active {
-        border-color: #007cba;
+    &.has-focus {
+        box-shadow: 0 0 0 1px #127fbf, 0 0 0 3px rgb(18 127 191 / 50%);
     }
 
     &::before {

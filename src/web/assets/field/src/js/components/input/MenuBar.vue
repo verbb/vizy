@@ -128,13 +128,13 @@ export default {
                 {
                     name: 'line-break',
                     svg: 'page-break',
-                    title: 'Line Break',
+                    title: Craft.t('vizy', 'Line Break'),
                     action: () => this.editor.chain().focus().setHardBreak().run(),
                 },
                 {
                     name: 'clear-format',
                     svg: 'remove-format',
-                    title: 'Clear Format',
+                    title: Craft.t('vizy', 'Clear Format'),
                     action: () => this.editor.chain().focus().clearNodes().unsetAllMarks().run(),
                 },
                 {
@@ -234,7 +234,7 @@ export default {
                 {
                     name: 'image',
                     icon: 'image',
-                    title: Craft.t('vizy', 'image'),
+                    title: Craft.t('vizy', 'Image'),
                     component: 'ImageMenuBarItem',
                     isActive: () => this.editor.isActive('image'),
                 },
@@ -298,7 +298,7 @@ export default {
     align-items: center;
     flex-wrap: wrap;
     display: flex;
-    z-index: 1;
+    z-index: 5;
     border-bottom: 1px rgba(49, 49, 93, 0.15) solid;
     box-shadow: 0 2px 3px 0 rgba(49, 49, 93, 0.075);
 }
