@@ -462,6 +462,10 @@ export default {
         height: 10px;
         display: block;
     }
+
+    .vizy-static & {
+        padding-top: 12px;
+    }
 }
 
 .vizyblock-header {

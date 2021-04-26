@@ -220,6 +220,17 @@ class VizyField extends Field
         return $value;
     }
 
+    public function getStaticHtml($value, ElementInterface $element): string
+    {
+        $view = Craft::$app->getView();
+
+        $view->registerAssetBundle(VizyAsset::class);
+
+        return Html::tag('div', $value->renderStaticHtml() ?: '&nbsp;', [
+            'class' => 'text vizy-static',
+        ]);
+    }
+
     public function beforeSave(bool $isNew): bool
     {
         if (!parent::beforeSave($isNew)) {

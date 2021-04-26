@@ -2,9 +2,11 @@
 namespace verbb\vizy\nodes;
 
 use verbb\vizy\base\Node;
+use verbb\vizy\elements\Block as BlockElement;
 
 use Craft;
 use craft\behaviors\CustomFieldBehavior;
+use craft\helpers\Html;
 
 class VizyBlock extends Node
 {
@@ -134,6 +136,35 @@ class VizyBlock extends Node
         $variables = array_merge($this->toArray(), $fieldValues);
 
         return $view->renderTemplate($this->_blockType->template, $variables);
+    }
+
+    public function renderStaticHtml()
+    {
+        $html = '';
+
+        $fieldLayout = $this->getFieldLayout();
+
+        if (!$fieldLayout) {
+            return $html;
+        }
+
+        // Create a fake element with the same fieldtype as our block
+        $block = new BlockElement();
+        $block->setFieldLayout($fieldLayout);
+
+        // Set the field values based on stored content
+        $fieldValues = $this->attrs['values']['content']['fields'] ?? [];
+        $block->setFieldValues($fieldValues);
+
+        foreach ($fieldLayout->getTabs() as $tab) {
+            foreach ($tab->elements as $tabElement) {
+                $html .= $tabElement->formHtml($block, true);
+            }
+        }
+
+        return Html::tag('div', $html, [
+            'class' => 'vizyblock',
+        ]);
     }
 
 

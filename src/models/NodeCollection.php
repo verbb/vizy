@@ -64,32 +64,25 @@ class NodeCollection extends Model
     {
         $html = [];
 
+        $this->_prepNodesForHtml($config);
+
         foreach ($this->getNodes() as $node) {
-            // Apply any node config set in templates
-            foreach ($config as $type => $nodeConfig) {
-                if ($node->getType() === $type) {
-                    // Extract any mark config and apply to all marks of matching type
-                    // Also remove it from the config so it doesn't clash with the `marks` prop.
-                    $marksConfig = ArrayHelper::remove($nodeConfig, 'marks');
-
-                    foreach ($node->content as $nodeContent) {
-                        foreach ($nodeContent->marks as $mark) {
-                            $markConfig = $marksConfig[$mark->getType()] ?? [];
-
-                            if ($markConfig) {
-                                Craft::configure($mark, $markConfig);
-                            }
-                        }
-                    }
-
-                    // Check if we want to merge attributes, instead of replace. Useful for attrs.
-                    $merge = ArrayHelper::remove($nodeConfig, 'merge');
-
-                    self::configure($node, $nodeConfig, $merge);
-                }
-            }
-
             $html[] = $node->renderHtml();
+        }
+
+        $html = join($html);
+
+        return Template::raw($html);
+    }
+
+    public function renderStaticHtml($config = [])
+    {
+        $html = [];
+
+        $this->_prepNodesForHtml($config);
+
+        foreach ($this->getNodes() as $node) {
+            $html[] = $node->renderStaticHtml();
         }
 
         $html = join($html);
@@ -172,6 +165,35 @@ class NodeCollection extends Model
         }
 
         return $result;
+    }
+
+    private function _prepNodesForHtml($config = [])
+    {
+        foreach ($this->getNodes() as $node) {
+            // Apply any node config set in templates
+            foreach ($config as $type => $nodeConfig) {
+                if ($node->getType() === $type) {
+                    // Extract any mark config and apply to all marks of matching type
+                    // Also remove it from the config so it doesn't clash with the `marks` prop.
+                    $marksConfig = ArrayHelper::remove($nodeConfig, 'marks');
+
+                    foreach ($node->content as $nodeContent) {
+                        foreach ($nodeContent->marks as $mark) {
+                            $markConfig = $marksConfig[$mark->getType()] ?? [];
+
+                            if ($markConfig) {
+                                Craft::configure($mark, $markConfig);
+                            }
+                        }
+                    }
+
+                    // Check if we want to merge attributes, instead of replace. Useful for attrs.
+                    $merge = ArrayHelper::remove($nodeConfig, 'merge');
+
+                    self::configure($node, $nodeConfig, $merge);
+                }
+            }
+        }
     }
 
 }

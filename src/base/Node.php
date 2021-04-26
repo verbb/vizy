@@ -99,6 +99,11 @@ class Node extends Component
         return Template::raw((string)$this->renderNode());
     }
 
+    public function renderStaticHtml()
+    {
+        return $this->renderHtml();
+    }
+
     public function renderOpeningTag()
     {
         $tag = $this->getTag();
