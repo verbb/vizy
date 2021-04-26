@@ -22,31 +22,12 @@ mix.sass(assetsPath + '/field/src/scss/style.scss', assetsPath + '/field/dist/cs
 // Setup and configure JS
 mix.js(assetsPath + '/field/src/js/main.js', assetsPath + '/field/dist/js');
 
+// Vue 2
+mix.vue({ version: 2 });
 
-
-
-
-// // Directly copy over some folders
-// mix.copy(assetsPath + '/forms/src/fonts', assetsPath + '/forms/dist/fonts');
-
-
-// // Optimise images and SVGs
-// mix.imagemin([
-//     { from: assetsPath + '/forms/src/img', to: 'forms/dist/img' },
-// ], {}, {
-//     gifsicle: { interlaced: true },
-//     mozjpeg: { progressive: true, arithmetic: false },
-//     optipng: { optimizationLevel: 3 }, // Lower number = speedier/reduced compression
-//     svgo: {
-//         plugins: [
-//             { convertColors: { currentColor: false } },
-//             { removeDimensions: false },
-//             { removeViewBox: false },
-//             { cleanupIDs: false },
-//         ],
-//     },
-// });
-
+mix.override((config) => {
+    delete config.watchOptions;
+});
 
 // Setup additional CSS-related options including Tailwind and any other PostCSS items
 mix.options({
@@ -81,13 +62,11 @@ mix.eslint({
 // Always allow versioning of assets
 mix.version();
 
-// if (mix.inProduction()) {
-//     // Add polyfills
-//     mix.polyfill({
-//         enabled: true,
-//         useBuiltIns: 'usage', // Only add a polyfill when a feature is used
-//         targets: false, // "false" makes the config use .browserslistrc file
-//         corejs: 3,
-//         debug: false, // "true" to check which polyfills are being used
-//     });
-// }
+// Add polyfills
+// mix.polyfill({
+//     enabled: true,
+//     useBuiltIns: 'usage', // Only add a polyfill when a feature is used
+//     targets: false, // "false" makes the config use .browserslistrc file
+//     corejs: 3,
+//     debug: false, // "true" to check which polyfills are being used
+// });

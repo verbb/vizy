@@ -1,10 +1,10 @@
 <template>
     <div>
-        <div class="vui-rich-text" :class="{ 'has-focus': editor ? editor.isFocused : false }">
-            <menu-bar v-if="editor && buttons.length" ref="toolbar" :buttons="buttons" :editor="editor" :field="this" />
-            <code-editor v-if="editor" v-model="codeEditorHtml" :visible="showCodeEditor" :editor="editor" :field="this" />
+        <div v-if="editor" class="vui-rich-text" :class="{ 'has-focus': editor ? editor.isFocused : false }">
+            <menu-bar v-if="buttons.length" ref="toolbar" :buttons="buttons" :editor="editor" :field="this" />
+            <code-editor v-model="codeEditorHtml" :visible="showCodeEditor" :editor="editor" :field="this" />
             <editor-content :class="{ 'code-view': showCodeEditor }" class="vui-editor" :editor="editor" />
-            <block-picker v-if="editor" :editor="editor" :field="this" :block-groups="settings.blockGroups" />
+            <block-picker :editor="editor" :field="this" :block-groups="settings.blockGroups" />
         </div>
 
         <div v-if="$isDebug" class="input text" style="margin-top: 20px;">{{ jsonContent }}</div>
@@ -15,8 +15,7 @@
 <script>
 import find from 'lodash/find';
 
-import { Editor } from '@tiptap/core';
-import { EditorContent } from '@tiptap/vue-2';
+import { Editor, EditorContent } from '@tiptap/vue-2';
 
 // TipTap - Marks
 import Bold from '@tiptap/extension-bold';
