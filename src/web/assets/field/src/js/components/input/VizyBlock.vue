@@ -372,12 +372,16 @@ export default {
         },
 
         deleteBlock() {
-            const pos = this.getPos();
-            const range = { from: pos, to: pos + this.node.nodeSize };
+            // Hide, don't destory, because of how Tiptap re-renders blocks
+            this.tippy.hide();
 
-            this.editor.chain().focus().deleteRange(range).run();
+            // Give it a second to hide tippy first
+            setTimeout(() => {
+                const pos = this.getPos();
+                const range = { from: pos, to: pos + this.node.nodeSize };
 
-            this.tippy.destroy();
+                this.editor.chain().focus().deleteRange(range).run();
+            }, 200);
         },
 
         collapseBlock() {
