@@ -24,7 +24,7 @@ class Paragraph extends Node
 
         // Add instead as a class, `text-left`, `text-right`, etc.
         if ($align && $align !== 'start') {
-            $this->attrs['class'] = ($this->attrs['class'] ?? '') . ' text-' . $align;
+            $this->attrs['class'] = trim(($this->attrs['class'] ?? '') . ' text-' . $align);
         }
 
         return parent::getTag();
