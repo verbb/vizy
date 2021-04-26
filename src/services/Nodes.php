@@ -128,7 +128,7 @@ class Nodes extends Component
                 }
             }
         } else if ($text = $node->getText()) {
-            $html[] = htmlentities($text, ENT_QUOTES);
+            $html[] = $text;
         }
 
         if (!$node->selfClosing()) {
