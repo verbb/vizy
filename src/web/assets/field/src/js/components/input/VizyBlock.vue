@@ -144,7 +144,7 @@ export default {
         },
 
         vizyField() {
-            return this.extension.options.field;
+            return this.editor.vizyField;
         },
 
         values() {

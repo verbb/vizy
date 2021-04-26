@@ -15,10 +15,6 @@ export default Node.create({
     selectable: true,
     // allowGapCursor: true,
 
-    defaultOptions: {
-        field: {},
-    },
-
     addAttributes() {
         return {
             id: { default: null },

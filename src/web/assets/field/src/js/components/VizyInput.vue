@@ -126,6 +126,10 @@ export default {
             },
         });
 
+        // Store this input against the editor for each access everywhere.
+        // Maybe watch this in the future as it's setting a non-standard prop.
+        this.editor.vizyField = this;
+
         this.json = this.editor.getJSON().content;
         this.html = this.editor.getHTML();
 
@@ -198,7 +202,7 @@ export default {
                 HardBreak,
                 Paragraph,
                 Text,
-                VizyBlock.configure({ field: this }),
+                VizyBlock,
                 Focus.configure({ className: 'has-focus', mode: 'deepest' }),
             ];
 
@@ -318,9 +322,11 @@ export default {
             var html = this.cachedFieldHtml[blockId];
 
             // When serialized, htmlentities are used, so decode them
-            html = html.replace(/&#(\d+);/g, (match, dec) => {
-                return String.fromCharCode(dec);
-            });
+            if (typeof html === 'string') {
+                html = html.replace(/&#(\d+);/g, (match, dec) => {
+                    return String.fromCharCode(dec);
+                });
+            }
 
             return this.getParsedBlockHtml(html, blockId);
         },
@@ -333,9 +339,11 @@ export default {
             var html = this.cachedFieldJs[blockId];
 
             // When serialized, htmlentities are used, so decode them
-            html = html.replace(/&#(\d+);/g, (match, dec) => {
-                return String.fromCharCode(dec);
-            });
+            if (typeof html === 'string') {
+                html = html.replace(/&#(\d+);/g, (match, dec) => {
+                    return String.fromCharCode(dec);
+                });
+            }
 
             return this.getParsedBlockHtml(html, blockId);
         },
