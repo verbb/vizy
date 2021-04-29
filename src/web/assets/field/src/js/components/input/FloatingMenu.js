@@ -67,14 +67,17 @@ class Menu {
             return;
         }
 
-        const parentBox = parent.getBoundingClientRect();
-        const cursorCoords = view.coordsAtPos(anchor);
-        const top = cursorCoords.top - parentBox.top;
+        // Give it a sec for the UI to catch up with newly added blocks
+        setTimeout(() => {
+            const parentBox = parent.getBoundingClientRect();
+            const cursorCoords = view.coordsAtPos(anchor);
+            const top = cursorCoords.top - parentBox.top;
 
-        this.isActive = true;
-        this.top = top;
+            this.isActive = true;
+            this.top = top;
 
-        this.sendUpdate();
+            this.sendUpdate();
+        }, 10);
     }
 
     sendUpdate() {
