@@ -35,7 +35,8 @@
             "developers/events",
             "developers/node",
             "developers/mark",
-            "developers/node-collection"
+            "developers/node-collection",
+            "developers/graphql"
         ]
     },
     {
