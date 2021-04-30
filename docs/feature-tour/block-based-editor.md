@@ -1,4 +1,4 @@
-# Block-Based Editor
+# Block Based Editor
 A big part of what makes Vizy special is how content is stored. Unlike many WYSIWYG fields, which store the raw HTML in the database, Vizy instead stores your content as JSON. This provides amazing flexibility and control when it comes to outputting the content of a Vizy field in your templates. 
 
 For example, consider the following paragraph of content:
