@@ -1,7 +1,7 @@
 blank_issues_enabled: false
 contact_links:
   - name: Documentation
-    url: https://verbb.io/craft-plugins/formie/docs
+    url: https://verbb.io/craft-plugins/vizy/docs
     about: Read the official documentation.
   - name: Craft Discord
     url: https://craftcms.com/discord
