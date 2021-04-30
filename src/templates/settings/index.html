@@ -22,11 +22,13 @@
 
 {% namespace 'settings' %}
 
-{{ forms.textField({
+{{ forms.autosuggestField({
     label: 'Icons Path' | t('vizy'),
     instructions: 'Provide the full path to your icon files. Aliases are also supported.' | t('vizy'),
     name: 'iconsPath',
     value: settings.iconsPath,
+    suggestEnvVars: true,
+    suggestAliases: true,
     errors: settings.getErrors('iconsPath'),
     warning: macros.configWarning('iconsPath', 'vizy'),
 }) }}
