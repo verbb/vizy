@@ -370,11 +370,51 @@ class VizyField extends Field
         return null;
     }
 
+    protected function searchKeywords($value, ElementInterface $element): string
+    {
+        $keywords = parent::searchKeywords($value, $element);
+
+        if ($value instanceof NodeCollection) {
+            $nodes = $value->getRawNodes();
+
+            // Any actual editor text
+            $keywords = $this->_getNestedValues($nodes, 'text');
+
+            // Fields are different, and we need to check on their searchability
+            foreach ($value->getNodes() as $key => $block) {
+                if ($block instanceof VizyBlock) {
+                    if ($fieldLayout = $block->getFieldLayout()) {
+                        foreach ($fieldLayout->getFields() as $field) {
+                            if (!$field->searchable) {
+                                continue;
+                            }
+
+                            $fieldData = $block->attrs['values']['content']['fields'][$field->handle] ?? [];
+
+                            // If this is a nested Vizy block?
+                            if ($field instanceof $this) {
+                                // Prep the collection so we can run this again for the nested field
+                                $fieldData = new NodeCollection($field, $fieldData);
+                            }
+
+                            $keywords[] = $field->searchKeywords($fieldData, $element);
+                        }
+                    }
+                }
+            }
+        }
+
+        if (is_array($keywords)) {
+            $keywords = trim(implode(' ', array_unique($keywords)));
+        }
+
+        return $keywords;
+    }
+
     public function getContentGqlType()
     {
         return NodeCollectionType::getType($this);
     }
-
 
 
     // Private Methods
@@ -395,6 +435,21 @@ class VizyField extends Field
         }
 
         return $data;
+    }
+
+    private function _getNestedValues($value, $key, &$items = [])
+    {
+        foreach ($value as $k => $v) {
+            if ((string)$k === $key) {
+                $items[] = $v;
+            }
+
+            if (is_array($v)) {
+                $this->_getNestedValues($v, $key, $items);
+            }
+        }
+
+        return $items;
     }
 
     private function _getBlockGroupsForSettings()
