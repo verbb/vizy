@@ -41,7 +41,7 @@ As you can see, despite not including the actual template code this code is alre
 
 Here, instead of including the template code for each node type in this template, we're including them using `{% include %}`. We're dynamically setting the include, based off the `node.type` attribute, with a fallback to `default` whenever a template is not found.
 
-::tip
+:::tip
 Read more about Twig's [include](https://twig.symfony.com/doc/3.x/tags/include.html) tag for how this works
 :::
 
