@@ -74,7 +74,7 @@ You can use our query engine to filter, limit or search nodes for a field.
 For further examples, see [Querying Nodes](docs:template-guides/querying-nodes).
 
 ## Raw Node Data
-You can also get the raw JSON block data, exactly as it's stored in the database.
+You can also get the raw JSON block data, exactly as it's stored in the database. Vizy will unserialize the JSON into an array for use in your templates.
 
 ```twig
 {{ dump(entry.vizyField.getRawNodes()) }}
