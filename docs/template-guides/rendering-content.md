@@ -50,7 +50,9 @@ Using the manual render method is far more involved, but gives you complete cont
         {% endif %}
     {% elseif node.type == 'paragraph' %}
         {# Handle rendering paragraphs #}
-        <p class="p-text">{{ nodeContent.text }}</p>
+        {% for nodeContent in node.content %}
+            <p class="p-text">{{ nodeContent.text }}</p>
+        {% endfor %}
     {% else %}
         {# Otherwise, render using the default #}
         {{ node.renderHtml() }}
