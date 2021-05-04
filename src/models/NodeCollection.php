@@ -16,6 +16,7 @@ class NodeCollection extends Model
     // Properties
     // =========================================================================
 
+    private $element;
     private $field;
     private $nodes = [];
     private $rawNodes = [];
@@ -27,8 +28,9 @@ class NodeCollection extends Model
     // Public Methods
     // =========================================================================
 
-    public function __construct($field, $nodes = [])
+    public function __construct($field, $nodes = [], $element = null)
     {
+        $this->element = $element;
         $this->field = $field;
         $this->rawNodes = $nodes;
 
@@ -139,6 +141,7 @@ class NodeCollection extends Model
                         $node['marks'][$markKey] = Craft::createObject(array_merge($mark, [
                             'class' => $class,
                             'field' => $this->field,
+                            'element' => $this->element,
                         ]));
                     } else {
                         // If an un-registered mark, drop it
@@ -153,6 +156,7 @@ class NodeCollection extends Model
                 $nodeClass = Craft::createObject(array_merge($node, [
                     'class' => $class,
                     'field' => $this->field,
+                    'element' => $this->element,
                 ]));
 
                 if (!$nodeClass->isDeleted()) {

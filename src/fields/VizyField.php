@@ -184,7 +184,7 @@ class VizyField extends Field
         }
 
         // Convert serialized data to a collection of nodes
-        $value = new NodeCollection($this, $value);
+        $value = new NodeCollection($this, $value, $element);
 
         return $value;
     }
@@ -394,7 +394,7 @@ class VizyField extends Field
                             // If this is a nested Vizy block?
                             if ($field instanceof $this) {
                                 // Prep the collection so we can run this again for the nested field
-                                $fieldData = new NodeCollection($field, $fieldData);
+                                $fieldData = new NodeCollection($field, $fieldData, $element);
                             }
 
                             $keywords[] = $field->searchKeywords($fieldData, $element);

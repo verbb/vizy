@@ -6,6 +6,7 @@ use verbb\vizy\elements\Block as BlockElement;
 
 use Craft;
 use craft\behaviors\CustomFieldBehavior;
+use craft\errors\InvalidFieldException;
 use craft\helpers\Html;
 
 class VizyBlock extends Node
@@ -19,6 +20,7 @@ class VizyBlock extends Node
     private $_fieldLayout;
     private $_blockType;
     private $_fieldsByHandle;
+    private $_normalizedFieldValues;
 
 
     // Public Methods
@@ -53,7 +55,7 @@ class VizyBlock extends Node
 
     public function __isset($name)
     {
-        if (isset($this->_fieldsByHandle[$name])) {
+        if ($this->fieldByHandle($name)) {
             return true;
         }
 
@@ -62,10 +64,8 @@ class VizyBlock extends Node
 
     public function __get($name)
     {
-        if (isset($this->_fieldsByHandle[$name])) {
-            $content = $this->_getRawFieldContent($name);
-
-            return $this->_fieldsByHandle[$name]->normalizeValue($content) ?? null;
+        if ($this->fieldByHandle($name) !== null) {
+            return $this->getFieldValue($name);
         }
 
         return parent::__get($name);
@@ -165,6 +165,52 @@ class VizyBlock extends Node
         return Html::tag('div', $html, [
             'class' => 'vizyblock',
         ]);
+    }
+
+    public function getFieldContext(): string
+    {
+        return Craft::$app->getContent()->fieldContext;
+    }
+
+    public function getFieldValue(string $fieldHandle)
+    {
+        // Make sure the value has been normalized
+        return $this->normalizeFieldValue($fieldHandle);
+    }
+
+    protected function normalizeFieldValue(string $fieldHandle)
+    {
+        // Have we already normalized this value?
+        if (isset($this->_normalizedFieldValues[$fieldHandle])) {
+            return;
+        }
+
+        $field = $this->fieldByHandle($fieldHandle);
+
+        if (!$field) {
+            throw new InvalidFieldException($fieldHandle);
+        }
+
+        $this->_normalizedFieldValues[$fieldHandle] = true;
+        $content = $this->_getRawFieldContent($fieldHandle);
+
+        return $field->normalizeValue($content, $this->element);
+    }
+
+    protected function fieldByHandle(string $handle)
+    {
+        if ($this->_fieldsByHandle !== null && array_key_exists($handle, $this->_fieldsByHandle)) {
+            return $this->_fieldsByHandle[$handle];
+        }
+
+        $contentService = Craft::$app->getContent();
+        $originalFieldContext = $contentService->fieldContext;
+        $contentService->fieldContext = $this->getFieldContext();
+        $fieldLayout = $this->getFieldLayout();
+        $this->_fieldsByHandle[$handle] = $fieldLayout ? $fieldLayout->getFieldByHandle($handle) : null;
+        $contentService->fieldContext = $originalFieldContext;
+
+        return $this->_fieldsByHandle[$handle];
     }
 
 

@@ -25,6 +25,7 @@ class Mark extends Component
     public $tagName = null;
     public $attrs = [];
     
+    private $element;
     private $field;
 
 
@@ -44,6 +45,16 @@ class Mark extends Component
     public function setField($value)
     {
         $this->field = $value;
+    }
+
+    public function getElement()
+    {
+        return $this->element;
+    }
+
+    public function setElement($value)
+    {
+        $this->element = $value;
     }
 
     public function getTag()

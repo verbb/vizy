@@ -28,6 +28,7 @@ class Node extends Component
     public $marks = [];
     public $text = null;
 
+    private $element;
     private $field;
 
 
@@ -77,6 +78,16 @@ class Node extends Component
     public function setField($value)
     {
         $this->field = $value;
+    }
+
+    public function getElement()
+    {
+        return $this->element;
+    }
+
+    public function setElement($value)
+    {
+        $this->element = $value;
     }
 
     public function getAttrs()
