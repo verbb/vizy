@@ -460,12 +460,15 @@ class VizyField extends Field
             $blocks = $group['blockTypes'] ?? [];
 
             foreach ($blocks as $blockTypeKey => $blockTypeData) {
+                // Remove this before populating the model
+                $layout = ArrayHelper::remove($blockTypeData, 'layout');
+
                 $blockType = new BlockType($blockTypeData);
                 $blockTypeArray = $blockType->toArray();
 
                 // Watch for Vue's reactivity with arrays/objects. Easier to just implement here.
                 // Never actually stored in the DB, but needed for field layout designer
-                $blockTypeArray['layout'] = [];
+                $blockTypeArray['layout'] = $layout;
 
                 // Override with prepped data for Vue
                 $data[$groupKey]['blockTypes'][$blockTypeKey] = $blockTypeArray;
