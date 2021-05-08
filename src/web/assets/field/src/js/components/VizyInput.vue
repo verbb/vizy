@@ -450,16 +450,17 @@ export default {
         box-sizing: border-box;
     }
 
-    ul, ol {
+    .ProseMirror > ul,
+    .ProseMirror > ol {
         padding-left: 0 !important;
         margin-left: 24px;
     }
 
-    ul {
+    .ProseMirror > ul {
         list-style-type: disc;
     }
 
-    blockquote {
+    .ProseMirror > blockquote {
         border-left: 5px solid #edf2fc;
         border-radius: 2px;
         color: #606266;
@@ -467,7 +468,7 @@ export default {
         padding-left: 1em;
     }
 
-    pre {
+    .ProseMirror > pre {
         background: #0d0d0d;
         color: #fff;
         font-family: JetBrainsMono,monospace;
@@ -475,7 +476,7 @@ export default {
         border-radius: .5rem;
     }
 
-    a {
+    .ProseMirror > p > a {
         color: #3397ff;
         text-decoration: underline;
     }
