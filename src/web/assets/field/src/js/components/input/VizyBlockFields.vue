@@ -57,6 +57,7 @@ export default {
                 });
             });
 
+            // Handle element selects
             $(this.$el).find('.elementselect').each((index, element) => {
                 var elementSelect = $(element).data('elementSelect');
 
@@ -65,6 +66,27 @@ export default {
                         this.emitUpdate();
                     });
                 }
+            });
+
+            // Handle tag select - a little different
+            $(this.$el).find('.elementselect.tagselect .elements').each((index, element) => {
+                const observer = new MutationObserver((mutationsList, observer) => {
+                    // Use traditional 'for loops' for IE 11
+                    for (const mutation of mutationsList) {
+                        if (mutation.type === 'childList' && (mutation.target.classList.contains('elements'))) {
+                            // We need to subscribe to the input's value and trigger an update when that changes.
+                            // This is because a hidden input is created when an element is selected, but for
+                            // new tags, there's an Ajax call to create it. We need to listen for that,
+                            $(mutation.target).find('input[type=hidden]').each((index, input) => {
+                                this.waitForInputValue($(input), () => {
+                                    this.emitUpdate();
+                                });
+                            });
+                        }
+                    }
+                });
+
+                observer.observe(element, { childList: true, subtree: true });
             });
 
             // Special case for Matrix blocks.
@@ -122,6 +144,16 @@ export default {
             input.$on('content-update', (value) => {
                 this.emitUpdate();
             });
+        },
+
+        waitForInputValue($el, cb) {
+            if ($el.val()) {
+                cb();
+            } else {
+                setTimeout(() => {
+                    this.waitForInputValue($el, cb);
+                }, 100);
+            }
         },
     },
 };
