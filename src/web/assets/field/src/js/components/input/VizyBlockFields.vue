@@ -36,7 +36,7 @@ export default {
         watchFieldChanges() {
             // Using jQuery to handle dynamically-added DOM content.
             // For some reason, doesn't lightswitch fields behave differently...
-            $(this.$el).on('input change', 'input, textarea, select, .lightswitch', () => {
+            $(this.$el).on('input change', 'input, textarea, select, .lightswitch', (e) => {
                 this.emitUpdate();
             });
 
@@ -80,6 +80,14 @@ export default {
                 });
 
                 observer.observe(element, { childList: true, subtree: true });
+            });
+
+            // Special case for Redactor
+            $(this.$el).find('.redactor .redactor-in').on('keyup', () => {
+                // Redactor needs even more time to wait for it to be updated
+                setTimeout(() => {
+                    this.emitUpdate();
+                }, 500);
             });
         },
 
