@@ -204,77 +204,32 @@ export default {
                 Text,
                 VizyBlock,
                 Focus.configure({ className: 'has-focus', mode: 'deepest' }),
+
+                // Optional Marks
+                Bold,
+                Code,
+                Highlight,
+                Italic,
+                Strike,
+                Underline,
+
+                // Optional Nodes
+                Blockquote,
+                BulletList,
+                CodeBlock,
+                Heading.configure({ levels: [1, 2, 3, 4, 5, 6] }),
+                HorizontalRule,
+                ListItem,
+                OrderedList,
+
+                // Optional Extensions
+                History,
+                TextAlign.configure({ defaultAlignment: 'start' }),
+
+                // Optional Custom
+                Link.configure({ openOnClick: false }),
+                Image,
             ];
-
-            const { buttons } = this;
-
-            if (buttons.includes('blockquote')) {
-                extensions.push(Blockquote);
-            }
-
-            if (buttons.includes('bold')) {
-                extensions.push(Bold);
-            }
-
-            if (buttons.includes('ordered-list') || buttons.includes('unordered-list')) {
-                extensions.push(ListItem);
-
-                if (buttons.includes('ordered-list')) {
-                    extensions.push(OrderedList);
-                }
-
-                if (buttons.includes('unordered-list')) {
-                    extensions.push(BulletList);
-                }
-            }
-
-            if (buttons.includes('code')) {
-                extensions.push(Code);
-            }
-
-            if (buttons.includes('code-block')) {
-                extensions.push(CodeBlock);
-            }
-
-            if (buttons.includes('h1') || buttons.includes('h2') || buttons.includes('h3') || buttons.includes('h4') || buttons.includes('h5') || buttons.includes('h6')) {
-                extensions.push(Heading.configure({ levels: [1, 2, 3, 4, 5, 6] }));
-            }
-
-            if (buttons.includes('highlight')) {
-                extensions.push(Highlight);
-            }
-
-            if (buttons.includes('undo') || buttons.includes('redo')) {
-                extensions.push(History);
-            }
-
-            if (buttons.includes('hr')) {
-                extensions.push(HorizontalRule);
-            }
-
-            if (buttons.includes('image')) {
-                extensions.push(Image);
-            }
-
-            if (buttons.includes('italic')) {
-                extensions.push(Italic);
-            }
-
-            if (buttons.includes('link')) {
-                extensions.push(Link.configure({ openOnClick: false }));
-            }
-
-            if (buttons.includes('strike')) {
-                extensions.push(Strike);
-            }
-
-            if (buttons.includes('align-left') || buttons.includes('align-right') || buttons.includes('align-center') || buttons.includes('align-justify')) {
-                extensions.push(TextAlign.configure({ defaultAlignment: 'start' }));
-            }
-
-            if (buttons.includes('underline')) {
-                extensions.push(Underline);
-            }
 
             return extensions;
         },
