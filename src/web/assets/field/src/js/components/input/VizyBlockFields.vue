@@ -40,6 +40,23 @@ export default {
                 this.emitUpdate();
             });
 
+            // Handle hidden inputs, which are a bit special
+            $(this.$el).find('input[type=hidden]').each((index, element) => {
+                var self = this;
+                var { value } = element;
+
+                Object.defineProperty(element, 'value', {
+                    set(newValue) {
+                        self.emitUpdate();
+
+                        value = newValue;
+                    },
+                    get(){
+                        return value;
+                    },
+                });
+            });
+
             $(this.$el).find('.elementselect').each((index, element) => {
                 var elementSelect = $(element).data('elementSelect');
 
