@@ -527,8 +527,11 @@ class VizyField extends Field
 
                 $data[$groupKey]['blockTypes'][$blockTypeKey] = $blockTypeArray;
             }
-        }
 
+            // Ensure we reset array indexes to play nicely with JS
+            $data[$groupKey]['blockTypes'] = array_values($data[$groupKey]['blockTypes']);
+        }
+        
         return $data;
     }
 
