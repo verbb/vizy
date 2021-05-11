@@ -45,6 +45,9 @@ mix.webpackConfig({
         alias: {
             '@utils': path.resolve(__dirname, assetsPath + '/field/src/js/utils'),
         }
+    },
+    externals: {
+        vue: 'Vue',
     }
 });
 

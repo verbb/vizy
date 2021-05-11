@@ -41,10 +41,8 @@
         "resolve-url-loader": "^3.1.2",
         "sass": "^1.32.11",
         "sass-loader": "^9.0.2",
-        "vue": "^2.6.10",
         "vue-loader": "^15.9.6",
-        "vue-template-compiler": "^2.6.10",
-        "vuex": "^3.6.2"
+        "vue-template-compiler": "^2.6.12"
     },
     "dependencies": {
         "@fortawesome/fontawesome-svg-core": "^1.2.35",
