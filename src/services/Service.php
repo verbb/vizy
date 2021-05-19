@@ -1,6 +1,8 @@
 <?php
 namespace verbb\vizy\services;
 
+use verbb\vizy\fields\VizyField;
+
 use Craft;
 use craft\base\Component;
 use craft\db\Query;
@@ -25,6 +27,19 @@ class Service extends Component
             ->one();
 
         return $result ? new FieldLayout($result) : null;
+    }
+
+    public function getAllBlockTypes()
+    {
+        $blockTypes = [];
+
+        foreach (Craft::$app->getFields()->getAllFields() as $field) {
+            if ($field instanceof VizyField) {
+                $blockTypes = array_merge($blockTypes, $field->getBlockTypes());
+            }
+        }
+
+        return $blockTypes;
     }
 
 }

@@ -1,6 +1,8 @@
 <?php
 namespace verbb\vizy\gql\types;
 
+use verbb\vizy\gql\interfaces\NodeInterface;
+
 use craft\gql\base\ObjectType;
 use craft\gql\GqlEntityRegistry;
 
@@ -17,11 +19,15 @@ class NodeCollectionType extends ObjectType
         return 'NodeCollection';
     }
 
-    public static function getType()
+    public static function getType($context = null)
     {
         return GqlEntityRegistry::getEntity(self::getName()) ?: GqlEntityRegistry::createEntity(self::getName(), new self([
             'name' => self::getName(),
             'fields' => [
+                'nodes' => [
+                    'name' => 'nodes',
+                    'type' => Type::listOf(NodeInterface::getType($context)),
+                ],
                 'rawNodes' => [
                     'name' => 'rawNodes',
                     'type' => ArrayType::getType(),
