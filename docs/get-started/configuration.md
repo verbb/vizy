@@ -95,6 +95,7 @@ You can also provide this as an empty array, to disable buttons completely.
 ```
 
 ### Formatting
+You can use the following options in the `formatting` options. Note that you'll also need to include `formatting` as a button in the `buttons` options.
 
 Option | Description
 --- | ---
@@ -110,6 +111,18 @@ Option | Description
 
 ```json
 {
+    "buttons": ["formatting", "bold", "italic"],
     "formatting": ["h2", "h3", "h4", "h5", "h6"]
+}
+```
+
+### Kitchen Sink
+The below is a "kitchen sink" example that contains everything.
+
+```json
+{
+    "buttons": ["html", "formatting", "h1", "h2", "h3", "h4", "h5", "h6", "bold", "italic", "underline", "strike", "ordered-list", "unordered-list", "code-block", "hr", "highlight", "align-left", "align-right", "align-center", "align-justify", "clear-format", "line-break", "link", "image", "table", "undo", "redo"],
+    "formatting": ["paragraph", "code", "blockquote", "h1", "h2", "h3", "h4", "h5", "h6"],
+    "toolbarFixed": true
 }
 ```
