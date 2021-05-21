@@ -144,17 +144,4 @@ class Node extends Component
 
         return Nodes::renderClosingTag($event->tag);
     }
-
-    public function getGqlTypeName()
-    {
-        $classNameParts = explode('\\', static::class);
-        $end = array_pop($classNameParts);
-
-        return 'Node_' . $end;
-    }
-
-    public function getContentGqlType($context)
-    {
-        return [];
-    }
 }

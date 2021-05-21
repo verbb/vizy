@@ -411,27 +411,6 @@ class VizyField extends Field
         return $keywords;
     }
 
-    public function getBlockTypes()
-    {
-        $blockTypes = [];
-
-        foreach ($this->fieldData as $groupKey => $group) {
-            $blocks = $group['blockTypes'] ?? [];
-
-            foreach ($blocks as $blockTypeKey => $blockTypeData) {
-                // Remove this before populating the model
-                $layout = ArrayHelper::remove($blockTypeData, 'layout');
-
-                $blockType = new BlockType($blockTypeData);
-                $blockType->fieldId = $this->id;
-
-                $blockTypes[] = $blockType;
-            }
-        }
-
-        return $blockTypes;
-    }
-
     public function getContentGqlType()
     {
         return NodeCollectionType::getType($this);
