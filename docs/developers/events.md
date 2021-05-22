@@ -1,6 +1,6 @@
 # Events
 
-Vizy provides a collection of events for extending its functionality. Modules and plugins can register event listeners, typically in their `init()` methods, to modify Formie’s behavior.
+Vizy provides a collection of events for extending its functionality. Modules and plugins can register event listeners, typically in their `init()` methods, to modify Vizy’s behavior.
 
 ### The `registerNodes` event
 The event that is triggered for registration of nodes.
