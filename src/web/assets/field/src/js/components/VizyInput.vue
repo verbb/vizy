@@ -341,7 +341,7 @@ export default {
         },
 
         cleanDeltas() {
-            var fieldHandle = `fields[${this.settings.fieldHandle}]`;
+            var fieldHandle = `[${this.settings.fieldHandle}]`;
 
             // Clean up deltas for this field, which would normally be helpful, but not so much for this field.
             // Otherwise we end up sending partial data for just the inner fields (which are namespaced)
