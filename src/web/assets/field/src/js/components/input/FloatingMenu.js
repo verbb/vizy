@@ -45,6 +45,18 @@ class Menu {
         }
     }
 
+    isNodeEmpty($node) {
+        var nodeJson = $node.toJSON();
+
+        // Roll our own version of `isNodeEmpty` to handle text alignment and a few other cases.
+        // We just check if the current node has no inner content.
+        if (!nodeJson.content) {
+            return true;
+        }
+
+        return false;
+    }
+
     update(view, oldState) {
         const { state, composing } = view;
         const { doc, selection } = state;
@@ -58,7 +70,7 @@ class Menu {
         const parent = this.options.element.offsetParent;
         const isRootDepth = $anchor.depth === 1;
         const isDefaultNodeType = $anchor.parent.type === state.doc.type.contentMatch.defaultType;
-        const isDefaultNodeEmpty = isNodeEmpty(selection.$anchor.parent);
+        const isDefaultNodeEmpty = this.isNodeEmpty(selection.$anchor.parent);
         const isActive = isRootDepth && isDefaultNodeType && isDefaultNodeEmpty;
 
         if (!empty || !parent || !isActive) {
