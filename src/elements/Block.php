@@ -9,6 +9,7 @@ class Block extends Element
     // Properties
     // =========================================================================
 
+    private $_owner;
     private $_fieldLayout;
 
 
@@ -22,7 +23,7 @@ class Block extends Element
 
     public function setFieldLayout($fieldLayout)
     {
-        $this->_fieldLayout = $fieldLayout;;
+        $this->_fieldLayout = $fieldLayout;
     }
 
     public function setFieldValues(array $values)
@@ -35,6 +36,16 @@ class Block extends Element
         }
 
         return parent::setFieldValues($values);
+    }
+
+    public function getOwner()
+    {
+        return $this->_owner;
+    }
+
+    public function setOwner($owner)
+    {
+        $this->_owner = $owner;
     }
 
 }
