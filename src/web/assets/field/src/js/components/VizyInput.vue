@@ -93,6 +93,7 @@ export default {
             editor: null,
             json: null,
             html: null,
+            parentToolbars: 0,
             cachedFieldHtml: {},
             cachedFieldJs: {},
         };
@@ -169,6 +170,9 @@ export default {
             // Disable Craft delta-handling, which messes up saving the field in our case.
             this.cleanDeltas();
         });
+
+        // Keep track of any parent fields (at least their toolbars) so we can align them
+        this.parentToolbars = this.getParentToolbarCount(this.$el);
     },
 
     created() {
@@ -336,6 +340,9 @@ export default {
                 headerBuffer = document.querySelector('.lp-editor-container header.flex') ? document.querySelector('.lp-editor-container header.flex').offsetHeight : 0;
             }
 
+            // Check if there are any parent Vizy fields, otherwise we get multiple toolbar overlaps
+            headerBuffer = headerBuffer + this.parentToolbars * 41;
+
             this.$refs.toolbar.$el.style.position = 'sticky';
             this.$refs.toolbar.$el.style.top = this.$el.scrollTop + headerBuffer + 'px';
         },
@@ -356,6 +363,20 @@ export default {
                     Craft.deltaNames.splice(index);
                 }
             });
+        },
+
+        getParentToolbarCount(el) {
+            var parents = [];
+
+            for (; el && el !== document; el = el.parentNode) {
+                if (el.classList.contains('vui-rich-text')) {
+                    if (el.querySelector('.vui-editor-toolbar')) {
+                        parents.push(el);
+                    }
+                }
+            }
+
+            return parents.length;
         },
     },
 
@@ -383,11 +404,13 @@ export default {
     .ProseMirror {
         outline: none;
         word-wrap: normal;
-        overflow: hidden;
         padding: 16px;
         min-height: 10rem;
         background-color: #fbfcfe;
         background-clip: padding-box;
+
+        // Won't work with nested Vizy fields and toolbar fixed
+        // overflow: hidden;
 
         [data-is-showing-errors="true"] & {
             border-color: $errorColor;
