@@ -173,6 +173,10 @@ export default {
 
         // Keep track of any parent fields (at least their toolbars) so we can align them
         this.parentToolbars = this.getParentToolbarCount(this.$el);
+
+        // For nested Vizy fields, the field will be serialized again on-load, but will produce content
+        // change warnings. So wait until ready, then re-serialize it.
+        this.refreshUnloadData();
     },
 
     created() {
@@ -377,6 +381,31 @@ export default {
             }
 
             return parents.length;
+        },
+
+        refreshUnloadData() {
+            // Give it a second for everything to be ready
+            setTimeout(() => {
+                var $forms = $('form[data-confirm-unload]');
+
+                // Re-serialize the form data, to prevent unload warnings for nested Vizy fields
+                for (var i = 0; i < $forms.length; i++) {
+                    var $form = $($forms[i]);
+                    var data = $form.data('initialSerializedValue');
+
+                    if (data) {
+                        var serialized = data;
+
+                        if (typeof $form.data('serializer') === 'function') {
+                            serialized = $form.data('serializer')();
+                        } else {
+                            serialized = $form.serialize();
+                        }
+
+                        $form.data('initialSerializedValue', serialized);
+                    }
+                }
+            }, 500);
         },
     },
 
