@@ -261,6 +261,9 @@ class VizyField extends Field
                         $elementConfigs = $layout['elementConfigs'] ?? [];
                         $layoutUid = $blockType->layoutUid ?? null;
 
+                        // Prevent potential issues when tab names aren't a string (`123` for example).
+                        $elementPlacements = array_filter($elementPlacements);
+
                         if (!$blockType->validate()) {
                             foreach ($blockType->getErrors() as $key => $error) {
                                 $errors[$blockType->id . ':' . $key] = $error;

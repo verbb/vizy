@@ -50,6 +50,10 @@ class FieldController extends Controller
                 $tab->sortOrder = ++$tabSortOrder;
                 $tab->elements = [];
 
+                if (!is_array($elementKeys)) {
+                    continue;
+                }
+
                 foreach ($elementKeys as $i => $elementKey) {
                     $elementConfig = Json::decode($elementConfigs[$elementKey]);
 
