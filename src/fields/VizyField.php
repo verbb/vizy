@@ -262,15 +262,6 @@ class VizyField extends Field
                         $elementConfigs = $layout['elementConfigs'] ?? [];
                         $layoutUid = $blockType->layoutUid ?? null;
 
-                        // Don't save anything if there's no data
-                        if ($elementPlacements && $elementConfigs) {
-                            $fieldLayout = $this->assembleLayout($elementPlacements, $elementConfigs, $layoutUid);
-                            $fieldLayout->type = BlockType::class;
-                            Craft::$app->getFields()->saveLayout($fieldLayout);
-
-                            $blockType->layoutUid = $fieldLayout->uid;
-                        }
-
                         if (!$blockType->validate()) {
                             foreach ($blockType->getErrors() as $key => $error) {
                                 $errors[$blockType->id . ':' . $key] = $error;
@@ -279,11 +270,19 @@ class VizyField extends Field
                             continue;
                         }
 
+                        // Don't save anything if there's no data
+                        if ($elementPlacements && $elementConfigs) {
+                            $fieldLayout = $this->assembleLayout($elementPlacements, $elementConfigs, $layoutUid);
+                            $fieldLayout->type = BlockType::class;
+                            Craft::$app->getFields()->saveLayout($fieldLayout);
+
+                            $blockType->layoutUid = $fieldLayout->uid;
+                            $blocktype->layoutConfig = $fieldLayout->getConfig();
+                        }
+
                         // Override with our cleaned model data
                         $this->fieldData[$groupKey]['blockTypes'][$blockTypeKey] = $blockType->serializeArray();
                     } catch (\Throwable $e) {
-                        // Craft::dd($e->getMessage());
-
                         return false;
                     }
                 }
