@@ -31,6 +31,31 @@ class BlockType extends Model
     // Public Methods
     // =========================================================================
 
+    public static function displayName(): string
+    {
+        return Craft::t('vizy', 'Vizy Block');
+    }
+
+    public static function lowerDisplayName(): string
+    {
+        return StringHelper::toLowerCase(static::displayName());
+    }
+
+    public static function pluralDisplayName(): string
+    {
+        return Craft::t('vizy', 'Vizy Blocks');
+    }
+
+    public static function pluralLowerDisplayName(): string
+    {
+        return StringHelper::toLowerCase(static::pluralDisplayName());
+    }
+
+    public static function refHandle()
+    {
+        return null;
+    }
+
     protected function defineRules(): array
     {
         $rules = parent::defineRules();
