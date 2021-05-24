@@ -9,8 +9,8 @@ use verbb\vizy\models\Settings;
 use Craft;
 use craft\base\Plugin;
 use craft\events\RegisterComponentTypesEvent;
-use craft\services\Fields;
 use craft\helpers\UrlHelper;
+use craft\services\Fields;
 
 use yii\base\Event;
 
@@ -44,6 +44,7 @@ class Vizy extends Plugin
         $this->_setLogging();
         $this->_registerCpRoutes();
         $this->_registerFieldTypes();
+        $this->_registerProjectConfigEventListeners();
     }
 
     public function getSettingsResponse()
@@ -69,4 +70,12 @@ class Vizy extends Plugin
             $event->types[] = VizyField::class;
         });
     }
+
+    private function _registerProjectConfigEventListeners()
+    {
+        Craft::$app->projectConfig
+            ->onAdd(Fields::CONFIG_FIELDS_KEY . '.{uid}', [$this->getService(), 'handleChangedField'])
+            ->onUpdate(Fields::CONFIG_FIELDS_KEY . '.{uid}', [$this->getService(), 'handleChangedField'])
+    }
+ 
 }

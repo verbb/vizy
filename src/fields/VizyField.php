@@ -240,15 +240,14 @@ class VizyField extends Field
         $request = Craft::$app->getRequest();
         $errors = [];
 
-        // For some reason, the field's settings are empty here, despite having values...
-        $currentFieldData = $this->_getCurrentFieldData();
-
         // Prepare the setting data to be saved
         if ($fieldData = $request->getParam('fieldData')) {
             $this->fieldData = Json::decode($fieldData);
 
             foreach ($this->fieldData as $groupKey => $group) {
-                foreach ($group['blockTypes'] as $blockTypeKey => $blockType) {
+                $blockTypes = $group['blockTypes'] ?? [];
+
+                foreach ($blockTypes as $blockTypeKey => $blockType) {
                     // Ensure we catch errors to prevent data loss
                     try {
                         // Remove this before populating the model
@@ -274,10 +273,9 @@ class VizyField extends Field
                         if ($elementPlacements && $elementConfigs) {
                             $fieldLayout = $this->assembleLayout($elementPlacements, $elementConfigs, $layoutUid);
                             $fieldLayout->type = BlockType::class;
-                            Craft::$app->getFields()->saveLayout($fieldLayout);
 
-                            $blockType->layoutUid = $fieldLayout->uid;
-                            $blocktype->layoutConfig = $fieldLayout->getConfig();
+                            // Set the layout here, saving takes place in PC event handlers, straight after this
+                            $blockType->setFieldLayout($fieldLayout);
                         }
 
                         // Override with our cleaned model data
@@ -297,54 +295,18 @@ class VizyField extends Field
             return false;
         }
 
-        // Have we deleted any blocks? Ensure we clean up any field layouts
-        $layoutsToDelete = [];
-
-        foreach ($currentFieldData as $group) {
-            // Is this a deleted group?
-            $hasGroup = ArrayHelper::firstWhere($this->fieldData, 'id', $group['id']);
-
-            if ($hasGroup) {
-                $blocks = $group['blockTypes'] ?? [];
-
-                foreach ($blocks as $block) {
-                    // Is this a deleted block?
-                    $hasBlock = ArrayHelper::firstWhere($hasGroup['blockTypes'], 'id', $block['id']);
-
-                    if (!$hasBlock) {
-                        // This block was deleted. Remove any fieldLayout
-                        $layoutsToDelete[] = $block['layoutUid'] ?? null;
-                    }
-                }
-            } else {
-                // We've deleted an entire group. Delete each block's layout.
-                $blocks = $group['blockTypes'] ?? [];
-
-                foreach ($blocks as $block) {
-                    $layoutsToDelete[] = $block['layoutUid'] ?? null;
-                }
-            }
-        }
-
-        $layoutsToDelete = array_filter($layoutsToDelete);
-
-        // Delete any layouts we need to delete for deleted blocks/groups
-        if ($layoutsToDelete) {
-            foreach ($layoutsToDelete as $fieldLayoutUid) {
-                if ($layout = Vizy::$plugin->getService()->getFieldLayoutByUid($fieldLayoutUid)) {
-                    Craft::$app->getFields()->deleteLayout($layout);
-                }
-            }
-        }
-
-        // Prevent any empty blocks. Throws an error in `unpackAssociativeArray`.
+        // Prevent any empty groups.
         foreach ($this->fieldData as $groupKey => $group) {
             $blocks = $group['blockTypes'] ?? [];
 
             if (!$blocks) {
-                unset($this->fieldData[$groupKey]['blockTypes']);
+                unset($this->fieldData[$groupKey]);
             }
         }
+
+        // Be sure to reset the array keys, in case empty blocks have been deleted.
+        // Can cause PC issues with `unpackAssociativeArray`.
+        $this->fieldData = array_values($this->fieldData);
 
         return true;
     }
@@ -420,23 +382,6 @@ class VizyField extends Field
 
     // Private Methods
     // =========================================================================
-
-    private function _getCurrentFieldData()
-    {
-        $data = [];
-
-        if ($this->id) {
-            $settings = (new Query())
-                ->select(['settings',])
-                ->from(Table::FIELDS)
-                ->where(['id' => $this->id])
-                ->scalar();
-
-            $data = Json::decodeIfJson($settings)['fieldData'] ?? [];
-        }
-
-        return $data;
-    }
 
     private function _getNestedValues($value, $key, &$items = [])
     {
