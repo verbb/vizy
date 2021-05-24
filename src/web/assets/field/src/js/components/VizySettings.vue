@@ -115,6 +115,10 @@
                 </div>
             </div>
 
+            <ul v-if="getErrors(selectedBlockType, 'general')" class="errors">
+                <li v-for="(error, index) in getErrors(selectedBlockType, 'general')" :key="index">{{ error }}</li>
+            </ul>
+
             <div class="field">
                 <div class="heading">
                     <label id="name-field-label" class="required" for="name">{{ 'Name' | t('vizy') }}</label>

@@ -283,6 +283,8 @@ class VizyField extends Field
                         // Override with our cleaned model data
                         $this->fieldData[$groupKey]['blockTypes'][$blockTypeKey] = $blockType->serializeArray();
                     } catch (\Throwable $e) {
+                        $this->addErrors([$blockType->id . ':general' => $e->getMessage()]);
+
                         return false;
                     }
                 }
