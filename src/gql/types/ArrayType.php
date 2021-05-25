@@ -3,10 +3,16 @@ namespace verbb\vizy\gql\types;
 
 use craft\gql\GqlEntityRegistry;
 
+use craft\helpers\Json;
 use GraphQL\Type\Definition\ScalarType;
 
 class ArrayType extends ScalarType
 {
+    /**
+     * @var string
+     */
+    public $name = 'ArrayType';
+
     // Static Methods
     // =========================================================================
 
@@ -30,7 +36,7 @@ class ArrayType extends ScalarType
             $value->toArray();
         }
 
-        return $value;
+        return Json::encode($value);
     }
 
     public function parseValue($value)
