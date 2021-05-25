@@ -1,6 +1,8 @@
 <?php
 namespace verbb\vizy\gql\types;
 
+use craft\helpers\Gql;
+use verbb\vizy\base\Node;
 use verbb\vizy\gql\interfaces\NodeInterface;
 use verbb\vizy\gql\interfaces\VizyBlockInterface;
 
@@ -25,6 +27,13 @@ class NodeType extends ObjectType
 
     protected function resolve($source, $arguments, $context, ResolveInfo $resolveInfo)
     {
+        /** @var Node $source */
+        $fieldName = Gql::getFieldNameWithAlias($resolveInfo, $source, $context);
+        
+        if ($fieldName === 'content') {
+            return $source->renderNode();
+        }
+
         return $source[$resolveInfo->fieldName];
     }
 }
