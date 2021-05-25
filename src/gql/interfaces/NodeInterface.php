@@ -58,10 +58,6 @@ class NodeInterface extends BaseInterfaceType
                 'name' => 'tagName',
                 'type' => Type::string(),
             ],
-            'content' => [
-                'name' => 'content',
-                'type' => ArrayType::getType(),
-            ],
             'attrs' => [
                 'name' => 'attrs',
                 'type' => ArrayType::getType(),
