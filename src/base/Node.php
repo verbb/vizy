@@ -1,6 +1,7 @@
 <?php
 namespace verbb\vizy\base;
 
+use GraphQL\Type\Definition\Type;
 use verbb\vizy\Vizy;
 use verbb\vizy\events\ModifyNodeTagEvent;
 use verbb\vizy\helpers\Nodes;
@@ -155,6 +156,6 @@ class Node extends Component
 
     public function getContentGqlType($context)
     {
-        return [];
+        return Type::string();
     }
 }
