@@ -22,23 +22,35 @@ class NodeCollectionType extends ObjectType
 
     public static function getType($context = null)
     {
-        return GqlEntityRegistry::getEntity(self::getName()) ?: GqlEntityRegistry::createEntity(self::getName(), new self([
-            'name' => self::getName(),
-            'fields' => [
-                'nodes' => [
-                    'name' => 'nodes',
-                    'type' => Type::listOf(NodeInterface::getType($context)),
+        $entity = GqlEntityRegistry::getEntity(self::getName());
+
+        if (!$entity) {
+            $nodeCollectionType = new self([
+                'name' => self::getName(),
+                'fields' => [
+                    'nodes' => [
+                        'name' => 'nodes',
+                        'type' => Type::listOf(NodeInterface::getType($context)),
+                    ],
+                    'rawNodes' => [
+                        'name' => 'rawNodes',
+                        'type' => ArrayType::getType(),
+                    ],
+                    'renderHtml' => [
+                        'name' => 'renderHtml',
+                        'type' => Type::string(),
+                    ],
                 ],
-                'rawNodes' => [
-                    'name' => 'rawNodes',
-                    'type' => ArrayType::getType(),
-                ],
-                'renderHtml' => [
-                    'name' => 'renderHtml',
-                    'type' => Type::string(),
-                ],
-            ],
-        ]));
+            ]);
+
+            $entity = GqlEntityRegistry::getEntity(self::getName());
+
+            if (!$entity) {
+                $entity = GqlEntityRegistry::createEntity(self::getName(), $nodeCollectionType);
+            }
+        }
+
+        return $entity;
     }
 
 
