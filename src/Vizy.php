@@ -1,9 +1,13 @@
 <?php
 namespace verbb\vizy;
 
+use craft\events\RegisterGqlTypesEvent;
+use craft\services\Gql;
 use verbb\vizy\base\PluginTrait;
 use verbb\vizy\base\Routes;
 use verbb\vizy\fields\VizyField;
+use verbb\vizy\gql\interfaces\NodeInterface;
+use verbb\vizy\gql\interfaces\VizyBlockInterface;
 use verbb\vizy\models\Settings;
 
 use Craft;
@@ -44,6 +48,7 @@ class Vizy extends Plugin
         $this->_setLogging();
         $this->_registerCpRoutes();
         $this->_registerFieldTypes();
+        $this->_registerGraphQl();
     }
 
     public function getSettingsResponse()
@@ -67,6 +72,14 @@ class Vizy extends Plugin
     {
         Event::on(Fields::class, Fields::EVENT_REGISTER_FIELD_TYPES, function(RegisterComponentTypesEvent $event) {
             $event->types[] = VizyField::class;
+        });
+    }
+
+    private function _registerGraphQl()
+    {
+        Event::on(Gql::class, Gql::EVENT_REGISTER_GQL_TYPES, function(RegisterGqlTypesEvent $event) {
+            $event->types[] = NodeInterface::class;
+            $event->types[] = VizyBlockInterface::class;
         });
     }
 }

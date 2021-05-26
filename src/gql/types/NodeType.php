@@ -29,7 +29,7 @@ class NodeType extends ObjectType
     {
         /** @var Node $source */
         $fieldName = Gql::getFieldNameWithAlias($resolveInfo, $source, $context);
-        
+
         if ($fieldName === 'content') {
             return $source->renderNode();
         }

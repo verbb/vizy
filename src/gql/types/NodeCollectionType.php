@@ -1,6 +1,7 @@
 <?php
 namespace verbb\vizy\gql\types;
 
+use craft\helpers\Gql;
 use verbb\vizy\gql\interfaces\NodeInterface;
 
 use craft\gql\base\ObjectType;
@@ -46,7 +47,7 @@ class NodeCollectionType extends ObjectType
 
     protected function resolve($source, $arguments, $context, ResolveInfo $resolveInfo)
     {
-        $fieldName = $resolveInfo->fieldName;
+        $fieldName = Gql::getFieldNameWithAlias($resolveInfo, $source, $context);
 
         if (method_exists($source, $fieldName)) {
             return $source->$fieldName();

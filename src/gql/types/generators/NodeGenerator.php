@@ -3,8 +3,10 @@ namespace verbb\vizy\gql\types\generators;
 
 use craft\gql\base\GeneratorInterface;
 use craft\gql\GqlEntityRegistry;
+use verbb\vizy\fields\VizyField;
 use verbb\vizy\gql\interfaces\NodeInterface;
 use verbb\vizy\gql\types\NodeType;
+use verbb\vizy\nodes\VizyBlock;
 use verbb\vizy\Vizy;
 
 class NodeGenerator implements GeneratorInterface
@@ -20,6 +22,13 @@ class NodeGenerator implements GeneratorInterface
         $interfaceFields = NodeInterface::getFieldDefinitions();
 
         foreach ($nodeClasses as $nodeClass) {
+            // Handle these on a per-field base.
+            if ($nodeClass === VizyBlock::class) {
+                /** @noinspection SlowArrayOperationsInLoopInspection */
+                $gqlTypes = array_merge($gqlTypes, VizyBlockTypeGenerator::generateTypes());
+                continue;
+            }
+
             $node = new $nodeClass;
             $node->setField($field);
 
@@ -44,6 +53,19 @@ class NodeGenerator implements GeneratorInterface
             $gqlTypes[$entity->name] = $entity;
         }
 
+       // self::registerVizyBlockTypes($field);
+
         return $gqlTypes;
+    }
+
+    protected static function registerVizyBlockTypes(VizyField $field) {
+        foreach ($field->fieldData as $blockGroup) {
+            if (is_array($blockGroup) && is_array($blockGroup['blockTypes'] ?? null)) {
+                foreach ($blockGroup['blockTypes'] as $blockType) {
+                  //  $blockTypeName =
+                    echo '';
+                }
+            }
+        }
     }
 }

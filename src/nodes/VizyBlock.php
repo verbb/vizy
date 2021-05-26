@@ -178,6 +178,11 @@ class VizyBlock extends Node
         return $this->normalizeFieldValue($fieldHandle);
     }
 
+    public function getGqlTypeName()
+    {
+        return $this->getField()->handle . '_' . $this->handle . '_BlockType';
+    }
+
     protected function normalizeFieldValue(string $fieldHandle)
     {
         // Have we already normalized this value?
