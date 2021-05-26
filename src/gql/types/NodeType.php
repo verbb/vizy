@@ -19,7 +19,6 @@ class NodeType extends ObjectType
     {
         $config['interfaces'] = [
             NodeInterface::getType(),
-            VizyBlockInterface::getType(),
         ];
 
         parent::__construct($config);
