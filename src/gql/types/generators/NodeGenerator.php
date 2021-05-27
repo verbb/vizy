@@ -52,20 +52,7 @@ class NodeGenerator implements GeneratorInterface
 
             $gqlTypes[$entity->name] = $entity;
         }
-
-       // self::registerVizyBlockTypes($field);
-
+        
         return $gqlTypes;
-    }
-
-    protected static function registerVizyBlockTypes(VizyField $field) {
-        foreach ($field->fieldData as $blockGroup) {
-            if (is_array($blockGroup) && is_array($blockGroup['blockTypes'] ?? null)) {
-                foreach ($blockGroup['blockTypes'] as $blockType) {
-                  //  $blockTypeName =
-                    echo '';
-                }
-            }
-        }
     }
 }
