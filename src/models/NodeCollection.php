@@ -186,7 +186,10 @@ class NodeCollection extends Model
                             $markConfig = $marksConfig[$mark->getType()] ?? [];
 
                             if ($markConfig) {
-                                Craft::configure($mark, $markConfig);
+                                // Check if we want to merge attributes, instead of replace. Useful for attrs.
+                                $merge = ArrayHelper::remove($markConfig, 'merge');
+
+                                self::configure($mark, $markConfig, $merge);
                             }
                         }
                     }

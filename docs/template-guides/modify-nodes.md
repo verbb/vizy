@@ -75,6 +75,23 @@ So far, all the overrides we've done have completely replaced the attributes on 
 
 Importantly, the Paragraph node actually outputs a `text-left`, `text-right`, etc class depending on the alignment in the editor. Without `merge` set, our custom class would completely replace these clases, losing our alignment functionality.
 
+You can also use `merge` for marks.
+
+```twig
+{{ entry.vizyField.renderHtml({
+    paragraph: {
+        marks: {
+            link: {
+                merge: true,
+                attrs: {
+                    class: 'text-xl',
+                },
+            },
+        },
+    },
+}) }}
+```
+
 ## Using PHP
 Alternatively, you can use the PHP method from a plugin or module to control this behaviour as well.
 
