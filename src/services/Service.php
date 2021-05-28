@@ -33,7 +33,7 @@ class Service extends Component
     {
         $blockTypes = [];
 
-        foreach (Craft::$app->getFields()->getAllFields() as $field) {
+        foreach (Craft::$app->getFields()->getAllFields(false) as $field) {
             if ($field instanceof VizyField) {
                 $blockTypes = array_merge($blockTypes, $field->getBlockTypes());
             }
