@@ -81,6 +81,16 @@
     name: 'showUnpermittedFiles',
     checked: field.showUnpermittedFiles,
 }) }}
+
+{{ forms.checkboxSelectField({
+    id: 'availableVolumes',
+    name: 'availableVolumes',
+    label: 'Available Volumes' | t('vizy'),
+    instructions: 'The volumes that should be available when selecting assets (if the selected config has an Image or File button).' | t('vizy'),
+    options: volumeOptions,
+    values: field.availableVolumes,
+    showAllOption: volumeOptions | length ? true : false,
+}) }}
 <hr>
 
 <a class="fieldtoggle" data-target="advanced">{{ 'Advanced' | t('vizy') }}</a>
