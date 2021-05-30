@@ -8,6 +8,7 @@ use Craft;
 use craft\base\ElementInterface;
 use craft\behaviors\CustomFieldBehavior;
 use craft\errors\InvalidFieldException;
+use craft\fields\BaseRelationField;
 use craft\helpers\Html;
 use craft\helpers\Json;
 
@@ -195,6 +196,23 @@ class VizyBlock extends Node
                 }
 
                 $value['attrs']['values']['content']['fields'][$fieldKey] = $field;
+            }
+        }
+
+        // Create a fake element with the same fieldtype as our block
+        if ($fieldLayout = $this->getFieldLayout()) {
+            $block = new BlockElement();
+            $block->setOwner($element);
+            $block->setFieldLayout($fieldLayout);
+
+            // Set the field values based on stored content
+            $fieldValues = $this->attrs['values']['content']['fields'] ?? [];
+            $block->setFieldValues($fieldValues);
+
+            foreach ($fieldLayout->getFields() as $field) {
+                // Ensure we call each field's `afterElementSave` method. This would be auto-done
+                // if a VizyBlock node was an element, and we were saving that.
+                $field->afterElementSave($block, true);
             }
         }
 

@@ -48,4 +48,12 @@ class Block extends Element
         $this->_owner = $owner;
     }
 
+    public function isFieldDirty(string $fieldHandle): bool
+    {
+        // Keep an eye on the ramifications of setting this. We override this because for assets fields,
+        // the BaseRelationField class will try and create a relation, which we don't want. 
+        // This is the only feasible way  to flag the `afterElementSave` BaseRelationField not to proceed.
+        return false;
+    }
+
 }
