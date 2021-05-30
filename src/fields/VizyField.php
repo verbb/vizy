@@ -115,10 +115,38 @@ class VizyField extends Field
             Json::encode($settings, JSON_UNESCAPED_UNICODE) .
         ');');
 
+        $volumeOptions = [];
+
+        foreach (Craft::$app->getVolumes()->getPublicVolumes() as $volume) {
+            if ($volume->hasUrls) {
+                $volumeOptions[] = [
+                    'label' => Html::encode($volume->name),
+                    'value' => $volume->uid
+                ];
+            }
+        }
+
+        $transformOptions = [];
+
+        foreach (Craft::$app->getAssetTransforms()->getAllTransforms() as $transform) {
+            $transformOptions[] = [
+                'label' => Html::encode($transform->name),
+                'value' => $transform->uid
+            ];
+        }
+
         return $view->renderTemplate('vizy/field/settings', [
             'idPrefix' => $idPrefix,
             'field' => $this,
             'vizyConfigOptions' => $this->_getCustomConfigOptions('vizy'),
+            'volumeOptions' => $volumeOptions,
+            'transformOptions' => $transformOptions,
+            'defaultTransformOptions' => array_merge([
+                [
+                    'label' => Craft::t('vizy', 'No transform'),
+                    'value' => null
+                ]
+            ], $transformOptions),
         ]);
     }
 

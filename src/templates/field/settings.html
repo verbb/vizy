@@ -101,6 +101,9 @@
     values: field.availableTransforms,
     showAllOption: transformOptions | length ? true : false,
 }) }}
+
+{{ forms.selectField({
+    id: 'defaultTransform',
 <hr>
 
 <a class="fieldtoggle" data-target="advanced">{{ 'Advanced' | t('vizy') }}</a>
