@@ -74,6 +74,11 @@ class NodeCollection extends Model
 
         $html = join($html);
 
+        // Is this a completely empty field?
+        if (strip_tags($html) === '') {
+            $html = '';
+        }
+
         return Template::raw($html);
     }
 
