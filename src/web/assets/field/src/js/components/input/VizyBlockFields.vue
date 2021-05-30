@@ -4,6 +4,10 @@ import debounce from 'lodash/debounce';
 export default {
     name: 'VizyBlockFields',
 
+    // Add nonsense as we don't want any Vue templating included in this template
+    // Otherwise including Twig in field content will throw an error.
+    delimiters: ['$!{', '}!$'],
+
     components: {
         // Seems to be the only way to resolve issues!
         VizyInput: () => import('../VizyInput.vue'),
