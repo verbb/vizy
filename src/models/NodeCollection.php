@@ -121,8 +121,6 @@ class NodeCollection extends Model
 
         $values = array_values(array_filter($values));
 
-        // Craft::dd($values[1]['attrs']['values']['content']);
-
         return $values;
     }
 
