@@ -67,6 +67,7 @@ class VizyField extends Field
     public $showUnpermittedVolumes = false;
     public $showUnpermittedFiles = false;
     public $defaultTransform = '';
+    public $trimEmptyParagraphs = true;
     public $columnType = Schema::TYPE_TEXT;
 
     private $_blockTypesById = [];

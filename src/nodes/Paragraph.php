@@ -3,6 +3,7 @@ namespace verbb\vizy\nodes;
 
 use verbb\vizy\base\Node;
 
+use craft\base\ElementInterface;
 use craft\helpers\ArrayHelper;
 
 class Paragraph extends Node
@@ -28,6 +29,18 @@ class Paragraph extends Node
         }
 
         return parent::getTag();
+    }
+
+    public function serializeValue(ElementInterface $element = null)
+    {
+        $value = parent::serializeValue($element);
+
+        // Check if we're to exclude empty nodes
+        if ($this->field->trimEmptyParagraphs && !$this->content) {
+            return false;
+        }
+
+        return $value;
     }
 
 }

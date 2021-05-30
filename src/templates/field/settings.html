@@ -57,6 +57,17 @@
 </div>
 
 <hr>
+
+{{ forms.lightswitchField({
+    label: 'Remove Empty Paragraphs' | t('vizy'),
+    instructions: 'Whether empty paragraphs should be trimmed automatically from field output.' | t('vizy'),
+    name: 'trimEmptyParagraphs',
+    on: field.trimEmptyParagraphs,
+    errors: field.getErrors('trimEmptyParagraphs'),
+}) }}
+
+<hr>
+
 <a class="fieldtoggle" data-target="advanced">{{ 'Advanced' | t('vizy') }}</a>
 
 <div id="advanced" class="hidden">
