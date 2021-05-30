@@ -91,6 +91,16 @@
     values: field.availableVolumes,
     showAllOption: volumeOptions | length ? true : false,
 }) }}
+
+{{ forms.checkboxSelectField({
+    id: 'availableTransforms',
+    name: 'availableTransforms',
+    label: 'Available Transforms' | t('vizy'),
+    instructions: 'The transforms that should be available when inserting images.' | t('vizy'),
+    options: transformOptions,
+    values: field.availableTransforms,
+    showAllOption: transformOptions | length ? true : false,
+}) }}
 <hr>
 
 <a class="fieldtoggle" data-target="advanced">{{ 'Advanced' | t('vizy') }}</a>
