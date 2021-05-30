@@ -4,6 +4,7 @@ namespace verbb\vizy\models;
 use verbb\vizy\Vizy;
 
 use Craft;
+use craft\base\ElementInterface;
 use craft\base\Model;
 use craft\helpers\ArrayHelper;
 use craft\helpers\Component as ComponentHelper;
@@ -110,6 +111,21 @@ class NodeCollection extends Model
         return $arrayQuery->from($this->getNodes());
     }
 
+    public function serializeValues(ElementInterface $element = null)
+    {
+        $values = [];
+
+        foreach ($this->getNodes() as $nodeKey => $node) {
+            $values[$nodeKey] = $node->serializeValue($element);
+        }
+
+        $values = array_values(array_filter($values));
+
+        // Craft::dd($values[1]['attrs']['values']['content']);
+
+        return $values;
+    }
+
 
     // Private Methods
     // =========================================================================
@@ -132,6 +148,8 @@ class NodeCollection extends Model
         $result = [];
 
         foreach ($nodes as $nodeKey => $node) {
+            $rawNode = $node;
+
             // Drill into any nested nodes first
             if (isset($node['content'])) {
                 $node['content'] = $this->_populateNodes($node['content']);
@@ -162,6 +180,7 @@ class NodeCollection extends Model
                     'class' => $class,
                     'field' => $this->field,
                     'element' => $this->element,
+                    'rawNode' => $rawNode,
                 ]));
 
                 if (!$nodeClass->isDeleted()) {

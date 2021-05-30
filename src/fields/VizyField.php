@@ -192,29 +192,7 @@ class VizyField extends Field
     public function serializeValue($value, ElementInterface $element = null)
     {
         if ($value instanceof NodeCollection) {
-            // For any nested Vizy fields, we want to deserialie the JSON from the front-end and expand
-            // it to a normal array. This helps with particularly character encoding and htmlentities.
-            $values = $value->getRawNodes() ?? [];
-
-            foreach ($values as $valueKey => $value) {
-                $type = $value['type'] ?? null;
-
-                if ($type === 'vizyBlock') {
-                    $fields = $value['attrs']['values']['content']['fields'] ?? [];
-
-                    foreach ($fields as $fieldKey => $field) {
-                        if (is_string($field)) {
-                            if (substr($field, 0, 2) === '[{') {
-                                $field = Json::decodeIfJson($field);
-                            }
-
-                            $values[$valueKey]['attrs']['values']['content']['fields'][$fieldKey] = $field;
-                        }
-                    }
-                }
-            }
-
-            return $values;
+            return $value->serializeValues($element);
         }
 
         return $value;

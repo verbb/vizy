@@ -5,9 +5,11 @@ use verbb\vizy\base\Node;
 use verbb\vizy\elements\Block as BlockElement;
 
 use Craft;
+use craft\base\ElementInterface;
 use craft\behaviors\CustomFieldBehavior;
 use craft\errors\InvalidFieldException;
 use craft\helpers\Html;
+use craft\helpers\Json;
 
 class VizyBlock extends Node
 {
@@ -177,6 +179,31 @@ class VizyBlock extends Node
         // Make sure the value has been normalized
         return $this->normalizeFieldValue($fieldHandle);
     }
+
+    public function serializeValue(ElementInterface $element = null)
+    {
+        $value = parent::serializeValue($element);
+
+        // For any nested Vizy fields, we want to deserialie the JSON from the front-end and expand
+        // it to a normal array. This helps with particularly character encoding and htmlentities.
+        $fields = $value['attrs']['values']['content']['fields'] ?? [];
+
+        foreach ($fields as $fieldKey => $field) {
+            if (is_string($field)) {
+                if (substr($field, 0, 2) === '[{') {
+                    $field = Json::decodeIfJson($field);
+                }
+
+                $value['attrs']['values']['content']['fields'][$fieldKey] = $field;
+            }
+        }
+
+        return $value;
+    }
+
+
+    // Protected Methods
+    // =========================================================================
 
     protected function normalizeFieldValue(string $fieldHandle)
     {

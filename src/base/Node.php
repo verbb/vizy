@@ -7,6 +7,7 @@ use verbb\vizy\helpers\Nodes;
 
 use Craft;
 use craft\base\Component;
+use craft\base\ElementInterface;
 use craft\helpers\Template;
 
 class Node extends Component
@@ -27,6 +28,7 @@ class Node extends Component
     public $attrs = [];
     public $marks = [];
     public $text = null;
+    public $rawNode = [];
 
     private $element;
     private $field;
@@ -143,5 +145,10 @@ class Node extends Component
         $this->trigger(self::EVENT_MODIFY_TAG, $event);
 
         return Nodes::renderClosingTag($event->tag);
+    }
+
+    public function serializeValue(ElementInterface $element = null)
+    {
+        return $this->rawNode;
     }
 }
