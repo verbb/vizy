@@ -66,6 +66,13 @@
     errors: field.getErrors('trimEmptyParagraphs'),
 }) }}
 
+{{ forms.checkboxField({
+    label: 'Show unpermitted volumes' | t('app'),
+    instructions: 'Whether to show volumes that the user doesn’t have permission to view.' | t('app'),
+    id: 'showUnpermittedVolumes',
+    name: 'showUnpermittedVolumes',
+    checked: field.showUnpermittedVolumes,
+}) }}
 <hr>
 
 <a class="fieldtoggle" data-target="advanced">{{ 'Advanced' | t('vizy') }}</a>
