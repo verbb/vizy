@@ -52,7 +52,7 @@ class NodeGenerator implements GeneratorInterface
 
             $gqlTypes[$entity->name] = $entity;
         }
-        
+
         return $gqlTypes;
     }
 }
