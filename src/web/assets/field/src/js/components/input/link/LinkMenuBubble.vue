@@ -82,7 +82,7 @@ export default {
                     this.$el.style.display = 'block';
 
                     // Update our model
-                    const attrs = this.editor.getMarkAttributes('link');
+                    const attrs = this.editor.getAttributes('link');
                     this.model.text = $node.textContent;
                     this.model.url = attrs.href;
                     this.model.target = attrs.target;

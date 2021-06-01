@@ -8,7 +8,7 @@ export default Link.extend({
                 key: new PluginKey('handleClick'),
                 props: {
                     handleClick: (view, pos, event) => {
-                        const attrs = this.editor.getMarkAttributes('link');
+                        const attrs = this.editor.getAttributes('link');
 
                         // Raise a custom event so we can action this elsewhere. Notably, opening
                         // up a menu bubble in a Vue component, for max convenience

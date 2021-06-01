@@ -59,7 +59,7 @@ export default {
             focus: this.editor.focus,
             commands: this.editor.commands,
             isActive: this.editor.isActive,
-            getMarkAttrs: this.editor.getMarkAttributes.bind(this.editor),
+            getMarkAttrs: this.editor.getAttributes.bind(this.editor),
             getNodeAttrs: this.editor.getNodeAttributes.bind(this.editor),
             menu: this.menu,
         });

@@ -165,7 +165,7 @@ export default {
 
             const { from, to } = this.editor.view.state.selection;
             const $node = this.editor.view.docView.domFromPos(from).node;
-            const attrs = this.editor.getMarkAttributes('link');
+            const attrs = this.editor.getAttributes('link');
 
             this.model.text = $node.textContent;
             this.model.url = attrs.href;
