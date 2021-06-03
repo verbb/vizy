@@ -5,6 +5,7 @@ use verbb\vizy\Vizy;
 use verbb\vizy\fields\VizyField;
 use verbb\vizy\gql\interfaces\NodeInterface;
 use verbb\vizy\gql\types\NodeType;
+use verbb\vizy\gql\types\generators\VizyBlockTypeGenerator;
 use verbb\vizy\nodes\VizyBlock;
 
 use craft\gql\base\GeneratorInterface;

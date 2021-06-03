@@ -157,6 +157,11 @@ class Node extends Component
         return 'Node_' . $end;
     }
 
+    public function getContentGqlType($context)
+    {
+        return Type::string();
+    }
+
     public function serializeValue(ElementInterface $element = null)
     {
         return $this->rawNode;

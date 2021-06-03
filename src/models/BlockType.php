@@ -2,6 +2,7 @@
 namespace verbb\vizy\models;
 
 use verbb\vizy\Vizy;
+use verbb\vizy\fields\VizyField;
 
 use Craft;
 use craft\base\Model;
@@ -24,6 +25,7 @@ class BlockType extends Model
     public $enabled;
     public $layoutUid;
     public $layoutConfig;
+    public $fieldId;
 
     private $_fieldLayout;
 
@@ -80,6 +82,19 @@ class BlockType extends Model
     public function setFieldLayout(FieldLayout $fieldLayout)
     {
         $this->_fieldLayout = $fieldLayout;
+    }
+
+    public function getField(): VizyField
+    {
+        if ($this->fieldId === null) {
+            throw new InvalidConfigException('Block type missing its field ID');
+        }
+
+        if (($field = Craft::$app->getFields()->getFieldById($this->fieldId)) === null) {
+            throw new InvalidConfigException('Invalid field ID: ' . $this->fieldId);
+        }
+
+        return $field;
     }
 
     public function serializeArray()
