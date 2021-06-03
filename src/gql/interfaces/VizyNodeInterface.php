@@ -44,7 +44,7 @@ class VizyNodeInterface extends BaseInterfaceType
 
     public static function getName(): string
     {
-        return 'VizyVizyNodeInterface';
+        return 'VizyNodeInterface';
     }
 
     public static function getFieldDefinitions(): array
