@@ -181,6 +181,11 @@ class VizyBlock extends Node
         return $this->normalizeFieldValue($fieldHandle);
     }
 
+    public function getGqlTypeName()
+    {
+        return $this->getField()->handle . '_' . $this->handle . '_BlockType';
+    }
+
     public function serializeValue(ElementInterface $element = null)
     {
         $value = parent::serializeValue($element);

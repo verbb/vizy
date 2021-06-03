@@ -1,6 +1,9 @@
 <?php
 namespace verbb\vizy\gql\types;
 
+use craft\helpers\Gql;
+use verbb\vizy\gql\interfaces\NodeInterface;
+
 use craft\gql\base\ObjectType;
 use craft\gql\GqlEntityRegistry;
 
@@ -17,21 +20,37 @@ class NodeCollectionType extends ObjectType
         return 'NodeCollection';
     }
 
-    public static function getType()
+    public static function getType($context = null)
     {
-        return GqlEntityRegistry::getEntity(self::getName()) ?: GqlEntityRegistry::createEntity(self::getName(), new self([
-            'name' => self::getName(),
-            'fields' => [
-                'rawNodes' => [
-                    'name' => 'rawNodes',
-                    'type' => ArrayType::getType(),
+        $entity = GqlEntityRegistry::getEntity(self::getName());
+
+        if (!$entity) {
+            $nodeCollectionType = new self([
+                'name' => self::getName(),
+                'fields' => [
+                    'nodes' => [
+                        'name' => 'nodes',
+                        'type' => Type::listOf(NodeInterface::getType($context)),
+                    ],
+                    'rawNodes' => [
+                        'name' => 'rawNodes',
+                        'type' => ArrayType::getType(),
+                    ],
+                    'renderHtml' => [
+                        'name' => 'renderHtml',
+                        'type' => Type::string(),
+                    ],
                 ],
-                'renderHtml' => [
-                    'name' => 'renderHtml',
-                    'type' => Type::string(),
-                ],
-            ],
-        ]));
+            ]);
+
+            $entity = GqlEntityRegistry::getEntity(self::getName());
+
+            if (!$entity) {
+                $entity = GqlEntityRegistry::createEntity(self::getName(), $nodeCollectionType);
+            }
+        }
+
+        return $entity;
     }
 
 
@@ -40,7 +59,7 @@ class NodeCollectionType extends ObjectType
 
     protected function resolve($source, $arguments, $context, ResolveInfo $resolveInfo)
     {
-        $fieldName = $resolveInfo->fieldName;
+        $fieldName = Gql::getFieldNameWithAlias($resolveInfo, $source, $context);
 
         if (method_exists($source, $fieldName)) {
             return $source->$fieldName();

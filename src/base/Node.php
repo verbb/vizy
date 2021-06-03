@@ -1,6 +1,7 @@
 <?php
 namespace verbb\vizy\base;
 
+use GraphQL\Type\Definition\Type;
 use verbb\vizy\Vizy;
 use verbb\vizy\events\ModifyNodeTagEvent;
 use verbb\vizy\helpers\Nodes;
@@ -145,6 +146,14 @@ class Node extends Component
         $this->trigger(self::EVENT_MODIFY_TAG, $event);
 
         return Nodes::renderClosingTag($event->tag);
+    }
+
+    public function getGqlTypeName()
+    {
+        $classNameParts = explode('\\', static::class);
+        $end = array_pop($classNameParts);
+
+        return 'Node_' . $end;
     }
 
     public function serializeValue(ElementInterface $element = null)

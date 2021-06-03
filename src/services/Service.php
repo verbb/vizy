@@ -35,6 +35,19 @@ class Service extends Component
         return $result ? new FieldLayout($result) : null;
     }
 
+    public function getAllBlockTypes()
+    {
+        $blockTypes = [];
+
+        foreach (Craft::$app->getFields()->getAllFields(false) as $field) {
+            if ($field instanceof VizyField) {
+                $blockTypes = array_merge($blockTypes, $field->getBlockTypes());
+            }
+        }
+
+        return $blockTypes;
+    }
+
     public function handleChangedField(ConfigEvent $event)
     {
         $data = $event->newValue;
