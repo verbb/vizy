@@ -2,8 +2,8 @@
 namespace verbb\vizy\gql\types;
 
 use craft\gql\GqlEntityRegistry;
-
 use craft\helpers\Json;
+
 use GraphQL\Type\Definition\ScalarType;
 
 class ArrayType extends ScalarType

@@ -1,7 +1,6 @@
 <?php
 namespace verbb\vizy\base;
 
-use GraphQL\Type\Definition\Type;
 use verbb\vizy\Vizy;
 use verbb\vizy\events\ModifyNodeTagEvent;
 use verbb\vizy\helpers\Nodes;
@@ -10,6 +9,8 @@ use Craft;
 use craft\base\Component;
 use craft\base\ElementInterface;
 use craft\helpers\Template;
+
+use GraphQL\Type\Definition\Type;
 
 class Node extends Component
 {

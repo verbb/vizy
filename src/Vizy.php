@@ -1,8 +1,6 @@
 <?php
 namespace verbb\vizy;
 
-use craft\events\RegisterGqlTypesEvent;
-use craft\services\Gql;
 use verbb\vizy\base\PluginTrait;
 use verbb\vizy\base\Routes;
 use verbb\vizy\fields\VizyField;
@@ -13,9 +11,10 @@ use verbb\vizy\models\Settings;
 use Craft;
 use craft\base\Plugin;
 use craft\events\RegisterComponentTypesEvent;
-use craft\services\Fields;
+use craft\events\RegisterGqlTypesEvent;
 use craft\helpers\UrlHelper;
-
+use craft\services\Fields;
+use craft\services\Gql;
 
 use yii\base\Event;
 
@@ -84,6 +83,7 @@ class Vizy extends Plugin
             ->onUpdate(Fields::CONFIG_FIELDS_KEY . '.{uid}', [$this->getService(), 'handleChangedField'])
             ->onRemove(Fields::CONFIG_FIELDS_KEY . '.{uid}', [$this->getService(), 'handleDeletedField']);
     }
+    
     private function _registerGraphQl()
     {
         Event::on(Gql::class, Gql::EVENT_REGISTER_GQL_TYPES, function(RegisterGqlTypesEvent $event) {

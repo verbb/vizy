@@ -1,12 +1,12 @@
 <?php
 namespace verbb\vizy\gql\types;
 
-use craft\helpers\Gql;
 use verbb\vizy\base\Node;
 use verbb\vizy\gql\interfaces\NodeInterface;
 use verbb\vizy\gql\interfaces\VizyBlockInterface;
 
 use craft\gql\base\ObjectType;
+use craft\helpers\Gql;
 
 use GraphQL\Type\Definition\ResolveInfo;
 

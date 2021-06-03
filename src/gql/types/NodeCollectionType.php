@@ -1,11 +1,11 @@
 <?php
 namespace verbb\vizy\gql\types;
 
-use craft\helpers\Gql;
 use verbb\vizy\gql\interfaces\NodeInterface;
 
 use craft\gql\base\ObjectType;
 use craft\gql\GqlEntityRegistry;
+use craft\helpers\Gql;
 
 use GraphQL\Type\Definition\ResolveInfo;
 use GraphQL\Type\Definition\Type;

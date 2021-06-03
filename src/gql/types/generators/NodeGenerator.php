@@ -1,13 +1,14 @@
 <?php
 namespace verbb\vizy\gql\types\generators;
 
-use craft\gql\base\GeneratorInterface;
-use craft\gql\GqlEntityRegistry;
+use verbb\vizy\Vizy;
 use verbb\vizy\fields\VizyField;
 use verbb\vizy\gql\interfaces\NodeInterface;
 use verbb\vizy\gql\types\NodeType;
 use verbb\vizy\nodes\VizyBlock;
-use verbb\vizy\Vizy;
+
+use craft\gql\base\GeneratorInterface;
+use craft\gql\GqlEntityRegistry;
 
 class NodeGenerator implements GeneratorInterface
 {
