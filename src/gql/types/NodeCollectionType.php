@@ -1,7 +1,7 @@
 <?php
 namespace verbb\vizy\gql\types;
 
-use verbb\vizy\gql\interfaces\NodeInterface;
+use verbb\vizy\gql\interfaces\VizyNodeInterface;
 
 use craft\gql\base\ObjectType;
 use craft\gql\GqlEntityRegistry;
@@ -30,7 +30,7 @@ class NodeCollectionType extends ObjectType
                 'fields' => [
                     'nodes' => [
                         'name' => 'nodes',
-                        'type' => Type::listOf(NodeInterface::getType($context)),
+                        'type' => Type::listOf(VizyNodeInterface::getType($context)),
                     ],
                     'rawNodes' => [
                         'name' => 'rawNodes',

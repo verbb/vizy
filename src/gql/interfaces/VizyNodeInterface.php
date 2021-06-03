@@ -1,7 +1,7 @@
 <?php
 namespace verbb\vizy\gql\interfaces;
 
-use verbb\vizy\gql\types\generators\NodeGenerator;
+use verbb\vizy\gql\types\generators\VizyNodeGenerator;
 use verbb\vizy\gql\types\ArrayType;
 
 use craft\gql\base\InterfaceType as BaseInterfaceType;
@@ -12,14 +12,14 @@ use GraphQL\Type\Definition\InterfaceType;
 use GraphQL\Type\Definition\ObjectType;
 use GraphQL\Type\Definition\Type;
 
-class NodeInterface extends BaseInterfaceType
+class VizyNodeInterface extends BaseInterfaceType
 {
     // Public Methods
     // =========================================================================
 
     public static function getTypeGenerator(): string
     {
-        return NodeGenerator::class;
+        return VizyNodeGenerator::class;
     }
 
     public static function getType($fields = null): Type
@@ -37,14 +37,14 @@ class NodeInterface extends BaseInterfaceType
             },
         ]));
 
-        NodeGenerator::generateTypes($fields);
+        VizyNodeGenerator::generateTypes($fields);
 
         return $type;
     }
 
     public static function getName(): string
     {
-        return 'VizyNodeInterface';
+        return 'VizyVizyNodeInterface';
     }
 
     public static function getFieldDefinitions(): array

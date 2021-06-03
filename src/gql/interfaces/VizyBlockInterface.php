@@ -50,7 +50,7 @@ class VizyBlockInterface extends BaseInterfaceType
     public static function getFieldDefinitions(): array
     {
         return TypeManager::prepareFieldDefinitions(array_merge(parent::getFieldDefinitions(), [
-            // TODO extend NodeInterface
+            // TODO extend VizyNodeInterface
             'type' => [
                 'name' => 'type',
                 'type' => Type::string(),

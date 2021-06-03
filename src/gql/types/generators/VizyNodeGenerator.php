@@ -3,15 +3,15 @@ namespace verbb\vizy\gql\types\generators;
 
 use verbb\vizy\Vizy;
 use verbb\vizy\fields\VizyField;
-use verbb\vizy\gql\interfaces\NodeInterface;
-use verbb\vizy\gql\types\NodeType;
+use verbb\vizy\gql\interfaces\VizyNodeInterface;
+use verbb\vizy\gql\types\VizyNodeType;
 use verbb\vizy\gql\types\generators\VizyBlockTypeGenerator;
 use verbb\vizy\nodes\VizyBlock;
 
 use craft\gql\base\GeneratorInterface;
 use craft\gql\GqlEntityRegistry;
 
-class NodeGenerator implements GeneratorInterface
+class VizyNodeGenerator implements GeneratorInterface
 {
     // Public Methods
     // =========================================================================
@@ -21,7 +21,7 @@ class NodeGenerator implements GeneratorInterface
         $nodeClasses = Vizy::$plugin->getNodes()->getRegisteredNodes();
 
         $gqlTypes = [];
-        $interfaceFields = NodeInterface::getFieldDefinitions();
+        $interfaceFields = VizyNodeInterface::getFieldDefinitions();
 
         foreach ($nodeClasses as $nodeClass) {
             // Handle these on a per-field base.
@@ -42,7 +42,7 @@ class NodeGenerator implements GeneratorInterface
                 // Override content field with the nodes content type.
                 $nodeFields = array_merge($interfaceFields, ['content' => $contentType]);
 
-                $entity = new NodeType([
+                $entity = new VizyNodeType([
                     'name' => $typeName,
                     'fields' => function() use ($nodeFields) {
                         return $nodeFields;

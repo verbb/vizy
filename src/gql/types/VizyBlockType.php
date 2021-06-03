@@ -1,7 +1,7 @@
 <?php
 namespace verbb\vizy\gql\types;
 
-use verbb\vizy\gql\interfaces\NodeInterface;
+use verbb\vizy\gql\interfaces\VizyNodeInterface;
 use verbb\vizy\gql\interfaces\VizyBlockInterface;
 
 use craft\gql\base\ObjectType;
@@ -16,7 +16,7 @@ class VizyBlockType extends ObjectType
     public function __construct(array $config)
     {
         $config['interfaces'] = [
-            NodeInterface::getType(),
+            VizyNodeInterface::getType(),
             VizyBlockInterface::getType(),
         ];
 

@@ -4,7 +4,7 @@ namespace verbb\vizy;
 use verbb\vizy\base\PluginTrait;
 use verbb\vizy\base\Routes;
 use verbb\vizy\fields\VizyField;
-use verbb\vizy\gql\interfaces\NodeInterface;
+use verbb\vizy\gql\interfaces\VizyNodeInterface;
 use verbb\vizy\gql\interfaces\VizyBlockInterface;
 use verbb\vizy\models\Settings;
 
@@ -87,7 +87,7 @@ class Vizy extends Plugin
     private function _registerGraphQl()
     {
         Event::on(Gql::class, Gql::EVENT_REGISTER_GQL_TYPES, function(RegisterGqlTypesEvent $event) {
-            $event->types[] = NodeInterface::class;
+            $event->types[] = VizyNodeInterface::class;
             $event->types[] = VizyBlockInterface::class;
         });
     }

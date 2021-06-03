@@ -2,7 +2,7 @@
 namespace verbb\vizy\gql\types;
 
 use verbb\vizy\base\Node;
-use verbb\vizy\gql\interfaces\NodeInterface;
+use verbb\vizy\gql\interfaces\VizyNodeInterface;
 use verbb\vizy\gql\interfaces\VizyBlockInterface;
 
 use craft\gql\base\ObjectType;
@@ -10,7 +10,7 @@ use craft\helpers\Gql;
 
 use GraphQL\Type\Definition\ResolveInfo;
 
-class NodeType extends ObjectType
+class VizyNodeType extends ObjectType
 {
     // Public Methods
     // =========================================================================
@@ -18,7 +18,7 @@ class NodeType extends ObjectType
     public function __construct(array $config)
     {
         $config['interfaces'] = [
-            NodeInterface::getType(),
+            VizyNodeInterface::getType(),
         ];
 
         parent::__construct($config);

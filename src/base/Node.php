@@ -154,7 +154,7 @@ class Node extends Component
         $classNameParts = explode('\\', static::class);
         $end = array_pop($classNameParts);
 
-        return 'Node_' . $end;
+        return 'VizyNode_' . $end;
     }
 
     public function getContentGqlType($context)
