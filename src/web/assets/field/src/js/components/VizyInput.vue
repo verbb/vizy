@@ -461,10 +461,23 @@ export default {
     .ProseMirror > ol {
         padding-left: 0 !important;
         margin-left: 24px;
+
+        ul, ol {
+            padding-left: 0 !important;
+            margin-left: 24px;
+        }
+
+        p {
+            margin: 0;
+        }
     }
 
     .ProseMirror > ul {
         list-style-type: disc;
+
+        ul {
+            list-style-type: disc;
+        }
     }
 
     .ProseMirror > blockquote {
