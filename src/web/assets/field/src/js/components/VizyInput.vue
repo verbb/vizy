@@ -93,7 +93,7 @@ export default {
             editor: null,
             json: null,
             html: null,
-            parentToolbars: 0,
+            parentToolbarOffset: 0,
             cachedFieldHtml: {},
             cachedFieldJs: {},
         };
@@ -172,7 +172,11 @@ export default {
         });
 
         // Keep track of any parent fields (at least their toolbars) so we can align them
-        this.parentToolbars = this.getParentToolbarCount(this.$el);
+        this.getParentInputs(this.$el).forEach((parentInput) => {
+            if (parentInput.$refs.toolbar) {
+                this.parentToolbarOffset += parentInput.$refs.toolbar.$el.offsetHeight;
+            }
+        });
 
         // For nested Vizy fields, the field will be serialized again on-load, but will produce content
         // change warnings. So wait until ready, then re-serialize it.
@@ -344,8 +348,8 @@ export default {
                 headerBuffer = document.querySelector('.lp-editor-container header.flex') ? document.querySelector('.lp-editor-container header.flex').offsetHeight : 0;
             }
 
-            // Check if there are any parent Vizy fields, otherwise we get multiple toolbar overlaps
-            headerBuffer = headerBuffer + this.parentToolbars * 41;
+            // Apply any parent Vizy fields toolbars, otherwise we get multiple toolbar overlaps
+            headerBuffer = headerBuffer + this.parentToolbarOffset;
 
             this.$refs.toolbar.$el.style.position = 'sticky';
             this.$refs.toolbar.$el.style.top = this.$el.scrollTop + headerBuffer + 'px';
@@ -369,18 +373,17 @@ export default {
             });
         },
 
-        getParentToolbarCount(el) {
+        getParentInputs() {
             var parents = [];
+            var node = this.$parent;
 
-            for (; el && el !== document; el = el.parentNode) {
-                if (el.classList.contains('vui-rich-text')) {
-                    if (el.querySelector('.vui-editor-toolbar')) {
-                        parents.push(el);
-                    }
+            for (; node; node = node.$parent) {
+                if (node.$options._componentTag === 'vizy-input') {
+                    parents.push(node);
                 }
             }
 
-            return parents.length;
+            return parents;
         },
 
         refreshUnloadData() {
@@ -424,6 +427,7 @@ export default {
     position: relative;
     border-radius: 3px;
     border: 1px solid rgba(96, 125, 159, 0.25);
+    z-index: 1;
 
     &.has-focus {
         box-shadow: 0 0 0 1px #127fbf, 0 0 0 3px rgb(18 127 191 / 50%);
