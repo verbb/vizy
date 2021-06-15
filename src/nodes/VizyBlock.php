@@ -240,7 +240,7 @@ class VizyBlock extends Node
     {
         // Have we already normalized this value?
         if (isset($this->_normalizedFieldValues[$fieldHandle])) {
-            return;
+            return $this->_normalizedFieldValues[$fieldHandle];
         }
 
         $field = $this->fieldByHandle($fieldHandle);
@@ -249,10 +249,9 @@ class VizyBlock extends Node
             throw new InvalidFieldException($fieldHandle);
         }
 
-        $this->_normalizedFieldValues[$fieldHandle] = true;
         $content = $this->_getRawFieldContent($fieldHandle);
 
-        return $field->normalizeValue($content, $this->element);
+        return $this->_normalizedFieldValues[$fieldHandle] = $field->normalizeValue($content, $this->element);
     }
 
     protected function fieldByHandle(string $handle)
