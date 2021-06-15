@@ -24,6 +24,7 @@ class VizyBlock extends Node
     private $_blockType;
     private $_fieldsByHandle;
     private $_normalizedFieldValues;
+    private $_blockElement;
 
 
     // Public Methods
@@ -152,14 +153,9 @@ class VizyBlock extends Node
         }
 
         // Create a fake element with the same fieldtype as our block
-        $block = new BlockElement();
-        $block->setFieldLayout($fieldLayout);
+        $block = $this->getBlockElement();
 
-        // Set the field values based on stored content
-        $fieldValues = $this->attrs['values']['content']['fields'] ?? [];
-        $block->setFieldValues($fieldValues);
-
-        foreach ($fieldLayout->getTabs() as $tab) {
+        foreach ($block->getFieldLayout()->getTabs() as $tab) {
             foreach ($tab->elements as $tabElement) {
                 $html .= $tabElement->formHtml($block, true);
             }
@@ -205,23 +201,35 @@ class VizyBlock extends Node
         }
 
         // Create a fake element with the same fieldtype as our block
+        $block = $this->getBlockElement($element);
+        
+        foreach ($block->getFieldLayout()->getFields() as $field) {
+            // Ensure we call each field's `afterElementSave` method. This would be auto-done
+            // if a VizyBlock node was an element, and we were saving that.
+            $field->afterElementSave($block, true);
+        }
+
+        return $value;
+    }
+
+    public function getBlockElement($element = null)
+    {
+        if ($this->_blockElement) {
+            return $this->_blockElement;
+        }
+
+        $block = new BlockElement();
+
         if ($fieldLayout = $this->getFieldLayout()) {
-            $block = new BlockElement();
             $block->setOwner($element);
             $block->setFieldLayout($fieldLayout);
 
             // Set the field values based on stored content
             $fieldValues = $this->attrs['values']['content']['fields'] ?? [];
             $block->setFieldValues($fieldValues);
-
-            foreach ($fieldLayout->getFields() as $field) {
-                // Ensure we call each field's `afterElementSave` method. This would be auto-done
-                // if a VizyBlock node was an element, and we were saving that.
-                $field->afterElementSave($block, true);
-            }
         }
 
-        return $value;
+        return $this->_blockElement = $block;
     }
 
 

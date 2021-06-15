@@ -16,6 +16,11 @@ class Block extends Element
     // Public Methods
     // =========================================================================
 
+    public static function hasContent(): bool
+    {
+        return true;
+    }
+
     public function getFieldLayout()
     {
         return $this->_fieldLayout;

@@ -410,6 +410,32 @@ class VizyField extends Field
         return NodeCollectionType::getType($this);
     }
 
+    public function getElementValidationRules(): array
+    {
+        return [
+            [
+                'validateBlocks',
+                'on' => [Element::SCENARIO_ESSENTIALS, Element::SCENARIO_DEFAULT, Element::SCENARIO_LIVE],
+            ],
+        ];
+    }
+
+    public function validateBlocks(ElementInterface $element)
+    {
+        $value = $element->getFieldValue($this->handle);
+        $blocks = $value->query()->where(['type' => 'vizyBlock'])->all();
+        $scenario = $element->getScenario();
+
+        foreach ($blocks as $i => $block) {
+            $blockElement = $block->getBlockElement($element);
+            $blockElement->setScenario($scenario);
+
+            if (!$blockElement->validate()) {
+                $element->addModelErrors($blockElement, "{$this->handle}[{$i}]");
+            }
+        }
+    }
+
 
     // Private Methods
     // =========================================================================
@@ -520,7 +546,7 @@ class VizyField extends Field
         $blocks = [];
 
         if ($value && $value instanceof NodeCollection) {
-            foreach ($value->getNodes() as $key => $block) {
+            foreach ($value->getNodes() as $i => $block) {
                 if ($block instanceof VizyBlock) {
                     $blockId = $block->attrs['id'];
                     $fieldData = $block->attrs['values']['content']['fields'] ?? [];
@@ -538,6 +564,15 @@ class VizyField extends Field
                     $blockElement->setFieldLayout($fieldLayout);
                     $blockElement->setOwner($element);
                     $blockElement->setFieldValues($fieldData);
+
+                    // Handle any errors on the element to the field layout, so it'll render them
+                    foreach ($element->getErrors() as $errorKey => $errors) {
+                        if (strstr($errorKey, "{$this->handle}[{$i}].")) {
+                            $key = str_replace("{$this->handle}[{$i}].", '', $errorKey);
+
+                            $blockElement->addErrors([$key => $errors]);
+                        }
+                    }
 
                     $originalNamespace = $view->getNamespace();
                     $namespace = $view->namespaceInputName($this->handle . "[blocks][{$blockId}]", $originalNamespace);
