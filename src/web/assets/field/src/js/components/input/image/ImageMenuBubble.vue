@@ -17,6 +17,7 @@
 </template>
 
 <script>
+import size from 'lodash/size';
 import ImageMenuModal from './ImageMenuModal.vue';
 
 import { findChildrenByType } from '@utils/tiptap/nodes';
@@ -79,8 +80,15 @@ export default {
         renderBubble(event) {
             const { view } = this.editor;
 
+            // Prevent empty models from proceeding. Happens for nested Vizy fields.
+            var model = this.editor.getNodeAttributes('image');
+
+            if (!size(model)) {
+                return;
+            }
+
             // Update our model
-            this.model = this.editor.getNodeAttributes('image');
+            this.model = model;
 
             this.$el.style.display = 'block';
 
