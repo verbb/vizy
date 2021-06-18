@@ -1,6 +1,8 @@
 <?php
 namespace verbb\vizy\elements;
 
+use verbb\vizy\helpers\Matrix;
+
 use Craft;
 use craft\base\Element;
 

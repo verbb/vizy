@@ -3,6 +3,7 @@ namespace verbb\vizy\nodes;
 
 use verbb\vizy\base\Node;
 use verbb\vizy\elements\Block as BlockElement;
+use verbb\vizy\helpers\Matrix;
 
 use Craft;
 use craft\base\ElementInterface;
