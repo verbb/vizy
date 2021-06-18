@@ -35,6 +35,12 @@ class Block extends Element
     {
         // Filter out any field values for fields that no longer exist on the element
         foreach ($values as $fieldHandle => $value) {
+            $field = $this->fieldByHandle($fieldHandle);
+
+            if (Matrix::isMatrix($field)) {
+                $values[$fieldHandle] = Matrix::sanitizeMatrixContent($field, $value);
+            }
+
             if (!property_exists($this->getBehavior('customFields'), $fieldHandle)) {
                 unset($values[$fieldHandle]);
             }

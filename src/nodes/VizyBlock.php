@@ -251,6 +251,10 @@ class VizyBlock extends Node
 
         $content = $this->_getRawFieldContent($fieldHandle);
 
+        if (Matrix::isMatrix($field)) {
+            $content = Matrix::sanitizeMatrixContent($field, $content);
+        }
+
         return $this->_normalizedFieldValues[$fieldHandle] = $field->normalizeValue($content, $this->element);
     }
 
