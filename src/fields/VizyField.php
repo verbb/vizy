@@ -318,12 +318,12 @@ class VizyField extends Field
         // Can cause PC issues with `unpackAssociativeArray`.
         $this->fieldData = array_values($this->fieldData);
 
-        return true;
-    }
+        // Any fields not in the global scope won't trigger a PC change event. Go manual.
+        if ($this->context !== 'global') {
+            Vizy::$plugin->getService()->saveField($this->fieldData);
+        }
 
-    public function beforeElementSave(ElementInterface $element, bool $isNew): bool
-    {
-        return parent::beforeElementSave($element, $isNew);
+        return true;
     }
 
     public function getBlockTypeById($blockTypeId)

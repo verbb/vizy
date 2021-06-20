@@ -68,6 +68,13 @@ class Service extends Component
 
         $fieldData = $data['settings']['fieldData'] ?? [];
         $fieldData = ProjectConfigHelper::unpackAssociativeArrays($fieldData);
+        $this->saveField($fieldData, $event);
+    }
+
+    public function saveField($fieldData, $event = null)
+    {
+        $fieldsService = Craft::$app->getFields();
+        $projectConfigService = Craft::$app->getProjectConfig();
 
         // Ensure we update all field layouts, for each blocktype
         foreach ($fieldData as $groupKey => $group) {
