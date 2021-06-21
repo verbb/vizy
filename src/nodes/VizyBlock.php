@@ -3,6 +3,7 @@ namespace verbb\vizy\nodes;
 
 use verbb\vizy\base\Node;
 use verbb\vizy\elements\Block as BlockElement;
+use verbb\vizy\helpers\Matrix;
 
 use Craft;
 use craft\base\ElementInterface;
@@ -250,6 +251,10 @@ class VizyBlock extends Node
         }
 
         $content = $this->_getRawFieldContent($fieldHandle);
+
+        if (Matrix::isMatrix($field)) {
+            $content = Matrix::sanitizeMatrixContent($field, $content);
+        }
 
         return $this->_normalizedFieldValues[$fieldHandle] = $field->normalizeValue($content, $this->element);
     }
