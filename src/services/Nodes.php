@@ -109,48 +109,81 @@ class Nodes extends Component
         return $this->_registeredMarksByType;
     }
 
-    public function renderNode($node)
+    public function renderNode($node, $prevNode = null, $nextNode = null)
     {
         $html = [];
+
+        if ($node->marks) {
+            foreach ($node->marks as $mark) {
+                if ($this->markShouldOpen($mark, $prevNode)) {
+                    $html[] = $mark->renderOpeningTag();
+                }
+            }
+        }
 
         $html[] = $node->renderOpeningTag();
 
         if ($node->content) {
-            foreach ($node->content as $nestedNode) {
-                if ($nodeHtml = $this->renderNode($nestedNode)) {
-                    $html[] = $nodeHtml;
-                }
+            foreach ($node->content as $index => $nestedNode) {
+                $prevNestedNode = $node->content[$index - 1] ?? null;
+                $nextNestedNode = $node->content[$index + 1] ?? null;
+
+                $html[] = $this->renderNode($nestedNode, $prevNestedNode, $nextNestedNode);
+                $prevNode = $nestedNode;
             }
-        } else if ($node->marks) {
-            foreach ($node->marks as $mark) {
-                if ($markHtml = $this->renderMark($node, $mark)) {
-                    $html[] = $markHtml;
-                }
-            }
-        } else if ($text = $node->getText()) {
+        } elseif ($text = $node->getText()) {
             $html[] = $text;
         }
 
-        if (!$node->selfClosing()) {
-            $html[] = $node->renderClosingTag();
+        if ($node->selfClosing()) {
+            return;
         }
-        
+
+        $html[] = $node->renderClosingTag();
+
+        if ($node->marks) {
+            foreach (array_reverse($node->marks) as $mark) {
+                if ($this->markShouldClose($mark, $nextNode)) {
+                    $html[] = $mark->renderClosingTag();
+                }
+            }
+        }
+
         return join($html);
     }
 
-    public function renderMark($node, $mark)
+
+    // Private Methods
+    // =========================================================================
+
+    private function markShouldOpen($mark, $prevNode)
     {
-        $html = [];
+        return $this->nodeHasMark($prevNode, $mark);
+    }
 
-        $html[] = $mark->renderOpeningTag();
+    private function markShouldClose($mark, $nextNode)
+    {
+        return $this->nodeHasMark($nextNode, $mark);
+    }
 
-        if ($text = $node->getText()) {
-            $html[] = $text;
+    private function nodeHasMark($node, $mark)
+    {
+        if (!$node) {
+            return true;
         }
 
-        $html[] = $mark->renderClosingTag();
+        if (!property_exists($node, 'marks')) {
+            return true;
+        }
 
-        return join($html);
+        // Other node has same mark
+        foreach ($node->marks as $otherMark) {
+            if ($mark == $otherMark) {
+                return false;
+            }
+        }
+
+        return true;
     }
 
 }
