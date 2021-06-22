@@ -1,5 +1,35 @@
 # Changelog
 
+## 1.0.3 - 2021-06-22
+
+### Added
+- Add `defaultTransform` field setting.
+- Add `defaultTransform` field setting.
+- Add `availableTransforms` field setting.
+- Add `availableVolumes` field setting.
+- Add `showUnpermittedFiles` field setting.
+- Add `showUnpermittedVolumes` field setting.
+- Add `trimEmptyParagraphs` field setting to automatically trim any empty paragraphs in content.
+- Add `serializeValue()` to all nodes, to control the values saved to the database.
+
+### Changed
+- Update all tiptap dependancies to latest beta versions.
+- Update Vizy Node GraphQL interface name.
+
+### Fixed
+- Fix multiple nested marks (bold + underline, etc) rendering text twice.
+- Fix Matrix blocks throwing an error if a block type field was deleted. (thanks @dyerc).
+- Fix Vizy block type fields not saving when nested in a Super Table/Matrix field.
+- Fix nested Vizy fields’ image nodes not working correctly.
+- Fix GQL Vizy Block field aliases not working.
+- Fix fixed toolbar buttons overlapping for nested Vizy fields.
+- Fix nested list elements `ul`, `ol` not appearing correctly in the control panel editor.
+- Fix Vizy Block fields not validating when saving an element.
+- Fix `getMarkAttributes` tiptap deprecation.
+- Fix asset fields in Vizy blocks not resolving to the correct volume/paths.
+- Fix incorrectly parsing Twig template code in block fields.
+- Fiz Vizy fields not showing as empty for empty content.
+
 ## 1.0.2 - 2021-05-30
 
 ### Added
