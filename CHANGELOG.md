@@ -28,7 +28,7 @@
 - Fix `getMarkAttributes` tiptap deprecation.
 - Fix asset fields in Vizy blocks not resolving to the correct volume/paths.
 - Fix incorrectly parsing Twig template code in block fields.
-- Fiz Vizy fields not showing as empty for empty content.
+- Fix Vizy fields not showing as empty for empty content.
 
 ## 1.0.2 - 2021-05-30
 
