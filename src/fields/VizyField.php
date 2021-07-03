@@ -95,6 +95,18 @@ class VizyField extends Field
         return $this->columnType;
     }
 
+    public function isValueEmpty($value, ElementInterface $element): bool
+    {
+        $isValueEmpty = parent::isValueEmpty($value, $element);
+
+        // Check for an empty paragraph
+        if ($value instanceof NodeCollection) {
+            $isValueEmpty = $isValueEmpty || $value->isEmpty();
+        }
+
+        return $isValueEmpty;
+    }
+
     public function getSettingsHtml()
     {
         $view = Craft::$app->getView();

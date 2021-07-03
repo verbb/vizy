@@ -124,6 +124,17 @@ class NodeCollection extends Model
         return $values;
     }
 
+    public function isEmpty()
+    {
+        // Check to see if this is an empty field. Note 'empty' means a single
+        // paragraph node with no content.
+        if (strip_tags($this->renderHtml()) === '') {
+            return true;
+        }
+
+        return false;
+    }
+
 
     // Private Methods
     // =========================================================================
