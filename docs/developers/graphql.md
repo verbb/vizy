@@ -80,9 +80,11 @@ This is the interface implemented by all nodes.
 | - | - | -
 | `type`| `string` | The type of the node.
 | `tagName`| `string` | The HTML tag name of the node.
-| `attrs`| `array` | The attributes of the node.
-| `marks`| `array` | The marks of the node.
-| `content`| `string` | The content of the node.
+| `attrs`| `json` | The attributes of the node.
+| `marks`| `json` | The marks of the node.
+| `content`| `string` | The content of the node. This will produce rendered HTML.
+| `text`| `string` | The inner text of the node.
+| `rawNode`| `json` | The raw JSON structure for the node, as stored in the database.
 
 Available node type fragments are:
 

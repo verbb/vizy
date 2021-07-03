@@ -66,6 +66,14 @@ class VizyNodeInterface extends BaseInterfaceType
                 'name' => 'marks',
                 'type' => ArrayType::getType(),
             ],
+            'text' => [
+                'name' => 'text',
+                'type' => Type::string(),
+            ],
+            'rawNode' => [
+                'name' => 'rawNode',
+                'type' => ArrayType::getType(),
+            ],
         ]), self::getName());
     }
 }
