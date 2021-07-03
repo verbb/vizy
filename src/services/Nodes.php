@@ -135,16 +135,14 @@ class Nodes extends Component
             $html[] = $text;
         }
 
-        if ($node->selfClosing()) {
-            return;
-        }
+        if (!$node->selfClosing()) {
+            $html[] = $node->renderClosingTag();
 
-        $html[] = $node->renderClosingTag();
-
-        if ($node->marks) {
-            foreach (array_reverse($node->marks) as $mark) {
-                if ($this->markShouldClose($mark, $nextNode)) {
-                    $html[] = $mark->renderClosingTag();
+            if ($node->marks) {
+                foreach (array_reverse($node->marks) as $mark) {
+                    if ($this->markShouldClose($mark, $nextNode)) {
+                        $html[] = $mark->renderClosingTag();
+                    }
                 }
             }
         }
