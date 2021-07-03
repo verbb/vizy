@@ -7,6 +7,7 @@ use verbb\vizy\gql\types\ArrayType;
 use craft\gql\base\InterfaceType as BaseInterfaceType;
 use craft\gql\GqlEntityRegistry;
 use craft\gql\TypeManager;
+use craft\helpers\Json;
 
 use GraphQL\Type\Definition\InterfaceType;
 use GraphQL\Type\Definition\ObjectType;
@@ -58,17 +59,40 @@ class VizyNodeInterface extends BaseInterfaceType
                 'name' => 'tagName',
                 'type' => Type::string(),
             ],
+            'html' => [
+                'name' => 'html',
+                'type' => Type::string(),
+                'resolve' => function ($source) {
+                    return $source->renderHtml();
+                },
+            ],
+            'content' => [
+                'name' => 'content',
+                'type' => ArrayType::getType(),
+                'resolve' => function ($source) {
+                    return $source->rawNode['content'] ?? [];
+                },
+            ],
             'attrs' => [
                 'name' => 'attrs',
                 'type' => ArrayType::getType(),
+                'resolve' => function ($source) {
+                    return $source->rawNode['attrs'] ?? [];
+                },
             ],
             'marks' => [
                 'name' => 'marks',
                 'type' => ArrayType::getType(),
+                'resolve' => function ($source) {
+                    return $source->rawNode['marks'] ?? [];
+                },
             ],
             'text' => [
                 'name' => 'text',
                 'type' => Type::string(),
+                'resolve' => function ($source) {
+                    return $source->rawNode['text'] ?? '';
+                },
             ],
             'rawNode' => [
                 'name' => 'rawNode',

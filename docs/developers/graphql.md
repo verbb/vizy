@@ -12,7 +12,7 @@ Using `nodes` to query your data is the most common scenario.
         nodes {
           ... on VizyNode_Paragraph {
             type
-            content
+            html
           }
           
           ... on vizyField_mediaWithImage_BlockType {
@@ -45,7 +45,7 @@ Using `nodes` to query your data is the most common scenario.
           "nodes": [
             {
               "type": "paragraph",
-              "content": "<p>Wait until you get a load of this</p>"
+              "html": "<p>Wait until you get a load of this</p>"
             },
             {
               "enabled": true,
@@ -82,8 +82,9 @@ This is the interface implemented by all nodes.
 | `tagName`| `string` | The HTML tag name of the node.
 | `attrs`| `json` | The attributes of the node.
 | `marks`| `json` | The marks of the node.
-| `content`| `string` | The content of the node. This will produce rendered HTML.
-| `text`| `string` | The inner text of the node.
+| `content`| `json` | The content of the node as structured node JSON, including nested marks and text content.
+| `html`| `string` | The content of the node as rendered HTML.
+| `text`| `string` | The inner text of the node, if applicable.
 | `rawNode`| `json` | The raw JSON structure for the node, as stored in the database.
 
 Available node type fragments are:

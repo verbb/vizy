@@ -40,12 +40,12 @@ class VizyNodeGenerator implements GeneratorInterface
                 $contentType = $node->getContentGqlType($field);
 
                 // Override content field with the nodes content type.
-                $nodeFields = array_merge($interfaceFields, ['content' => $contentType]);
+                // $nodeFields = array_merge($interfaceFields, ['content' => $contentType]);
 
                 $entity = new VizyNodeType([
                     'name' => $typeName,
-                    'fields' => function() use ($nodeFields) {
-                        return $nodeFields;
+                    'fields' => function() use ($interfaceFields) {
+                        return $interfaceFields;
                     }
                 ]);
 
