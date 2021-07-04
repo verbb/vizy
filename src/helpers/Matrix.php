@@ -17,6 +17,10 @@ class Matrix
             return $block->handle;
         }, $field->blockTypeFields);
 
+        if (!is_array($content)) {
+            $content = [];
+        }
+
         if (array_key_exists('blocks', $content)) {
             // Filter block types against those available
             $content['blocks'] = array_filter($content['blocks'], function ($block) use ($blockTypes) {
