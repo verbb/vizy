@@ -428,6 +428,7 @@ class VizyField extends Field
             [
                 'validateBlocks',
                 'on' => [Element::SCENARIO_ESSENTIALS, Element::SCENARIO_DEFAULT, Element::SCENARIO_LIVE],
+                'skipOnEmpty' => false,
             ],
         ];
     }
