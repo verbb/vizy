@@ -1,5 +1,17 @@
 # Changelog
 
+## 1.0.4 - 2021-07-21
+
+### Added
+- Add `text` and `rawNode` to NodeInterface for GraphQL.
+
+### Fixed
+- Fix an error when saving Vizy blocks containing Matrix fields with no blocks defined.
+- Fix Vizy fields failing to validate Vizy blocks, when only Vizy blocks are present in the field.
+- Fix `content`, `attrs`, `marks` and `text` GraphQL node properties not having the correct values.
+- Fix image node, and other self-closing nodes not displaying correctly.
+- Fix required Vizy fields not validating when no content is set for the field.
+
 ## 1.0.3 - 2021-06-22
 
 ### Added
