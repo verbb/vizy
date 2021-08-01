@@ -55,8 +55,6 @@
         </div>
 
         <slide-up-down :active="!collapsed" :duration="300">
-            <span v-if="$isDebug" style="font-size: 10px;line-height: 13px;">{{ node.attrs.values.content }}</span>
-
             <vizy-block-fields v-if="fieldsHtml" ref="fields" :key="updateFieldsHtml" class="vizyblock-fields" :template="fieldsHtml" @update="onFieldUpdate" />
         </slide-up-down>
     </node-view-wrapper>

@@ -1,6 +1,6 @@
 <template>
     <div>
-        <div v-if="editor" class="vui-rich-text" :class="{ 'has-focus': editor ? editor.isFocused : false }">
+        <div v-if="editor" class="vui-rich-text" :class="{ 'has-focus': isFocused() }">
             <menu-bar v-if="buttons.length" ref="toolbar" :buttons="buttons" :editor="editor" :field="this" />
             <code-editor v-model="codeEditorHtml" :visible="showCodeEditor" :editor="editor" :field="this" />
             <editor-content :class="{ 'code-view': showCodeEditor }" class="vui-editor" :editor="editor" />
@@ -121,7 +121,7 @@ export default {
         this.editor = new Editor({
             extensions: this.getExtensions(),
             content: this.valueToContent(clone(this.value)),
-            // autofocus: false,
+            autofocus: false,
             onUpdate: () => {
                 this.json = this.editor.getJSON().content;
                 this.html = this.editor.getHTML();
@@ -424,6 +424,10 @@ export default {
                     }
                 }
             }, 500);
+        },
+
+        isFocused() {
+            return this.editor.isFocused && !this.editor.isActive('vizyBlock');
         },
     },
 
