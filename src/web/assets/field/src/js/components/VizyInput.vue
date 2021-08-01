@@ -96,6 +96,7 @@ export default {
             parentToolbarOffset: 0,
             cachedFieldHtml: {},
             cachedFieldJs: {},
+            renderedJsCache: {},
         };
     },
 
@@ -312,7 +313,21 @@ export default {
                 });
             }
 
-            return this.getParsedBlockHtml(html, blockId);
+            var fieldJs = this.getParsedBlockHtml(html, blockId);
+
+            // When re-rendering the block, we'll want to remove some things that are initialized
+            // multiple times. This will likely grow as we find more incompatible fields...
+            if (this.renderedJsCache[blockId]) {
+                // Static Super Table fields contain JS to auto-add a row when the field is initialised
+                // and un-saved. Unfortunately, this messes up Vizy which re-renders the block when moving.
+                // This only effect un-saved, brand-new ST rows which still rely on this JS to auto-add a row.
+                fieldJs = fieldJs.replace(/(superTableInput.addRow.*?;)/g, 'null');
+            }
+
+            // Save this to our internal cache for next time
+            this.renderedJsCache[blockId] = fieldJs;
+
+            return fieldJs;
         },
 
         setCachedFieldJs(blockId, value) {
