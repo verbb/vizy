@@ -329,7 +329,17 @@ export default {
         onUpdateDOM() {
             this.$nextTick(() => {
                 if (this.$refs.fields) {
-                    var fieldsHtml = $(this.$refs.fields.$el.childNodes).htmlize();
+                    var $fieldsHtml = $(this.$refs.fields.$el.childNodes).clone();
+
+                    // Special-case for Redactor. We need to reset it to its un-initialized form
+                    // because it doesn't have better double-binding checks.
+                    if ($fieldsHtml.find('.redactor-box').length) {
+                        // Rip out the `textarea` which is all we need
+                        var $textarea = $fieldsHtml.find('.redactor-box textarea').htmlize();
+                        $fieldsHtml.find('.redactor-box').replaceWith($textarea);
+                    }
+
+                    var fieldsHtml = $fieldsHtml.htmlize();
 
                     this.vizyField.setCachedFieldHtml(this.node.attrs.id, fieldsHtml);
                 }
