@@ -1,7 +1,7 @@
 <template>
     <div class="vui-workspace">
         <div>
-            <textarea class="hidden fullwidth" rows="20" name="fieldData" :value="JSON.stringify(fieldData)"></textarea>
+            <textarea class="hidden fullwidth" rows="20" :name="fieldName" :value="JSON.stringify(fieldData)"></textarea>
         </div>
 
         <div class="vui-popover">
@@ -260,6 +260,11 @@ export default {
     },
 
     props: {
+        fieldName: {
+            type: String,
+            required: true,
+        },
+
         errors: {
             type: [Object, Array],
             default: () => {},

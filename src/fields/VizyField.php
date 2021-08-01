@@ -260,53 +260,51 @@ class VizyField extends Field
         $errors = [];
 
         // Prepare the setting data to be saved
-        if ($fieldData = $request->getParam('fieldData')) {
-            $this->fieldData = Json::decode($fieldData);
+        $this->fieldData = Json::decodeIfJson($this->fieldData) ?? [];
 
-            foreach ($this->fieldData as $groupKey => $group) {
-                $blockTypes = $group['blockTypes'] ?? [];
+        foreach ($this->fieldData as $groupKey => $group) {
+            $blockTypes = $group['blockTypes'] ?? [];
 
-                foreach ($blockTypes as $blockTypeKey => $blockType) {
-                    // Ensure we catch errors to prevent data loss
-                    try {
-                        // Remove this before populating the model
-                        $layout = ArrayHelper::remove($blockType, 'layout');
+            foreach ($blockTypes as $blockTypeKey => $blockType) {
+                // Ensure we catch errors to prevent data loss
+                try {
+                    // Remove this before populating the model
+                    $layout = ArrayHelper::remove($blockType, 'layout');
 
-                        // Create a model so we can properly validate
-                        $blockType = new BlockType($blockType);
+                    // Create a model so we can properly validate
+                    $blockType = new BlockType($blockType);
 
-                        // Setup the field layout from field layout designer
-                        $elementPlacements = $layout['elementPlacements'] ?? [];
-                        $elementConfigs = $layout['elementConfigs'] ?? [];
-                        $layoutUid = $blockType->layoutUid ?? null;
+                    // Setup the field layout from field layout designer
+                    $elementPlacements = $layout['elementPlacements'] ?? [];
+                    $elementConfigs = $layout['elementConfigs'] ?? [];
+                    $layoutUid = $blockType->layoutUid ?? null;
 
-                        // Prevent potential issues when tab names aren't a string (`123` for example).
-                        $elementPlacements = array_filter($elementPlacements);
+                    // Prevent potential issues when tab names aren't a string (`123` for example).
+                    $elementPlacements = array_filter($elementPlacements);
 
-                        if (!$blockType->validate()) {
-                            foreach ($blockType->getErrors() as $key => $error) {
-                                $errors[$blockType->id . ':' . $key] = $error;
-                            }
-
-                            continue;
+                    if (!$blockType->validate()) {
+                        foreach ($blockType->getErrors() as $key => $error) {
+                            $errors[$blockType->id . ':' . $key] = $error;
                         }
 
-                        // Don't save anything if there's no data
-                        if ($elementPlacements && $elementConfigs) {
-                            $fieldLayout = $this->assembleLayout($elementPlacements, $elementConfigs, $layoutUid);
-                            $fieldLayout->type = BlockType::class;
-
-                            // Set the layout here, saving takes place in PC event handlers, straight after this
-                            $blockType->setFieldLayout($fieldLayout);
-                        }
-
-                        // Override with our cleaned model data
-                        $this->fieldData[$groupKey]['blockTypes'][$blockTypeKey] = $blockType->serializeArray();
-                    } catch (\Throwable $e) {
-                        $this->addErrors([$blockType->id . ':general' => $e->getMessage()]);
-
-                        return false;
+                        continue;
                     }
+
+                    // Don't save anything if there's no data
+                    if ($elementPlacements && $elementConfigs) {
+                        $fieldLayout = $this->assembleLayout($elementPlacements, $elementConfigs, $layoutUid);
+                        $fieldLayout->type = BlockType::class;
+
+                        // Set the layout here, saving takes place in PC event handlers, straight after this
+                        $blockType->setFieldLayout($fieldLayout);
+                    }
+
+                    // Override with our cleaned model data
+                    $this->fieldData[$groupKey]['blockTypes'][$blockTypeKey] = $blockType->serializeArray();
+                } catch (\Throwable $e) {
+                    $this->addErrors([$blockType->id . ':general' => $e->getMessage()]);
+
+                    return false;
                 }
             }
         }

@@ -51,8 +51,10 @@
         <p>{{ 'Define the types of blocks that can be created within this Vizy field, as well as the fields each block type is made up of.' | t('vizy') }}</p>
     </div>
 
+    {% set fieldName = craft.app.view.namespaceInputName('fieldData') %}
+
     <div class="{{ idPrefix }}-vizy-configurator vizy-configurator">
-        <vizy-settings :errors="{{ field.getErrors() | json_encode }}"></vizy-settings>
+        <vizy-settings field-name="{{ fieldName }}" :errors="{{ field.getErrors() | json_encode }}"></vizy-settings>
     </div>
 </div>
 
