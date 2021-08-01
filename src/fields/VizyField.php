@@ -560,8 +560,6 @@ class VizyField extends Field
             foreach ($value->getNodes() as $i => $block) {
                 if ($block instanceof VizyBlock) {
                     $blockId = $block->attrs['id'];
-                    $fieldData = $block->attrs['values']['content']['fields'] ?? [];
-
                     $fieldLayout = $block->getFieldLayout();
 
                     if (!$fieldLayout) {
@@ -571,19 +569,7 @@ class VizyField extends Field
                     $view->startJsBuffer();
 
                     // Create a fake element with the same fieldtype as our block
-                    $blockElement = new BlockElement();
-                    $blockElement->setFieldLayout($fieldLayout);
-                    $blockElement->setOwner($element);
-                    $blockElement->setFieldValues($fieldData);
-
-                    // Handle any errors on the element to the field layout, so it'll render them
-                    foreach ($element->getErrors() as $errorKey => $errors) {
-                        if (strstr($errorKey, "{$this->handle}[{$i}].")) {
-                            $key = str_replace("{$this->handle}[{$i}].", '', $errorKey);
-
-                            $blockElement->addErrors([$key => $errors]);
-                        }
-                    }
+                    $blockElement = $block->getBlockElement($element);
 
                     $originalNamespace = $view->getNamespace();
                     $namespace = $view->namespaceInputName($this->handle . "[blocks][{$blockId}]", $originalNamespace);
