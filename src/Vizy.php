@@ -19,6 +19,8 @@ use craft\services\Matrix;
 
 use yii\base\Event;
 
+use verbb\supertable\services\SuperTableService;
+
 class Vizy extends Plugin
 {
     // Public Properties
@@ -89,6 +91,13 @@ class Vizy extends Plugin
             ->onAdd(Matrix::CONFIG_BLOCKTYPE_KEY . '.{uid}', [$this->getService(), 'handleChangedBlockType'])
             ->onUpdate(Matrix::CONFIG_BLOCKTYPE_KEY . '.{uid}', [$this->getService(), 'handleChangedBlockType'])
             ->onRemove(Matrix::CONFIG_BLOCKTYPE_KEY . '.{uid}', [$this->getService(), 'handleDeletedBlockType']);
+
+        if (class_exists(SuperTableService::class)) {
+            Craft::$app->projectConfig
+                ->onAdd(SuperTableService::CONFIG_BLOCKTYPE_KEY . '.{uid}', [$this->getService(), 'handleChangedBlockType'])
+                ->onUpdate(SuperTableService::CONFIG_BLOCKTYPE_KEY . '.{uid}', [$this->getService(), 'handleChangedBlockType'])
+                ->onRemove(SuperTableService::CONFIG_BLOCKTYPE_KEY . '.{uid}', [$this->getService(), 'handleDeletedBlockType']);
+        }
     }
     
     private function _registerGraphQl()

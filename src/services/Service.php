@@ -204,6 +204,22 @@ class Service extends Component
 
     public function handleDeletedBlockType(ConfigEvent $event)
     {
+        $blockTypeUid = $event->tokenMatches[0];
+        $data = $event->newValue;
+        $previousData = $event->oldValue;
+
+        $fields = $previousData['fields'] ?? [];
+
+        foreach ($fields as $field) {
+            if ($field['type'] === VizyField::class) {
+                $configEvent = new ConfigEvent([
+                    'oldValue' => $field,
+                ]);
+
+                // Call the regular event handler with a fake event to prevent duplicate code
+                $this->handleDeletedField($configEvent);
+            }
+        }
     }
 
 }
