@@ -15,6 +15,7 @@ use craft\events\RegisterGqlTypesEvent;
 use craft\helpers\UrlHelper;
 use craft\services\Fields;
 use craft\services\Gql;
+use craft\services\Matrix;
 
 use yii\base\Event;
 
@@ -82,6 +83,12 @@ class Vizy extends Plugin
             ->onAdd(Fields::CONFIG_FIELDS_KEY . '.{uid}', [$this->getService(), 'handleChangedField'])
             ->onUpdate(Fields::CONFIG_FIELDS_KEY . '.{uid}', [$this->getService(), 'handleChangedField'])
             ->onRemove(Fields::CONFIG_FIELDS_KEY . '.{uid}', [$this->getService(), 'handleDeletedField']);
+
+        // Special case for some fields like Matrix, that don't emit the change event for nested fields.
+        Craft::$app->projectConfig
+            ->onAdd(Matrix::CONFIG_BLOCKTYPE_KEY . '.{uid}', [$this->getService(), 'handleChangedBlockType'])
+            ->onUpdate(Matrix::CONFIG_BLOCKTYPE_KEY . '.{uid}', [$this->getService(), 'handleChangedBlockType'])
+            ->onRemove(Matrix::CONFIG_BLOCKTYPE_KEY . '.{uid}', [$this->getService(), 'handleDeletedBlockType']);
     }
     
     private function _registerGraphQl()

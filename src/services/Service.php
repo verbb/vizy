@@ -53,15 +53,12 @@ class Service extends Component
         $data = $event->newValue;
         $fieldUid = $event->tokenMatches[0];
 
-        $fieldsService = Craft::$app->getFields();
-        $projectConfigService = Craft::$app->getProjectConfig();
-
         if (!is_array($data)) {
             return;
         }
 
         // This handler fires on every field-change, so we need to ensure this field is a Vizy field.
-        // We want eo watch for Vizy field changes to update each block type's field layout.
+        // We want to watch for Vizy field changes to update each block type's field layout.
         if ($data['type'] !== VizyField::class) {
             return;
         }
@@ -183,6 +180,30 @@ class Service extends Component
                 }
             }
         }
+    }
+
+    public function handleChangedBlockType(ConfigEvent $event)
+    {
+        $blockTypeUid = $event->tokenMatches[0];
+        $data = $event->newValue;
+        $previousData = $event->oldValue;
+
+        $fields = $data['fields'] ?? [];
+
+        foreach ($fields as $field) {
+            if ($field['type'] === VizyField::class) {
+                $configEvent = new ConfigEvent([
+                    'newValue' => $field,
+                ]);
+
+                // Call the regular event handler with a fake event to prevent duplicate code
+                $this->handleChangedField($configEvent);
+            }
+        }
+    }
+
+    public function handleDeletedBlockType(ConfigEvent $event)
+    {
     }
 
 }
