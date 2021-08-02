@@ -1,5 +1,20 @@
 # Changelog
 
+## 1.0.6 - 2021-08-02
+
+### Changed
+- Update all tiptap dependancies to latest beta versions.
+
+### Fixed
+- Fix nested Vizy fields not rendering when used inside a Matrix block (also inside a Vizy field).
+- Fix focus styling when selecting a Vizy Block.
+- Fix Vizy Block inner field validation (including Matrix).
+- Fix brand-new static Super Table blocks in a Vizy block having their rows duplicated when moving the block.
+- Fix when moving a Vizy block containing a Redactor field, it Redactor would be initialized multiple times.
+- Fix field layout changed in a Super Table-nested Vizy field not applying when running `project-config/apply`.
+- Fix field layout changed in a Matrix-nested Vizy field not applying when running `project-config/apply`.
+- Fix multiple Vizy fields in Matrix/Super Table parent fields not saving correctly.
+
 ## 1.0.4 - 2021-07-21
 
 ### Added
