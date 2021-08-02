@@ -1,6 +1,6 @@
 # Changelog
 
-## 1.0.6 - 2021-08-02
+## 1.0.5 - 2021-08-02
 
 ### Changed
 - Update all tiptap dependancies to latest beta versions.
