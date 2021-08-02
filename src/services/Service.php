@@ -50,8 +50,7 @@ class Service extends Component
 
     public function handleChangedField(ConfigEvent $event)
     {
-        $data = $event->newValue;
-        $fieldUid = $event->tokenMatches[0];
+        $data = $event->newValue ?? [];
 
         if (!is_array($data)) {
             return;
@@ -148,8 +147,7 @@ class Service extends Component
 
     public function handleDeletedField(ConfigEvent $event)
     {
-        $data = $event->oldValue;
-        $fieldUid = $event->tokenMatches[0];
+        $data = $event->oldValue ?? [];
 
         $fieldsService = Craft::$app->getFields();
         $projectConfigService = Craft::$app->getProjectConfig();
@@ -184,11 +182,7 @@ class Service extends Component
 
     public function handleChangedBlockType(ConfigEvent $event)
     {
-        $blockTypeUid = $event->tokenMatches[0];
-        $data = $event->newValue;
-        $previousData = $event->oldValue;
-
-        $fields = $data['fields'] ?? [];
+        $fields = $event->newValue['fields'] ?? [];
 
         foreach ($fields as $field) {
             if ($field['type'] === VizyField::class) {
@@ -204,11 +198,7 @@ class Service extends Component
 
     public function handleDeletedBlockType(ConfigEvent $event)
     {
-        $blockTypeUid = $event->tokenMatches[0];
-        $data = $event->newValue;
-        $previousData = $event->oldValue;
-
-        $fields = $previousData['fields'] ?? [];
+        $fields = $event->oldValue['fields'] ?? [];
 
         foreach ($fields as $field) {
             if ($field['type'] === VizyField::class) {
