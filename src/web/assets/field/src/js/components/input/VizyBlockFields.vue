@@ -8,21 +8,11 @@ export default {
     // Otherwise including Twig in field content will throw an error.
     delimiters: ['$!{', '}!$'],
 
-    components: {
-        // Seems to be the only way to resolve issues!
-        VizyInput: () => import('../VizyInput.vue'),
-    },
-
     props: {
         template: {
             type: String,
             default: '',
         },
-    },
-
-    created() {
-        // Apply our dynamically provided template, rendered via Craft.
-        this.$options.template = '<div>' + this.template + '</div>';
     },
 
     mounted() {
@@ -178,6 +168,15 @@ export default {
                 this.emitUpdate();
             });
         },
+    },
+
+    render(h) {
+        // Apply our dynamically provided template, rendered via Craft.
+        return h('div', {
+            domProps: {
+                innerHTML: this.template,
+            },
+        });
     },
 };
 

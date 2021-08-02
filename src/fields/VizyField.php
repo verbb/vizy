@@ -193,13 +193,19 @@ class VizyField extends Field
 
         // No need to output JS for any nested fields, all settings are rendered in the template
         // as Vue takes over and processes the props.
-        if (!$element instanceof BlockElement) {
-            $view->registerAssetBundle(VizyAsset::class);
-            $view->registerJs('new Craft.Vizy.Input(' .
-                '"' . $view->namespaceInputId($id) . '", ' .
-                '"' . $view->namespaceInputName($this->handle) . '"' .
-            ');');
-        }
+        // if (!$element instanceof BlockElement) {
+        //     $view->registerAssetBundle(VizyAsset::class);
+        //     $view->registerJs('new Craft.Vizy.Input(' .
+        //         '"' . $view->namespaceInputId($id) . '", ' .
+        //         '"' . $view->namespaceInputName($this->handle) . '"' .
+        //     ');');
+        // }
+
+        $view->registerAssetBundle(VizyAsset::class);
+        $view->registerJs('new Craft.Vizy.Input(' .
+            '"' . $view->namespaceInputId($id) . '", ' .
+            '"' . $view->namespaceInputName($this->handle) . '"' .
+        ');');
 
         return $view->renderTemplate('vizy/field/input', [
             'id' => $id,
