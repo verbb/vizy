@@ -237,7 +237,10 @@ export default {
 
                 // Optional Extensions
                 History,
-                TextAlign.configure({ defaultAlignment: 'start' }),
+                TextAlign.configure({
+                    types: ['heading', 'paragraph'],
+                    defaultAlignment: 'start',
+                }),
 
                 // Optional Custom
                 Link.configure({ openOnClick: false }),
