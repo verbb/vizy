@@ -24,6 +24,7 @@ class FieldController extends Controller
         $request = Craft::$app->getRequest();
 
         $fieldLayoutUid = $request->getParam('layoutUid');
+        $blockTypeId = $request->getParam('blockTypeId');
         $fieldIds = $request->getParam('fieldIds');
         $elementPlacements = $request->getParam('elementPlacements', []);
         $elementConfigs = $request->getParam('elementConfigs', []);
@@ -98,16 +99,27 @@ class FieldController extends Controller
             }
         }
 
+        // Ensure we namespace the FLD so it's unique. Important when used in Matrix blocks
+        // as under normal Vizy field circumstances, you edit a one FLD at a time.
+        $originalNamespace = $view->getNamespace();
+        $namespace = $view->namespaceInputName(str_replace('type-', '', $blockTypeId), $originalNamespace);
+        $view->setNamespace($namespace);
+
         // Render the HTML for the FLD to send back to Vue
         $html = $view->renderTemplate('vizy/field/_includes/fld', [
             'fieldLayout' => $fieldLayout,
             'availableCustomFields' => $availableCustomFields,
         ]);
 
+        $headHtml = $view->getHeadHtml();
+        $footHtml = $view->getBodyHtml();
+
+        $view->setNamespace($originalNamespace);
+
         return $this->asJson([
             'html' => $html,
-            'headHtml' => $view->getHeadHtml(),
-            'footHtml' => $view->getBodyHtml(),
+            'headHtml' => $headHtml,
+            'footHtml' => $footHtml,
         ]);
     }
 }

@@ -218,7 +218,7 @@
                 </div>
 
                 <div class="input ltr">
-                    <field-layout-designer v-model="selectedBlockType.layout" :layout-uid="selectedBlockType.layoutUid" :field-id="settings.fieldId" />
+                    <field-layout-designer v-model="selectedBlockType.layout" :layout-uid="selectedBlockType.layoutUid" :field-id="settings.fieldId" :block-type-id="selectedBlockType.id" />
                 </div>
             </div>
         </div>

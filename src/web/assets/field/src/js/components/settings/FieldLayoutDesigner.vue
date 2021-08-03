@@ -223,6 +223,11 @@ export default {
             default: null,
         },
 
+        blockTypeId: {
+            type: String,
+            default: null,
+        },
+
         value: {
             type: [Object, Array],
             default: () => {},
@@ -274,6 +279,7 @@ export default {
         var data = {
             fieldIds,
             layoutUid: this.layoutUid,
+            blockTypeId: this.blockTypeId,
             ...this.proxyValue,
         };
 
@@ -343,8 +349,11 @@ export default {
             }
 
             var postData = this.getPostData(this.$el);
+            postData = Craft.expandPostArray(postData);
 
-            this.proxyValue = Craft.expandPostArray(postData);
+            // The first index will be the blockTypeId to ensure FLD are unique, 
+            // we just want the inner info
+            this.proxyValue = postData[Object.keys(postData)[0]];
         },
     },
 };

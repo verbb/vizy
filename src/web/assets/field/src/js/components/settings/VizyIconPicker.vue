@@ -22,7 +22,7 @@
             </button>
         </div>
 
-        <div id="template" class="vui-icons-pane" style="display: none;">
+        <div class="vui-icons-pane js-vui-tippy-template" style="display: none;">
             <div v-if="isFetching" class="vui-no-icons">
                 <span class="vui-loading"></span>
             </div>
@@ -112,7 +112,7 @@ export default {
     mounted() {
         const self = this;
 
-        const template = document.getElementById('template');
+        const template = this.$el.querySelector('.js-vui-tippy-template');
         template.style.display = 'block';
 
         this.tippy = tippy(`#${this.id}`, {
