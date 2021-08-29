@@ -104,6 +104,11 @@ class Node extends Component
         return $this->text;
     }
 
+    public function getEnabled()
+    {
+        return true;
+    }
+
     public function renderNode()
     {
         return Vizy::$plugin->getNodes()->renderNode($this);
