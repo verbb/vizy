@@ -50,7 +50,7 @@ class VizyNodeInterface extends BaseInterfaceType
 
     public static function getFieldDefinitions(): array
     {
-        return TypeManager::prepareFieldDefinitions(array_merge(parent::getFieldDefinitions(), [
+        return TypeManager::prepareFieldDefinitions([
             'type' => [
                 'name' => 'type',
                 'type' => Type::string(),
@@ -98,6 +98,6 @@ class VizyNodeInterface extends BaseInterfaceType
                 'name' => 'rawNode',
                 'type' => ArrayType::getType(),
             ],
-        ]), self::getName());
+        ], self::getName());
     }
 }
