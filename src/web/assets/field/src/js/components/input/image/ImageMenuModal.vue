@@ -9,7 +9,7 @@
         @confirm="confirmModal"
         @cancel="cancelModal"
     >
-        <template v-slot:title>{{ $attrs['modal-title'] | t('vizy') }}</template>
+        <template #title>{{ $attrs['modal-title'] | t('vizy') }}</template>
 
         <div class="vizy-modal-image-preview">
             <img :src="value.src">

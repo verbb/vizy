@@ -8,7 +8,7 @@
         @confirm="confirmModal"
         @cancel="cancelModal"
     >
-        <template v-slot:title>{{ $attrs['modal-title'] | t('vizy') }}</template>
+        <template #title>{{ $attrs['modal-title'] | t('vizy') }}</template>
 
         <div id="url-field" class="field" :class="{ 'has-errors': errors.includes('url') }">
             <div class="heading">

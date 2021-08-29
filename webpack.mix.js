@@ -3,8 +3,7 @@ const path = require('path');
 
 // Mix plugins
 const autoprefixer = require('autoprefixer');
-const eslint = require('laravel-mix-eslint-config');
-const polyfill = require('laravel-mix-polyfill');
+const eslint = require('laravel-mix-eslint');
 const imagemin = require('laravel-mix-imagemin');
 
 const assetsPath = './src/web/assets';
@@ -44,22 +43,20 @@ mix.webpackConfig({
     resolve: {
         alias: {
             '@utils': path.resolve(__dirname, assetsPath + '/field/src/js/utils'),
-        }
+        },
     },
     externals: {
         vue: 'Vue',
-    }
+    },
 });
 
 // Setup JS-linting
 mix.eslint({
+    fix: true,
+    cache: false,
     exclude: [
         'node_modules',
     ],
-    options: {
-        fix: true,
-        cache: false,
-    },
 });
 
 // Always allow versioning of assets

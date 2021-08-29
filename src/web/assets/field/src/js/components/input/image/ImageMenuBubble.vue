@@ -81,7 +81,7 @@ export default {
             const { view } = this.editor;
 
             // Prevent empty models from proceeding. Happens for nested Vizy fields.
-            var model = this.editor.getNodeAttributes('image');
+            var model = this.editor.getAttributes('image');
 
             if (!size(model)) {
                 return;

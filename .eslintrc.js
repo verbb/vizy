@@ -125,7 +125,8 @@ module.exports = {
         'vue/require-valid-default-prop': 1,
         'vue/require-prop-types': 1,
         'vue/mustache-interpolation-spacing': ['warn', 'always'],
-        'vue/no-v-html': 'off'
+        'vue/no-v-html': 'off',
+        'vue/no-mutating-props': 'off'
     },
 
     // Standard indentation rule needs to be disabled for .vue files

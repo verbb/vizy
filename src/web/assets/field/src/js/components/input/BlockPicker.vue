@@ -1,5 +1,5 @@
 <template>
-    <floating-menu v-show="blockGroups.length" v-slot="{ commands, isActive, menu }" ref="menu" :editor="editor">
+    <floating-menu v-show="blockGroups.length" v-slot="{ menu }" ref="menu" :editor="editor">
         <div
             class="vui-editor-insert"
             :class="{ 'is-active': menu.isActive }"

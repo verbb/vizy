@@ -60,7 +60,7 @@ export default {
             commands: this.editor.commands,
             isActive: this.editor.isActive,
             getMarkAttrs: this.editor.getAttributes.bind(this.editor),
-            getNodeAttrs: this.editor.getNodeAttributes.bind(this.editor),
+            getNodeAttrs: this.editor.getAttributes.bind(this.editor),
             menu: this.menu,
         });
     },
