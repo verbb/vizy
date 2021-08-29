@@ -1,5 +1,23 @@
 # Changelog
 
+## 1.0.6 - 2021-08-29
+
+### Added
+- Add `subscript` and `superscript` buttons.
+
+### Changed
+- Update all tiptap dependancies to latest beta versions.
+
+### Fixed
+- Ensure each field's content is serialized properly when saving Vizy blocks.
+- Fix Vizy blocks using `isolating`, causing issues with backspacing some other nodes (blockquote).
+- Fix an error when trying to add a link with only numbers.
+- Remove field modification indicator (from Craft) for Vizy block inner fields.
+- Fix lack of `enabled` attribute for all nodes.
+- Fix disabled Vizy blocks returned in `query()` when using `all()` to query nodes.
+- Fix text align buttons not working, due to `@tiptap/core@2.0.0-beta.85` change.
+- Fix numerous errors when creating multiple Vizy fields in Matrix and Super Table fields.
+
 ## 1.0.5 - 2021-08-02
 
 ### Changed
