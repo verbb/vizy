@@ -73,6 +73,21 @@ Return all Vizy Block nodes of type `textBlock` ordered by a `plainText` field:
 ```
 
 
+### Enabled
+By default, only enabled Vizy blocks will be returned in a query. You can control this with `enabled`. This has no effect on other node types like Paragraph, Image, etc.
+
+```twig
+{# Return all blocks that are enabled _only_ (default) #}
+{% set blocks = entry.vizyField.query().where({ enabled: true }).all() %}
+
+{# Return all blocks that are disabled _only_ #}
+{% set blocks = entry.vizyField.query().where({ enabled: false }).all() %}
+
+{# Return all blocks that are both enabled and disabled #}
+{% set blocks = entry.vizyField.query().where({ enabled: null }).all() %}
+```
+
+
 ### Fields
 Return all Vizy Block nodes of type `textBlock` with a `plainText` field with a value equal to `123`:
 

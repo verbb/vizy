@@ -108,7 +108,7 @@ class NodeCollection extends Model
         $arrayQuery = new ArrayQuery();
         $arrayQuery->primaryKeyName = 'type';
 
-        return $arrayQuery->from($this->getNodes());
+        return $arrayQuery->from($this->getNodes())->where(['enabled' => true]);
     }
 
     public function serializeValues(ElementInterface $element = null)
