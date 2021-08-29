@@ -170,12 +170,15 @@ export default {
                 }
 
                 if (this.value.text) {
+                    // Cast as string, just in case.
+                    const text = this.value.text.toString();
+                    
                     // Insert the new text, replacing the old range
-                    tr.insertText(this.value.text, range.from, range.to);
+                    tr.insertText(text, range.from, range.to);
 
                     // Now the selection length has likely changed, get it again
                     const $start = tr.doc.resolve(range.from);
-                    const $end = tr.doc.resolve(range.from + this.value.text.length);
+                    const $end = tr.doc.resolve(range.from + text.length);
 
                     // And re-select it so our attribute-update actually works.
                     tr.setSelection(new TextSelection($start, $end));
