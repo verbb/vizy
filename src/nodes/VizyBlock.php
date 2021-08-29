@@ -205,6 +205,10 @@ class VizyBlock extends Node
         $block = $this->getBlockElement($element);
         
         foreach ($block->getFieldLayout()->getFields() as $field) {
+            // Ensure each field's content is serialized properly
+            $serializedFieldValues = $field->serializeValue($block->getFieldValue($field->handle), $block);
+            $value['attrs']['values']['content']['fields'][$field->handle] = $serializedFieldValues;
+
             // Ensure we call each field's `afterElementSave` method. This would be auto-done
             // if a VizyBlock node was an element, and we were saving that.
             $field->afterElementSave($block, true);
