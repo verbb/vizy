@@ -59,7 +59,9 @@ Option | Description
 `bold` | Allow text to be bold.
 `italic` | Allow text to be italic.
 `underline` | Allow text to be underlined.
-`strike` | Allow text to have a strikethrough.
+`strikethrough` | Allow text to have a strikethrough.
+`subscript` | Allow text to be subscript.
+`superscript` | Allow text to be superscript.
 `unordered-list` | Allow the use of `<ul>` elements for an unordered list.
 `ordered-list` | Allow the use of `<ol>` elements for an unordered list.
 `blockquote` | Allow text to be shown as a blockquote.
@@ -121,7 +123,7 @@ The below is a "kitchen sink" example that contains everything.
 
 ```json
 {
-    "buttons": ["html", "formatting", "h1", "h2", "h3", "h4", "h5", "h6", "bold", "italic", "underline", "strike", "ordered-list", "unordered-list", "code-block", "hr", "highlight", "align-left", "align-right", "align-center", "align-justify", "clear-format", "line-break", "link", "image", "undo", "redo"],
+    "buttons": ["html", "formatting", "h1", "h2", "h3", "h4", "h5", "h6", "bold", "italic", "underline", "strikethrough", "subscript", "superscript", "ordered-list", "unordered-list", "code-block", "hr", "highlight", "align-left", "align-right", "align-center", "align-justify", "clear-format", "line-break", "link", "image", "undo", "redo"],
     "formatting": ["paragraph", "code", "blockquote", "h1", "h2", "h3", "h4", "h5", "h6"],
     "toolbarFixed": true
 }

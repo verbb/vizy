@@ -81,10 +81,10 @@ class Nodes extends Component
             marks\Highlight::class,
             marks\Italic::class,
             marks\Link::class,
-            marks\Subscript::class,
-            marks\Underline::class,
             marks\Strike::class,
+            marks\Subscript::class,
             marks\Superscript::class,
+            marks\Underline::class,
         ];
 
         $event = new RegisterMarksEvent([

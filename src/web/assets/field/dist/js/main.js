@@ -18345,6 +18345,138 @@ const Strike = _tiptap_core__WEBPACK_IMPORTED_MODULE_0__.Mark.create({
 
 /***/ }),
 
+/***/ "./node_modules/@tiptap/extension-subscript/dist/tiptap-extension-subscript.esm.js":
+/*!*****************************************************************************************!*\
+  !*** ./node_modules/@tiptap/extension-subscript/dist/tiptap-extension-subscript.esm.js ***!
+  \*****************************************************************************************/
+/***/ (function(__unused_webpack_module, __webpack_exports__, __webpack_require__) {
+
+"use strict";
+__webpack_require__.r(__webpack_exports__);
+/* harmony export */ __webpack_require__.d(__webpack_exports__, {
+/* harmony export */   "Subscript": function() { return /* binding */ Subscript; }
+/* harmony export */ });
+/* harmony import */ var _tiptap_core__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! @tiptap/core */ "./node_modules/@tiptap/core/dist/tiptap-core.esm.js");
+
+
+const Subscript = _tiptap_core__WEBPACK_IMPORTED_MODULE_0__.Mark.create({
+    name: 'subscript',
+    defaultOptions: {
+        HTMLAttributes: {},
+    },
+    parseHTML() {
+        return [
+            {
+                tag: 'sub',
+            },
+            {
+                style: 'vertical-align',
+                getAttrs(value) {
+                    // Don’t match this rule if the vertical align isn’t sub.
+                    if (value !== 'sub') {
+                        return false;
+                    }
+                    // If it falls through we’ll match, and this mark will be applied.
+                },
+            },
+        ];
+    },
+    renderHTML({ HTMLAttributes }) {
+        return ['sub', (0,_tiptap_core__WEBPACK_IMPORTED_MODULE_0__.mergeAttributes)(this.options.HTMLAttributes, HTMLAttributes), 0];
+    },
+    addCommands() {
+        return {
+            setSubscript: () => ({ commands }) => {
+                return commands.setMark('subscript');
+            },
+            toggleSubscript: () => ({ commands }) => {
+                return commands.toggleMark('subscript');
+            },
+            unsetSubscript: () => ({ commands }) => {
+                return commands.unsetMark('subscript');
+            },
+        };
+    },
+    addKeyboardShortcuts() {
+        return {
+            'Mod-,': () => this.editor.commands.toggleSubscript(),
+        };
+    },
+});
+
+/* harmony default export */ __webpack_exports__["default"] = (Subscript);
+
+//# sourceMappingURL=tiptap-extension-subscript.esm.js.map
+
+
+/***/ }),
+
+/***/ "./node_modules/@tiptap/extension-superscript/dist/tiptap-extension-superscript.esm.js":
+/*!*********************************************************************************************!*\
+  !*** ./node_modules/@tiptap/extension-superscript/dist/tiptap-extension-superscript.esm.js ***!
+  \*********************************************************************************************/
+/***/ (function(__unused_webpack_module, __webpack_exports__, __webpack_require__) {
+
+"use strict";
+__webpack_require__.r(__webpack_exports__);
+/* harmony export */ __webpack_require__.d(__webpack_exports__, {
+/* harmony export */   "Superscript": function() { return /* binding */ Superscript; }
+/* harmony export */ });
+/* harmony import */ var _tiptap_core__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! @tiptap/core */ "./node_modules/@tiptap/core/dist/tiptap-core.esm.js");
+
+
+const Superscript = _tiptap_core__WEBPACK_IMPORTED_MODULE_0__.Mark.create({
+    name: 'superscript',
+    defaultOptions: {
+        HTMLAttributes: {},
+    },
+    parseHTML() {
+        return [
+            {
+                tag: 'sup',
+            },
+            {
+                style: 'vertical-align',
+                getAttrs(value) {
+                    // Don’t match this rule if the vertical align isn’t super.
+                    if (value !== 'super') {
+                        return false;
+                    }
+                    // If it falls through we’ll match, and this mark will be applied.
+                },
+            },
+        ];
+    },
+    renderHTML({ HTMLAttributes }) {
+        return ['sup', (0,_tiptap_core__WEBPACK_IMPORTED_MODULE_0__.mergeAttributes)(this.options.HTMLAttributes, HTMLAttributes), 0];
+    },
+    addCommands() {
+        return {
+            setSuperscript: () => ({ commands }) => {
+                return commands.setMark('superscript');
+            },
+            toggleSuperscript: () => ({ commands }) => {
+                return commands.toggleMark('superscript');
+            },
+            unsetSuperscript: () => ({ commands }) => {
+                return commands.unsetMark('superscript');
+            },
+        };
+    },
+    addKeyboardShortcuts() {
+        return {
+            'Mod-.': () => this.editor.commands.toggleSuperscript(),
+        };
+    },
+});
+
+/* harmony default export */ __webpack_exports__["default"] = (Superscript);
+
+//# sourceMappingURL=tiptap-extension-superscript.esm.js.map
+
+
+/***/ }),
+
 /***/ "./node_modules/@tiptap/extension-text-align/dist/tiptap-extension-text-align.esm.js":
 /*!*******************************************************************************************!*\
   !*** ./node_modules/@tiptap/extension-text-align/dist/tiptap-extension-text-align.esm.js ***!
@@ -20790,28 +20922,30 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony import */ var _tiptap_extension_highlight__WEBPACK_IMPORTED_MODULE_4__ = __webpack_require__(/*! @tiptap/extension-highlight */ "./node_modules/@tiptap/extension-highlight/dist/tiptap-extension-highlight.esm.js");
 /* harmony import */ var _tiptap_extension_italic__WEBPACK_IMPORTED_MODULE_5__ = __webpack_require__(/*! @tiptap/extension-italic */ "./node_modules/@tiptap/extension-italic/dist/tiptap-extension-italic.esm.js");
 /* harmony import */ var _tiptap_extension_strike__WEBPACK_IMPORTED_MODULE_6__ = __webpack_require__(/*! @tiptap/extension-strike */ "./node_modules/@tiptap/extension-strike/dist/tiptap-extension-strike.esm.js");
-/* harmony import */ var _tiptap_extension_underline__WEBPACK_IMPORTED_MODULE_7__ = __webpack_require__(/*! @tiptap/extension-underline */ "./node_modules/@tiptap/extension-underline/dist/tiptap-extension-underline.esm.js");
-/* harmony import */ var _tiptap_extension_blockquote__WEBPACK_IMPORTED_MODULE_8__ = __webpack_require__(/*! @tiptap/extension-blockquote */ "./node_modules/@tiptap/extension-blockquote/dist/tiptap-extension-blockquote.esm.js");
-/* harmony import */ var _tiptap_extension_bullet_list__WEBPACK_IMPORTED_MODULE_9__ = __webpack_require__(/*! @tiptap/extension-bullet-list */ "./node_modules/@tiptap/extension-bullet-list/dist/tiptap-extension-bullet-list.esm.js");
-/* harmony import */ var _tiptap_extension_code_block__WEBPACK_IMPORTED_MODULE_10__ = __webpack_require__(/*! @tiptap/extension-code-block */ "./node_modules/@tiptap/extension-code-block/dist/tiptap-extension-code-block.esm.js");
-/* harmony import */ var _tiptap_extension_document__WEBPACK_IMPORTED_MODULE_11__ = __webpack_require__(/*! @tiptap/extension-document */ "./node_modules/@tiptap/extension-document/dist/tiptap-extension-document.esm.js");
-/* harmony import */ var _tiptap_extension_hard_break__WEBPACK_IMPORTED_MODULE_12__ = __webpack_require__(/*! @tiptap/extension-hard-break */ "./node_modules/@tiptap/extension-hard-break/dist/tiptap-extension-hard-break.esm.js");
-/* harmony import */ var _tiptap_extension_heading__WEBPACK_IMPORTED_MODULE_13__ = __webpack_require__(/*! @tiptap/extension-heading */ "./node_modules/@tiptap/extension-heading/dist/tiptap-extension-heading.esm.js");
-/* harmony import */ var _tiptap_extension_horizontal_rule__WEBPACK_IMPORTED_MODULE_14__ = __webpack_require__(/*! @tiptap/extension-horizontal-rule */ "./node_modules/@tiptap/extension-horizontal-rule/dist/tiptap-extension-horizontal-rule.esm.js");
-/* harmony import */ var _tiptap_extension_list_item__WEBPACK_IMPORTED_MODULE_15__ = __webpack_require__(/*! @tiptap/extension-list-item */ "./node_modules/@tiptap/extension-list-item/dist/tiptap-extension-list-item.esm.js");
-/* harmony import */ var _tiptap_extension_ordered_list__WEBPACK_IMPORTED_MODULE_16__ = __webpack_require__(/*! @tiptap/extension-ordered-list */ "./node_modules/@tiptap/extension-ordered-list/dist/tiptap-extension-ordered-list.esm.js");
-/* harmony import */ var _tiptap_extension_paragraph__WEBPACK_IMPORTED_MODULE_17__ = __webpack_require__(/*! @tiptap/extension-paragraph */ "./node_modules/@tiptap/extension-paragraph/dist/tiptap-extension-paragraph.esm.js");
-/* harmony import */ var _tiptap_extension_text__WEBPACK_IMPORTED_MODULE_18__ = __webpack_require__(/*! @tiptap/extension-text */ "./node_modules/@tiptap/extension-text/dist/tiptap-extension-text.esm.js");
-/* harmony import */ var _tiptap_extension_dropcursor__WEBPACK_IMPORTED_MODULE_19__ = __webpack_require__(/*! @tiptap/extension-dropcursor */ "./node_modules/@tiptap/extension-dropcursor/dist/tiptap-extension-dropcursor.esm.js");
-/* harmony import */ var _tiptap_extension_focus__WEBPACK_IMPORTED_MODULE_20__ = __webpack_require__(/*! @tiptap/extension-focus */ "./node_modules/@tiptap/extension-focus/dist/tiptap-extension-focus.esm.js");
-/* harmony import */ var _tiptap_extension_history__WEBPACK_IMPORTED_MODULE_21__ = __webpack_require__(/*! @tiptap/extension-history */ "./node_modules/@tiptap/extension-history/dist/tiptap-extension-history.esm.js");
-/* harmony import */ var _tiptap_extension_text_align__WEBPACK_IMPORTED_MODULE_22__ = __webpack_require__(/*! @tiptap/extension-text-align */ "./node_modules/@tiptap/extension-text-align/dist/tiptap-extension-text-align.esm.js");
-/* harmony import */ var _input_VizyBlock__WEBPACK_IMPORTED_MODULE_23__ = __webpack_require__(/*! ./input/VizyBlock */ "./src/web/assets/field/src/js/components/input/VizyBlock.js");
-/* harmony import */ var _input_link_Link__WEBPACK_IMPORTED_MODULE_24__ = __webpack_require__(/*! ./input/link/Link */ "./src/web/assets/field/src/js/components/input/link/Link.js");
-/* harmony import */ var _input_image_Image__WEBPACK_IMPORTED_MODULE_25__ = __webpack_require__(/*! ./input/image/Image */ "./src/web/assets/field/src/js/components/input/image/Image.js");
-/* harmony import */ var _input_MenuBar_vue__WEBPACK_IMPORTED_MODULE_26__ = __webpack_require__(/*! ./input/MenuBar.vue */ "./src/web/assets/field/src/js/components/input/MenuBar.vue");
-/* harmony import */ var _input_BlockPicker_vue__WEBPACK_IMPORTED_MODULE_27__ = __webpack_require__(/*! ./input/BlockPicker.vue */ "./src/web/assets/field/src/js/components/input/BlockPicker.vue");
-/* harmony import */ var _input_CodeEditor_vue__WEBPACK_IMPORTED_MODULE_28__ = __webpack_require__(/*! ./input/CodeEditor.vue */ "./src/web/assets/field/src/js/components/input/CodeEditor.vue");
+/* harmony import */ var _tiptap_extension_subscript__WEBPACK_IMPORTED_MODULE_7__ = __webpack_require__(/*! @tiptap/extension-subscript */ "./node_modules/@tiptap/extension-subscript/dist/tiptap-extension-subscript.esm.js");
+/* harmony import */ var _tiptap_extension_superscript__WEBPACK_IMPORTED_MODULE_8__ = __webpack_require__(/*! @tiptap/extension-superscript */ "./node_modules/@tiptap/extension-superscript/dist/tiptap-extension-superscript.esm.js");
+/* harmony import */ var _tiptap_extension_underline__WEBPACK_IMPORTED_MODULE_9__ = __webpack_require__(/*! @tiptap/extension-underline */ "./node_modules/@tiptap/extension-underline/dist/tiptap-extension-underline.esm.js");
+/* harmony import */ var _tiptap_extension_blockquote__WEBPACK_IMPORTED_MODULE_10__ = __webpack_require__(/*! @tiptap/extension-blockquote */ "./node_modules/@tiptap/extension-blockquote/dist/tiptap-extension-blockquote.esm.js");
+/* harmony import */ var _tiptap_extension_bullet_list__WEBPACK_IMPORTED_MODULE_11__ = __webpack_require__(/*! @tiptap/extension-bullet-list */ "./node_modules/@tiptap/extension-bullet-list/dist/tiptap-extension-bullet-list.esm.js");
+/* harmony import */ var _tiptap_extension_code_block__WEBPACK_IMPORTED_MODULE_12__ = __webpack_require__(/*! @tiptap/extension-code-block */ "./node_modules/@tiptap/extension-code-block/dist/tiptap-extension-code-block.esm.js");
+/* harmony import */ var _tiptap_extension_document__WEBPACK_IMPORTED_MODULE_13__ = __webpack_require__(/*! @tiptap/extension-document */ "./node_modules/@tiptap/extension-document/dist/tiptap-extension-document.esm.js");
+/* harmony import */ var _tiptap_extension_hard_break__WEBPACK_IMPORTED_MODULE_14__ = __webpack_require__(/*! @tiptap/extension-hard-break */ "./node_modules/@tiptap/extension-hard-break/dist/tiptap-extension-hard-break.esm.js");
+/* harmony import */ var _tiptap_extension_heading__WEBPACK_IMPORTED_MODULE_15__ = __webpack_require__(/*! @tiptap/extension-heading */ "./node_modules/@tiptap/extension-heading/dist/tiptap-extension-heading.esm.js");
+/* harmony import */ var _tiptap_extension_horizontal_rule__WEBPACK_IMPORTED_MODULE_16__ = __webpack_require__(/*! @tiptap/extension-horizontal-rule */ "./node_modules/@tiptap/extension-horizontal-rule/dist/tiptap-extension-horizontal-rule.esm.js");
+/* harmony import */ var _tiptap_extension_list_item__WEBPACK_IMPORTED_MODULE_17__ = __webpack_require__(/*! @tiptap/extension-list-item */ "./node_modules/@tiptap/extension-list-item/dist/tiptap-extension-list-item.esm.js");
+/* harmony import */ var _tiptap_extension_ordered_list__WEBPACK_IMPORTED_MODULE_18__ = __webpack_require__(/*! @tiptap/extension-ordered-list */ "./node_modules/@tiptap/extension-ordered-list/dist/tiptap-extension-ordered-list.esm.js");
+/* harmony import */ var _tiptap_extension_paragraph__WEBPACK_IMPORTED_MODULE_19__ = __webpack_require__(/*! @tiptap/extension-paragraph */ "./node_modules/@tiptap/extension-paragraph/dist/tiptap-extension-paragraph.esm.js");
+/* harmony import */ var _tiptap_extension_text__WEBPACK_IMPORTED_MODULE_20__ = __webpack_require__(/*! @tiptap/extension-text */ "./node_modules/@tiptap/extension-text/dist/tiptap-extension-text.esm.js");
+/* harmony import */ var _tiptap_extension_dropcursor__WEBPACK_IMPORTED_MODULE_21__ = __webpack_require__(/*! @tiptap/extension-dropcursor */ "./node_modules/@tiptap/extension-dropcursor/dist/tiptap-extension-dropcursor.esm.js");
+/* harmony import */ var _tiptap_extension_focus__WEBPACK_IMPORTED_MODULE_22__ = __webpack_require__(/*! @tiptap/extension-focus */ "./node_modules/@tiptap/extension-focus/dist/tiptap-extension-focus.esm.js");
+/* harmony import */ var _tiptap_extension_history__WEBPACK_IMPORTED_MODULE_23__ = __webpack_require__(/*! @tiptap/extension-history */ "./node_modules/@tiptap/extension-history/dist/tiptap-extension-history.esm.js");
+/* harmony import */ var _tiptap_extension_text_align__WEBPACK_IMPORTED_MODULE_24__ = __webpack_require__(/*! @tiptap/extension-text-align */ "./node_modules/@tiptap/extension-text-align/dist/tiptap-extension-text-align.esm.js");
+/* harmony import */ var _input_VizyBlock__WEBPACK_IMPORTED_MODULE_25__ = __webpack_require__(/*! ./input/VizyBlock */ "./src/web/assets/field/src/js/components/input/VizyBlock.js");
+/* harmony import */ var _input_link_Link__WEBPACK_IMPORTED_MODULE_26__ = __webpack_require__(/*! ./input/link/Link */ "./src/web/assets/field/src/js/components/input/link/Link.js");
+/* harmony import */ var _input_image_Image__WEBPACK_IMPORTED_MODULE_27__ = __webpack_require__(/*! ./input/image/Image */ "./src/web/assets/field/src/js/components/input/image/Image.js");
+/* harmony import */ var _input_MenuBar_vue__WEBPACK_IMPORTED_MODULE_28__ = __webpack_require__(/*! ./input/MenuBar.vue */ "./src/web/assets/field/src/js/components/input/MenuBar.vue");
+/* harmony import */ var _input_BlockPicker_vue__WEBPACK_IMPORTED_MODULE_29__ = __webpack_require__(/*! ./input/BlockPicker.vue */ "./src/web/assets/field/src/js/components/input/BlockPicker.vue");
+/* harmony import */ var _input_CodeEditor_vue__WEBPACK_IMPORTED_MODULE_30__ = __webpack_require__(/*! ./input/CodeEditor.vue */ "./src/web/assets/field/src/js/components/input/CodeEditor.vue");
 //
 //
 //
@@ -20828,6 +20962,8 @@ __webpack_require__.r(__webpack_exports__);
 //
 
  // TipTap - Marks
+
+
 
 
 
@@ -20864,9 +21000,9 @@ __webpack_require__.r(__webpack_exports__);
   name: 'VizyInput',
   components: {
     EditorContent: _tiptap_vue_2__WEBPACK_IMPORTED_MODULE_1__.EditorContent,
-    MenuBar: _input_MenuBar_vue__WEBPACK_IMPORTED_MODULE_26__.default,
-    BlockPicker: _input_BlockPicker_vue__WEBPACK_IMPORTED_MODULE_27__.default,
-    CodeEditor: _input_CodeEditor_vue__WEBPACK_IMPORTED_MODULE_28__.default
+    MenuBar: _input_MenuBar_vue__WEBPACK_IMPORTED_MODULE_28__.default,
+    BlockPicker: _input_BlockPicker_vue__WEBPACK_IMPORTED_MODULE_29__.default,
+    CodeEditor: _input_CodeEditor_vue__WEBPACK_IMPORTED_MODULE_30__.default
   },
   props: {
     name: {
@@ -20998,21 +21134,21 @@ __webpack_require__.r(__webpack_exports__);
     },
     getExtensions: function getExtensions() {
       var extensions = [// Core Extensions
-      _tiptap_extension_document__WEBPACK_IMPORTED_MODULE_11__.default, _tiptap_extension_dropcursor__WEBPACK_IMPORTED_MODULE_19__.default, _tiptap_extension_dropcursor__WEBPACK_IMPORTED_MODULE_19__.default, _tiptap_extension_hard_break__WEBPACK_IMPORTED_MODULE_12__.default, _tiptap_extension_paragraph__WEBPACK_IMPORTED_MODULE_17__.default, _tiptap_extension_text__WEBPACK_IMPORTED_MODULE_18__.default, _input_VizyBlock__WEBPACK_IMPORTED_MODULE_23__.default, _tiptap_extension_focus__WEBPACK_IMPORTED_MODULE_20__.default.configure({
+      _tiptap_extension_document__WEBPACK_IMPORTED_MODULE_13__.default, _tiptap_extension_dropcursor__WEBPACK_IMPORTED_MODULE_21__.default, _tiptap_extension_dropcursor__WEBPACK_IMPORTED_MODULE_21__.default, _tiptap_extension_hard_break__WEBPACK_IMPORTED_MODULE_14__.default, _tiptap_extension_paragraph__WEBPACK_IMPORTED_MODULE_19__.default, _tiptap_extension_text__WEBPACK_IMPORTED_MODULE_20__.default, _input_VizyBlock__WEBPACK_IMPORTED_MODULE_25__.default, _tiptap_extension_focus__WEBPACK_IMPORTED_MODULE_22__.default.configure({
         className: 'has-focus',
         mode: 'deepest'
       }), // Optional Marks
-      _tiptap_extension_bold__WEBPACK_IMPORTED_MODULE_2__.default, _tiptap_extension_code__WEBPACK_IMPORTED_MODULE_3__.default, _tiptap_extension_highlight__WEBPACK_IMPORTED_MODULE_4__.default, _tiptap_extension_italic__WEBPACK_IMPORTED_MODULE_5__.default, _tiptap_extension_strike__WEBPACK_IMPORTED_MODULE_6__.default, _tiptap_extension_underline__WEBPACK_IMPORTED_MODULE_7__.default, // Optional Nodes
-      _tiptap_extension_blockquote__WEBPACK_IMPORTED_MODULE_8__.default, _tiptap_extension_bullet_list__WEBPACK_IMPORTED_MODULE_9__.default, _tiptap_extension_code_block__WEBPACK_IMPORTED_MODULE_10__.default, _tiptap_extension_heading__WEBPACK_IMPORTED_MODULE_13__.default.configure({
+      _tiptap_extension_bold__WEBPACK_IMPORTED_MODULE_2__.default, _tiptap_extension_code__WEBPACK_IMPORTED_MODULE_3__.default, _tiptap_extension_highlight__WEBPACK_IMPORTED_MODULE_4__.default, _tiptap_extension_italic__WEBPACK_IMPORTED_MODULE_5__.default, _tiptap_extension_strike__WEBPACK_IMPORTED_MODULE_6__.default, _tiptap_extension_subscript__WEBPACK_IMPORTED_MODULE_7__.default, _tiptap_extension_superscript__WEBPACK_IMPORTED_MODULE_8__.default, _tiptap_extension_underline__WEBPACK_IMPORTED_MODULE_9__.default, // Optional Nodes
+      _tiptap_extension_blockquote__WEBPACK_IMPORTED_MODULE_10__.default, _tiptap_extension_bullet_list__WEBPACK_IMPORTED_MODULE_11__.default, _tiptap_extension_code_block__WEBPACK_IMPORTED_MODULE_12__.default, _tiptap_extension_heading__WEBPACK_IMPORTED_MODULE_15__.default.configure({
         levels: [1, 2, 3, 4, 5, 6]
-      }), _tiptap_extension_horizontal_rule__WEBPACK_IMPORTED_MODULE_14__.default, _tiptap_extension_list_item__WEBPACK_IMPORTED_MODULE_15__.default, _tiptap_extension_ordered_list__WEBPACK_IMPORTED_MODULE_16__.default, // Optional Extensions
-      _tiptap_extension_history__WEBPACK_IMPORTED_MODULE_21__.default, _tiptap_extension_text_align__WEBPACK_IMPORTED_MODULE_22__.default.configure({
+      }), _tiptap_extension_horizontal_rule__WEBPACK_IMPORTED_MODULE_16__.default, _tiptap_extension_list_item__WEBPACK_IMPORTED_MODULE_17__.default, _tiptap_extension_ordered_list__WEBPACK_IMPORTED_MODULE_18__.default, // Optional Extensions
+      _tiptap_extension_history__WEBPACK_IMPORTED_MODULE_23__.default, _tiptap_extension_text_align__WEBPACK_IMPORTED_MODULE_24__.default.configure({
         types: ['heading', 'paragraph'],
         defaultAlignment: 'start'
       }), // Optional Custom
-      _input_link_Link__WEBPACK_IMPORTED_MODULE_24__.default.configure({
+      _input_link_Link__WEBPACK_IMPORTED_MODULE_26__.default.configure({
         openOnClick: false
-      }), _input_image_Image__WEBPACK_IMPORTED_MODULE_25__.default];
+      }), _input_image_Image__WEBPACK_IMPORTED_MODULE_27__.default];
       return extensions;
     },
     setCodeEditor: function setCodeEditor() {
@@ -22076,6 +22212,26 @@ __webpack_require__.r(__webpack_exports__);
           return _this.editor.isActive('strike');
         }
       }, {
+        name: 'subscript',
+        svg: 'subscript',
+        title: Craft.t('vizy', 'Subscript'),
+        action: function action() {
+          return _this.editor.chain().focus().toggleSubscript().run();
+        },
+        isActive: function isActive() {
+          return _this.editor.isActive('subscript');
+        }
+      }, {
+        name: 'superscript',
+        svg: 'superscript',
+        title: Craft.t('vizy', 'Superscript'),
+        action: function action() {
+          return _this.editor.chain().focus().toggleSuperscript().run();
+        },
+        isActive: function isActive() {
+          return _this.editor.isActive('superscript');
+        }
+      }, {
         name: 'underline',
         svg: 'underline',
         title: Craft.t('vizy', 'Underline'),
@@ -22744,7 +22900,9 @@ _fortawesome_fontawesome_svg_core__WEBPACK_IMPORTED_MODULE_0__.library.add(_fort
         'brackets-curly': '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 576 512"><path d="M208 32h-88a56 56 0 0 0-56 56v77.49a40 40 0 0 1-11.72 28.29L7 239a24 24 0 0 0 0 34l45.24 45.24A40 40 0 0 1 64 346.52V424a56 56 0 0 0 56 56h88a16 16 0 0 0 16-16v-16a16 16 0 0 0-16-16h-88a8 8 0 0 1-8-8v-77.48a88.06 88.06 0 0 0-25.78-62.24L57.93 256l28.29-28.28A88.06 88.06 0 0 0 112 165.48V88a8 8 0 0 1 8-8h88a16 16 0 0 0 16-16V48a16 16 0 0 0-16-16zm361 207l-45.25-45.24A40.07 40.07 0 0 1 512 165.48V88a56 56 0 0 0-56-56h-88a16 16 0 0 0-16 16v16a16 16 0 0 0 16 16h88a8 8 0 0 1 8 8v77.48a88 88 0 0 0 25.78 62.24L518.06 256l-28.28 28.28A88 88 0 0 0 464 346.52V424a8 8 0 0 1-8 8h-88a16 16 0 0 0-16 16v16a16 16 0 0 0 16 16h88a56 56 0 0 0 56-56v-77.49a40 40 0 0 1 11.72-28.29L569 273a24 24 0 0 0 0-34z"></path></svg>',
         //             'expand': '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><path d="M0 180V56c0-13.3 10.7-24 24-24h124c6.6 0 12 5.4 12 12v24c0 6.6-5.4 12-12 12H48v100c0 6.6-5.4 12-12 12H12c-6.6 0-12-5.4-12-12zM288 44v24c0 6.6 5.4 12 12 12h100v100c0 6.6 5.4 12 12 12h24c6.6 0 12-5.4 12-12V56c0-13.3-10.7-24-24-24H300c-6.6 0-12 5.4-12 12zm148 276h-24c-6.6 0-12 5.4-12 12v100H300c-6.6 0-12 5.4-12 12v24c0 6.6 5.4 12 12 12h124c13.3 0 24-10.7 24-24V332c0-6.6-5.4-12-12-12zM160 468v-24c0-6.6-5.4-12-12-12H48V332c0-6.6-5.4-12-12-12H12c-6.6 0-12 5.4-12 12v124c0 13.3 10.7 24 24 24h124c6.6 0 12-5.4 12-12z"/></svg>',
         'undo': '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><path d="M212.333 224.333H12c-6.627 0-12-5.373-12-12V12C0 5.373 5.373 0 12 0h48c6.627 0 12 5.373 12 12v78.112C117.773 39.279 184.26 7.47 258.175 8.007c136.906.994 246.448 111.623 246.157 248.532C504.041 393.258 393.12 504 256.333 504c-64.089 0-122.496-24.313-166.51-64.215-5.099-4.622-5.334-12.554-.467-17.42l33.967-33.967c4.474-4.474 11.662-4.717 16.401-.525C170.76 415.336 211.58 432 256.333 432c97.268 0 176-78.716 176-176 0-97.267-78.716-176-176-176-58.496 0-110.28 28.476-142.274 72.333h98.274c6.627 0 12 5.373 12 12v48c0 6.627-5.373 12-12 12z"/></svg>',
-        'redo': '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><path d="M500.33 0h-47.41a12 12 0 0 0-12 12.57l4 82.76A247.42 247.42 0 0 0 256 8C119.34 8 7.9 119.53 8 256.19 8.1 393.07 119.1 504 256 504a247.1 247.1 0 0 0 166.18-63.91 12 12 0 0 0 .48-17.43l-34-34a12 12 0 0 0-16.38-.55A176 176 0 1 1 402.1 157.8l-101.53-4.87a12 12 0 0 0-12.57 12v47.41a12 12 0 0 0 12 12h200.33a12 12 0 0 0 12-12V12a12 12 0 0 0-12-12z"/></svg>'
+        'redo': '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><path d="M500.33 0h-47.41a12 12 0 0 0-12 12.57l4 82.76A247.42 247.42 0 0 0 256 8C119.34 8 7.9 119.53 8 256.19 8.1 393.07 119.1 504 256 504a247.1 247.1 0 0 0 166.18-63.91 12 12 0 0 0 .48-17.43l-34-34a12 12 0 0 0-16.38-.55A176 176 0 1 1 402.1 157.8l-101.53-4.87a12 12 0 0 0-12.57 12v47.41a12 12 0 0 0 12 12h200.33a12 12 0 0 0 12-12V12a12 12 0 0 0-12-12z"/></svg>',
+        'subscript': '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><path d="M336 64h-52.28a16 16 0 0 0-13.31 7.12L176 212.73 81.59 71.12A16 16 0 0 0 68.28 64H16A16 16 0 0 0 0 80v16a16 16 0 0 0 16 16h35.16l96 144-96 144H16a16 16 0 0 0-16 16v16a16 16 0 0 0 16 16h52.28a16 16 0 0 0 13.31-7.12L176 299.27l94.41 141.61a16 16 0 0 0 13.31 7.12H336a16 16 0 0 0 16-16v-16a16 16 0 0 0-16-16h-35.16l-96-144 96-144H336a16 16 0 0 0 16-16V80a16 16 0 0 0-16-16zm160 400h-24V304a16 16 0 0 0-16-16h-32a16 16 0 0 0-14.29 8.83l-16 32A16 16 0 0 0 408 352h16v112h-24a16 16 0 0 0-16 16v16a16 16 0 0 0 16 16h96a16 16 0 0 0 16-16v-16a16 16 0 0 0-16-16z"></path></svg>',
+        'superscript': '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><path d="M336 64h-52.28a16 16 0 0 0-13.31 7.12L176 212.73 81.59 71.12A16 16 0 0 0 68.28 64H16A16 16 0 0 0 0 80v16a16 16 0 0 0 16 16h35.16l96 144-96 144H16a16 16 0 0 0-16 16v16a16 16 0 0 0 16 16h52.28a16 16 0 0 0 13.31-7.12L176 299.27l94.41 141.61a16 16 0 0 0 13.31 7.12H336a16 16 0 0 0 16-16v-16a16 16 0 0 0-16-16h-35.16l-96-144 96-144H336a16 16 0 0 0 16-16V80a16 16 0 0 0-16-16zm160 112h-24V16a16 16 0 0 0-16-16h-32a16 16 0 0 0-14.29 8.83l-16 32A16 16 0 0 0 408 64h16v112h-24a16 16 0 0 0-16 16v16a16 16 0 0 0 16 16h96a16 16 0 0 0 16-16v-16a16 16 0 0 0-16-16z"></path></svg>'
       }
     };
   },

@@ -65,6 +65,20 @@ export default {
                     isActive: () => this.editor.isActive('strike'),
                 },
                 {
+                    name: 'subscript',
+                    svg: 'subscript',
+                    title: Craft.t('vizy', 'Subscript'),
+                    action: () => this.editor.chain().focus().toggleSubscript().run(),
+                    isActive: () => this.editor.isActive('subscript'),
+                },
+                {
+                    name: 'superscript',
+                    svg: 'superscript',
+                    title: Craft.t('vizy', 'Superscript'),
+                    action: () => this.editor.chain().focus().toggleSuperscript().run(),
+                    isActive: () => this.editor.isActive('superscript'),
+                },
+                {
                     name: 'underline',
                     svg: 'underline',
                     title: Craft.t('vizy', 'Underline'),

@@ -23,6 +23,8 @@ import Code from '@tiptap/extension-code';
 import Highlight from '@tiptap/extension-highlight';
 import Italic from '@tiptap/extension-italic';
 import Strike from '@tiptap/extension-strike';
+import Subscript from '@tiptap/extension-subscript';
+import Superscript from '@tiptap/extension-superscript';
 import Underline from '@tiptap/extension-underline';
 
 // TipTap - Nodes
@@ -224,6 +226,8 @@ export default {
                 Highlight,
                 Italic,
                 Strike,
+                Subscript,
+                Superscript,
                 Underline,
 
                 // Optional Nodes
