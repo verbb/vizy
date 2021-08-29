@@ -10,10 +10,13 @@ export default Node.create({
     inline: false,
     group: 'block',
     draggable: true,
-    isolating: true,
     defining: true,
     selectable: true,
     // allowGapCursor: true,
+
+    // Disabled due to blockquote removal issue
+    // https://github.com/verbb/vizy/issues/69
+    // isolating: true,
 
     addAttributes() {
         return {
