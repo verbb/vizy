@@ -558,4 +558,9 @@ export default {
     overflow-x: visible !important;
 }
 
+// Fix Vizy block fields and modified indicator
+.vizyblock-fields .field::before {
+    display: none !important;
+}
+
 </style>
