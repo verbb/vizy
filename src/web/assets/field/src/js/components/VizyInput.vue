@@ -160,6 +160,10 @@ export default {
                 window.addEventListener('scroll', this.updateFixedToolbar);
                 window.addEventListener('resize', this.updateFixedToolbar);
 
+                // Handle the element editor slideout
+                document.querySelector('.slideout.element-editor .ee-body').addEventListener('scroll', this.updateFixedToolbarEditor);
+                document.querySelector('.slideout.element-editor .ee-body').addEventListener('resize', this.updateFixedToolbarEditor);
+
                 Garnish.on(Craft.Preview, 'open', this.openLivePreviewCallback);
                 Garnish.on(Craft.LivePreview, 'enter', this.openLivePreviewCallback);
 
@@ -369,6 +373,16 @@ export default {
             if (this.isLivePreview) {
                 headerBuffer = document.querySelector('.lp-editor-container header.flex') ? document.querySelector('.lp-editor-container header.flex').offsetHeight : 0;
             }
+
+            // Apply any parent Vizy fields toolbars, otherwise we get multiple toolbar overlaps
+            headerBuffer = headerBuffer + this.parentToolbarOffset;
+
+            this.$refs.toolbar.$el.style.position = 'sticky';
+            this.$refs.toolbar.$el.style.top = this.$el.scrollTop + headerBuffer + 'px';
+        },
+
+        updateFixedToolbarEditor(event) {
+            let headerBuffer = -24;
 
             // Apply any parent Vizy fields toolbars, otherwise we get multiple toolbar overlaps
             headerBuffer = headerBuffer + this.parentToolbarOffset;
