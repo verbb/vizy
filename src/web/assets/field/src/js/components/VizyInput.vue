@@ -161,8 +161,12 @@ export default {
                 window.addEventListener('resize', this.updateFixedToolbar);
 
                 // Handle the element editor slideout
-                document.querySelector('.slideout.element-editor .ee-body').addEventListener('scroll', this.updateFixedToolbarEditor);
-                document.querySelector('.slideout.element-editor .ee-body').addEventListener('resize', this.updateFixedToolbarEditor);
+                const slideout = document.querySelector('.slideout.element-editor .ee-body');
+
+                if (slideout) {
+                    slideout.addEventListener('scroll', this.updateFixedToolbarEditor);
+                    slideout.addEventListener('resize', this.updateFixedToolbarEditor);
+                }
 
                 Garnish.on(Craft.Preview, 'open', this.openLivePreviewCallback);
                 Garnish.on(Craft.LivePreview, 'enter', this.openLivePreviewCallback);
