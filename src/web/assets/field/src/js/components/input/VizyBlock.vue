@@ -418,6 +418,14 @@ export default {
             var foundContent = {};
 
             if (!isEmpty(content)) {
+                // Special-handling when in the element slideout
+                const slideout = document.querySelector('.slideout.element-editor .ee-body');
+
+                if (slideout) {
+                    // eslint-disable-next-line
+                    content = Object.values(content)[0];
+                }
+                
                 Object.entries(content.fields).forEach(([fieldHandle, fieldBlocks]) => {
                     if (!isEmpty(fieldBlocks.blocks)) {
                         Object.entries(fieldBlocks.blocks).forEach(([blockId, blockFields]) => {
