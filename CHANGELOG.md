@@ -1,5 +1,13 @@
 # Changelog
 
+## 1.0.7 - 2021-09-09
+
+### Fixed
+- Fix content not saving correctly when editing via the element slideout.
+- Fix editor toolbar not behaving as fixed when opening the element editor slideout.
+- Fix links containing ref tags not being parsed properly.
+- Fix including incorrect attributes (`id`, `uid`) when querying Vizy field nodes via GraphQL.
+
 ## 1.0.6 - 2021-08-29
 
 ### Added
