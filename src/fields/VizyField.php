@@ -378,7 +378,7 @@ class VizyField extends Field
                                 continue;
                             }
 
-                            $fieldData = $block->attrs['values']['content']['fields'][$field->handle] ?? [];
+                            $fieldData = $block->getFieldValue($field->handle);
 
                             // If this is a nested Vizy block?
                             if ($field instanceof $this) {
