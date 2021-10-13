@@ -2,6 +2,7 @@
 namespace verbb\vizy\nodes;
 
 use verbb\vizy\base\Node;
+use verbb\vizy\helpers\Nodes;
 use verbb\vizy\marks\Link;
 
 use craft\helpers\ArrayHelper;
@@ -52,6 +53,15 @@ class Image extends Node
         ArrayHelper::remove($this->attrs, 'target');
         ArrayHelper::remove($this->attrs, 'transform');
         ArrayHelper::remove($this->attrs, 'linkClass');
+
+        // Parse the image src for ref tags
+        $src = $this->attrs['src'] ?? '';
+
+        if ($src) {
+            $siteId = $this->element->siteId ?? null;
+
+            $this->attrs['src'] = Nodes::parseRefTags($src, $siteId);
+        }
 
         return parent::getTag();
     }

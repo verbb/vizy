@@ -4,7 +4,10 @@ namespace verbb\vizy\helpers;
 use verbb\vizy\Vizy;
 
 use Craft;
+use craft\helpers\Html;
+use craft\helpers\StringHelper;
 use craft\helpers\Template;
+use craft\validators\HandleValidator;
 
 class Nodes
 {
@@ -52,6 +55,45 @@ class Nodes
                 return "</{$tag}>";
             }, $tags));
         }, $tags));
+    }
+
+    public static function parseRefTags($value, $siteId)
+    {
+        $value = preg_replace_callback('/([^\'"\?#]*)(\?[^\'"\?#]+)?(#[^\'"\?#]+)?(?:#|%23)([\w]+)\:(\d+)(?:@(\d+))?(\:(?:transform\:)?' . HandleValidator::$handlePattern . ')?/', function($matches) {
+            list(, $url, $query, $hash, $elementType, $ref, $siteId, $transform) = array_pad($matches, 10, null);
+
+            // Create the ref tag, and make sure :url is in there
+            $ref = $elementType . ':' . $ref . ($siteId ? "@$siteId" : '') . ($transform ?: ':url');
+
+            if ($query || $hash) {
+                // Make sure that the query/hash isn't actually part of the parsed URL
+                // - someone's Entry URL Format could include "?slug={slug}" or "#{slug}", etc.
+                // - assets could include ?mtime=X&focal=none, etc.
+                $parsed = Craft::$app->getElements()->parseRefs("{{$ref}}");
+                
+                if ($query) {
+                    // Decode any HTML entities, e.g. &amp;
+                    $query = Html::decode($query);
+
+                    if (mb_strpos($parsed, $query) !== false) {
+                        $url .= $query;
+                        $query = '';
+                    }
+                }
+                if ($hash && mb_strpos($parsed, $hash) !== false) {
+                    $url .= $hash;
+                    $hash = '';
+                }
+            }
+
+            return '{' . $ref . '||' . $url . '}' . $query . $hash;
+        }, $value);
+
+        if (StringHelper::contains($value, '{')) {
+            $value = Craft::$app->getElements()->parseRefs($value, $siteId);
+        }
+
+        return $value;
     }
     
 }
