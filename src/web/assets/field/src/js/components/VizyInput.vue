@@ -471,7 +471,7 @@ export default {
     position: relative;
     border-radius: 3px;
     border: 1px solid rgba(96, 125, 159, 0.25);
-    z-index: 1;
+    z-index: 2;
 
     &.has-focus {
         box-shadow: 0 0 0 1px #127fbf, 0 0 0 3px rgb(18 127 191 / 50%);
