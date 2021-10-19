@@ -10,7 +10,9 @@
             </button>
 
             <div id="vizy-blocks-template" style="display: none;">
-                <input v-model="search" type="text" class="text fullwidth" placeholder="Search for blocks">
+                <div>
+                    <input v-model="search" type="text" class="text fullwidth" placeholder="Search for blocks">
+                </div>
 
                 <div v-if="filteredBlockGroups.length">
                     <div v-for="(group, groupIndex) in filteredBlockGroups" :key="groupIndex" class="vui-block-group">
@@ -261,9 +263,12 @@ export default {
 
 .vui-editor-insert .tippy-box {
     width: 335px;
+    max-height: 90vh;
 
     .tippy-content {
         padding: 16px 16px 26px;
+        max-height: 480px;
+        overflow: scroll;
     }
 
     hr {
