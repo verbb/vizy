@@ -1,5 +1,19 @@
 # Changelog
 
+## 1.0.8 - 2021-10-23
+
+### Changed
+- Update all tiptap dependancies to latest beta versions.
+
+### Fixed
+- Fix Redactor fields not working correct in a Vizy block.
+- Fix editor losing focus when pressing toolbar buttons.
+- Fix z-index overflow issue when showing the block type selector.
+- Fix block type selector not allowing scrollable area when a lot of blocks are available.
+- Fix Image nodes not having ref tags parsed correctly for transforms.
+- Fix ref parsing logic for Link nodes.
+- Fix an error thrown during search indexing, when a Vizy block contained an element select field (assets, entries, etc).
+
 ## 1.0.7 - 2021-09-09
 
 ### Fixed
