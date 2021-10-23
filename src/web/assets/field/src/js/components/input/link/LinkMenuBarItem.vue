@@ -1,6 +1,6 @@
 <template>
     <div>
-        <button v-tooltip="title" class="btn vui-toolbar-btn" :class="{ 'active': active }" @click.prevent="() => {}">
+        <button v-tooltip="title" class="btn vui-toolbar-btn" :class="{ 'active': active }" @click.prevent="() => {}" @mousedown="onMouseDown">
             <svg-icon :content="{ icon, svg }" />
         </button>
         
@@ -219,6 +219,10 @@ export default {
             this.tippy.hide();
 
             this.editor.chain().focus().unsetLink().run();
+        },
+
+        onMouseDown(e) {
+            e.preventDefault();
         },
     },
 };

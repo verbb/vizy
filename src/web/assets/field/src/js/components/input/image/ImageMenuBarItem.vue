@@ -1,6 +1,6 @@
 <template>
     <div>
-        <button v-tooltip="title" class="btn vui-toolbar-btn" :class="{ 'active': active }" @click.prevent="runAction">
+        <button v-tooltip="title" class="btn vui-toolbar-btn" :class="{ 'active': active }" @click.prevent="runAction" @mousedown="onMouseDown">
             <svg-icon :content="{ icon, svg }" />
         </button>
 
@@ -222,6 +222,10 @@ export default {
 
         closeModal() {
             this.showEditModal = false;
+        },
+
+        onMouseDown(e) {
+            e.preventDefault();
         },
     },
 };
