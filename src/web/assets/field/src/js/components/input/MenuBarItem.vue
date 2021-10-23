@@ -1,5 +1,5 @@
 <template>
-    <button v-tooltip="title" class="btn vui-toolbar-btn" :class="{ 'active': active }" @click.prevent="runAction(action)">
+    <button v-tooltip="title" class="btn vui-toolbar-btn" :class="{ 'active': active }" @click.prevent="runAction(action)" @mousedown="onMouseDown">
         <svg-icon :content="{ icon, svg }" />
 
         <div v-if="hasDropdown()" class="vui-toolbar-dropdown-container" :class="'vui-toolbar-dropdown-' + name" style="display: none;">
@@ -120,6 +120,10 @@ export default {
             if (action) {
                 action();
             }
+        },
+
+        onMouseDown(e) {
+            e.preventDefault();
         },
     },
 };
