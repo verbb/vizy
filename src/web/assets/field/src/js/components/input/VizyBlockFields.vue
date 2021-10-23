@@ -23,6 +23,10 @@ export default {
             this.$nextTick(() => {
                 // Watch all field content for changes to serialize them to our text inputs that are stored in JSON blocks.
                 this.watchFieldChanges();
+
+                // Special fix for Redactor. For some reason, when clicking on formatting buttons, we lose
+                // focus on ProseMirror. One day, we'll figure out what's really going on here
+                this.applyRedactorFix();
             });
         });
     },
@@ -151,6 +155,17 @@ export default {
             //         this.emitUpdate();
             //     }, 500);
             // });
+        },
+
+        applyRedactorFix() {
+            var $redactorToolbar = this.$el.querySelector('.redactor-toolbar');
+
+            if ($redactorToolbar) {
+                // This prevents focus being taken off the Redactor editor
+                $redactorToolbar.addEventListener('mousedown', (e) => {
+                    e.preventDefault();
+                });
+            }
         },
 
         emitUpdate() {
