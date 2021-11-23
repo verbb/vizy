@@ -29,6 +29,7 @@
     "require": {
         "craftcms/cms": "^3.6.0",
         "verbb/base": "^1.0.0",
+        "ueberdosis/html-to-prosemirror": "^1.5",
         "yii2mod/yii2-array-query": "^1.4"
     },
     "autoload": {

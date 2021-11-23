@@ -6,6 +6,7 @@ use verbb\vizy\base\Routes;
 use verbb\vizy\fields\VizyField;
 use verbb\vizy\gql\interfaces\VizyNodeInterface;
 use verbb\vizy\gql\interfaces\VizyBlockInterface;
+use verbb\vizy\integrations\feedme\fields\Vizy as FeedMeVizyField;
 use verbb\vizy\models\Settings;
 
 use Craft;
@@ -20,6 +21,9 @@ use craft\services\Matrix;
 use yii\base\Event;
 
 use verbb\supertable\services\SuperTableService;
+
+use craft\feedme\events\RegisterFeedMeFieldsEvent;
+use craft\feedme\services\Fields as FeedMeFields;
 
 class Vizy extends Plugin
 {
@@ -53,6 +57,7 @@ class Vizy extends Plugin
         $this->_registerFieldTypes();
         $this->_registerProjectConfigEventListeners();
         $this->_registerGraphQl();
+        $this->_registerThirdPartyEventListeners();
     }
 
     public function getSettingsResponse()
@@ -106,5 +111,14 @@ class Vizy extends Plugin
             $event->types[] = VizyNodeInterface::class;
             $event->types[] = VizyBlockInterface::class;
         });
+    }
+
+    private function _registerThirdPartyEventListeners()
+    {
+        if (class_exists(FeedMeFields::class)) {
+            Event::on(FeedMeFields::class, FeedMeFields::EVENT_REGISTER_FEED_ME_FIELDS, function(RegisterFeedMeFieldsEvent $event) {
+                $event->fields[] = FeedMeVizyField::class;
+            });
+        }
     }
 }
