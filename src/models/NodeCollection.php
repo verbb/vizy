@@ -75,8 +75,8 @@ class NodeCollection extends Model
 
         $html = join($html);
 
-        // Is this a completely empty field?
-        if (strip_tags($html) === '') {
+        // Is this a completely empty field (we always have an empty paragraph)?
+        if (str_replace(['<p>', '</p>'], '', $html) === '') {
             $html = '';
         }
 
