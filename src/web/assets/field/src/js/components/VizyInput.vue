@@ -43,7 +43,7 @@ import Text from '@tiptap/extension-text';
 // TipTap - Extensions
 import Dropcursor from '@tiptap/extension-dropcursor';
 import Focus from '@tiptap/extension-focus';
-import Gapcursor from '@tiptap/extension-dropcursor';
+import Gapcursor from '@tiptap/extension-gapcursor';
 import History from '@tiptap/extension-history';
 import TextAlign from '@tiptap/extension-text-align';
 
