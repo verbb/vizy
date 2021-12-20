@@ -311,6 +311,10 @@ export default {
                     hideOnClick: true,
                 });
             }
+
+            // This is a dirty hack to fix Firefox's inability to select inputs/textareas when the 
+            // parent element is set to draggable. Note the direct DOM update instead of a prop.
+            this.$el.setAttribute('draggable', false);
         });
     },
 
