@@ -5,6 +5,7 @@ use verbb\vizy\base\Node;
 
 use craft\base\ElementInterface;
 use craft\helpers\ArrayHelper;
+use craft\helpers\StringHelper;
 
 class Paragraph extends Node
 {
@@ -36,8 +37,13 @@ class Paragraph extends Node
         $value = parent::serializeValue($element);
 
         // Check if we're to exclude empty nodes
-        if ($this->field->trimEmptyParagraphs && !$this->content) {
-            return false;
+        if ($this->field->trimEmptyParagraphs) {
+            $text = $value['content'][0]['text'] ?? '';
+            $text = StringHelper::trim($text);
+
+            if ($text === '') {
+                return false;
+            }
         }
 
         return $value;
