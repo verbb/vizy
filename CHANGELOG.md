@@ -1,5 +1,19 @@
 # Changelog
 
+## 1.0.9 - 2022-01-17
+
+### Added
+- Add support for Feed Me.
+
+### Changed
+- Bump axios from 0.21.1 to 0.21.2.
+
+### Fixed
+- Fix "Remove Empty Paragraphs" not working correctly when content has been pasted from Word, or contained `&nbsp;` characters.
+- Fix Firefox text selection issue, when trying to select text within a Vizy block (input, textarea fields).
+- Fix `gapcursor` tiptap utility not working correctly.
+- Fix when fields only containing images, the field is considered empty.
+
 ## 1.0.8 - 2021-10-23
 
 ### Changed
