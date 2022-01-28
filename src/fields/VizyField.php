@@ -211,8 +211,8 @@ class VizyField extends Field
             'id' => $id,
             'name' => $this->handle,
             'field' => $this,
-            'value' => Json::encode($value->getRawNodes(), JSON_UNESCAPED_UNICODE),
-            'settings' => Json::encode($settings, JSON_UNESCAPED_UNICODE),
+            'value' => Json::encode($value->getRawNodes(), JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_QUOT),
+            'settings' => Json::encode($settings, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_QUOT),
         ]);
     }
 
