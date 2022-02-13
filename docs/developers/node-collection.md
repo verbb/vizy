@@ -1,8 +1,8 @@
 # Node Collection
-A Node Collection is the object you deal with in your templates, when handling a Vizy Field. You can also call the field directly to return the raw HTML, which using the `| raw` Twig filter, and be rendered as HTML.
+A Node Collection is the object you deal with in your templates, when handling a Vizy Field. You can also call the field directly to render as HTML.
 
 ```twig
-{{ entry.vizyField | raw }}
+{{ entry.vizyField }}
 ```
 
 ## Methods

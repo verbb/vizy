@@ -11,8 +11,9 @@ use craft\helpers\Component as ComponentHelper;
 use craft\helpers\Template;
 
 use yii2mod\query\ArrayQuery;
+use Twig\Markup;
 
-class NodeCollection extends Model
+class NodeCollection extends Markup
 {
     // Properties
     // =========================================================================
@@ -41,11 +42,9 @@ class NodeCollection extends Model
 
         // Prepare node/mark classes for the collection
         $this->nodes = $this->_populateNodes($nodes);
-    }
 
-    public function __toString()
-    {
-        return (string)$this->renderHtml();
+        // Prevent everyone from having to use the `| raw` filter when outputting RTE content
+        parent::__construct((string)$this->renderHtml(), Craft::$app->charset);
     }
 
     public function getNodes()

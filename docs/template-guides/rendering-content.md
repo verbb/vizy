@@ -7,7 +7,7 @@ When calling a Vizy field when attached to an element such as `{{ entry.vizyFiel
 The simplest and most common method will be to automatically render the HTML for your content. All nodes such as Paragraph, Image, etc will use the in-built rendering methods to render content.
 
 ```twig
-{{ entry.vizyField | raw }}
+{{ entry.vizyField }}
 
 {# Is the same as... #}
 {{ entry.vizyField.renderHtml() }}
