@@ -7,6 +7,9 @@ use Craft;
 
 class Matrix
 {
+    // Static Methods
+    // =========================================================================
+
     public static function sanitizeMatrixContent($field, $content)
     {
         $blockTypes = array_map(function ($block) {
@@ -21,22 +24,18 @@ class Matrix
             $content = [];
         }
 
-        if (array_key_exists('blocks', $content)) {
+        foreach ($content as $blockKey => $block) {
             // Filter block types against those available
-            $content['blocks'] = array_filter($content['blocks'], function ($block) use ($blockTypes) {
-                return in_array($block['type'], $blockTypes);
-            });
+            if (!in_array($block['type'], $blockTypes)) {
+                unset($content[$blockKey]);
+            }
 
             // Filter fields within valid blocks against those available
-            $content['blocks'] = array_map(function ($block) use ($blockFields) {
-                if (array_key_exists('fields', $block)) {
-                    $block['fields'] = array_filter($block['fields'], function ($key) use ($blockFields) {
-                        return in_array($key, $blockFields);
-                    }, ARRAY_FILTER_USE_KEY);
+            foreach ($block['fields'] as $fieldKey => $field) {
+                if (!in_array($fieldKey, $blockFields)) {
+                    unset($content[$blockKey]['fields'][$fieldKey]);
                 }
-
-                return $block;
-            }, $content['blocks']);
+            }
         }
 
         return $content;
