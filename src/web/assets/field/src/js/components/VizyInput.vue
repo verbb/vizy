@@ -585,4 +585,9 @@ export default {
     display: none !important;
 }
 
+// Fix Redactor incompatibility with ProseMirror style
+.ProseMirror [contenteditable="false"] .redactor [contenteditable="true"] {
+    white-space: normal;
+}
+
 </style>
