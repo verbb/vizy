@@ -59,6 +59,11 @@ class Block extends Element
     public function setOwner($owner)
     {
         $this->_owner = $owner;
+
+        // Set the appropriate siteId for the block, inherited from the owner
+        if ($owner) {
+            $this->siteId = $owner->siteId;
+        }
     }
 
     public function isFieldDirty(string $fieldHandle): bool
