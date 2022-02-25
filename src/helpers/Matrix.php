@@ -24,18 +24,11 @@ class Matrix
             $content = [];
         }
 
-        foreach ($content as $blockKey => $block) {
-            // Filter block types against those available
-            if (!in_array($block['type'], $blockTypes)) {
-                unset($content[$blockKey]);
-            }
-
-            // Filter fields within valid blocks against those available
-            foreach ($block['fields'] as $fieldKey => $field) {
-                if (!in_array($fieldKey, $blockFields)) {
-                    unset($content[$blockKey]['fields'][$fieldKey]);
-                }
-            }
+        // Handle new blocks, which are structured differently
+        if (isset($content['blocks'])) {
+            $content['blocks'] = self::filterContent($content['blocks'], $blockTypes, $blockFields);
+        } else {
+            $content = self::filterContent($content, $blockTypes, $blockFields);
         }
 
         return $content;
@@ -44,5 +37,27 @@ class Matrix
     public static function isMatrix($field)
     {
         return $field instanceof craft\fields\Matrix;
+    }
+
+    private static function filterContent($content, $blockTypes, $blockFields)
+    {
+        foreach ($content as $blockKey => $block) {
+            $type = $block['type'] ?? '';
+            $fields = $block['fields'] ?? [];
+
+            // Filter block types against those available
+            if ($type && !in_array($type, $blockTypes)) {
+                unset($content[$blockKey]);
+            }
+
+            // Filter fields within valid blocks against those available
+            foreach ($fields as $fieldKey => $field) {
+                if (!in_array($fieldKey, $blockFields)) {
+                    unset($content[$blockKey]['fields'][$fieldKey]);
+                }
+            }
+        }
+
+        return $content;
     }
 }
