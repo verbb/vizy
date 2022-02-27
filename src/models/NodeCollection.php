@@ -2,6 +2,7 @@
 namespace verbb\vizy\models;
 
 use verbb\vizy\Vizy;
+use verbb\vizy\helpers\Nodes;
 
 use Craft;
 use craft\base\ElementInterface;
@@ -32,6 +33,11 @@ class NodeCollection extends Markup
 
     public function __construct($field, $nodes = [], $element = null)
     {
+        // Handle emoji's and un-serialize them
+        foreach ($nodes as $key => $node) {
+            $nodes[$key] = Nodes::normalizeEmojis($node);
+        }
+
         $this->element = $element;
         $this->field = $field;
         $this->rawNodes = $nodes;
@@ -116,6 +122,9 @@ class NodeCollection extends Markup
 
         foreach ($this->getNodes() as $nodeKey => $node) {
             $values[$nodeKey] = $node->serializeValue($element);
+
+            // Handle serializing any emoji's in text nodes
+            $values[$nodeKey] = Nodes::serializeEmojis($node->rawNode);
         }
 
         $values = array_values(array_filter($values));

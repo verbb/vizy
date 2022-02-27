@@ -9,6 +9,8 @@ use craft\helpers\StringHelper;
 use craft\helpers\Template;
 use craft\validators\HandleValidator;
 
+use LitEmoji\LitEmoji;
+
 class Nodes
 {
     // Static Methods
@@ -94,6 +96,36 @@ class Nodes
         }
 
         return $value;
+    }
+
+    public static function serializeEmojis($rawNode)
+    {
+        $content = $rawNode['content'] ?? [];
+
+        foreach ($content as $key => $block) {
+            $text = $block['text'] ?? '';
+
+            // We only want to modify simple nodes and their text content, not complicated
+            // nodes like VizyBlocks, which could mess things up as fields control their content.
+            $rawNode['content'][$key]['text'] = LitEmoji::unicodeToShortcode($text);
+        }
+
+        return $rawNode;
+    }
+
+    public static function normalizeEmojis($rawNode)
+    {
+        $content = $rawNode['content'] ?? [];
+
+        foreach ($content as $key => $block) {
+            $text = $block['text'] ?? '';
+
+            // We only want to modify simple nodes and their text content, not complicated
+            // nodes like VizyBlocks, which could mess things up as fields control their content.
+            $rawNode['content'][$key]['text'] = LitEmoji::shortcodeToUnicode($text);
+        }
+
+        return $rawNode;
     }
     
 }
