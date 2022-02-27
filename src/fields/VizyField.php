@@ -342,6 +342,73 @@ class VizyField extends Field
         return true;
     }
 
+    public function beforeElementSave(ElementInterface $element, bool $isNew): bool
+    {
+        // If we're propagating the element (entry), we need to perform some additional checks in a specific scenario
+        // If the Vizy field is set to un-translatable but the inner fields are, Craft's `_propagateElement()` will copy
+        // values across all elements, which we don't want. As such, check each field and remove the duplicated content,
+        // restoring the content that was there. This is tricky that Vizy fields don't use elements for their content
+        // unlike Matrix, so we need to do a deep-dive into the content to re-jig it.
+        //
+        // We can also skip over this entirely if the Vizy field is translatable - that works as expected.
+        if ($element->propagating && $this->translationMethod === Field::TRANSLATION_METHOD_NONE) {
+            $translatableFields = [];
+
+            // Before going any further, are there any inner fields in _any_ block type for this field
+            // that are translatable? No need to go further if there aren't, and saves a lot of time.
+            foreach ($this->getBlockTypes() as $blockType) {
+                if (($fieldLayout = $blockType->getFieldLayout()) !== null) {
+                    foreach ($fieldLayout->getFields() as $field) {
+                        if ($field->translationMethod !== Field::TRANSLATION_METHOD_NONE) {
+                            $translatableFields[$blockType->id][] = $field->handle;
+                        }
+                    }
+                }
+            }
+
+            if ($translatableFields) {
+                // Fetch the current element, so we can get it's content before saving.
+                $siteElement = Craft::$app->getElements()->getElementById($element->id, get_class($element), $element->siteId);
+                
+                if ($siteElement) {
+                    $hasUpdatedContent = false;
+                    $newNodes = $element->getFieldValue($this->handle)->getRawNodes();
+
+                    // Extract the raw content for _just_ the translatable fields
+                    foreach ($siteElement->getFieldValue($this->handle)->getRawNodes() as $rawNode) {
+                        if ($rawNode['type'] === 'vizyBlock') {
+                            $blockId = $rawNode['attrs']['id'] ?? '';
+                            $blockTypeId = $rawNode['attrs']['values']['type'] ?? '';
+                            $fields = $translatableFields[$blockTypeId] ?? [];
+
+                            foreach ($fields as $field) {
+                                // Ensure we find the right block to update
+                                foreach ($newNodes as $key => $newNode) {
+                                    $newBlockId = $newNode['attrs']['id'] ?? '';
+
+                                    if ($newBlockId === $blockId) {
+                                        $hasUpdatedContent = true;
+
+                                        $newNodes[$key]['attrs']['values']['content']['fields'][$field] = $rawNode['attrs']['values']['content']['fields'][$field] ?? '';
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+                    if ($hasUpdatedContent) {
+                        // Rebuild the node collection - if it's changed
+                        $nodeCollection = new NodeCollection($this, $newNodes, $element);
+                        
+                        $element->setFieldValue($this->handle, $nodeCollection);
+                    }
+                }
+            }
+        }
+
+        return parent::beforeElementSave($element, $isNew);
+    }
+
     public function getBlockTypeById($blockTypeId)
     {
         if (isset($this->_blockTypesById[$blockTypeId])) {
