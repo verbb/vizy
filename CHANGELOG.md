@@ -1,5 +1,20 @@
 # Changelog
 
+## 1.0.10 - 2022-02-28
+
+### Added
+- Add support for emoji’s in Vizy field content.
+
+### Fixed
+- Fix field content not updating when editing raw HTML.
+- Fix non-translatable Vizy field with inner translatable fields not having their content propagated correctly.
+- Fix Matrix field sanitizing not working correctly for Vizy Blocks containing Matrix fields where their sub-field handles have changed.
+- Fix related elements in Vizy block fields not having their appopriate site (inherited from the owner element) applied to the field.
+- Fix Matrix field sanitizing not working correctly for Vizy Blocks containing Matrix fields where their sub-field handles have changed.
+- Fix a compatibility issue with Redactor, showing extra line breaks incorrectly.
+- Fix rendering content not reporting back correctly for `length` Twig filter, and no longer require the use of `raw` Twig filter.
+- Fix displaying encoded html characters in some cases (pasting from Word).
+
 ## 1.0.9 - 2022-01-17
 
 ### Added
