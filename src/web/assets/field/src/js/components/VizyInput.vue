@@ -116,6 +116,10 @@ export default {
         jsonContent(newValue) {
             this.$emit('content-update', newValue);
         },
+
+        codeEditorHtml(newValue) {
+            this.editor.chain().setContent(newValue, true).run();
+        },
     },
 
     mounted() {
@@ -264,7 +268,7 @@ export default {
 
         setCodeEditor() {
             if (this.showCodeEditor) {
-                this.editor.chain().setContent(this.codeEditorHtml).run();
+                this.editor.chain().setContent(this.codeEditorHtml, true).run();
             } else {
                 this.codeEditorHtml = this.editor.getHTML();
             }
