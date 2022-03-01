@@ -12,6 +12,7 @@ use craft\errors\InvalidFieldException;
 use craft\fields\BaseRelationField;
 use craft\helpers\Html;
 use craft\helpers\Json;
+use craft\web\View;
 
 class VizyBlock extends Node
 {
@@ -125,7 +126,7 @@ class VizyBlock extends Node
 
         $view = Craft::$app->getView();
 
-        if (!$view->doesTemplateExist($this->_blockType->template)) {
+        if (!$view->doesTemplateExist($this->_blockType->template, View::TEMPLATE_MODE_SITE)) {
             return null;
         }
 
@@ -140,7 +141,7 @@ class VizyBlock extends Node
 
         $variables = array_merge($this->toArray(), $fieldValues);
 
-        return $view->renderTemplate($this->_blockType->template, $variables);
+        return $view->renderTemplate($this->_blockType->template, $variables, View::TEMPLATE_MODE_SITE);
     }
 
     public function renderStaticHtml()
