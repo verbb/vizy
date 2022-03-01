@@ -447,12 +447,6 @@ class VizyField extends Field
 
                             $fieldData = $block->getFieldValue($field->handle);
 
-                            // If this is a nested Vizy block?
-                            if ($field instanceof $this) {
-                                // Prep the collection so we can run this again for the nested field
-                                $fieldData = new NodeCollection($field, $fieldData, $element);
-                            }
-
                             $keywords[] = $field->searchKeywords($fieldData, $element);
                         }
                     }
