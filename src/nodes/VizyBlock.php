@@ -130,16 +130,10 @@ class VizyBlock extends Node
             return null;
         }
 
-        $fieldValues = [];
+        // Create a fake element with the same fieldtype as our block
+        $block = $this->getBlockElement();
 
-        // Fetch all the custom field content, and supply with variables
-        if ($this->_fieldLayout) {
-            foreach ($this->_fieldLayout->getFields() as $field) {
-                $fieldValues[$field->handle] = $this->{$field->handle} ?? null;
-            }
-        }
-
-        $variables = array_merge($this->toArray(), $fieldValues);
+        $variables = array_merge($this->toArray(), $block->getFieldValues());
 
         return $view->renderTemplate($this->_blockType->template, $variables, View::TEMPLATE_MODE_SITE);
     }
