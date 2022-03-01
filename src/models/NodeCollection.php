@@ -23,7 +23,8 @@ class NodeCollection extends Markup
     private $field;
     private $nodes = [];
     private $rawNodes = [];
-
+    
+    private $_content;
     private $_registeredNodesByType = [];
     private $_registeredMarksByType = [];
 
@@ -48,12 +49,25 @@ class NodeCollection extends Markup
 
         // Prepare node/mark classes for the collection
         $this->nodes = $this->_populateNodes($nodes);
+    }
+
+    public function __toString()
+    {
+        if (!$this->_content) {
+            $this->_content = (string)$this->renderHtml();
+        }
 
         // Prevent everyone from having to use the `| raw` filter when outputting RTE content
-        // But only do this for non-CP requests, as editing the input
-        if (!Craft::$app->getRequest()->getIsCpRequest()) {
-            parent::__construct((string)$this->renderHtml(), Craft::$app->charset);
+        return $this->_content;
+    }
+
+    public function count()
+    {
+        if (!$this->_content) {
+            $this->_content = (string)$this->renderHtml();
         }
+
+        return mb_strlen($this->_content, Craft::$app->charset);
     }
 
     public function getNodes()
