@@ -31,7 +31,7 @@ class NodeCollection extends Markup
     // Public Methods
     // =========================================================================
 
-    public function __construct($field, $nodes = [], $element = null)
+    public function __construct($field, $nodes = [], $element = null, $render = false)
     {
         // Handle emoji's and un-serialize them
         foreach ($nodes as $key => $node) {
@@ -50,7 +50,9 @@ class NodeCollection extends Markup
         $this->nodes = $this->_populateNodes($nodes);
 
         // Prevent everyone from having to use the `| raw` filter when outputting RTE content
-        parent::__construct((string)$this->renderHtml(), Craft::$app->charset);
+        if ($render) {
+            parent::__construct((string)$this->renderHtml(), Craft::$app->charset);
+        }
     }
 
     public function getNodes()
