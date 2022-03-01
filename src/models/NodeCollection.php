@@ -31,7 +31,7 @@ class NodeCollection extends Markup
     // Public Methods
     // =========================================================================
 
-    public function __construct($field, $nodes = [], $element = null, $render = false)
+    public function __construct($field, $nodes = [], $element = null)
     {
         // Handle emoji's and un-serialize them
         foreach ($nodes as $key => $node) {
@@ -50,7 +50,8 @@ class NodeCollection extends Markup
         $this->nodes = $this->_populateNodes($nodes);
 
         // Prevent everyone from having to use the `| raw` filter when outputting RTE content
-        if ($render) {
+        // But only do this for non-CP requests, as editing the input
+        if (!Craft::$app->getRequest()->getIsCpRequest()) {
             parent::__construct((string)$this->renderHtml(), Craft::$app->charset);
         }
     }
@@ -136,6 +137,11 @@ class NodeCollection extends Markup
 
     public function isEmpty()
     {
+        // We don't want to render anything for CP requests for the input.
+        if (Craft::$app->getRequest()->getIsCpRequest()) {
+            return false;
+        }
+
         // Check to see if this is an empty field. Note 'empty' means a single
         // paragraph node with no content.
         if (strip_tags($this->renderHtml()) === '') {

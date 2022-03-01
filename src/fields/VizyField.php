@@ -231,8 +231,7 @@ class VizyField extends Field
         }
 
         // Convert serialized data to a collection of nodes.
-        // Prevent auto-rendering for the control panel, where it's not needed.
-        $value = new NodeCollection($this, $value, $element, !Craft::$app->getRequest()->getIsCpRequest());
+        $value = new NodeCollection($this, $value, $element);
 
         return $value;
     }
