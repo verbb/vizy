@@ -31,10 +31,16 @@ class NodeCollectionType extends ObjectType
                     'nodes' => [
                         'name' => 'nodes',
                         'type' => Type::listOf(VizyNodeInterface::getType($context)),
+                        'resolve' => function($source) {
+                            return $source->getNodes();
+                        },
                     ],
                     'rawNodes' => [
                         'name' => 'rawNodes',
                         'type' => ArrayType::getType(),
+                        'resolve' => function($source) {
+                            return $source->getRawNodes();
+                        },
                     ],
                     'renderHtml' => [
                         'name' => 'renderHtml',
