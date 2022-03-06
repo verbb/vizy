@@ -8,13 +8,13 @@ class Text extends Node
     // Properties
     // =========================================================================
 
-    public static $type = 'text';
+    public static ?string $type = 'text';
 
 
     // Public Methods
     // =========================================================================
 
-    public function getTag()
+    public function getTag(): array
     {
         return [];
     }

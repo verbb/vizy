@@ -2,10 +2,8 @@
 namespace verbb\vizy\gql\types\generators;
 
 use verbb\vizy\Vizy;
-use verbb\vizy\fields\VizyField;
 use verbb\vizy\gql\interfaces\VizyNodeInterface;
 use verbb\vizy\gql\types\VizyNodeType;
-use verbb\vizy\gql\types\generators\VizyBlockTypeGenerator;
 use verbb\vizy\nodes\VizyBlock;
 
 use craft\gql\base\GeneratorInterface;
@@ -16,7 +14,7 @@ class VizyNodeGenerator implements GeneratorInterface
     // Public Methods
     // =========================================================================
 
-    public static function generateTypes($field = null): array
+    public static function generateTypes(mixed $field = null): array
     {
         $nodeClasses = Vizy::$plugin->getNodes()->getRegisteredNodes();
 
@@ -24,7 +22,7 @@ class VizyNodeGenerator implements GeneratorInterface
         $interfaceFields = VizyNodeInterface::getFieldDefinitions();
 
         foreach ($nodeClasses as $nodeClass) {
-            // Handle these on a per-field base.
+            // Handle these on a per-field basis.
             if ($nodeClass === VizyBlock::class) {
                 /** @noinspection SlowArrayOperationsInLoopInspection */
                 $gqlTypes = array_merge($gqlTypes, VizyBlockTypeGenerator::generateTypes());

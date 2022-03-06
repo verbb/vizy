@@ -8,7 +8,7 @@ class Subscript extends Mark
     // Properties
     // =========================================================================
 
-    public static $type = 'subscript';
-    public $tagName = 'sub';
+    public static ?string $type = 'subscript';
+    public mixed $tagName = 'sub';
     
 }

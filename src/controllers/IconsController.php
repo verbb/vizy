@@ -6,12 +6,14 @@ use verbb\vizy\Vizy;
 use Craft;
 use craft\web\Controller;
 
+use yii\web\Response;
+
 class IconsController extends Controller
 {
     // Public Methods
     // =========================================================================
 
-    public function actionIndex()
+    public function actionIndex(): Response
     {
         $request = Craft::$app->getRequest();
 

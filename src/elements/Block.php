@@ -3,16 +3,16 @@ namespace verbb\vizy\elements;
 
 use verbb\vizy\helpers\Matrix;
 
-use Craft;
 use craft\base\Element;
+use craft\models\FieldLayout;
 
 class Block extends Element
 {
     // Properties
     // =========================================================================
 
-    private $_owner;
-    private $_fieldLayout;
+    private mixed $_owner = null;
+    private ?FieldLayout $_fieldLayout = null;
 
 
     // Public Methods
@@ -23,17 +23,17 @@ class Block extends Element
         return true;
     }
 
-    public function getFieldLayout()
+    public function getFieldLayout(): ?FieldLayout
     {
         return $this->_fieldLayout;
     }
 
-    public function setFieldLayout($fieldLayout)
+    public function setFieldLayout($fieldLayout): void
     {
         $this->_fieldLayout = $fieldLayout;
     }
 
-    public function setFieldValues(array $values)
+    public function setFieldValues(array $values): void
     {
         // Filter out any field values for fields that no longer exist on the element
         foreach ($values as $fieldHandle => $value) {
@@ -48,7 +48,7 @@ class Block extends Element
             }
         }
 
-        return parent::setFieldValues($values);
+        parent::setFieldValues($values);
     }
 
     public function getOwner()
@@ -56,7 +56,7 @@ class Block extends Element
         return $this->_owner;
     }
 
-    public function setOwner($owner)
+    public function setOwner($owner): void
     {
         $this->_owner = $owner;
 

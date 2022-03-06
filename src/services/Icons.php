@@ -15,13 +15,13 @@ class Icons extends Component
     // Properties
     // =========================================================================
 
-    private $_defaultIconSvg = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><path d="M400 32H48C21.5 32 0 53.5 0 80v352c0 26.5 21.5 48 48 48h352c26.5 0 48-21.5 48-48V80c0-26.5-21.5-48-48-48zm-6 400H54c-3.3 0-6-2.7-6-6V86c0-3.3 2.7-6 6-6h340c3.3 0 6 2.7 6 6v340c0 3.3-2.7 6-6 6z"/></svg>';
+    private string $_defaultIconSvg = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><path d="M400 32H48C21.5 32 0 53.5 0 80v352c0 26.5 21.5 48 48 48h352c26.5 0 48-21.5 48-48V80c0-26.5-21.5-48-48-48zm-6 400H54c-3.3 0-6-2.7-6-6V86c0-3.3 2.7-6 6-6h340c3.3 0 6 2.7 6 6v340c0 3.3-2.7 6-6 6z"/></svg>';
 
 
     // Public Methods
     // =========================================================================
 
-    public function getCustomIcons()
+    public function getCustomIcons(): array
     {
         $iconsPath = Vizy::$plugin->getSettings()->getIconsPath();
 
@@ -85,7 +85,7 @@ class Icons extends Component
         return $files;
     }
 
-    public function getFontAwesomeIcons()
+    public function getFontAwesomeIcons(): array
     {
         $iconPath = __DIR__ . '/../inc/font-awesome.json';
         $allFontAwesomeIcons = Json::decode(file_get_contents($iconPath));
@@ -103,15 +103,13 @@ class Icons extends Component
         return $icons;
     }
 
-    public function getAvailableIconSets()
+    public function getAvailableIconSets(): array
     {
         $fontAwesomeIcons = $this->getFontAwesomeIcons();
         $customIcons = $this->getCustomIcons();
 
         $icons = array_merge($fontAwesomeIcons, $customIcons);
-        $icons = array_values($icons);
-
-        return $icons;
+        return array_values($icons);
     }
 
     public function getIconForValue($value)
@@ -146,7 +144,7 @@ class Icons extends Component
     // Private Methods
     // =========================================================================
 
-    private function _getFiles($path, $options)
+    private function _getFiles($path, $options): array
     {
         $iconsPath = Vizy::$plugin->getSettings()->getIconsPath();
 
@@ -164,7 +162,7 @@ class Icons extends Component
         return $files;
     }
 
-    private function _getIconModel($filepath)
+    private function _getIconModel($filepath): array
     {
         $filename = pathinfo($filepath, PATHINFO_FILENAME);
 
@@ -175,7 +173,7 @@ class Icons extends Component
         ];
     }
 
-    private function _getTitleString($string)
+    private function _getTitleString($string): string
     {
         $string = str_replace(['-', '_'], [' ', ' '], $string);
 

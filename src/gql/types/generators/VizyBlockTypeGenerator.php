@@ -5,24 +5,18 @@ use verbb\vizy\Vizy;
 use verbb\vizy\gql\interfaces\VizyBlockInterface;
 use verbb\vizy\gql\types\VizyBlockType;
 
-use Craft;
 use craft\gql\base\Generator;
 use craft\gql\base\GeneratorInterface;
-use craft\gql\base\ObjectType;
 use craft\gql\base\SingleGeneratorInterface;
 use craft\gql\GqlEntityRegistry;
-use craft\gql\TypeLoader;
 use craft\gql\TypeManager;
-use craft\helpers\Gql as GqlHelper;
-
-use GraphQL\Type\Definition\Type;
 
 class VizyBlockTypeGenerator extends Generator implements GeneratorInterface, SingleGeneratorInterface
 {
     // Public Methods
     // =========================================================================
 
-    public static function generateTypes($context = null): array
+    public static function generateTypes(mixed $context = null): array
     {
         if ($context) {
             $vizyBlockTypes = $context->getBlockTypes();
@@ -40,7 +34,7 @@ class VizyBlockTypeGenerator extends Generator implements GeneratorInterface, Si
         return $gqlTypes;
     }
 
-    public static function generateType($context): ObjectType
+    public static function generateType(mixed $context): mixed
     {
         $typeName = $context->getField()->handle . '_' . $context->handle . '_BlockType';
 

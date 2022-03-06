@@ -8,14 +8,14 @@ class TableCell extends Node
     // Properties
     // =========================================================================
 
-    public static $type = 'tableCell';
-    public $tagName = 'td';
+    public static ?string $type = 'tableCell';
+    public mixed $tagName = 'td';
     
 
     // Public Methods
     // =========================================================================
 
-    public function getTag()
+    public function getTag(): array
     {
         $attrs = [];
 
@@ -24,11 +24,9 @@ class TableCell extends Node
                 $attrs['colspan'] = $this->attrs['colspan'];
             }
 
-            if (isset($this->attrs['colwidth'])) {
-                if ($widths = $this->attrs['colwidth']) {
-                    if (count($widths) === $attrs['colspan']) {
-                        $attrs['data-colwidth'] = implode(',', $widths);
-                    }
+            if (isset($this->attrs['colwidth']) && $widths = $this->attrs['colwidth']) {
+                if (count($widths) === $attrs['colspan']) {
+                    $attrs['data-colwidth'] = implode(',', $widths);
                 }
             }
 

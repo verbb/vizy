@@ -1,12 +1,9 @@
 <?php
 namespace verbb\vizy\helpers;
 
-use verbb\vizy\Vizy;
-
 use Craft;
 use craft\helpers\Html;
 use craft\helpers\StringHelper;
-use craft\helpers\Template;
 use craft\validators\HandleValidator;
 
 use LitEmoji\LitEmoji;
@@ -16,7 +13,7 @@ class Nodes
     // Static Methods
     // =========================================================================
 
-    public static function renderOpeningTag($tags)
+    public static function renderOpeningTag($tags): ?string
     {
         $tags = (array)$tags;
 
@@ -24,10 +21,10 @@ class Nodes
             return null;
         }
 
-        return join('', array_map(function($item) {
+        return implode('', array_map(function($item) {
             $tags = (array)$item['tag'];
 
-            return join('', array_map(function($tag) use ($item) {
+            return implode('', array_map(function($tag) use ($item) {
                 $attrs = '';
 
                 if (isset($item['attrs'])) {
@@ -41,7 +38,7 @@ class Nodes
         }, $tags));
     }
 
-    public static function renderClosingTag($tags)
+    public static function renderClosingTag($tags): ?string
     {
         $tags = (array)$tags;
         $tags = array_reverse($tags);
@@ -50,19 +47,19 @@ class Nodes
             return null;
         }
 
-        return join('', array_map(function($item) {
+        return implode('', array_map(function($item) {
             $tags = (array)$item['tag'];
 
-            return join('', array_map(function($tag) use ($item) {
+            return implode('', array_map(function($tag) use ($item) {
                 return "</{$tag}>";
             }, $tags));
         }, $tags));
     }
 
-    public static function parseRefTags($value, $siteId)
+    public static function parseRefTags($value, $siteId): array|string|null
     {
         $value = preg_replace_callback('/([^\'"\?#]*)(\?[^\'"\?#]+)?(#[^\'"\?#]+)?(?:#|%23)([\w]+)\:(\d+)(?:@(\d+))?(\:(?:transform\:)?' . HandleValidator::$handlePattern . ')?/', function($matches) {
-            list(, $url, $query, $hash, $elementType, $ref, $siteId, $transform) = array_pad($matches, 10, null);
+            [, $url, $query, $hash, $elementType, $ref, $siteId, $transform] = array_pad($matches, 10, null);
 
             // Create the ref tag, and make sure :url is in there
             $ref = $elementType . ':' . $ref . ($siteId ? "@$siteId" : '') . ($transform ?: ':url');
@@ -77,12 +74,12 @@ class Nodes
                     // Decode any HTML entities, e.g. &amp;
                     $query = Html::decode($query);
 
-                    if (mb_strpos($parsed, $query) !== false) {
+                    if (str_contains($parsed, $query)) {
                         $url .= $query;
                         $query = '';
                     }
                 }
-                if ($hash && mb_strpos($parsed, $hash) !== false) {
+                if ($hash && str_contains($parsed, $hash)) {
                     $url .= $hash;
                     $hash = '';
                 }
@@ -98,7 +95,7 @@ class Nodes
         return $value;
     }
 
-    public static function serializeEmojis($rawNode)
+    public static function serializeEmojis($rawNode): array
     {
         $content = $rawNode['content'] ?? [];
 
@@ -113,7 +110,7 @@ class Nodes
         return $rawNode;
     }
 
-    public static function normalizeEmojis($rawNode)
+    public static function normalizeEmojis($rawNode): array
     {
         $content = $rawNode['content'] ?? [];
 

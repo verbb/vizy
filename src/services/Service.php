@@ -1,7 +1,6 @@
 <?php
 namespace verbb\vizy\services;
 
-use verbb\vizy\Vizy;
 use verbb\vizy\fields\VizyField;
 use verbb\vizy\models\BlockType;
 
@@ -11,7 +10,6 @@ use craft\db\Query;
 use craft\db\Table;
 use craft\events\ConfigEvent;
 use craft\helpers\ArrayHelper;
-use craft\helpers\Json;
 use craft\helpers\ProjectConfig as ProjectConfigHelper;
 use craft\models\FieldLayout;
 
@@ -20,7 +18,7 @@ class Service extends Component
     // Public Methods
     // =========================================================================
 
-    public function getFieldLayoutByUid($layoutUid)
+    public function getFieldLayoutByUid($layoutUid): ?FieldLayout
     {
         $result = (new Query)
             ->select([
@@ -35,7 +33,7 @@ class Service extends Component
         return $result ? new FieldLayout($result) : null;
     }
 
-    public function getAllBlockTypes()
+    public function getAllBlockTypes(): array
     {
         $blockTypes = [];
 
@@ -48,7 +46,7 @@ class Service extends Component
         return $blockTypes;
     }
 
-    public function handleChangedField(ConfigEvent $event)
+    public function handleChangedField(ConfigEvent $event): void
     {
         $data = $event->newValue ?? [];
 
@@ -67,7 +65,7 @@ class Service extends Component
         $this->saveField($fieldData, $event);
     }
 
-    public function saveField($fieldData, $event = null)
+    public function saveField($fieldData, $event = null): void
     {
         $fieldsService = Craft::$app->getFields();
         $projectConfigService = Craft::$app->getProjectConfig();
@@ -84,14 +82,12 @@ class Service extends Component
                     continue;
                 }
 
-                if ($layoutConfig !== null) {
                     $fieldLayout = FieldLayout::createFromConfig($layoutConfig);
                     // $fieldLayout->id = $record->fieldLayoutId;
                     $fieldLayout->type = BlockType::class;
                     $fieldLayout->uid = $layoutUid;
 
                     $fieldsService->saveLayout($fieldLayout);
-                }
             }
         }
 
@@ -111,10 +107,9 @@ class Service extends Component
         foreach ($oldFieldData as $group) {
             // Is this a deleted group?
             $hasGroup = ArrayHelper::firstWhere($fieldData, 'id', $group['id']);
+            $blocks = $group['blockTypes'] ?? [];
 
             if ($hasGroup) {
-                $blocks = $group['blockTypes'] ?? [];
-
                 foreach ($blocks as $block) {
                     // Is this a deleted block?
                     $hasBlock = ArrayHelper::firstWhere($hasGroup['blockTypes'], 'id', $block['id']);
@@ -126,8 +121,6 @@ class Service extends Component
                 }
             } else {
                 // We've deleted an entire group. Delete each block's layout.
-                $blocks = $group['blockTypes'] ?? [];
-
                 foreach ($blocks as $block) {
                     $layoutsToDelete[] = $block['layoutUid'] ?? null;
                 }
@@ -145,7 +138,7 @@ class Service extends Component
         }
     }
 
-    public function handleDeletedField(ConfigEvent $event)
+    public function handleDeletedField(ConfigEvent $event): void
     {
         $data = $event->oldValue ?? [];
 
@@ -180,7 +173,7 @@ class Service extends Component
         }
     }
 
-    public function handleChangedBlockType(ConfigEvent $event)
+    public function handleChangedBlockType(ConfigEvent $event): void
     {
         $fields = $event->newValue['fields'] ?? [];
 
@@ -196,7 +189,7 @@ class Service extends Component
         }
     }
 
-    public function handleDeletedBlockType(ConfigEvent $event)
+    public function handleDeletedBlockType(ConfigEvent $event): void
     {
         $fields = $event->oldValue['fields'] ?? [];
 

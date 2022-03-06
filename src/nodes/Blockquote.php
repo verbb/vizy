@@ -8,7 +8,7 @@ class Blockquote extends Node
     // Properties
     // =========================================================================
 
-    public static $type = 'blockquote';
-    public $tagName = 'blockquote';
+    public static ?string $type = 'blockquote';
+    public mixed $tagName = 'blockquote';
     
 }

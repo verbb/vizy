@@ -7,10 +7,8 @@ use verbb\vizy\gql\types\ArrayType;
 use craft\gql\base\InterfaceType as BaseInterfaceType;
 use craft\gql\GqlEntityRegistry;
 use craft\gql\TypeManager;
-use craft\helpers\Json;
 
 use GraphQL\Type\Definition\InterfaceType;
-use GraphQL\Type\Definition\ObjectType;
 use GraphQL\Type\Definition\Type;
 
 class VizyNodeInterface extends BaseInterfaceType

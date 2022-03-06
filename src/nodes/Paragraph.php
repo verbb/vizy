@@ -12,14 +12,14 @@ class Paragraph extends Node
     // Properties
     // =========================================================================
 
-    public static $type = 'paragraph';
-    public $tagName = 'p';
+    public static ?string $type = 'paragraph';
+    public mixed $tagName = 'p';
     
 
     // Public Methods
     // =========================================================================
 
-    public function getTag()
+    public function getTag(): array
     {
         // Don't include certain attributes in rendering
         $align = ArrayHelper::remove($this->attrs, 'textAlign');
@@ -32,17 +32,17 @@ class Paragraph extends Node
         return parent::getTag();
     }
 
-    public function serializeValue(ElementInterface $element = null)
+    public function serializeValue(ElementInterface $element = null): ?array
     {
         $value = parent::serializeValue($element);
 
         // Check if we're to exclude empty nodes
-        if ($this->field->trimEmptyParagraphs) {
+        if ($this->getField()->trimEmptyParagraphs) {
             $text = $value['content'][0]['text'] ?? '';
             $text = StringHelper::trim($text);
 
             if ($text === '') {
-                return false;
+                return null;
             }
         }
 

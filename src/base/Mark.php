@@ -1,38 +1,35 @@
 <?php
 namespace verbb\vizy\base;
 
-use verbb\vizy\Vizy;
 use verbb\vizy\events\ModifyMarkTagEvent;
 use verbb\vizy\helpers\Nodes;
 
-use Craft;
 use craft\base\Component;
-use craft\helpers\Template;
 
 class Mark extends Component
 {
     // Constants
     // =========================================================================
 
-    const EVENT_MODIFY_TAG = 'modifyTag';
+    public const EVENT_MODIFY_TAG = 'modifyTag';
 
 
     // Properties
     // =========================================================================
 
-    public static $type;
+    public static ?string $type = null;
 
-    public $tagName = null;
-    public $attrs = [];
+    public mixed $tagName = null;
+    public array $attrs = [];
     
-    private $element;
-    private $field;
+    private mixed $element = null;
+    private mixed $field = null;
 
 
     // Public Methods
     // =========================================================================
 
-    public function getType()
+    public function getType(): ?string
     {
         return static::$type;
     }
@@ -42,7 +39,7 @@ class Mark extends Component
         return $this->field;
     }
 
-    public function setField($value)
+    public function setField($value): void
     {
         $this->field = $value;
     }
@@ -52,12 +49,12 @@ class Mark extends Component
         return $this->element;
     }
 
-    public function setElement($value)
+    public function setElement($value): void
     {
         $this->element = $value;
     }
 
-    public function getTag()
+    public function getTag(): array
     {
         return [
             [
@@ -67,7 +64,7 @@ class Mark extends Component
         ];
     }
 
-    public function renderOpeningTag()
+    public function renderOpeningTag(): ?string
     {
         $tag = $this->getTag();
 
@@ -82,7 +79,7 @@ class Mark extends Component
         return Nodes::renderOpeningTag($event->tag);
     }
 
-    public function renderClosingTag()
+    public function renderClosingTag(): ?string
     {
         $tag = $this->getTag();
 

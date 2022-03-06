@@ -1,13 +1,11 @@
 <?php
 namespace verbb\vizy\services;
 
-use verbb\vizy\Vizy;
 use verbb\vizy\events\RegisterNodesEvent;
 use verbb\vizy\events\RegisterMarksEvent;
 use verbb\vizy\nodes as allnodes;
 use verbb\vizy\marks;
 
-use Craft;
 use craft\base\Component;
 
 class Nodes extends Component
@@ -15,21 +13,21 @@ class Nodes extends Component
     // Constants
     // =========================================================================
 
-    const EVENT_REGISTER_NODES = 'registerNodes';
-    const EVENT_REGISTER_MARKS = 'registerMarks';
+    public const EVENT_REGISTER_NODES = 'registerNodes';
+    public const EVENT_REGISTER_MARKS = 'registerMarks';
 
 
     // Properties
     // =========================================================================
 
-    private $_registeredNodesByType = [];
-    private $_registeredMarksByType = [];
+    private array $_registeredNodesByType = [];
+    private array $_registeredMarksByType = [];
 
 
     // Public Methods
     // =========================================================================
 
-    public function getRegisteredNodes()
+    public function getRegisteredNodes(): array
     {
         $nodes = [
             allnodes\Blockquote::class,
@@ -60,7 +58,7 @@ class Nodes extends Component
         return $event->nodes;
     }
 
-    public function getRegisteredNodesByType()
+    public function getRegisteredNodesByType(): array
     {
         if ($this->_registeredNodesByType) {
             return $this->_registeredNodesByType;
@@ -73,7 +71,7 @@ class Nodes extends Component
         return $this->_registeredNodesByType;
     }
 
-    public function getRegisteredMarks()
+    public function getRegisteredMarks(): array
     {
         $marks = [
             marks\Bold::class,
@@ -96,7 +94,7 @@ class Nodes extends Component
         return $event->marks;
     }
 
-    public function getRegisteredMarksByType()
+    public function getRegisteredMarksByType(): array
     {
         if ($this->_registeredMarksByType) {
             return $this->_registeredMarksByType;
@@ -109,7 +107,7 @@ class Nodes extends Component
         return $this->_registeredMarksByType;
     }
 
-    public function renderNode($node, $prevNode = null, $nextNode = null)
+    public function renderNode($node, $prevNode = null, $nextNode = null): string
     {
         $html = [];
 
@@ -147,24 +145,24 @@ class Nodes extends Component
             }
         }
 
-        return join($html);
+        return implode($html);
     }
 
 
     // Private Methods
     // =========================================================================
 
-    private function markShouldOpen($mark, $prevNode)
+    private function markShouldOpen($mark, $prevNode): bool
     {
         return $this->nodeHasMark($prevNode, $mark);
     }
 
-    private function markShouldClose($mark, $nextNode)
+    private function markShouldClose($mark, $nextNode): bool
     {
         return $this->nodeHasMark($nextNode, $mark);
     }
 
-    private function nodeHasMark($node, $mark)
+    private function nodeHasMark($node, $mark): bool
     {
         if (!$node) {
             return true;

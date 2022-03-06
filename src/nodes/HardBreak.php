@@ -8,13 +8,13 @@ class HardBreak extends Node
     // Properties
     // =========================================================================
 
-    public static $type = 'hardBreak';
-    public $tagName = 'br';
+    public static ?string $type = 'hardBreak';
+    public mixed $tagName = 'br';
 
     // Public Methods
     // =========================================================================
 
-    public function selfClosing()
+    public function selfClosing(): bool
     {
         return true;
     }

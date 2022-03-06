@@ -5,12 +5,14 @@ use craft\gql\GqlEntityRegistry;
 use craft\helpers\Json;
 
 use GraphQL\Type\Definition\ScalarType;
+use GraphQL\Language\AST\StringValueNode;
+use GraphQL\Language\AST\NullValueNode;
+use GraphQL\Language\AST\IntValueNode;
+use GraphQL\Language\AST\FloatValueNode;
+use GraphQL\Language\AST\BooleanValueNode;
 
 class ArrayType extends ScalarType
 {
-    /**
-     * @var string
-     */
     public $name = 'ArrayType';
 
     // Static Methods
@@ -30,7 +32,7 @@ class ArrayType extends ScalarType
     // Public Methods
     // =========================================================================
 
-    public function serialize($value)
+    public function serialize($value): string
     {
         if (!is_array($value)) {
             $value->toArray();
@@ -44,7 +46,7 @@ class ArrayType extends ScalarType
         return $value;
     }
 
-    public function parseLiteral($valueNode, array $variables = null)
+    public function parseLiteral($valueNode, array $variables = null): BooleanValueNode|FloatValueNode|IntValueNode|NullValueNode|StringValueNode
     {
         return $valueNode;
     }

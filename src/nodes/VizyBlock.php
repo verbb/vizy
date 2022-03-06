@@ -7,9 +7,7 @@ use verbb\vizy\helpers\Matrix;
 
 use Craft;
 use craft\base\ElementInterface;
-use craft\behaviors\CustomFieldBehavior;
 use craft\errors\InvalidFieldException;
-use craft\fields\BaseRelationField;
 use craft\helpers\Html;
 use craft\helpers\Json;
 use craft\web\View;
@@ -19,14 +17,14 @@ class VizyBlock extends Node
     // Properties
     // =========================================================================
 
-    public static $type = 'vizyBlock';
-    protected $handle;
+    public static ?string $type = 'vizyBlock';
+    protected ?string $handle = null;
 
-    private $_fieldLayout;
-    private $_blockType;
-    private $_fieldsByHandle;
-    private $_normalizedFieldValues;
-    private $_blockElement;
+    private mixed $_fieldLayout = null;
+    private mixed $_blockType = null;
+    private ?array $_fieldsByHandle = null;
+    private ?array $_normalizedFieldValues = null;
+    private ?BlockElement $_blockElement = null;
 
 
     // Public Methods
@@ -39,7 +37,7 @@ class VizyBlock extends Node
         $blockTypeId = $this->attrs['values']['type'] ?? '';
 
         if ($blockTypeId) {
-            $this->_blockType = $this->field->getBlockTypeById($blockTypeId);
+            $this->_blockType = $this->getField()->getBlockTypeById($blockTypeId);
             
             if ($this->_blockType) {
                 $this->_fieldLayout = $this->_blockType->getFieldLayout();
@@ -77,7 +75,7 @@ class VizyBlock extends Node
         return parent::__get($name);
     }
 
-    public function getHandle()
+    public function getHandle(): ?string
     {
         return $this->handle;
     }
@@ -92,7 +90,7 @@ class VizyBlock extends Node
         return $this->_fieldLayout;
     }
 
-    public function getEnabled()
+    public function getEnabled(): bool
     {
         return $this->attrs['enabled'] ?? true;
     }
@@ -102,7 +100,7 @@ class VizyBlock extends Node
         return $this->attrs['values']['typeEnabled'] ?? true;
     }
 
-    public function isDeleted()
+    public function isDeleted(): bool
     {
         // BlockType has likely been deleted, bail
         if (!$this->_blockType) {
@@ -112,7 +110,7 @@ class VizyBlock extends Node
         return parent::isDeleted();
     }
 
-    public function renderNode()
+    public function renderNode(): ?string
     {
         // If a template has been defined on the block, use that to render
         if (!$this->_blockType->template) {
@@ -138,7 +136,7 @@ class VizyBlock extends Node
         return $view->renderTemplate($this->_blockType->template, $variables, View::TEMPLATE_MODE_SITE);
     }
 
-    public function renderStaticHtml()
+    public function renderStaticHtml(): ?string
     {
         $html = '';
 
@@ -173,22 +171,22 @@ class VizyBlock extends Node
         return $this->normalizeFieldValue($fieldHandle);
     }
 
-    public function getGqlTypeName()
+    public function getGqlTypeName(): string
     {
         return $this->getField()->handle . '_' . $this->handle . '_BlockType';
     }
 
-    public function serializeValue(ElementInterface $element = null)
+    public function serializeValue(ElementInterface $element = null): ?array
     {
         $value = parent::serializeValue($element);
 
-        // For any nested Vizy fields, we want to deserialie the JSON from the front-end and expand
+        // For any nested Vizy fields, we want to deserialize the JSON from the front-end and expand
         // it to a normal array. This helps with particularly character encoding and htmlentities.
         $fields = $value['attrs']['values']['content']['fields'] ?? [];
 
         foreach ($fields as $fieldKey => $field) {
             if (is_string($field)) {
-                if (substr($field, 0, 2) === '[{') {
+                if (str_starts_with($field, '[{')) {
                     $field = Json::decodeIfJson($field);
                 }
 
@@ -212,7 +210,7 @@ class VizyBlock extends Node
         return $value;
     }
 
-    public function getBlockElement($element = null)
+    public function getBlockElement($element = null): BlockElement
     {
         if ($this->_blockElement) {
             return $this->_blockElement;
@@ -255,7 +253,7 @@ class VizyBlock extends Node
             $content = Matrix::sanitizeMatrixContent($field, $content);
         }
 
-        return $this->_normalizedFieldValues[$fieldHandle] = $field->normalizeValue($content, $this->element);
+        return $this->_normalizedFieldValues[$fieldHandle] = $field->normalizeValue($content, $this->getElement());
     }
 
     protected function fieldByHandle(string $handle)

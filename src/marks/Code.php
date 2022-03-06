@@ -8,7 +8,7 @@ class Code extends Mark
     // Properties
     // =========================================================================
 
-    public static $type = 'code';
-    public $tagName = 'code';
+    public static ?string $type = 'code';
+    public mixed $tagName = 'code';
     
 }

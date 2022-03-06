@@ -2,32 +2,33 @@
 namespace verbb\vizy\models;
 
 use verbb\vizy\Vizy;
-use verbb\vizy\fields\VizyField;
 
 use Craft;
 use craft\base\Model;
 use craft\db\Table;
 use craft\helpers\Db;
-use craft\helpers\Json;
 use craft\helpers\StringHelper;
 use craft\models\FieldLayout;
+
+use yii\base\InvalidConfigException;
+use craft\base\FieldInterface;
 
 class BlockType extends Model
 {
     // Properties
     // =========================================================================
 
-    public $id;
-    public $name;
-    public $handle;
-    public $icon;
-    public $template;
-    public $enabled;
-    public $layoutUid;
-    public $layoutConfig;
-    public $fieldId;
+    public ?int $id = null;
+    public ?string $name = null;
+    public ?string $handle = null;
+    public ?string $icon = null;
+    public ?string $template = null;
+    public ?bool $enabled = null;
+    public ?int $layoutUid = null;
+    public ?array $layoutConfig = null;
+    public ?int $fieldId = null;
 
-    private $_fieldLayout;
+    private ?FieldLayout $_fieldLayout = null;
 
 
     // Public Methods
@@ -53,7 +54,7 @@ class BlockType extends Model
         return StringHelper::toLowerCase(static::pluralDisplayName());
     }
 
-    public static function refHandle()
+    public static function refHandle(): ?string
     {
         return null;
     }
@@ -66,7 +67,7 @@ class BlockType extends Model
         return $rules;
     }
 
-    public function getFieldLayout()
+    public function getFieldLayout(): ?FieldLayout
     {
         if ($this->_fieldLayout !== null) {
             return $this->_fieldLayout;
@@ -79,12 +80,12 @@ class BlockType extends Model
         return $this->_fieldLayout;
     }
 
-    public function setFieldLayout(FieldLayout $fieldLayout)
+    public function setFieldLayout(FieldLayout $fieldLayout): void
     {
         $this->_fieldLayout = $fieldLayout;
     }
 
-    public function getField(): VizyField
+    public function getField(): FieldInterface
     {
         if ($this->fieldId === null) {
             throw new InvalidConfigException('Block type missing its field ID');
@@ -97,7 +98,7 @@ class BlockType extends Model
         return $field;
     }
 
-    public function serializeArray()
+    public function serializeArray(): array
     {
         $data = $this->toArray();
 
@@ -109,9 +110,9 @@ class BlockType extends Model
             $data['layoutConfig'] = $fieldLayout->getConfig();
 
             // Set the layout UID, if not already set, fetch an existing one, or generate a new one.
-            // This is so we have always maintain a reference to a layout UID, even if we might not be
+            // This is so we have always maintained a reference to a layout UID, even if we might not be
             // creating one until after the field has saved, and the PC event handlers kick in.
-            $data['layoutUid'] = $data['layoutUid'] ?? $fieldLayout->uid ??
+            $data['layoutUid'] ??= $fieldLayout->uid ??
                     ($fieldLayout->id ? Db::uidById(Table::FIELDLAYOUTS, $fieldLayout->id) : null) ??
                     StringHelper::UUID();
         }
@@ -119,7 +120,7 @@ class BlockType extends Model
         return $data;
     }
 
-    public function toArray(array $fields = [], array $expand = [], $recursive = true)
+    public function toArray(array $fields = [], array $expand = [], $recursive = true): array
     {
         $array = parent::toArray($fields, $expand, $recursive);
 

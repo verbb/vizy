@@ -12,13 +12,14 @@ use craft\web\Controller;
 
 use yii\base\InvalidArgumentException;
 use yii\web\BadRequestHttpException;
+use yii\web\Response;
 
 class FieldController extends Controller
 {
     // Public Methods
     // =========================================================================
 
-    public function actionLayoutDesigner()
+    public function actionLayoutDesigner(): Response
     {
         $view = Craft::$app->getView();
         $request = Craft::$app->getRequest();
@@ -99,7 +100,7 @@ class FieldController extends Controller
             }
         }
 
-        // Ensure we namespace the FLD so it's unique. Important when used in Matrix blocks
+        // Ensure to namespace the FLD so it's unique. Important when used in Matrix blocks
         // as under normal Vizy field circumstances, you edit a one FLD at a time.
         $originalNamespace = $view->getNamespace();
         $namespace = $view->namespaceInputName(str_replace('type-', '', $blockTypeId), $originalNamespace);

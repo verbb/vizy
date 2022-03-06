@@ -8,7 +8,7 @@ class Strike extends Mark
     // Properties
     // =========================================================================
 
-    public static $type = 'strike';
-    public $tagName = 'strike';
+    public static ?string $type = 'strike';
+    public mixed $tagName = 'strike';
     
 }

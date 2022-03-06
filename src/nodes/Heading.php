@@ -10,13 +10,13 @@ class Heading extends Node
     // Properties
     // =========================================================================
 
-    public static $type = 'heading';
+    public static ?string $type = 'heading';
 
 
     // Public Methods
     // =========================================================================
 
-    public function getTag()
+    public function getTag(): array
     {
         // Don't include certain attributes in rendering
         $level = ArrayHelper::remove($this->attrs, 'level');

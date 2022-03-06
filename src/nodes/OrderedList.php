@@ -8,7 +8,7 @@ class OrderedList extends Node
     // Properties
     // =========================================================================
 
-    public static $type = 'orderedList';
-    public $tagName = 'ol';
+    public static ?string $type = 'orderedList';
+    public mixed $tagName = 'ol';
     
 }

@@ -5,51 +5,51 @@ use verbb\vizy\Vizy;
 use verbb\vizy\events\ModifyNodeTagEvent;
 use verbb\vizy\helpers\Nodes;
 
-use Craft;
 use craft\base\Component;
 use craft\base\ElementInterface;
 use craft\helpers\Template;
 
 use GraphQL\Type\Definition\Type;
+use GraphQL\Type\Definition\ScalarType;
 
 class Node extends Component
 {
     // Constants
     // =========================================================================
 
-    const EVENT_MODIFY_TAG = 'modifyTag';
+    public const EVENT_MODIFY_TAG = 'modifyTag';
 
 
     // Properties
     // =========================================================================
 
-    public static $type;
+    public static ?string $type = null;
 
-    public $tagName = null;
-    public $content = [];
-    public $attrs = [];
-    public $marks = [];
-    public $text = null;
-    public $rawNode = [];
+    public mixed $tagName = null;
+    public array $content = [];
+    public array $attrs = [];
+    public array $marks = [];
+    public ?string $text = null;
+    public array $rawNode = [];
 
-    private $element;
-    private $field;
+    private mixed $element = null;
+    private mixed $field = null;
 
 
     // Public Methods
     // =========================================================================
 
-    public function selfClosing()
+    public function selfClosing(): bool
     {
         return false;
     }
 
-    public function isDeleted()
+    public function isDeleted(): bool
     {
         return false;
     }
 
-    public function getTag()
+    public function getTag(): array
     {
         return [
             [
@@ -59,17 +59,17 @@ class Node extends Component
         ];
     }
 
-    public function getType()
+    public function getType(): ?string
     {
         return static::$type;
     }
 
-    public function getMarks()
+    public function getMarks(): array
     {
         return $this->marks;
     }
 
-    public function getContent()
+    public function getContent(): array
     {
         return $this->content;
     }
@@ -79,7 +79,7 @@ class Node extends Component
         return $this->field;
     }
 
-    public function setField($value)
+    public function setField($value): void
     {
         $this->field = $value;
     }
@@ -89,42 +89,42 @@ class Node extends Component
         return $this->element;
     }
 
-    public function setElement($value)
+    public function setElement($value): void
     {
         $this->element = $value;
     }
 
-    public function getAttrs()
+    public function getAttrs(): array
     {
         return $this->attrs;
     }
 
-    public function getText()
+    public function getText(): ?string
     {
         return $this->text;
     }
 
-    public function getEnabled()
+    public function getEnabled(): bool
     {
         return true;
     }
 
-    public function renderNode()
+    public function renderNode(): ?string
     {
         return Vizy::$plugin->getNodes()->renderNode($this);
     }
 
-    public function renderHtml()
+    public function renderHtml(): ?string
     {
-        return Template::raw((string)$this->renderNode());
+        return Template::raw($this->renderNode());
     }
 
-    public function renderStaticHtml()
+    public function renderStaticHtml(): ?string
     {
         return $this->renderHtml();
     }
 
-    public function renderOpeningTag()
+    public function renderOpeningTag(): ?string
     {
         $tag = $this->getTag();
 
@@ -139,7 +139,7 @@ class Node extends Component
         return Nodes::renderOpeningTag($event->tag);
     }
 
-    public function renderClosingTag()
+    public function renderClosingTag(): ?string
     {
         $tag = $this->getTag();
 
@@ -154,7 +154,7 @@ class Node extends Component
         return Nodes::renderClosingTag($event->tag);
     }
 
-    public function getGqlTypeName()
+    public function getGqlTypeName(): string
     {
         $classNameParts = explode('\\', static::class);
         $end = array_pop($classNameParts);
@@ -162,12 +162,12 @@ class Node extends Component
         return 'VizyNode_' . $end;
     }
 
-    public function getContentGqlType($context)
+    public function getContentGqlType($context): ScalarType
     {
         return Type::string();
     }
 
-    public function serializeValue(ElementInterface $element = null)
+    public function serializeValue(ElementInterface $element = null): ?array
     {
         return $this->rawNode;
     }

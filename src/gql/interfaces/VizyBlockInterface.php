@@ -2,13 +2,11 @@
 namespace verbb\vizy\gql\interfaces;
 
 use verbb\vizy\gql\types\generators\VizyBlockTypeGenerator;
-use verbb\vizy\gql\types\ArrayType;
 
 use craft\gql\GqlEntityRegistry;
 use craft\gql\TypeManager;
 
 use GraphQL\Type\Definition\InterfaceType;
-use GraphQL\Type\Definition\ObjectType;
 use GraphQL\Type\Definition\Type;
 
 class VizyBlockInterface extends VizyNodeInterface

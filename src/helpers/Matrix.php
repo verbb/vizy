@@ -1,10 +1,6 @@
 <?php
 namespace verbb\vizy\helpers;
 
-use verbb\vizy\Vizy;
-
-use Craft;
-
 class Matrix
 {
     // Static Methods
@@ -34,9 +30,9 @@ class Matrix
         return $content;
     }
 
-    public static function isMatrix($field)
+    public static function isMatrix($field): bool
     {
-        return $field instanceof craft\fields\Matrix;
+        return $field instanceof \craft\fields\Matrix;
     }
 
     private static function filterContent($content, $blockTypes, $blockFields)

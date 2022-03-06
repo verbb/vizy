@@ -12,19 +12,19 @@ class Image extends Node
     // Properties
     // =========================================================================
 
-    public static $type = 'image';
-    public $tagName = 'img';
+    public static ?string $type = 'image';
+    public mixed $tagName = 'img';
 
     
     // Public Methods
     // =========================================================================
 
-    public function selfClosing()
+    public function selfClosing(): bool
     {
         return true;
     }
 
-    public function renderNode()
+    public function renderNode(): ?string
     {
         if (isset($this->attrs['url'])) {
             $renderClass = new Link([
@@ -45,7 +45,7 @@ class Image extends Node
         return parent::renderNode();
     }
     
-    public function getTag()
+    public function getTag(): array
     {
         // Don't include certain attributes in rendering
         ArrayHelper::remove($this->attrs, 'id');
@@ -58,7 +58,7 @@ class Image extends Node
         $src = $this->attrs['src'] ?? '';
 
         if ($src) {
-            $siteId = $this->element->siteId ?? null;
+            $siteId = $this->getElement()->siteId ?? null;
 
             $this->attrs['src'] = Nodes::parseRefTags($src, $siteId);
         }

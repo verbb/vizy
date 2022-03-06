@@ -8,5 +8,5 @@ class RegisterNodesEvent extends Event
     // Properties
     // =========================================================================
 
-    public $nodes = [];
+    public array $nodes = [];
 }

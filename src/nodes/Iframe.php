@@ -8,7 +8,7 @@ class Iframe extends Node
     // Properties
     // =========================================================================
 
-    public static $type = 'iframe';
-    public $tagName = 'iframe';
+    public static ?string $type = 'iframe';
+    public mixed $tagName = 'iframe';
 
 }

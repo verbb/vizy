@@ -8,6 +8,6 @@ class ModifyVizyConfigEvent extends Event
     // Properties
     // =========================================================================
 
-    public $config;
-    public $field;
+    public ?array $config = null;
+    public mixed $field = null;
 }

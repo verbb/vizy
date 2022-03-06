@@ -8,5 +8,5 @@ class RegisterLinkOptionsEvent extends Event
     // Properties
     // =========================================================================
 
-    public $linkOptions = [];
+    public array $linkOptions = [];
 }

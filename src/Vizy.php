@@ -10,13 +10,14 @@ use verbb\vizy\integrations\feedme\fields\Vizy as FeedMeVizyField;
 use verbb\vizy\models\Settings;
 
 use Craft;
+use craft\base\Model;
 use craft\base\Plugin;
 use craft\events\RegisterComponentTypesEvent;
 use craft\events\RegisterGqlTypesEvent;
 use craft\helpers\UrlHelper;
 use craft\services\Fields;
 use craft\services\Gql;
-use craft\services\Matrix;
+use craft\services\ProjectConfig;
 
 use yii\base\Event;
 
@@ -27,12 +28,12 @@ use craft\feedme\services\Fields as FeedMeFields;
 
 class Vizy extends Plugin
 {
-    // Public Properties
+    // Properties
     // =========================================================================
 
-    public $schemaVersion = '0.9.0';
-    public $hasCpSettings = true;
-    public $hasCpSection = false;
+    public string $schemaVersion = '0.9.0';
+    public bool $hasCpSettings = true;
+    public bool $hasCpSection = false;
 
 
     // Traits
@@ -45,7 +46,7 @@ class Vizy extends Plugin
     // Public Methods
     // =========================================================================
 
-    public function init()
+    public function init(): void
     {
         parent::init();
 
@@ -60,15 +61,15 @@ class Vizy extends Plugin
         $this->_registerThirdPartyEventListeners();
     }
 
-    public function getSettingsResponse()
+    public function getSettingsResponse(): mixed
     {
-        Craft::$app->getResponse()->redirect(UrlHelper::cpUrl('vizy/settings'));
+        return Craft::$app->getResponse()->redirect(UrlHelper::cpUrl('vizy/settings'));
     }
 
     // Protected Methods
     // =========================================================================
 
-    protected function createSettingsModel(): Settings
+    protected function createSettingsModel(): ?Model
     {
         return new Settings();
     }
@@ -77,25 +78,25 @@ class Vizy extends Plugin
     // Private Methods
     // =========================================================================
 
-    private function _registerFieldTypes()
+    private function _registerFieldTypes(): void
     {
         Event::on(Fields::class, Fields::EVENT_REGISTER_FIELD_TYPES, function(RegisterComponentTypesEvent $event) {
             $event->types[] = VizyField::class;
         });
     }
 
-    private function _registerProjectConfigEventListeners()
+    private function _registerProjectConfigEventListeners(): void
     {
         Craft::$app->projectConfig
-            ->onAdd(Fields::CONFIG_FIELDS_KEY . '.{uid}', [$this->getService(), 'handleChangedField'])
-            ->onUpdate(Fields::CONFIG_FIELDS_KEY . '.{uid}', [$this->getService(), 'handleChangedField'])
-            ->onRemove(Fields::CONFIG_FIELDS_KEY . '.{uid}', [$this->getService(), 'handleDeletedField']);
+            ->onAdd(ProjectConfig::PATH_FIELDS . '.{uid}', [$this->getService(), 'handleChangedField'])
+            ->onUpdate(ProjectConfig::PATH_FIELDS . '.{uid}', [$this->getService(), 'handleChangedField'])
+            ->onRemove(ProjectConfig::PATH_FIELDS . '.{uid}', [$this->getService(), 'handleDeletedField']);
 
         // Special case for some fields like Matrix, that don't emit the change event for nested fields.
         Craft::$app->projectConfig
-            ->onAdd(Matrix::CONFIG_BLOCKTYPE_KEY . '.{uid}', [$this->getService(), 'handleChangedBlockType'])
-            ->onUpdate(Matrix::CONFIG_BLOCKTYPE_KEY . '.{uid}', [$this->getService(), 'handleChangedBlockType'])
-            ->onRemove(Matrix::CONFIG_BLOCKTYPE_KEY . '.{uid}', [$this->getService(), 'handleDeletedBlockType']);
+            ->onAdd(ProjectConfig::PATH_MATRIX_BLOCK_TYPES . '.{uid}', [$this->getService(), 'handleChangedBlockType'])
+            ->onUpdate(ProjectConfig::PATH_MATRIX_BLOCK_TYPES . '.{uid}', [$this->getService(), 'handleChangedBlockType'])
+            ->onRemove(ProjectConfig::PATH_MATRIX_BLOCK_TYPES . '.{uid}', [$this->getService(), 'handleDeletedBlockType']);
 
         if (class_exists(SuperTableService::class)) {
             Craft::$app->projectConfig
@@ -105,7 +106,7 @@ class Vizy extends Plugin
         }
     }
     
-    private function _registerGraphQl()
+    private function _registerGraphQl(): void
     {
         Event::on(Gql::class, Gql::EVENT_REGISTER_GQL_TYPES, function(RegisterGqlTypesEvent $event) {
             $event->types[] = VizyNodeInterface::class;
@@ -113,7 +114,7 @@ class Vizy extends Plugin
         });
     }
 
-    private function _registerThirdPartyEventListeners()
+    private function _registerThirdPartyEventListeners(): void
     {
         if (class_exists(FeedMeFields::class)) {
             Event::on(FeedMeFields::class, FeedMeFields::EVENT_REGISTER_FEED_ME_FIELDS, function(RegisterFeedMeFieldsEvent $event) {

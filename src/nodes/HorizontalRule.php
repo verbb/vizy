@@ -8,14 +8,14 @@ class HorizontalRule extends Node
     // Properties
     // =========================================================================
 
-    public static $type = 'horizontalRule';
-    public $tagName = 'hr';
+    public static ?string $type = 'horizontalRule';
+    public mixed $tagName = 'hr';
 
 
     // Public Methods
     // =========================================================================
 
-    public function selfClosing()
+    public function selfClosing(): bool
     {
         return true;
     }

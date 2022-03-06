@@ -3,15 +3,16 @@ namespace verbb\vizy\controllers;
 
 use verbb\vizy\Vizy;
 
-use Craft;
 use craft\web\Controller;
+
+use yii\web\Response;
 
 class SettingsController extends Controller
 {
     // Public Methods
     // =========================================================================
 
-    public function actionIndex()
+    public function actionIndex(): Response
     {
         $settings = Vizy::$plugin->getSettings();
 

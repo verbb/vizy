@@ -8,7 +8,7 @@ class Superscript extends Mark
     // Properties
     // =========================================================================
 
-    public static $type = 'superscript';
-    public $tagName = 'sup';
+    public static ?string $type = 'superscript';
+    public mixed $tagName = 'sup';
     
 }

@@ -3,7 +3,6 @@ namespace verbb\vizy\fields;
 
 use verbb\vizy\Vizy;
 use verbb\vizy\elements\Block as BlockElement;
-use verbb\vizy\events\ModifyPurifierConfigEvent;
 use verbb\vizy\events\ModifyVizyConfigEvent;
 use verbb\vizy\events\RegisterLinkOptionsEvent;
 use verbb\vizy\gql\types\NodeCollectionType;
@@ -16,24 +15,16 @@ use Craft;
 use craft\base\Element;
 use craft\base\ElementInterface;
 use craft\base\Field;
-use craft\base\FieldInterface;
-use craft\base\PreviewableFieldInterface;
-use craft\base\Volume;
-use craft\db\Query;
-use craft\db\Table;
 use craft\elements\Asset;
 use craft\elements\Category;
 use craft\elements\Entry;
-use craft\events\DefineFieldLayoutFieldsEvent;
 use craft\fieldlayoutelements\CustomField;
 use craft\helpers\ArrayHelper;
 use craft\helpers\Db;
 use craft\helpers\FileHelper;
 use craft\helpers\Html;
-use craft\helpers\HtmlPurifier;
 use craft\helpers\Json;
 use craft\helpers\StringHelper;
-use craft\helpers\UrlHelper;
 use craft\models\FieldLayout;
 use craft\models\FieldLayoutTab;
 use craft\models\Section;
@@ -43,34 +34,34 @@ use yii\base\InvalidArgumentException;
 use yii\db\Schema;
 use yii\web\BadRequestHttpException;
 
-use GraphQL\Type\Definition\Type;
+use Throwable;
 
 class VizyField extends Field
 {
     // Constants
     // =========================================================================
 
-    const EVENT_REGISTER_LINK_OPTIONS = 'registerLinkOptions';
-    const EVENT_MODIFY_PURIFIER_CONFIG = 'modifyPurifierConfig';
-    const EVENT_DEFINE_VIZY_CONFIG = 'defineVizyConfig';
+    public const EVENT_REGISTER_LINK_OPTIONS = 'registerLinkOptions';
+    public const EVENT_MODIFY_PURIFIER_CONFIG = 'modifyPurifierConfig';
+    public const EVENT_DEFINE_VIZY_CONFIG = 'defineVizyConfig';
 
 
     // Properties
     // =========================================================================
 
-    public $fieldData = [];
-    public $vizyConfig;
-    public $configSelectionMode = 'choose';
-    public $manualConfig = '';
-    public $availableVolumes = '*';
-    public $availableTransforms = '*';
-    public $showUnpermittedVolumes = false;
-    public $showUnpermittedFiles = false;
-    public $defaultTransform = '';
-    public $trimEmptyParagraphs = true;
-    public $columnType = Schema::TYPE_TEXT;
+    public array $fieldData = [];
+    public ?array $vizyConfig = null;
+    public string $configSelectionMode = 'choose';
+    public string $manualConfig = '';
+    public string $availableVolumes = '*';
+    public string $availableTransforms = '*';
+    public bool $showUnpermittedVolumes = false;
+    public bool $showUnpermittedFiles = false;
+    public string $defaultTransform = '';
+    public bool $trimEmptyParagraphs = true;
+    public string $columnType = Schema::TYPE_TEXT;
 
-    private $_blockTypesById = [];
+    private array $_blockTypesById = [];
 
 
     // Static Methods
@@ -90,12 +81,12 @@ class VizyField extends Field
     // Public Methods
     // =========================================================================
 
-    public function getContentColumnType(): string
+    public function getContentColumnType(): array|string
     {
         return $this->columnType;
     }
 
-    public function isValueEmpty($value, ElementInterface $element): bool
+    public function isValueEmpty(mixed $value, ElementInterface $element): bool
     {
         $isValueEmpty = parent::isValueEmpty($value, $element);
 
@@ -107,7 +98,7 @@ class VizyField extends Field
         return $isValueEmpty;
     }
 
-    public function getSettingsHtml()
+    public function getSettingsHtml(): ?string
     {
         $view = Craft::$app->getView();
 
@@ -140,7 +131,7 @@ class VizyField extends Field
 
         $transformOptions = [];
 
-        foreach (Craft::$app->getAssetTransforms()->getAllTransforms() as $transform) {
+        foreach (Craft::$app->getImageTransforms()->getAllTransforms() as $transform) {
             $transformOptions[] = [
                 'label' => Html::encode($transform->name),
                 'value' => $transform->uid
@@ -153,16 +144,16 @@ class VizyField extends Field
             'vizyConfigOptions' => $this->_getCustomConfigOptions('vizy'),
             'volumeOptions' => $volumeOptions,
             'transformOptions' => $transformOptions,
-            'defaultTransformOptions' => array_merge([
+            'defaultTransformOptions' => [...[
                 [
                     'label' => Craft::t('vizy', 'No transform'),
                     'value' => null
                 ]
-            ], $transformOptions),
+            ], ...$transformOptions],
         ]);
     }
 
-    public function getInputHtml($value, ElementInterface $element = null): string
+    public function getInputHtml(mixed $value, ?ElementInterface $element = null): string
     {
         $view = Craft::$app->getView();
         $id = Html::id($this->handle);
@@ -171,7 +162,7 @@ class VizyField extends Field
 
         $defaultTransform = '';
 
-        if (!empty($this->defaultTransform) && $transform = Craft::$app->getAssetTransforms()->getTransformByUid($this->defaultTransform)) {
+        if (!empty($this->defaultTransform) && $transform = Craft::$app->getImageTransforms()->getTransformByUid($this->defaultTransform)) {
             $defaultTransform = $transform->handle;
         }
 
@@ -216,7 +207,7 @@ class VizyField extends Field
         ]);
     }
 
-    public function normalizeValue($value, ElementInterface $element = null)
+    public function normalizeValue(mixed $value, ?ElementInterface $element = null): NodeCollection
     {
         if ($value instanceof NodeCollection) {
             return $value;
@@ -231,12 +222,10 @@ class VizyField extends Field
         }
 
         // Convert serialized data to a collection of nodes.
-        $value = new NodeCollection($this, $value, $element);
-
-        return $value;
+        return new NodeCollection($this, $value, $element);
     }
 
-    public function serializeValue($value, ElementInterface $element = null)
+    public function serializeValue(mixed $value, ?ElementInterface $element = null): mixed
     {
         if ($value instanceof NodeCollection) {
             return $value->serializeValues($element);
@@ -245,7 +234,7 @@ class VizyField extends Field
         return $value;
     }
 
-    public function getStaticHtml($value, ElementInterface $element): string
+    public function getStaticHtml(mixed $value, ElementInterface $element): string
     {
         $view = Craft::$app->getView();
 
@@ -280,7 +269,7 @@ class VizyField extends Field
                     // Create a model so we can properly validate
                     $blockType = new BlockType($blockType);
 
-                    // Setup the field layout from field layout designer
+                    // Set up the field layout from field layout designer
                     $elementPlacements = $layout['elementPlacements'] ?? [];
                     $elementConfigs = $layout['elementConfigs'] ?? [];
                     $layoutUid = $blockType->layoutUid ?? null;
@@ -307,7 +296,7 @@ class VizyField extends Field
 
                     // Override with our cleaned model data
                     $this->fieldData[$groupKey]['blockTypes'][$blockTypeKey] = $blockType->serializeArray();
-                } catch (\Throwable $e) {
+                } catch (Throwable $e) {
                     $this->addErrors([$blockType->id . ':general' => $e->getMessage()]);
 
                     return false;
@@ -368,7 +357,7 @@ class VizyField extends Field
 
             if ($translatableFields) {
                 // Fetch the current element, so we can get it's content before saving.
-                $siteElement = Craft::$app->getElements()->getElementById($element->id, get_class($element), $element->siteId);
+                $siteElement = Craft::$app->getElements()->getElementById($element->id, $element::class, $element->siteId);
                 
                 if ($siteElement) {
                     $hasUpdatedContent = false;
@@ -426,7 +415,7 @@ class VizyField extends Field
         return null;
     }
 
-    protected function searchKeywords($value, ElementInterface $element): string
+    protected function searchKeywords(mixed $value, ElementInterface $element): string
     {
         $keywords = parent::searchKeywords($value, $element);
 
@@ -461,7 +450,7 @@ class VizyField extends Field
         return $keywords;
     }
 
-    public function getBlockTypes()
+    public function getBlockTypes(): array
     {
         $blockTypes = [];
 
@@ -482,7 +471,7 @@ class VizyField extends Field
         return $blockTypes;
     }
 
-    public function getContentGqlType()
+    public function getContentGqlType(): array
     {
         return NodeCollectionType::getType($this);
     }
@@ -498,7 +487,7 @@ class VizyField extends Field
         ];
     }
 
-    public function validateBlocks(ElementInterface $element)
+    public function validateBlocks(ElementInterface $element): void
     {
         $value = $element->getFieldValue($this->handle);
         $blocks = $value->query()->where(['type' => 'vizyBlock'])->all();
@@ -518,7 +507,7 @@ class VizyField extends Field
     // Private Methods
     // =========================================================================
 
-    private function _getNestedValues($value, $key, &$items = [])
+    private function _getNestedValues($value, $key, &$items = []): array
     {
         foreach ($value as $k => $v) {
             if ((string)$k === $key) {
@@ -533,7 +522,7 @@ class VizyField extends Field
         return $items;
     }
 
-    private function _getBlockGroupsForSettings()
+    private function _getBlockGroupsForSettings(): array
     {
         $data = $this->fieldData;
 
@@ -559,7 +548,7 @@ class VizyField extends Field
         return $data;
     }
 
-    private function _getBlockGroupsForInput($value, $placeholderKey, ElementInterface $element = null)
+    private function _getBlockGroupsForInput($value, $placeholderKey, ElementInterface $element = null): array
     {
         $view = Craft::$app->getView();
 
@@ -617,13 +606,13 @@ class VizyField extends Field
         return $data;
     }
 
-    private function _getBlocksForInput($value, $placeholderKey, ElementInterface $element = null)
+    private function _getBlocksForInput($value, $placeholderKey, ElementInterface $element = null): array
     {
         $view = Craft::$app->getView();
 
         $blocks = [];
 
-        if ($value && $value instanceof NodeCollection) {
+        if ($value instanceof NodeCollection) {
             foreach ($value->getNodes() as $i => $block) {
                 if ($block instanceof VizyBlock) {
                     $blockId = $block->attrs['id'];
@@ -663,16 +652,14 @@ class VizyField extends Field
         return $blocks;
     }
 
-    // Copied from Craft, but refactored due to unable to rely on POST params
+    // Copied from Craft, but refactored due to being unable to rely on POST params
     private function assembleLayout($elementPlacements, $elementConfigs, $layoutUid = null): FieldLayout
     {
         $layout = new FieldLayout();
 
         // Try to find an existing layout, in case the field has a layout uid stored, but it's been deleted
-        if ($layoutUid) {
-            if (!$layout = Vizy::$plugin->getService()->getFieldLayoutByUid($layoutUid)) {
-                $layout = new FieldLayout();
-            }
+        if ($layoutUid && !$layout = Vizy::$plugin->getService()->getFieldLayoutByUid($layoutUid)) {
+            $layout = new FieldLayout();
         }
 
         $tabs = [];
@@ -937,7 +924,7 @@ class VizyField extends Field
             return [];
         }
 
-        $allTransforms = Craft::$app->getAssetTransforms()->getAllTransforms();
+        $allTransforms = Craft::$app->getImageTransforms()->getAllTransforms();
         $transformList = [];
 
         foreach ($allTransforms as $transform) {

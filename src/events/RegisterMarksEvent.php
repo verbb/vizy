@@ -8,5 +8,5 @@ class RegisterMarksEvent extends Event
     // Properties
     // =========================================================================
 
-    public $marks = [];
+    public array $marks = [];
 }

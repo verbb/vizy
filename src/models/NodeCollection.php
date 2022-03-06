@@ -6,9 +6,7 @@ use verbb\vizy\helpers\Nodes;
 
 use Craft;
 use craft\base\ElementInterface;
-use craft\base\Model;
 use craft\helpers\ArrayHelper;
-use craft\helpers\Component as ComponentHelper;
 use craft\helpers\Template;
 
 use yii2mod\query\ArrayQuery;
@@ -19,14 +17,14 @@ class NodeCollection extends Markup
     // Properties
     // =========================================================================
 
-    private $element;
-    private $field;
-    private $nodes = [];
-    private $rawNodes = [];
+    private mixed $element = null;
+    private mixed $field = null;
+    private array $nodes = [];
+    private array $rawNodes = [];
     
-    private $_content;
-    private $_registeredNodesByType = [];
-    private $_registeredMarksByType = [];
+    private mixed $_content = null;
+    private array $_registeredNodesByType = [];
+    private array $_registeredMarksByType = [];
 
 
     // Public Methods
@@ -49,9 +47,11 @@ class NodeCollection extends Markup
 
         // Prepare node/mark classes for the collection
         $this->nodes = $this->_populateNodes($nodes);
+
+        parent::__construct(null, null);
     }
 
-    public function __toString()
+    public function __toString(): string
     {
         if (!$this->_content) {
             $this->_content = (string)$this->renderHtml();
@@ -61,7 +61,7 @@ class NodeCollection extends Markup
         return $this->_content;
     }
 
-    public function count()
+    public function count(): bool|int
     {
         if (!$this->_content) {
             $this->_content = (string)$this->renderHtml();
@@ -70,7 +70,7 @@ class NodeCollection extends Markup
         return mb_strlen($this->_content, Craft::$app->charset);
     }
 
-    public function getNodes()
+    public function getNodes(): array
     {
         return $this->nodes;
     }
@@ -80,12 +80,12 @@ class NodeCollection extends Markup
         return $this->field;
     }
 
-    public function getRawNodes()
+    public function getRawNodes(): array
     {
         return $this->rawNodes;
     }
 
-    public function renderHtml($config = [])
+    public function renderHtml($config = []): ?string
     {
         $html = [];
 
@@ -95,7 +95,7 @@ class NodeCollection extends Markup
             $html[] = $node->renderHtml();
         }
 
-        $html = join($html);
+        $html = implode($html);
 
         // Is this a completely empty field (we always have an empty paragraph)?
         if (str_replace(['<p>', '</p>'], '', $html) === '') {
@@ -105,7 +105,7 @@ class NodeCollection extends Markup
         return Template::raw($html);
     }
 
-    public function renderStaticHtml($config = [])
+    public function renderStaticHtml($config = []): ?string
     {
         $html = [];
 
@@ -115,17 +115,17 @@ class NodeCollection extends Markup
             $html[] = $node->renderStaticHtml();
         }
 
-        $html = join($html);
+        $html = implode($html);
 
         return Template::raw($html);
     }
 
-    public function all()
+    public function all(): array
     {
         return $this->query()->all();
     }
 
-    public function query()
+    public function query(): ArrayQuery
     {
         $arrayQuery = new ArrayQuery();
         $arrayQuery->primaryKeyName = 'type';
@@ -133,7 +133,7 @@ class NodeCollection extends Markup
         return $arrayQuery->from($this->getNodes())->where(['enabled' => true]);
     }
 
-    public function serializeValues(ElementInterface $element = null)
+    public function serializeValues(ElementInterface $element = null): array
     {
         $values = [];
 
@@ -144,12 +144,10 @@ class NodeCollection extends Markup
             $values[$nodeKey] = Nodes::serializeEmojis($node->rawNode);
         }
 
-        $values = array_values(array_filter($values));
-
-        return $values;
+        return array_values(array_filter($values));
     }
 
-    public function isEmpty()
+    public function isEmpty(): bool
     {
         // We don't want to render anything for CP requests for the input.
         if (Craft::$app->getRequest()->getIsCpRequest()) {
@@ -169,7 +167,7 @@ class NodeCollection extends Markup
     // Private Methods
     // =========================================================================
 
-    private static function configure($object, $properties, $merge)
+    private static function configure($object, $properties, $merge): mixed
     {
         foreach ($properties as $name => $value) {
             if ($merge) {
@@ -182,7 +180,7 @@ class NodeCollection extends Markup
         return $object;
     }
 
-    private function _populateNodes($nodes)
+    private function _populateNodes($nodes): array
     {
         $result = [];
 
@@ -194,7 +192,7 @@ class NodeCollection extends Markup
                 $node['content'] = $this->_populateNodes($node['content']);
             }
 
-            // Handle initalizing nested marks
+            // Handle initializing nested marks
             if (isset($node['marks'])) {
                 foreach ($node['marks'] as $markKey => $mark) {
                     if ($class = ($this->_registeredMarksByType[$mark['type']] ?? null)) {
@@ -234,14 +232,14 @@ class NodeCollection extends Markup
         return $result;
     }
 
-    private function _prepNodesForHtml($config = [])
+    private function _prepNodesForHtml($config = []): void
     {
         foreach ($this->getNodes() as $node) {
             // Apply any node config set in templates
             foreach ($config as $type => $nodeConfig) {
                 if ($node->getType() === $type) {
                     // Extract any mark config and apply to all marks of matching type
-                    // Also remove it from the config so it doesn't clash with the `marks` prop.
+                    // Also remove it from the config, so it doesn't clash with the `marks` prop.
                     $marksConfig = ArrayHelper::remove($nodeConfig, 'marks');
 
                     foreach ($node->content as $nodeContent) {

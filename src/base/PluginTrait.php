@@ -1,7 +1,7 @@
 <?php
 namespace verbb\vizy\base;
 
-use verbb\base\BaseHelper;
+use verbb\vizy\Vizy;
 use verbb\vizy\services\Icons;
 use verbb\vizy\services\Nodes;
 use verbb\vizy\services\Service;
@@ -10,12 +10,28 @@ use Craft;
 
 use yii\log\Logger;
 
+use verbb\base\BaseHelper;
+
 trait PluginTrait
 {
-    // Static Properties
+    // Properties
     // =========================================================================
 
-    public static $plugin;
+    public static Vizy $plugin;
+
+
+    // Static Methods
+    // =========================================================================
+
+    public static function log($message): void
+    {
+        Craft::getLogger()->log($message, Logger::LEVEL_INFO, 'vizy');
+    }
+
+    public static function error($message): void
+    {
+        Craft::getLogger()->log($message, Logger::LEVEL_ERROR, 'vizy');
+    }
 
 
     // Public Methods
@@ -36,21 +52,11 @@ trait PluginTrait
         return $this->get('service');
     }
 
-    public static function log($message)
-    {
-        Craft::getLogger()->log($message, Logger::LEVEL_INFO, 'vizy');
-    }
-
-    public static function error($message)
-    {
-        Craft::getLogger()->log($message, Logger::LEVEL_ERROR, 'vizy');
-    }
-
 
     // Private Methods
     // =========================================================================
 
-    private function _setPluginComponents()
+    private function _setPluginComponents(): void
     {
         $this->setComponents([
             'icons' => Icons::class,
@@ -61,7 +67,7 @@ trait PluginTrait
         BaseHelper::registerModule();
     }
 
-    private function _setLogging()
+    private function _setLogging(): void
     {
         BaseHelper::setFileLogging('vizy');
     }

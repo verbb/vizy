@@ -3,7 +3,6 @@ namespace verbb\vizy\gql\types;
 
 use verbb\vizy\base\Node;
 use verbb\vizy\gql\interfaces\VizyNodeInterface;
-use verbb\vizy\gql\interfaces\VizyBlockInterface;
 
 use craft\gql\base\ObjectType;
 use craft\helpers\Gql;
@@ -24,7 +23,7 @@ class VizyNodeType extends ObjectType
         parent::__construct($config);
     }
 
-    protected function resolve($source, $arguments, $context, ResolveInfo $resolveInfo)
+    protected function resolve(mixed $source, array $arguments, mixed $context, ResolveInfo $resolveInfo): mixed
     {
         /** @var Node $source */
         $fieldName = Gql::getFieldNameWithAlias($resolveInfo, $source, $context);

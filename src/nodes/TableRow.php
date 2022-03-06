@@ -8,7 +8,7 @@ class TableRow extends Node
     // Properties
     // =========================================================================
 
-    public static $type = 'tableRow';
-    public $tagName = 'tr';
+    public static ?string $type = 'tableRow';
+    public mixed $tagName = 'tr';
 
 }

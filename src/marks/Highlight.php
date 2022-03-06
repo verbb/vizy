@@ -8,7 +8,7 @@ class Highlight extends Mark
     // Properties
     // =========================================================================
 
-    public static $type = 'highlight';
-    public $tagName = 'mark';
+    public static ?string $type = 'highlight';
+    public mixed $tagName = 'mark';
     
 }
