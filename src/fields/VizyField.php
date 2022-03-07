@@ -18,7 +18,6 @@ use craft\base\Field;
 use craft\elements\Asset;
 use craft\elements\Category;
 use craft\elements\Entry;
-use craft\fieldlayoutelements\CustomField;
 use craft\helpers\ArrayHelper;
 use craft\helpers\Db;
 use craft\helpers\FileHelper;
@@ -26,13 +25,10 @@ use craft\helpers\Html;
 use craft\helpers\Json;
 use craft\helpers\StringHelper;
 use craft\models\FieldLayout;
-use craft\models\FieldLayoutTab;
 use craft\models\Section;
 use craft\web\twig\variables\Cp;
 
-use yii\base\InvalidArgumentException;
 use yii\db\Schema;
-use yii\web\BadRequestHttpException;
 
 use Throwable;
 
@@ -303,7 +299,8 @@ class VizyField extends Field
                         continue;
                     }
 
-                    if ($fieldLayout = FieldLayout::createFromConfig($layoutConfig)) {
+                    // Check if there's any changes to be made
+                    if ($layoutConfig && $fieldLayout = FieldLayout::createFromConfig($layoutConfig)) {
                         $fieldLayout->type = BlockType::class;
 
                         // Set the layout here, saving takes place in PC event handlers, straight after this

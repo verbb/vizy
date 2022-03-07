@@ -5,14 +5,10 @@ use verbb\vizy\Vizy;
 use verbb\vizy\helpers\Fields;
 
 use Craft;
-use craft\fieldlayoutelements\CustomField;
 use craft\helpers\Json;
 use craft\models\FieldLayout;
-use craft\models\FieldLayoutTab;
 use craft\web\Controller;
 
-use yii\base\InvalidArgumentException;
-use yii\web\BadRequestHttpException;
 use yii\web\Response;
 
 class FieldController extends Controller
@@ -48,7 +44,7 @@ class FieldController extends Controller
         if ($fieldIds) {
             foreach ($availableCustomFields as $i => $groupFields) {
                 foreach ($groupFields as $j => $fields) {
-                    if (in_array($fields->field->id, $fieldIds)) {
+                    if (in_array($fields->getField()->id, $fieldIds)) {
                         unset($availableCustomFields[$i][$j]);
                     }
                 }

@@ -39,11 +39,13 @@ class Service extends Component
 
         foreach (Craft::$app->getFields()->getAllFields(false) as $field) {
             if ($field instanceof VizyField) {
-                $blockTypes = array_merge($blockTypes, $field->getBlockTypes());
+                // Create multidimensional array for performance
+                $blockTypes[] = $field->getBlockTypes();
             }
         }
 
-        return $blockTypes;
+        // Flatten multidimensional array
+        return array_merge(...$blockTypes);
     }
 
     public function handleChangedField(ConfigEvent $event): void
