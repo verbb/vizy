@@ -10,5 +10,5 @@ class Highlight extends Mark
 
     public static ?string $type = 'highlight';
     public mixed $tagName = 'mark';
-    
+
 }

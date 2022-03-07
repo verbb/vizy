@@ -60,35 +60,35 @@ class VizyNodeInterface extends BaseInterfaceType
             'html' => [
                 'name' => 'html',
                 'type' => Type::string(),
-                'resolve' => function ($source) {
+                'resolve' => function($source) {
                     return $source->renderHtml();
                 },
             ],
             'content' => [
                 'name' => 'content',
                 'type' => ArrayType::getType(),
-                'resolve' => function ($source) {
+                'resolve' => function($source) {
                     return $source->rawNode['content'] ?? [];
                 },
             ],
             'attrs' => [
                 'name' => 'attrs',
                 'type' => ArrayType::getType(),
-                'resolve' => function ($source) {
+                'resolve' => function($source) {
                     return $source->rawNode['attrs'] ?? [];
                 },
             ],
             'marks' => [
                 'name' => 'marks',
                 'type' => ArrayType::getType(),
-                'resolve' => function ($source) {
+                'resolve' => function($source) {
                     return $source->rawNode['marks'] ?? [];
                 },
             ],
             'text' => [
                 'name' => 'text',
                 'type' => Type::string(),
-                'resolve' => function ($source) {
+                'resolve' => function($source) {
                     return $source->rawNode['text'] ?? '';
                 },
             ],

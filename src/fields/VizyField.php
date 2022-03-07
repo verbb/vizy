@@ -37,9 +37,23 @@ class VizyField extends Field
     // Constants
     // =========================================================================
 
-    public const EVENT_REGISTER_LINK_OPTIONS = 'registerLinkOptions';
-    public const EVENT_MODIFY_PURIFIER_CONFIG = 'modifyPurifierConfig';
     public const EVENT_DEFINE_VIZY_CONFIG = 'defineVizyConfig';
+    public const EVENT_MODIFY_PURIFIER_CONFIG = 'modifyPurifierConfig';
+    public const EVENT_REGISTER_LINK_OPTIONS = 'registerLinkOptions';
+
+
+    // Static Methods
+    // =========================================================================
+
+    public static function displayName(): string
+    {
+        return Craft::t('vizy', 'Vizy');
+    }
+
+    public static function valueType(): string
+    {
+        return 'string|null';
+    }
 
 
     // Properties
@@ -58,20 +72,6 @@ class VizyField extends Field
     public string $columnType = Schema::TYPE_TEXT;
 
     private array $_blockTypesById = [];
-
-
-    // Static Methods
-    // =========================================================================
-
-    public static function displayName(): string
-    {
-        return Craft::t('vizy', 'Vizy');
-    }
-
-    public static function valueType(): string
-    {
-        return 'string|null';
-    }
 
 
     // Public Methods
@@ -138,7 +138,7 @@ class VizyField extends Field
             Json::encode($idPrefix, JSON_UNESCAPED_UNICODE) . ', ' .
             Json::encode($fieldData, JSON_UNESCAPED_UNICODE) . ', ' .
             Json::encode($settings, JSON_UNESCAPED_UNICODE) .
-        ');');
+            ');');
 
         $volumeOptions = [];
 
@@ -146,7 +146,7 @@ class VizyField extends Field
             if ($volume->hasUrls) {
                 $volumeOptions[] = [
                     'label' => Html::encode($volume->name),
-                    'value' => $volume->uid
+                    'value' => $volume->uid,
                 ];
             }
         }
@@ -156,7 +156,7 @@ class VizyField extends Field
         foreach (Craft::$app->getImageTransforms()->getAllTransforms() as $transform) {
             $transformOptions[] = [
                 'label' => Html::encode($transform->name),
-                'value' => $transform->uid
+                'value' => $transform->uid,
             ];
         }
 
@@ -166,12 +166,14 @@ class VizyField extends Field
             'vizyConfigOptions' => $this->_getCustomConfigOptions('vizy'),
             'volumeOptions' => $volumeOptions,
             'transformOptions' => $transformOptions,
-            'defaultTransformOptions' => [...[
-                [
-                    'label' => Craft::t('vizy', 'No transform'),
-                    'value' => null
-                ]
-            ], ...$transformOptions],
+            'defaultTransformOptions' => [
+                ...[
+                    [
+                        'label' => Craft::t('vizy', 'No transform'),
+                        'value' => null,
+                    ],
+                ], ...$transformOptions,
+            ],
         ]);
     }
 
@@ -218,7 +220,7 @@ class VizyField extends Field
         $view->registerJs('new Craft.Vizy.Input(' .
             '"' . $view->namespaceInputId($id) . '", ' .
             '"' . $view->namespaceInputName($this->handle) . '"' .
-        ');');
+            ');');
 
         return $view->renderTemplate('vizy/field/input', [
             'id' => $id,
@@ -371,7 +373,7 @@ class VizyField extends Field
             if ($translatableFields) {
                 // Fetch the current element, so we can get it's content before saving.
                 $siteElement = Craft::$app->getElements()->getElementById($element->id, $element::class, $element->siteId);
-                
+
                 if ($siteElement) {
                     $hasUpdatedContent = false;
                     $newNodes = $element->getFieldValue($this->handle)->getRawNodes();
@@ -401,7 +403,7 @@ class VizyField extends Field
                     if ($hasUpdatedContent) {
                         // Rebuild the node collection - if it's changed
                         $nodeCollection = new NodeCollection($this, $newNodes, $element);
-                        
+
                         $element->setFieldValue($this->handle, $nodeCollection);
                     }
                 }
@@ -426,41 +428,6 @@ class VizyField extends Field
         }
 
         return null;
-    }
-
-    protected function searchKeywords(mixed $value, ElementInterface $element): string
-    {
-        $keywords = parent::searchKeywords($value, $element);
-
-        if ($value instanceof NodeCollection) {
-            $nodes = $value->getRawNodes();
-
-            // Any actual editor text
-            $keywords = $this->_getNestedValues($nodes, 'text');
-
-            // Fields are different, and we need to check on their searchability
-            foreach ($value->getNodes() as $key => $block) {
-                if ($block instanceof VizyBlock) {
-                    if ($fieldLayout = $block->getFieldLayout()) {
-                        foreach ($fieldLayout->getCustomFields() as $field) {
-                            if (!$field->searchable) {
-                                continue;
-                            }
-
-                            $fieldData = $block->getFieldValue($field->handle);
-
-                            $keywords[] = $field->searchKeywords($fieldData, $element);
-                        }
-                    }
-                }
-            }
-        }
-
-        if (is_array($keywords)) {
-            $keywords = trim(implode(' ', array_unique($keywords)));
-        }
-
-        return $keywords;
     }
 
     public function getBlockTypes(): array
@@ -514,6 +481,41 @@ class VizyField extends Field
                 $element->addModelErrors($blockElement, "{$this->handle}[{$i}]");
             }
         }
+    }
+
+    protected function searchKeywords(mixed $value, ElementInterface $element): string
+    {
+        $keywords = parent::searchKeywords($value, $element);
+
+        if ($value instanceof NodeCollection) {
+            $nodes = $value->getRawNodes();
+
+            // Any actual editor text
+            $keywords = $this->_getNestedValues($nodes, 'text');
+
+            // Fields are different, and we need to check on their searchability
+            foreach ($value->getNodes() as $key => $block) {
+                if ($block instanceof VizyBlock) {
+                    if ($fieldLayout = $block->getFieldLayout()) {
+                        foreach ($fieldLayout->getCustomFields() as $field) {
+                            if (!$field->searchable) {
+                                continue;
+                            }
+
+                            $fieldData = $block->getFieldValue($field->handle);
+
+                            $keywords[] = $field->searchKeywords($fieldData, $element);
+                        }
+                    }
+                }
+            }
+        }
+
+        if (is_array($keywords)) {
+            $keywords = trim(implode(' ', array_unique($keywords)));
+        }
+
+        return $keywords;
     }
 
 
@@ -615,7 +617,7 @@ class VizyField extends Field
             // Ensure we reset array indexes to play nicely with JS
             $data[$groupKey]['blockTypes'] = array_values($data[$groupKey]['blockTypes']);
         }
-        
+
         return $data;
     }
 
@@ -676,7 +678,7 @@ class VizyField extends Field
         // Give plugins a chance to modify the config
         $event = new ModifyVizyConfigEvent([
             'config' => $config,
-            'field' => $this
+            'field' => $this,
         ]);
 
         $this->trigger(self::EVENT_DEFINE_VIZY_CONFIG, $event);
@@ -711,7 +713,7 @@ class VizyField extends Field
         if (is_dir($path)) {
             $files = FileHelper::findFiles($path, [
                 'only' => ['*.json'],
-                'recursive' => false
+                'recursive' => false,
             ]);
 
             foreach ($files as $file) {
@@ -739,7 +741,7 @@ class VizyField extends Field
                 'elementType' => Entry::class,
                 'refHandle' => Entry::refHandle(),
                 'sources' => $sectionSources,
-                'criteria' => ['uri' => ':notempty:']
+                'criteria' => ['uri' => ':notempty:'],
             ];
         }
 
@@ -763,7 +765,7 @@ class VizyField extends Field
 
         // Give plugins a chance to add their own
         $event = new RegisterLinkOptionsEvent([
-            'linkOptions' => $linkOptions
+            'linkOptions' => $linkOptions,
         ]);
         $this->trigger(self::EVENT_REGISTER_LINK_OPTIONS, $event);
         $linkOptions = $event->linkOptions;
@@ -848,7 +850,7 @@ class VizyField extends Field
 
         foreach ($allVolumes as $volume) {
             $allowedBySettings = $this->availableVolumes === '*' || (is_array($this->availableVolumes) && in_array($volume->uid, $this->availableVolumes));
-            
+
             if ($allowedBySettings && ($this->showUnpermittedVolumes || $userService->checkPermission("viewVolume:{$volume->uid}"))) {
                 $allowedVolumes[] = $volume->uid;
             }
@@ -892,7 +894,7 @@ class VizyField extends Field
             if (!is_array($this->availableTransforms) || in_array($transform->uid, $this->availableTransforms, false)) {
                 $transformList[] = [
                     'handle' => Html::encode($transform->handle),
-                    'name' => Html::encode($transform->name)
+                    'name' => Html::encode($transform->name),
                 ];
             }
         }

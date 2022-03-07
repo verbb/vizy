@@ -10,5 +10,5 @@ class Strike extends Mark
 
     public static ?string $type = 'strike';
     public mixed $tagName = 'strike';
-    
+
 }

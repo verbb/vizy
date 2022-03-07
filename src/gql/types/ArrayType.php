@@ -13,20 +13,19 @@ use GraphQL\Language\AST\BooleanValueNode;
 
 class ArrayType extends ScalarType
 {
-    public $name = 'ArrayType';
-
-    // Static Methods
-    // =========================================================================
-
     public static function getType()
     {
         return GqlEntityRegistry::getEntity(self::getName()) ?: GqlEntityRegistry::createEntity(self::getName(), new self());
     }
 
+    // Static Methods
+    // =========================================================================
+
     public static function getName(): string
     {
         return 'ArrayType';
     }
+    public $name = 'ArrayType';
 
 
     // Public Methods

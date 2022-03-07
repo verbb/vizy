@@ -10,5 +10,5 @@ class OrderedList extends Node
 
     public static ?string $type = 'orderedList';
     public mixed $tagName = 'ol';
-    
+
 }

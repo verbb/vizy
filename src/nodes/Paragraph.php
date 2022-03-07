@@ -14,7 +14,7 @@ class Paragraph extends Node
 
     public static ?string $type = 'paragraph';
     public mixed $tagName = 'p';
-    
+
 
     // Public Methods
     // =========================================================================

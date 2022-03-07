@@ -10,7 +10,7 @@ class TableCell extends Node
 
     public static ?string $type = 'tableCell';
     public mixed $tagName = 'td';
-    
+
 
     // Public Methods
     // =========================================================================

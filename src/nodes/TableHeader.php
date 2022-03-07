@@ -9,6 +9,6 @@ class TableHeader extends Node
     // =========================================================================
 
     public static ?string $type = 'tableHeader';
-    public mixed $tagName  = 'th';
+    public mixed $tagName = 'th';
 
 }

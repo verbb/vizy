@@ -31,9 +31,9 @@ class Vizy extends Plugin
     // Properties
     // =========================================================================
 
-    public string $schemaVersion = '0.9.0';
-    public bool $hasCpSettings = true;
     public bool $hasCpSection = false;
+    public bool $hasCpSettings = true;
+    public string $schemaVersion = '0.9.0';
 
 
     // Traits
@@ -105,7 +105,7 @@ class Vizy extends Plugin
                 ->onRemove(SuperTableService::CONFIG_BLOCKTYPE_KEY . '.{uid}', [$this->getService(), 'handleDeletedBlockType']);
         }
     }
-    
+
     private function _registerGraphQl(): void
     {
         Event::on(Gql::class, Gql::EVENT_REGISTER_GQL_TYPES, function(RegisterGqlTypesEvent $event) {

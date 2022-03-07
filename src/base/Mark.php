@@ -93,5 +93,5 @@ class Mark extends Component
 
         return Nodes::renderClosingTag($event->tag);
     }
-    
+
 }

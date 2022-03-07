@@ -15,23 +15,7 @@ use craft\base\FieldInterface;
 
 class BlockType extends Model
 {
-    // Properties
-    // =========================================================================
-
-    public ?string $id = null;
-    public ?string $name = null;
-    public ?string $handle = null;
-    public mixed $icon = null;
-    public ?string $template = null;
-    public ?bool $enabled = null;
-    public ?string $layoutUid = null;
-    public ?array $layoutConfig = null;
-    public ?int $fieldId = null;
-
-    private ?FieldLayout $_fieldLayout = null;
-
-
-    // Public Methods
+    // Static Methods
     // =========================================================================
 
     public static function displayName(): string
@@ -59,13 +43,25 @@ class BlockType extends Model
         return null;
     }
 
-    protected function defineRules(): array
-    {
-        $rules = parent::defineRules();
-        $rules[] = [['name', 'handle', 'icon'], 'required'];
 
-        return $rules;
-    }
+    // Properties
+    // =========================================================================
+
+    public ?string $id = null;
+    public ?string $name = null;
+    public ?string $handle = null;
+    public mixed $icon = null;
+    public ?string $template = null;
+    public ?bool $enabled = null;
+    public ?string $layoutUid = null;
+    public ?array $layoutConfig = null;
+    public ?int $fieldId = null;
+
+    private ?FieldLayout $_fieldLayout = null;
+
+
+    // Public Methods
+    // =========================================================================
 
     public function getFieldLayout(): ?FieldLayout
     {
@@ -113,8 +109,8 @@ class BlockType extends Model
             // This is so we have always maintained a reference to a layout UID, even if we might not be
             // creating one until after the field has saved, and the PC event handlers kick in.
             $data['layoutUid'] ??= $fieldLayout->uid ??
-                    ($fieldLayout->id ? Db::uidById(Table::FIELDLAYOUTS, $fieldLayout->id) : null) ??
-                    StringHelper::UUID();
+                ($fieldLayout->id ? Db::uidById(Table::FIELDLAYOUTS, $fieldLayout->id) : null) ??
+                StringHelper::UUID();
         }
 
         return $data;
@@ -132,5 +128,17 @@ class BlockType extends Model
         }
 
         return $array;
+    }
+
+
+    // Protected Methods
+    // =========================================================================
+
+    protected function defineRules(): array
+    {
+        $rules = parent::defineRules();
+        $rules[] = [['name', 'handle', 'icon'], 'required'];
+
+        return $rules;
     }
 }

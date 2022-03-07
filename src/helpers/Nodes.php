@@ -69,7 +69,7 @@ class Nodes
                 // - someone's Entry URL Format could include "?slug={slug}" or "#{slug}", etc.
                 // - assets could include ?mtime=X&focal=none, etc.
                 $parsed = Craft::$app->getElements()->parseRefs("{{$ref}}");
-                
+
                 if ($query) {
                     // Decode any HTML entities, e.g. &amp;
                     $query = Html::decode($query);
@@ -124,5 +124,5 @@ class Nodes
 
         return $rawNode;
     }
-    
+
 }

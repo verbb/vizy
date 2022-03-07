@@ -8,11 +8,11 @@ class Matrix
 
     public static function sanitizeMatrixContent($field, $content)
     {
-        $blockTypes = array_map(function ($block) {
+        $blockTypes = array_map(function($block) {
             return $block->handle;
         }, $field->blockTypes);
 
-        $blockFields = array_map(function ($block) {
+        $blockFields = array_map(function($block) {
             return $block->handle;
         }, $field->blockTypeFields);
 

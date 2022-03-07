@@ -129,7 +129,7 @@ class Nodes extends Component
                 $html[] = $this->renderNode($nestedNode, $prevNestedNode, $nextNestedNode);
                 $prevNode = $nestedNode;
             }
-        } elseif ($text = $node->getText()) {
+        } else if ($text = $node->getText()) {
             $html[] = $text;
         }
 

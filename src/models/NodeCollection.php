@@ -14,6 +14,23 @@ use Twig\Markup;
 
 class NodeCollection extends Markup
 {
+    // Static Methods
+    // =========================================================================
+
+    private static function configure($object, $properties, $merge): mixed
+    {
+        foreach ($properties as $name => $value) {
+            if ($merge) {
+                $value = array_merge($object->$name, $value);
+            }
+
+            $object->$name = $value;
+        }
+
+        return $object;
+    }
+
+
     // Properties
     // =========================================================================
 
@@ -147,6 +164,10 @@ class NodeCollection extends Markup
         return array_values(array_filter($values));
     }
 
+
+    // Private Methods
+    // =========================================================================
+
     public function isEmpty(): bool
     {
         // We don't want to render anything for CP requests for the input.
@@ -161,23 +182,6 @@ class NodeCollection extends Markup
         }
 
         return false;
-    }
-
-
-    // Private Methods
-    // =========================================================================
-
-    private static function configure($object, $properties, $merge): mixed
-    {
-        foreach ($properties as $name => $value) {
-            if ($merge) {
-                $value = array_merge($object->$name, $value);
-            }
-
-            $object->$name = $value;
-        }
-
-        return $object;
     }
 
     private function _populateNodes($nodes): array
@@ -212,7 +216,7 @@ class NodeCollection extends Markup
 
             if ($class = ($this->_registeredNodesByType[$node['type']] ?? null)) {
                 unset($node['type']);
-                
+
                 $nodeClass = Craft::createObject(array_merge($node, [
                     'class' => $class,
                     'field' => $this->field,

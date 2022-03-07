@@ -10,5 +10,5 @@ class Bold extends Mark
 
     public static ?string $type = 'bold';
     public mixed $tagName = 'strong';
-    
+
 }

@@ -10,5 +10,5 @@ class Underline extends Mark
 
     public static ?string $type = 'underline';
     public mixed $tagName = 'u';
-    
+
 }

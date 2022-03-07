@@ -8,20 +8,24 @@ use craft\models\FieldLayout;
 
 class Block extends Element
 {
-    // Properties
-    // =========================================================================
-
-    private mixed $_owner = null;
-    private ?FieldLayout $_fieldLayout = null;
-
-
-    // Public Methods
+    // Static Methods
     // =========================================================================
 
     public static function hasContent(): bool
     {
         return true;
     }
+
+
+    // Properties
+    // =========================================================================
+
+    private ?FieldLayout $_fieldLayout = null;
+    private mixed $_owner = null;
+
+
+    // Public Methods
+    // =========================================================================
 
     public function getFieldLayout(): ?FieldLayout
     {

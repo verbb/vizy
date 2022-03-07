@@ -10,5 +10,5 @@ class Blockquote extends Node
 
     public static ?string $type = 'blockquote';
     public mixed $tagName = 'blockquote';
-    
+
 }

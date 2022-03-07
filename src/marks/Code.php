@@ -10,5 +10,5 @@ class Code extends Mark
 
     public static ?string $type = 'code';
     public mixed $tagName = 'code';
-    
+
 }

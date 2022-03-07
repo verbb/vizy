@@ -24,7 +24,7 @@ class Service extends Component
             ->select([
                 'id',
                 'type',
-                'uid'
+                'uid',
             ])
             ->from([Table::FIELDLAYOUTS])
             ->where(['uid' => $layoutUid])
@@ -84,12 +84,12 @@ class Service extends Component
                     continue;
                 }
 
-                    $fieldLayout = FieldLayout::createFromConfig($layoutConfig);
-                    // $fieldLayout->id = $record->fieldLayoutId;
-                    $fieldLayout->type = BlockType::class;
-                    $fieldLayout->uid = $layoutUid;
+                $fieldLayout = FieldLayout::createFromConfig($layoutConfig);
+                // $fieldLayout->id = $record->fieldLayoutId;
+                $fieldLayout->type = BlockType::class;
+                $fieldLayout->uid = $layoutUid;
 
-                    $fieldsService->saveLayout($fieldLayout);
+                $fieldsService->saveLayout($fieldLayout);
             }
         }
 
@@ -165,7 +165,7 @@ class Service extends Component
 
             foreach ($blockTypes as $blockTypeKey => $blockType) {
                 $layoutUid = $blockType['layoutUid'] ?? '';
-                
+
                 // Add an extra check in here to ensure the layout exists, before deleting it. Deleting via ID may throw an error
                 // if the field layout doesn't exist.
                 if ($layout = $this->getFieldLayoutByUid($layoutUid)) {

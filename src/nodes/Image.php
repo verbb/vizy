@@ -15,7 +15,7 @@ class Image extends Node
     public static ?string $type = 'image';
     public mixed $tagName = 'img';
 
-    
+
     // Public Methods
     // =========================================================================
 
@@ -44,7 +44,7 @@ class Image extends Node
 
         return parent::renderNode();
     }
-    
+
     public function getTag(): array
     {
         // Don't include certain attributes in rendering

@@ -44,7 +44,7 @@ class VizyNodeGenerator implements GeneratorInterface
                     'name' => $typeName,
                     'fields' => function() use ($interfaceFields) {
                         return $interfaceFields;
-                    }
+                    },
                 ]);
 
                 $entity = GqlEntityRegistry::getEntity($typeName) ?: GqlEntityRegistry::createEntity($typeName, $entity);

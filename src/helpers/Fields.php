@@ -186,7 +186,7 @@ JS;
                     'tab',
                     'sel',
                     $customizable ? 'draggable' : null,
-                ])
+                ]),
             ]) .
             Html::tag('span', $tab->name) .
             ($customizable
@@ -257,7 +257,7 @@ JS;
                 'settings-namespace' => $settingsNamespace,
                 'settings-html' => $settingsHtml ?: false,
                 'settings-js' => $settingsJs ?: false,
-            ]
+            ],
         ]);
 
         return Html::modifyTagAttributes($element->selectorHtml(), $attr);
@@ -284,5 +284,5 @@ JS;
             $element->setLayout($fieldLayout);
         }
     }
-    
+
 }

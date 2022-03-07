@@ -10,5 +10,5 @@ class Italic extends Mark
 
     public static ?string $type = 'italic';
     public mixed $tagName = 'em';
-    
+
 }

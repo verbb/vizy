@@ -10,5 +10,5 @@ class Superscript extends Mark
 
     public static ?string $type = 'superscript';
     public mixed $tagName = 'sup';
-    
+
 }

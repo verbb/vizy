@@ -10,5 +10,5 @@ class Subscript extends Mark
 
     public static ?string $type = 'subscript';
     public mixed $tagName = 'sub';
-    
+
 }
