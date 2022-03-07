@@ -264,18 +264,10 @@ class VizyField extends Field
                 // Ensure we catch errors to prevent data loss
                 try {
                     // Remove this before populating the model
-                    $layout = ArrayHelper::remove($blockType, 'layout');
+                    $layoutConfig = Json::decode(ArrayHelper::remove($blockType, 'layout'));
 
                     // Create a model so we can properly validate
                     $blockType = new BlockType($blockType);
-
-                    // Set up the field layout from field layout designer
-                    $elementPlacements = $layout['elementPlacements'] ?? [];
-                    $elementConfigs = $layout['elementConfigs'] ?? [];
-                    $layoutUid = $blockType->layoutUid ?? null;
-
-                    // Prevent potential issues when tab names aren't a string (`123` for example).
-                    $elementPlacements = array_filter($elementPlacements);
 
                     if (!$blockType->validate()) {
                         foreach ($blockType->getErrors() as $key => $error) {
@@ -285,9 +277,7 @@ class VizyField extends Field
                         continue;
                     }
 
-                    // Don't save anything if there's no data
-                    if ($elementPlacements && $elementConfigs) {
-                        $fieldLayout = $this->assembleLayout($elementPlacements, $elementConfigs, $layoutUid);
+                    if ($fieldLayout = FieldLayout::createFromConfig($layoutConfig)) {
                         $fieldLayout->type = BlockType::class;
 
                         // Set the layout here, saving takes place in PC event handlers, straight after this
@@ -297,7 +287,7 @@ class VizyField extends Field
                     // Override with our cleaned model data
                     $this->fieldData[$groupKey]['blockTypes'][$blockTypeKey] = $blockType->serializeArray();
                 } catch (Throwable $e) {
-                    $this->addErrors([$blockType->id . ':general' => $e->getMessage()]);
+                    $this->addErrors([$blockType['id'] . ':general' => $e->getMessage()]);
 
                     return false;
                 }
@@ -650,58 +640,6 @@ class VizyField extends Field
         }
 
         return $blocks;
-    }
-
-    // Copied from Craft, but refactored due to being unable to rely on POST params
-    private function assembleLayout($elementPlacements, $elementConfigs, $layoutUid = null): FieldLayout
-    {
-        $layout = new FieldLayout();
-
-        // Try to find an existing layout, in case the field has a layout uid stored, but it's been deleted
-        if ($layoutUid && !$layout = Vizy::$plugin->getService()->getFieldLayoutByUid($layoutUid)) {
-            $layout = new FieldLayout();
-        }
-
-        $tabs = [];
-        $fields = [];
-        $tabSortOrder = 0;
-
-        $fieldsService = Craft::$app->getFields();
-
-        foreach ($elementPlacements as $tabName => $elementKeys) {
-            $tab = $tabs[] = new FieldLayoutTab();
-            $tab->name = urldecode($tabName);
-            $tab->sortOrder = ++$tabSortOrder;
-            $tab->elements = [];
-
-            foreach ($elementKeys as $i => $elementKey) {
-                $elementConfig = Json::decode($elementConfigs[$elementKey]);
-
-                try {
-                    $element = $fieldsService->createLayoutElement($elementConfig);
-                } catch (InvalidArgumentException $e) {
-                    throw new BadRequestHttpException($e->getMessage(), 0, $e);
-                }
-
-                $tab->elements[] = $element;
-
-                if ($element instanceof CustomField) {
-                    $fieldUid = $element->getFieldUid();
-                    $field = $fieldsService->getFieldByUid($fieldUid);
-                    if (!$field) {
-                        throw new BadRequestHttpException("Invalid field UUID: $fieldUid");
-                    }
-                    $field->required = (bool)($elementConfig['required'] ?? false);
-                    $field->sortOrder = ($i + 1);
-                    $fields[] = $field;
-                }
-            }
-        }
-
-        $layout->setTabs($tabs);
-        $layout->setFields($fields);
-
-        return $layout;
     }
 
     private function _getVizyConfig(): array

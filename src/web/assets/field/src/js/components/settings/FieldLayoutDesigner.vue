@@ -25,6 +25,12 @@ Craft.VizyFieldLayoutDesigner = Craft.FieldLayoutDesigner.extend({
         this.$container = $(container);
         this.setSettings(settings, Craft.FieldLayoutDesigner.defaults);
 
+        this.$configInput = this.$container.children('input[data-config-input]');
+        this._config = JSON.parse(this.$configInput.val());
+        if (!this._config.tabs) {
+            this._config.tabs = [];
+        }
+
         let $workspace = this.$container.children('.fld-workspace');
         this.$tabContainer = $workspace.children('.fld-tabs');
         this.$newTabBtn = $workspace.children('.fld-new-tab-btn');
@@ -51,14 +57,6 @@ Craft.VizyFieldLayoutDesigner = Craft.FieldLayoutDesigner.extend({
         for (let i = 0; i < $tabs.length; i++) {
             this.initTab($($tabs[i]));
         }
-
-        // create a placeholder input so *something* gets posted even if there are no tabs/elements
-        // CHANGE
-        // $('<input/>', {
-        //     type: 'hidden',
-        //     name: this.settings.elementPlacementInputName.replace('[__TAB_NAME__][]', ''),
-        //     value: '',
-        // }).insertBefore(this.$container);
 
         // CHANGE
         this.elementDrag = new Craft.VizyFieldLayoutDesigner.ElementDrag(this);
@@ -183,8 +181,10 @@ Craft.VizyFieldLayoutDesigner.Element = Craft.FieldLayoutDesigner.Element.extend
                     return Craft.t('app', '{pct} width', {pct: `${width}%`});
                 },
                 onChange: width => {
-                    this.config.width = width;
-                    this.updateConfigInput();
+                    this.updateConfig(config => {
+                        config.width = width;
+                        return config;
+                    });
                 }
             });
             widthSlider.$container.appendTo(this.$container);
@@ -240,10 +240,7 @@ export default {
             errorMessage: '',
             loading: false,
             mounted: false,
-            proxyValue: {
-                elementConfigs: {},
-                elementPlacements: {},
-            },
+            proxyValue: {},
         };
     },
   
@@ -280,13 +277,13 @@ export default {
             fieldIds,
             layoutUid: this.layoutUid,
             blockTypeId: this.blockTypeId,
-            ...this.proxyValue,
+            layout: this.proxyValue,
         };
 
         this.$axios.post(Craft.getActionUrl('vizy/field/layout-designer'), data).then((response) => {
             if (response.data.html) {
                 this.$el.innerHTML = response.data.html;
-                Craft.appendFootHtml(response.data.footHtml);
+                Craft.appendBodyHtml(response.data.footHtml);
 
                 this.mounted = true;
             } else {
@@ -300,60 +297,15 @@ export default {
     },
 
     methods: {
-        getPostData(container) {
-            var postData = {},
-                arrayInputCounters = {},
-                $inputs = $(container).find('[ref]');
-
-            var inputName;
-
-            for (var i = 0; i < $inputs.length; i++) {
-                var $input = $inputs.eq(i);
-
-                inputName = $input.attr('name');
-                var inputVal = $input.attr('data-value');
-
-                var isArrayInput = (inputName.substr(-2) === '[]');
-
-                if (isArrayInput) {
-                    // Get the cropped input name
-                    var croppedName = inputName.substring(0, inputName.length - 2);
-
-                    // Prep the input counter
-                    if (typeof arrayInputCounters[croppedName] === 'undefined') {
-                        arrayInputCounters[croppedName] = 0;
-                    }
-                }
-
-                if (!Garnish.isArray(inputVal)) {
-                    inputVal = [inputVal];
-                }
-
-                for (var j = 0; j < inputVal.length; j++) {
-                    if (isArrayInput) {
-                        inputName = croppedName + '[' + arrayInputCounters[croppedName] + ']';
-                        arrayInputCounters[croppedName]++;
-                    }
-
-                    postData[inputName] = inputVal[j];
-                }
-            }
-
-            return postData;
-        },
-
         serializeLayout() {
             // Prevent firing immediately on first render
             if (!this.mounted) {
                 return;
             }
 
-            var postData = this.getPostData(this.$el);
-            postData = Craft.expandPostArray(postData);
+            var fieldLayoutData = this.$el.querySelector('input[name="fieldLayout"]').value;
 
-            // The first index will be the blockTypeId to ensure FLD are unique, 
-            // we just want the inner info
-            this.proxyValue = postData[Object.keys(postData)[0]];
+            this.proxyValue = fieldLayoutData;
         },
     },
 };

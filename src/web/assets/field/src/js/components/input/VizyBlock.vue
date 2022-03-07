@@ -379,7 +379,7 @@ export default {
                     $script.parentElement.removeChild($script);
                 }
 
-                Craft.appendFootHtml(footHtml);
+                Craft.appendBodyHtml(footHtml);
             }
         },
 
