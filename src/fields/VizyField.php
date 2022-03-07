@@ -81,6 +81,32 @@ class VizyField extends Field
     // Public Methods
     // =========================================================================
 
+    public function __construct($config = [])
+    {
+        // Config normalization
+        if (array_key_exists('fieldData', $config)) {
+            if (is_string($config['fieldData'])) {
+                $config['fieldData'] = Json::decodeIfJson($config['fieldData']);
+            }
+
+            if (!is_array($config['fieldData'])) {
+                unset($config['fieldData']);
+            }
+        }
+
+        if (array_key_exists('vizyConfig', $config)) {
+            if (is_string($config['vizyConfig'])) {
+                $config['vizyConfig'] = Json::decodeIfJson($config['vizyConfig']);
+            }
+
+            if (!is_array($config['vizyConfig'])) {
+                unset($config['vizyConfig']);
+            }
+        }
+
+        parent::__construct($config);
+    }
+
     public function getContentColumnType(): array|string
     {
         return $this->columnType;

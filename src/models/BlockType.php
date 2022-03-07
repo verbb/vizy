@@ -18,13 +18,13 @@ class BlockType extends Model
     // Properties
     // =========================================================================
 
-    public ?int $id = null;
+    public ?string $id = null;
     public ?string $name = null;
     public ?string $handle = null;
-    public ?string $icon = null;
+    public mixed $icon = null;
     public ?string $template = null;
     public ?bool $enabled = null;
-    public ?int $layoutUid = null;
+    public ?string $layoutUid = null;
     public ?array $layoutConfig = null;
     public ?int $fieldId = null;
 
