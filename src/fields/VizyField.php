@@ -363,7 +363,7 @@ class VizyField extends Field
             // that are translatable? No need to go further if there aren't, and saves a lot of time.
             foreach ($this->getBlockTypes() as $blockType) {
                 if (($fieldLayout = $blockType->getFieldLayout()) !== null) {
-                    foreach ($fieldLayout->getFields() as $field) {
+                    foreach ($fieldLayout->getCustomFields() as $field) {
                         if ($field->translationMethod !== Field::TRANSLATION_METHOD_NONE) {
                             $translatableFields[$blockType->id][] = $field->handle;
                         }
@@ -445,7 +445,7 @@ class VizyField extends Field
             foreach ($value->getNodes() as $key => $block) {
                 if ($block instanceof VizyBlock) {
                     if ($fieldLayout = $block->getFieldLayout()) {
-                        foreach ($fieldLayout->getFields() as $field) {
+                        foreach ($fieldLayout->getCustomFields() as $field) {
                             if (!$field->searchable) {
                                 continue;
                             }

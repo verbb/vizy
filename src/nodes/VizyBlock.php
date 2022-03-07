@@ -49,7 +49,7 @@ class VizyBlock extends Node
                 $this->attrs['values']['typeEnabled'] = $this->_blockType->enabled;
 
                 if ($this->_fieldLayout) {
-                    foreach ($this->_fieldLayout->getFields() as $key => $field) {
+                    foreach ($this->_fieldLayout->getCustomFields() as $key => $field) {
                         $this->_fieldsByHandle[$field->handle] = $this->_fieldLayout->getFieldByHandle($field->handle);
                     }
                 }
@@ -197,7 +197,7 @@ class VizyBlock extends Node
         // Create a fake element with the same fieldtype as our block
         $block = $this->getBlockElement($element);
         
-        foreach ($block->getFieldLayout()->getFields() as $field) {
+        foreach ($block->getFieldLayout()->getCustomFields() as $field) {
             // Ensure each field's content is serialized properly
             $serializedFieldValues = $field->serializeValue($block->getFieldValue($field->handle), $block);
             $value['attrs']['values']['content']['fields'][$field->handle] = $serializedFieldValues;
