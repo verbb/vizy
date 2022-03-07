@@ -86,7 +86,7 @@ class VizyField extends Field
             }
 
             if (!is_array($config['fieldData'])) {
-                unset($config['fieldData']);
+                $config['fieldData'] = [];
             }
         }
 
@@ -96,7 +96,7 @@ class VizyField extends Field
             }
 
             if (!is_array($config['vizyConfig'])) {
-                unset($config['vizyConfig']);
+                $config['vizyConfig'] = [];
             }
         }
 
