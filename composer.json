@@ -28,7 +28,7 @@
     ],
     "require": {
         "php": "^8.0.2",
-        "craftcms/cms": "^4.0.0-alpha",
+        "craftcms/cms": "^4.0.0-beta.1",
         "verbb/base": "^2.0.0-beta",
         "ueberdosis/html-to-prosemirror": "^1.5",
         "yii2mod/yii2-array-query": "^1.4"
