@@ -4,9 +4,9 @@ namespace verbb\vizy\gql\interfaces;
 use verbb\vizy\gql\types\generators\VizyNodeGenerator;
 use verbb\vizy\gql\types\ArrayType;
 
+use Craft;
 use craft\gql\base\InterfaceType as BaseInterfaceType;
 use craft\gql\GqlEntityRegistry;
-use craft\gql\TypeManager;
 
 use GraphQL\Type\Definition\InterfaceType;
 use GraphQL\Type\Definition\Type;
@@ -48,7 +48,7 @@ class VizyNodeInterface extends BaseInterfaceType
 
     public static function getFieldDefinitions(): array
     {
-        return TypeManager::prepareFieldDefinitions([
+        return Craft::$app->getGql()->prepareFieldDefinitions([
             'type' => [
                 'name' => 'type',
                 'type' => Type::string(),

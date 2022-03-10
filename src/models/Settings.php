@@ -3,6 +3,7 @@ namespace verbb\vizy\models;
 
 use Craft;
 use craft\base\Model;
+use craft\helpers\App;
 use craft\helpers\FileHelper;
 
 class Settings extends Model
@@ -19,7 +20,7 @@ class Settings extends Model
     public function getIconsPath(): string
     {
         if ($this->iconsPath) {
-            return FileHelper::normalizePath(Craft::parseEnv($this->iconsPath));
+            return FileHelper::normalizePath(App::parseEnv($this->iconsPath));
         }
 
         return $this->iconsPath;

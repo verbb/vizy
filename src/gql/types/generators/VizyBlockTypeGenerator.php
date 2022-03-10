@@ -5,11 +5,11 @@ use verbb\vizy\Vizy;
 use verbb\vizy\gql\interfaces\VizyBlockInterface;
 use verbb\vizy\gql\types\VizyBlockType;
 
+use Craft;
 use craft\gql\base\Generator;
 use craft\gql\base\GeneratorInterface;
 use craft\gql\base\SingleGeneratorInterface;
 use craft\gql\GqlEntityRegistry;
-use craft\gql\TypeManager;
 
 class VizyBlockTypeGenerator extends Generator implements GeneratorInterface, SingleGeneratorInterface
 {
@@ -40,7 +40,7 @@ class VizyBlockTypeGenerator extends Generator implements GeneratorInterface, Si
 
         if (!($entity = GqlEntityRegistry::getEntity($typeName))) {
             $contentFieldGqlTypes = $context->getFieldLayout() ? self::getContentFields($context->getFieldLayout()) : [];
-            $blockTypeFields = TypeManager::prepareFieldDefinitions(array_merge(VizyBlockInterface::getFieldDefinitions(), $contentFieldGqlTypes), $typeName);
+            $blockTypeFields = Craft::$app->getGql()->prepareFieldDefinitions(array_merge(VizyBlockInterface::getFieldDefinitions(), $contentFieldGqlTypes), $typeName);
 
             // Generate a type for each block type
             $entity = GqlEntityRegistry::getEntity($typeName);

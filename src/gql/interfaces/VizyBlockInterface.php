@@ -3,8 +3,8 @@ namespace verbb\vizy\gql\interfaces;
 
 use verbb\vizy\gql\types\generators\VizyBlockTypeGenerator;
 
+use Craft;
 use craft\gql\GqlEntityRegistry;
-use craft\gql\TypeManager;
 
 use GraphQL\Type\Definition\InterfaceType;
 use GraphQL\Type\Definition\Type;
@@ -46,7 +46,7 @@ class VizyBlockInterface extends VizyNodeInterface
 
     public static function getFieldDefinitions(): array
     {
-        return TypeManager::prepareFieldDefinitions(array_merge(parent::getFieldDefinitions(), [
+        return Craft::$app->getGql()->prepareFieldDefinitions(array_merge(parent::getFieldDefinitions(), [
             'enabled' => [
                 'name' => 'enabled',
                 'type' => Type::boolean(),
