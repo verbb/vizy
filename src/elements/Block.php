@@ -15,13 +15,17 @@ class Block extends Element
     private $_fieldLayout;
 
 
-    // Public Methods
+    // Static Methods
     // =========================================================================
 
     public static function hasContent(): bool
     {
         return true;
     }
+
+
+    // Public Methods
+    // =========================================================================
 
     public function getFieldLayout()
     {

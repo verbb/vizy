@@ -290,7 +290,23 @@ export default {
                 }
             }
 
+            // Un-escape any HTML tags used in the text. Maybe we're writing HTML in text?
+            // This will have been serialized when saving.
+            value = this.decodeHtml(value);
+
             return value.length ? { type: 'doc', content: value } : null;
+        },
+
+        decodeHtml(html) {
+            if (Array.isArray(html)) {
+                html = JSON.stringify(html);
+            }
+
+            // The most easiest/efficient way to convert htmlentities...
+            var txt = document.createElement('textarea');
+            txt.innerHTML = html;
+
+            return JSON.parse(txt.value);
         },
 
         contentToValue(content) {

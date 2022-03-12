@@ -36,7 +36,7 @@ class NodeCollection extends Markup
     {
         // Handle emoji's and un-serialize them
         foreach ($nodes as $key => $node) {
-            $nodes[$key] = Nodes::normalizeEmojis($node);
+            $nodes[$key] = Nodes::normalizeContent($node);
         }
 
         $this->element = $element;
@@ -141,7 +141,7 @@ class NodeCollection extends Markup
             $values[$nodeKey] = $node->serializeValue($element);
 
             // Handle serializing any emoji's in text nodes
-            $values[$nodeKey] = Nodes::serializeEmojis($node->rawNode);
+            $values[$nodeKey] = Nodes::serializeContent($node->rawNode);
         }
 
         $values = array_values(array_filter($values));
