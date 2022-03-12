@@ -2,6 +2,7 @@
 namespace verbb\vizy\controllers;
 
 use verbb\vizy\Vizy;
+use verbb\vizy\models\Settings;
 
 use craft\web\Controller;
 
@@ -14,6 +15,7 @@ class SettingsController extends Controller
 
     public function actionIndex(): Response
     {
+        /* @var Settings $settings */
         $settings = Vizy::$plugin->getSettings();
 
         return $this->renderTemplate('vizy/settings', [
