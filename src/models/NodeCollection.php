@@ -138,10 +138,10 @@ class NodeCollection extends Markup
         $values = [];
 
         foreach ($this->getNodes() as $nodeKey => $node) {
-            $values[$nodeKey] = $node->serializeValue($element);
+            $rawNode = $node->serializeValue($element);
 
             // Handle serializing any emoji's in text nodes
-            $values[$nodeKey] = Nodes::serializeContent($node->rawNode);
+            $values[$nodeKey] = Nodes::serializeContent($rawNode);
         }
 
         $values = array_values(array_filter($values));
