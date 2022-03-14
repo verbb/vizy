@@ -106,6 +106,8 @@ class Nodes
         $content = $rawNode['content'] ?? [];
 
         foreach ($content as $key => $block) {
+            $type = $block['type'] ?? '';
+
             // We only want to modify simple nodes and their text content, not complicated
             // nodes like VizyBlocks, which could mess things up as fields control their content.
             $text = $block['text'] ?? '';
@@ -122,7 +124,7 @@ class Nodes
             $rawNode['content'][$key]['text'] = $text;
 
             // If this is now an empty text node, remove it. Tiptap won't like it.
-            if ($rawNode['content'][$key]['text'] === '') {
+            if ($rawNode['content'][$key]['text'] === '' && $type === 'text') {
                 unset($rawNode['content'][$key]);
             }
         }
