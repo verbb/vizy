@@ -2,7 +2,7 @@
 
 ## 1.0.12 - 2022-03-17
 
-### FIxed
+### Fixed
 - Fix nested node content being incorrectly stripped out due to HTML purifier.
 
 ## 1.0.11 - 2022-03-13
