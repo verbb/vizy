@@ -1,5 +1,10 @@
 # Changelog
 
+## 2.0.0-beta.2 - 2022-04-04
+
+### Fixed
+- Fix Craft 4.0.0-beta.x compatibilities.
+
 ## 2.0.0-beta.1 - 2022-03-10
 
 ### Changed
