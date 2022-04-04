@@ -32,6 +32,9 @@ use yii\db\Schema;
 
 use Throwable;
 
+use GraphQL\Type\Definition\Type;
+
+
 class VizyField extends Field
 {
     // Constants
@@ -116,8 +119,8 @@ class VizyField extends Field
 
         $volumeOptions = [];
 
-        foreach (Craft::$app->getVolumes()->getPublicVolumes() as $volume) {
-            if ($volume->hasUrls) {
+        foreach (Craft::$app->getVolumes()->getAllVolumes() as $volume) {
+            if ($volume->getFs()->hasUrls) {
                 $volumeOptions[] = [
                     'label' => Html::encode($volume->name),
                     'value' => $volume->uid,
@@ -425,7 +428,7 @@ class VizyField extends Field
         return $blockTypes;
     }
 
-    public function getContentGqlType(): array
+    public function getContentGqlType(): Type|array
     {
         return NodeCollectionType::getType($this);
     }

@@ -237,6 +237,7 @@ export default {
     }
 
     svg {
+        display: inline-block;
         width: 20px !important;
         height: 20px !important;
     }

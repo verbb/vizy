@@ -498,6 +498,10 @@ export default {
     background-clip: padding-box;
     overflow: hidden;
     min-height: 500px;
+
+    svg {
+        display: inline-block;
+    }
 }
 
 .vui-workspace {
