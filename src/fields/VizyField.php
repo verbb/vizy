@@ -63,7 +63,7 @@ class VizyField extends Field
     // =========================================================================
 
     public array $fieldData = [];
-    public ?array $vizyConfig = null;
+    public string $vizyConfig = '';
     public string $configSelectionMode = 'choose';
     public string $manualConfig = '';
     public string $availableVolumes = '*';
@@ -79,6 +79,18 @@ class VizyField extends Field
 
     // Public Methods
     // =========================================================================
+
+    public function __construct($config = [])
+    {
+        // Temporarily fix a config issue during beta
+        if (is_array($config['vizyConfig'])) {
+            $config['vizyConfig'] = $config['vizyConfig'][0];
+
+            Craft::$app->getDeprecator()->log("vizy:${config['handle']}", "Your Vizy field ${config['handle']} contains out of date settings. Please re-save the field.");
+        }
+
+        parent::__construct($config);
+    }
 
     public function getContentColumnType(): array|string
     {
