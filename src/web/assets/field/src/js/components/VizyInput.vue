@@ -211,7 +211,7 @@ export default {
 
     methods: {
         getFormattingOptions() {
-            var options = ['paragraph', 'code', 'blockquote', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6'];
+            var options = ['paragraph', 'code-block', 'blockquote', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6'];
 
             if (this.settings.vizyConfig.formatting && this.settings.vizyConfig.formatting.length) {
                 options = this.settings.vizyConfig.formatting; 

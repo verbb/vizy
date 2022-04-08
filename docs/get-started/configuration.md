@@ -67,7 +67,7 @@ Option | Description
 `blockquote` | Allow text to be shown as a blockquote.
 `highlight` | Allow text to be highlighted.
 `code` | Allow text to be shown as inline code.
-`code-block` | Allow text to be shown as a code block.
+`code-block` | Allow text to be shown as a code blocks.
 `hr` | Allow the use of a `<hr>` element for a horizontal rule.
 `line-break` | Allow the use of a `<br>` element for a horizontal rule.
 `align-left` | Allow text to be left-aligned.
@@ -107,7 +107,7 @@ Option | Description
 `h4` | Allow the use of `<h4>` heading tags.
 `h5` | Allow the use of `<h5>` heading tags.
 `h6` | Allow the use of `<h6>` heading tags.
-`code` | Allow text to be shown as inline code.
+`code-block` | Allow text to be shown as code blocks.
 `blockquote` | Allow text to be shown as a blockquote.
 `paragraph` | Allow text to be shown as a paragraph.
 
@@ -124,7 +124,7 @@ The below is a "kitchen sink" example that contains everything.
 ```json
 {
     "buttons": ["html", "formatting", "h1", "h2", "h3", "h4", "h5", "h6", "bold", "italic", "underline", "strikethrough", "subscript", "superscript", "ordered-list", "unordered-list", "code-block", "hr", "highlight", "align-left", "align-right", "align-center", "align-justify", "clear-format", "line-break", "link", "image", "undo", "redo"],
-    "formatting": ["paragraph", "code", "blockquote", "h1", "h2", "h3", "h4", "h5", "h6"],
+    "formatting": ["paragraph", "code-block", "blockquote", "h1", "h2", "h3", "h4", "h5", "h6"],
     "toolbarFixed": true
 }
 ```

@@ -197,9 +197,9 @@ export default {
                             title: Craft.t('vizy', 'Paragraph'),
                         },
                         {
-                            name: 'code',
-                            title: Craft.t('vizy', 'Code'),
-                            action: () => this.editor.chain().focus().toggleCode().run(),
+                            name: 'code-block',
+                            title: Craft.t('vizy', 'Code Block'),
+                            action: () => this.editor.chain().focus().toggleCodeBlock().run(),
                         },
                         {
                             name: 'blockquote',
