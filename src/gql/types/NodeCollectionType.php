@@ -30,6 +30,7 @@ class NodeCollectionType extends ObjectType
                 'fields' => [
                     'nodes' => [
                         'name' => 'nodes',
+                        'description' => 'Query nodes for this node collection.',
                         'type' => Type::listOf(VizyNodeInterface::getType($context)),
                         'resolve' => function($source) {
                             return $source->getNodes();
@@ -37,6 +38,7 @@ class NodeCollectionType extends ObjectType
                     ],
                     'rawNodes' => [
                         'name' => 'rawNodes',
+                        'description' => 'The raw JSON of nodes for this node collection.',
                         'type' => ArrayType::getType(),
                         'resolve' => function($source) {
                             return $source->getRawNodes();
@@ -44,6 +46,7 @@ class NodeCollectionType extends ObjectType
                     ],
                     'renderHtml' => [
                         'name' => 'renderHtml',
+                        'description' => 'The rendered HTML of nodes for this node collection.',
                         'type' => Type::string(),
                     ],
                 ],

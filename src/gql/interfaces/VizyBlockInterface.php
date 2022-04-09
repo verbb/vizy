@@ -51,6 +51,7 @@ class VizyBlockInterface extends VizyNodeInterface
         return TypeManager::prepareFieldDefinitions(array_merge(parent::getFieldDefinitions(), [
             'enabled' => [
                 'name' => 'enabled',
+                'description' => 'Whether this Vizy block is enabled or not.',
                 'type' => Type::boolean(),
                 'resolve' => function ($source, $arguments) {
                     return $source->getEnabled();
@@ -58,6 +59,7 @@ class VizyBlockInterface extends VizyNodeInterface
             ],
             'collapsed' => [
                 'name' => 'collapsed',
+                'description' => 'Whether this Vizy block is collapsed or not.',
                 'type' => Type::boolean(),
                 'resolve' => function ($source, $arguments) {
                     return $source->attrs['collapsed'] ?? false;
@@ -65,6 +67,7 @@ class VizyBlockInterface extends VizyNodeInterface
             ],
             'blockTypeId' => [
                 'name' => 'blockTypeId',
+                'description' => 'The block type ID for this Vizy block.',
                 'type' => Type::string(),
                 'resolve' => function ($source, $arguments) {
                     return $source->getBlockType()->id;
@@ -72,6 +75,7 @@ class VizyBlockInterface extends VizyNodeInterface
             ],
             'blockTypeHandle' => [
                 'name' => 'blockTypeHandle',
+                'description' => 'The block type handle for this Vizy block.',
                 'type' => Type::string(),
                 'resolve' => function ($source, $arguments) {
                     return $source->getBlockType()->handle;
