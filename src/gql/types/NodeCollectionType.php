@@ -33,7 +33,7 @@ class NodeCollectionType extends ObjectType
                         'description' => 'Query nodes for this node collection.',
                         'type' => Type::listOf(VizyNodeInterface::getType($context)),
                         'resolve' => function($source) {
-                            return $source->getNodes();
+                            return $source->query()->all();
                         },
                     ],
                     'rawNodes' => [
