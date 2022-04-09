@@ -58,7 +58,7 @@ class NodeCollectionType extends ObjectType
 
                             $query = Craft::configure($source->query(), $arguments);
 
-                            return $source->query()->all();
+                            return $query->all();
                         },
                     ],
                     'rawNodes' => [
