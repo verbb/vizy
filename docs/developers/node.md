@@ -213,5 +213,6 @@ Method | Description
 `getBlockType()` | Return the block type object.
 `getFieldLayout()` | Return the field layout object.
 `getEnabled()` | Returns whether the block is enabled or not.
+`getCollapsed()` | Returns whether the block is collapsed or not.
 `getBlockTypeEnabled()` | Returns whether the block type is enabled or not.
 

@@ -102,6 +102,11 @@ class VizyBlock extends Node
         return $this->attrs['enabled'] ?? true;
     }
 
+    public function getCollapsed()
+    {
+        return $this->attrs['collapsed'] ?? true;
+    }
+
     public function getBlockTypeEnabled()
     {
         return $this->attrs['values']['typeEnabled'] ?? true;
