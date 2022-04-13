@@ -151,18 +151,16 @@ class NodeCollection extends Markup
 
     public function isEmpty()
     {
-        // We don't want to render anything for CP requests for the input.
-        if (Craft::$app->getRequest()->getIsCpRequest()) {
-            return false;
+        // Don't rely on `renderHtml()` as this is trigger on-load in the CP when editing a field
+        // and it does plenty of unnesesary things. Instead, work with the `rawNodes` directly.
+        $results = [];
+
+        foreach ($this->getNodes() as $node) {
+            $results[] = $node->isEmpty();
         }
 
-        // Check to see if this is an empty field. Note 'empty' means a single
-        // paragraph node with no content.
-        if (strip_tags($this->renderHtml()) === '') {
-            return true;
-        }
-
-        return false;
+        // Are _all_ the results the same?
+        return (bool)array_product($results);
     }
 
 
