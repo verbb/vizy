@@ -1,5 +1,10 @@
 # Changelog
 
+## 2.0.0-beta.3 - 2022-04-13
+
+### Changed
+- Merge updates with version 1.0.13.
+
 ## 2.0.0-beta.2 - 2022-04-04
 
 ### Fixed
