@@ -1,5 +1,21 @@
 # Changelog
 
+## 1.0.13 - 2022-04-13
+
+### Added
+- Add support for `limit`, `orderBy` and `where` arguments for GraphQL queries, when querying `nodes`.
+- Add descriptions for all attributes for GraphQL.
+- Add `vizyBlock.getCollapsed()`.
+- Add `vizyBlock.id`.
+- Add `Node::isEmpty()`.
+
+### Changed
+- Change field layout instruction text for Vizy field settings.
+- GraphQL queries using `nodes` now only return enabled nodes.
+
+### Fixed
+- Fix `NodeCollection::isEmpty` not working correctly.
+
 ## 1.0.12 - 2022-03-17
 
 ### Fixed
