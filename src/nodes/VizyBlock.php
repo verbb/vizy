@@ -122,6 +122,13 @@ class VizyBlock extends Node
         return parent::isDeleted();
     }
 
+    public function isEmpty()
+    {
+        $content = $this->attrs['values']['content']['fields'] ?? [];
+
+        return !array_filter(array_values($content));
+    }
+
     public function renderNode()
     {
         // If a template has been defined on the block, use that to render

@@ -20,6 +20,7 @@ Method | Description
 --- | ---
 `selfClosing()` | Whether this node has a self-closing tag.
 `isDeleted()` | Whether this node has been deleted. Only applicable to Vizy Blocks.
+`isEmpty()` | Whether the node is considered empty of content.
 `getTag()` | Returns the HTML tag name and attributes the node should use for the HTML tag.
 `getField()` | Returns the Vizy field model.
 `getType()` | Returns the type of node this is.

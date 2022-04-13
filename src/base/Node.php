@@ -109,6 +109,11 @@ class Node extends Component
         return true;
     }
 
+    public function isEmpty()
+    {
+        return !($this->getContent() || $this->getText());
+    }
+
     public function renderNode()
     {
         return Vizy::$plugin->getNodes()->renderNode($this);
