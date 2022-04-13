@@ -51,7 +51,7 @@ class NodeCollection extends Markup
     {
         // Handle emoji's and un-serialize them
         foreach ($nodes as $key => $node) {
-            $nodes[$key] = Nodes::normalizeEmojis($node);
+            $nodes[$key] = Nodes::normalizeContent($node);
         }
 
         $this->element = $element;
@@ -155,10 +155,10 @@ class NodeCollection extends Markup
         $values = [];
 
         foreach ($this->getNodes() as $nodeKey => $node) {
-            $values[$nodeKey] = $node->serializeValue($element);
+            $rawNode = $node->serializeValue($element);
 
             // Handle serializing any emoji's in text nodes
-            $values[$nodeKey] = Nodes::serializeEmojis($node->rawNode);
+            $values[$nodeKey] = Nodes::serializeContent($rawNode);
         }
 
         return array_values(array_filter($values));
@@ -170,18 +170,16 @@ class NodeCollection extends Markup
 
     public function isEmpty(): bool
     {
-        // We don't want to render anything for CP requests for the input.
-        if (Craft::$app->getRequest()->getIsCpRequest()) {
-            return false;
+        // Don't rely on `renderHtml()` as this is trigger on-load in the CP when editing a field
+        // and it does plenty of unnesesary things. Instead, work with the `rawNodes` directly.
+        $results = [];
+
+        foreach ($this->getNodes() as $node) {
+            $results[] = $node->isEmpty();
         }
 
-        // Check to see if this is an empty field. Note 'empty' means a single
-        // paragraph node with no content.
-        if (strip_tags($this->renderHtml()) === '') {
-            return true;
-        }
-
-        return false;
+        // Are _all_ the results the same?
+        return (bool)array_product($results);
     }
 
     private function _populateNodes($nodes): array

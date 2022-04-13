@@ -90,9 +90,19 @@ class VizyBlock extends Node
         return $this->_fieldLayout;
     }
 
+    public function getId()
+    {
+        return $this->attrs['id'] ?? '';
+    }
+
     public function getEnabled(): bool
     {
         return $this->attrs['enabled'] ?? true;
+    }
+
+    public function getCollapsed()
+    {
+        return $this->attrs['collapsed'] ?? true;
     }
 
     public function getBlockTypeEnabled()
@@ -108,6 +118,13 @@ class VizyBlock extends Node
         }
 
         return parent::isDeleted();
+    }
+
+    public function isEmpty()
+    {
+        $content = $this->attrs['values']['content']['fields'] ?? [];
+
+        return !array_filter(array_values($content));
     }
 
     public function renderNode(): ?string

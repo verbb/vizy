@@ -11,6 +11,41 @@
 - Now requires PHP `^8.0.2`.
 - Now requires Craft `^4.0.0-beta.1`.
 
+## 1.0.13 - 2022-04-13
+
+### Added
+- Add support for `limit`, `orderBy` and `where` arguments for GraphQL queries, when querying `nodes`.
+- Add descriptions for all attributes for GraphQL.
+- Add `vizyBlock.getCollapsed()`.
+- Add `vizyBlock.id`.
+- Add `Node::isEmpty()`.
+
+### Changed
+- Change field layout instruction text for Vizy field settings.
+- GraphQL queries using `nodes` now only return enabled nodes.
+
+### Fixed
+- Fix `NodeCollection::isEmpty` not working correctly.
+
+## 1.0.12 - 2022-03-17
+
+### Fixed
+- Fix nested node content being incorrectly stripped out due to HTML purifier.
+
+## 1.0.11 - 2022-03-13
+
+### Changed
+- Improve node collection performance.
+- Minor Vizy block performance improvements.
+
+### Fixed
+- Fix serializing nested Vizy fields not being arrays.
+- Fix a potential XSS vulnerability, where HTML wasn’t correctly encoded.
+- Fix an error when serializing nested Vizy fields, when generating search keywords.
+- Fix rendering node collections in the control panel automatically when not needed.
+- Fix Vizy Block nodes not rendering correctly for GraphQL queries.
+- Fix an error when querying `nodes` or `rawNodes` for GraphQL queries.
+
 ## 1.0.10 - 2022-02-28
 
 ### Added

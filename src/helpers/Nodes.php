@@ -3,10 +3,13 @@ namespace verbb\vizy\helpers;
 
 use Craft;
 use craft\helpers\Html;
+use craft\helpers\HtmlPurifier;
 use craft\helpers\StringHelper;
 use craft\validators\HandleValidator;
 
 use LitEmoji\LitEmoji;
+
+use HTMLPurifier_Config;
 
 class Nodes
 {
@@ -95,34 +98,72 @@ class Nodes
         return $value;
     }
 
-    public static function serializeEmojis($rawNode): array
+    public static function serializeContent($rawNode)
     {
         $content = $rawNode['content'] ?? [];
 
         foreach ($content as $key => $block) {
-            $text = $block['text'] ?? '';
+            $type = $block['type'] ?? '';
 
             // We only want to modify simple nodes and their text content, not complicated
             // nodes like VizyBlocks, which could mess things up as fields control their content.
-            $rawNode['content'][$key]['text'] = LitEmoji::unicodeToShortcode($text);
+            $text = $block['text'] ?? '';
+
+            // Serialize any emoji's
+            $text = LitEmoji::unicodeToShortcode($text);
+
+            // Escape any HTML tags used in the text. Maybe we're writing HTML in text?
+            $text = StringHelper::htmlEncode($text);
+
+            // Run anything else not caught in the above through purifier to be extra safe
+            $text = HtmlPurifier::process($text, self::purifierConfig());
+
+            $rawNode['content'][$key]['text'] = $text;
+
+            // If this is now an empty text node, remove it. Tiptap won't like it.
+            if ($rawNode['content'][$key]['text'] === '' && $type === 'text') {
+                unset($rawNode['content'][$key]);
+            }
         }
 
         return $rawNode;
     }
 
-    public static function normalizeEmojis($rawNode): array
+    public static function normalizeContent($rawNode)
     {
         $content = $rawNode['content'] ?? [];
 
         foreach ($content as $key => $block) {
-            $text = $block['text'] ?? '';
-
             // We only want to modify simple nodes and their text content, not complicated
             // nodes like VizyBlocks, which could mess things up as fields control their content.
-            $rawNode['content'][$key]['text'] = LitEmoji::shortcodeToUnicode($text);
+            $text = $block['text'] ?? '';
+
+            // Un-serialize any emoji's
+            $text = LitEmoji::shortcodeToUnicode($text);
+
+            $rawNode['content'][$key]['text'] = $text;
         }
 
         return $rawNode;
     }
 
+    private static function purifierConfig(): HTMLPurifier_Config
+    {
+        $purifierConfig = HTMLPurifier_Config::createDefault();
+        $purifierConfig->autoFinalize = false;
+
+        $config = [
+            'Attr.AllowedFrameTargets' => ['_blank'],
+            'Attr.EnableID' => true,
+            'HTML.SafeIframe' => true,
+            'URI.SafeIframeRegexp' => '%^(https?:)?//(www\.youtube(-nocookie)?\.com/embed/|player\.vimeo\.com/video/)%',
+        ];
+
+        foreach ($config as $option => $value) {
+            $purifierConfig->set($option, $value);
+        }
+
+        return $purifierConfig;
+    }
+    
 }

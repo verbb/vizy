@@ -20,6 +20,7 @@ Method | Description
 --- | ---
 `selfClosing()` | Whether this node has a self-closing tag.
 `isDeleted()` | Whether this node has been deleted. Only applicable to Vizy Blocks.
+`isEmpty()` | Whether the node is considered empty of content.
 `getTag()` | Returns the HTML tag name and attributes the node should use for the HTML tag.
 `getField()` | Returns the Vizy field model.
 `getType()` | Returns the type of node this is.
@@ -200,6 +201,7 @@ These can be accessed via `attrs.values`.
 
 Value | Description
 --- | ---
+`id` | The ID for the block.
 `type` | The ID for the block type.
 `typeEnabled` | Whether the block type is enabled or not.
 `content.fields` | An array containing the field data.
@@ -212,5 +214,6 @@ Method | Description
 `getBlockType()` | Return the block type object.
 `getFieldLayout()` | Return the field layout object.
 `getEnabled()` | Returns whether the block is enabled or not.
+`getCollapsed()` | Returns whether the block is collapsed or not.
 `getBlockTypeEnabled()` | Returns whether the block type is enabled or not.
 

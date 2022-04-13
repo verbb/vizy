@@ -51,14 +51,17 @@ class VizyNodeInterface extends BaseInterfaceType
         return Craft::$app->getGql()->prepareFieldDefinitions([
             'type' => [
                 'name' => 'type',
+                'description' => 'The node type.',
                 'type' => Type::string(),
             ],
             'tagName' => [
                 'name' => 'tagName',
+                'description' => 'The HTML tag used for this node.',
                 'type' => Type::string(),
             ],
             'html' => [
                 'name' => 'html',
+                'description' => 'The rendered HTML for this node.',
                 'type' => Type::string(),
                 'resolve' => function($source) {
                     return $source->renderHtml();
@@ -66,6 +69,7 @@ class VizyNodeInterface extends BaseInterfaceType
             ],
             'content' => [
                 'name' => 'content',
+                'description' => 'The content for this node.',
                 'type' => ArrayType::getType(),
                 'resolve' => function($source) {
                     return $source->rawNode['content'] ?? [];
@@ -73,6 +77,7 @@ class VizyNodeInterface extends BaseInterfaceType
             ],
             'attrs' => [
                 'name' => 'attrs',
+                'description' => 'The attributes for this node.',
                 'type' => ArrayType::getType(),
                 'resolve' => function($source) {
                     return $source->rawNode['attrs'] ?? [];
@@ -80,6 +85,7 @@ class VizyNodeInterface extends BaseInterfaceType
             ],
             'marks' => [
                 'name' => 'marks',
+                'description' => 'The nested marks for this node.',
                 'type' => ArrayType::getType(),
                 'resolve' => function($source) {
                     return $source->rawNode['marks'] ?? [];
@@ -87,6 +93,7 @@ class VizyNodeInterface extends BaseInterfaceType
             ],
             'text' => [
                 'name' => 'text',
+                'description' => 'The textual content for this node.',
                 'type' => Type::string(),
                 'resolve' => function($source) {
                     return $source->rawNode['text'] ?? '';
@@ -94,6 +101,7 @@ class VizyNodeInterface extends BaseInterfaceType
             ],
             'rawNode' => [
                 'name' => 'rawNode',
+                'description' => 'The raw JSON content for this node.',
                 'type' => ArrayType::getType(),
             ],
         ], self::getName());

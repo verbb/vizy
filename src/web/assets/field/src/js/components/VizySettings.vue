@@ -214,7 +214,7 @@
                 </div>
 
                 <div id="layout-field-instructions" class="instructions">
-                    <p>{{ 'Define the field layout for this block type.' | t('vizy') }}</p>
+                    <p>{{ 'Define the field layout for this block type. Empty tabs are not allowed, and you must provide at least one element.' | t('vizy') }}</p>
                 </div>
 
                 <div class="input ltr">
