@@ -163,3 +163,39 @@ Or, you can use `renderHtml` to return the generated HTML, as determined by Craf
   }
 }
 ```
+
+## The `nodes` query
+This query is used to query for nodes, similar to how we would normally [query nodes](docs:template-guides/querying-nodes#querying-nodes).
+
+| Argument | Type | Description
+| - | - | -
+| `where`| `string` | Used to filter items based on params. This should be a JSON-encoded string.
+| `limit`| `int` | Limit the number of nodes returned.
+| `orderBy`| `string` | Return nodes ordered by a property.
+
+### Where
+Return all paragraph nodes, and no other node types. See [query nodes](docs:template-guides/querying-nodes#querying-nodes) for more examples of how to query. This must be a JSON-encoded string.
+
+```json
+nodes(where: "{ \"type\": \"paragraph\" }") {
+    
+}
+```
+
+### Limit
+Return the first 2 nodes.
+
+```json
+nodes(limit: 2) {
+    
+}
+```
+
+### Order By
+Return all nodes ordered by their type.
+
+```json
+nodes(orderBy: 'type DESC') {
+    
+}
+```
