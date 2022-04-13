@@ -200,6 +200,7 @@ These can be accessed via `attrs.values`.
 
 Value | Description
 --- | ---
+`id` | The ID for the block.
 `type` | The ID for the block type.
 `typeEnabled` | Whether the block type is enabled or not.
 `content.fields` | An array containing the field data.

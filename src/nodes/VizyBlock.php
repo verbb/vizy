@@ -92,6 +92,11 @@ class VizyBlock extends Node
         return $this->_fieldLayout;
     }
 
+    public function getId()
+    {
+        return $this->attrs['id'] ?? '';
+    }
+
     public function getEnabled()
     {
         return $this->attrs['enabled'] ?? true;
