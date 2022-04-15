@@ -831,6 +831,8 @@ class VizyField extends Field
             array_unshift($sources, '*');
         }
 
+        $sources = array_values(array_unique($sources));
+
         return $this->_sectionSources = $sources;
     }
 
@@ -854,6 +856,8 @@ class VizyField extends Field
                 }
             }
         }
+
+        $sources = array_values(array_unique($sources));
 
         return $this->_categorySources = $sources;
     }
@@ -881,6 +885,8 @@ class VizyField extends Field
                 $allowedVolumes[] = 'volume:' . $volume->uid;
             }
         }
+
+        $allowedVolumes = array_values(array_unique($allowedVolumes));
 
         return $this->_volumeKeys = $allowedVolumes;
     }
