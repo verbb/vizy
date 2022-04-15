@@ -124,15 +124,13 @@ export default {
                 handle,
             };
 
-            Craft.postActionRequest('assets/generate-transform', data, (response, textStatus) => {
-                if (textStatus === 'success') {
-                    if (response.url) {
-                        callback(response.url);
-                    } else {
-                        alert('There was an error generating the transform URL.');
-                    }
-                }
-            });
+            Craft.sendActionRequest('POST', 'assets/generate-transform', { data })
+                .then((response) => {
+                    callback(response.data.url);
+                })
+                .catch(({ response }) => {
+                    alert('There was an error generating the transform URL.');
+                });
         },
 
         runAction() {

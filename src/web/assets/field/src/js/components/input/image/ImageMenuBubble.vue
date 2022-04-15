@@ -175,16 +175,20 @@ export default {
                             handle: matches[4],
                         };
 
-                        Craft.postActionRequest('assets/generate-transform', params, (data) => {
-                            var attributes = {
-                                src: data.url + '?' + (new Date().getTime()) + '#asset:' + matches[2] + ':transform:' + matches[4],
-                            };
+                        Craft.sendActionRequest('POST', 'assets/generate-transform', { params })
+                            .then((response) => {
+                                var attributes = {
+                                    src: response.data.url + '?' + (new Date().getTime()) + '#asset:' + matches[2] + ':transform:' + matches[4],
+                                };
 
-                            this.editor.view.dispatch(this.editor.state.tr.setNodeMarkup(node.pos, null, {
-                                ...node.node.attrs,
-                                ...attributes,
-                            }));
-                        });
+                                this.editor.view.dispatch(this.editor.state.tr.setNodeMarkup(node.pos, null, {
+                                    ...node.node.attrs,
+                                    ...attributes,
+                                }));
+                            })
+                            .catch(({ response }) => {
+                                alert('There was an error generating the transform URL.');
+                            });
                     }
                 }
             });
