@@ -74,7 +74,12 @@ class VizyField extends Field
     public bool $trimEmptyParagraphs = true;
     public string $columnType = Schema::TYPE_TEXT;
 
-    private array $_blockTypesById = [];
+    private ?array $_blockTypesById = [];
+    private ?array $_linkOptions = null;
+    private ?array $_sectionSources = null;
+    private ?array $_categorySources = null;
+    private ?array $_volumeKeys = null;
+    private ?array $_transforms = null;
 
 
     // Public Methods
@@ -187,15 +192,21 @@ class VizyField extends Field
             'blockGroups' => $this->_getBlockGroupsForInput($value, $placeholderKey, $element),
             'blocks' => $this->_getBlocksForInput($value, $placeholderKey, $element),
             'vizyConfig' => $this->_getVizyConfig(),
-            'linkOptions' => $this->_getLinkOptions($element),
-            'volumes' => $this->_getVolumeKeys(),
-            'transforms' => $this->_getTransforms(),
             'defaultTransform' => $defaultTransform,
             'elementSiteId' => $site->id,
             'showAllUploaders' => $this->showUnpermittedFiles,
             'placeholderKey' => $placeholderKey,
             'fieldHandle' => $this->handle,
         ];
+
+        // Only include some options if we need them - for performance
+        $buttons = $settings['vizyConfig']['buttons'] ?? [];
+
+        if (in_array('link', $buttons) || in_array('image', $buttons)) {
+            $settings['linkOptions'] = $this->_getLinkOptions($element);
+            $settings['volumes'] = $this->_getVolumeKeys();
+            $settings['transforms'] = $this->_getTransforms();
+        }
 
         // No need to output JS for any nested fields, all settings are rendered in the template
         // as Vue takes over and processes the props.
@@ -564,6 +575,13 @@ class VizyField extends Field
             $blocks = $group['blockTypes'] ?? [];
 
             foreach ($blocks as $blockTypeKey => $blockTypeData) {
+                // Skip any disabled blocktypes
+                $enabled = $blockTypeData['enabled'] ?? true;
+
+                if (!$enabled) {
+                    continue;
+                }
+
                 $blockType = new BlockType($blockTypeData);
 
                 $fieldLayout = $blockType->getFieldLayout();
@@ -721,10 +739,15 @@ class VizyField extends Field
 
     private function _getLinkOptions(Element $element = null): array
     {
+        if ($this->_linkOptions !== null) {
+            return $this->_linkOptions;
+        }
+
         $linkOptions = [];
 
         $sectionSources = $this->_getSectionSources($element);
         $categorySources = $this->_getCategorySources($element);
+        $volumeKeys = $this->_getVolumeKeys();
 
         if (!empty($sectionSources)) {
             $linkOptions[] = [
@@ -736,12 +759,12 @@ class VizyField extends Field
             ];
         }
 
-        if (!empty($this->_getVolumeKeys())) {
+        if (!empty($volumeKeys)) {
             $linkOptions[] = [
                 'optionTitle' => Craft::t('vizy', 'Link to an asset'),
                 'elementType' => Asset::class,
                 'refHandle' => Asset::refHandle(),
-                'sources' => $this->_getVolumeKeys(),
+                'sources' => $volumeKeys,
             ];
         }
 
@@ -770,11 +793,15 @@ class VizyField extends Field
             }
         }
 
-        return $linkOptions;
+        return $this->_linkOptions = $linkOptions;
     }
 
     private function _getSectionSources(Element $element = null): array
     {
+        if ($this->_sectionSources !== null) {
+            return $this->_sectionSources;
+        }
+
         $sources = [];
         $sections = Craft::$app->getSections()->getAllSections();
         $showSingles = false;
@@ -804,11 +831,15 @@ class VizyField extends Field
             array_unshift($sources, '*');
         }
 
-        return $sources;
+        return $this->_sectionSources = $sources;
     }
 
     private function _getCategorySources(Element $element = null): array
     {
+        if ($this->_categorySources !== null) {
+            return $this->_categorySources;
+        }
+
         $sources = [];
 
         if ($element) {
@@ -824,11 +855,15 @@ class VizyField extends Field
             }
         }
 
-        return $sources;
+        return $this->_categorySources = $sources;
     }
 
     private function _getVolumeKeys(): array
     {
+        if ($this->_volumeKeys !== null) {
+            return $this->_volumeKeys;
+        }
+
         if (!$this->availableVolumes) {
             return [];
         }
@@ -841,39 +876,21 @@ class VizyField extends Field
 
         foreach ($allVolumes as $volume) {
             $allowedBySettings = $this->availableVolumes === '*' || (is_array($this->availableVolumes) && in_array($volume->uid, $this->availableVolumes));
-
-            if ($allowedBySettings && ($this->showUnpermittedVolumes || $userService->checkPermission("viewVolume:{$volume->uid}"))) {
-                $allowedVolumes[] = $volume->uid;
+            
+            if ($allowedBySettings && ($this->showUnpermittedVolumes || $userService->checkPermission("viewVolume:$volume->uid"))) {
+                $allowedVolumes[] = 'volume:' . $volume->uid;
             }
         }
 
-        $criteria['volumeId'] = Db::idsByUids('{{%volumes}}', $allowedVolumes);
-
-        $folders = Craft::$app->getAssets()->findFolders($criteria);
-
-        // Sort volumes in the same order as they are sorted in the CP
-        $sortedVolumeIds = Craft::$app->getVolumes()->getAllVolumeIds();
-        $sortedVolumeIds = array_flip($sortedVolumeIds);
-
-        $volumeKeys = [];
-
-        usort($folders, function($a, $b) use ($sortedVolumeIds) {
-            // In case Temporary volumes ever make an appearance in RTF modals, sort them to the end of the list.
-            $aOrder = $sortedVolumeIds[$a->volumeId] ?? PHP_INT_MAX;
-            $bOrder = $sortedVolumeIds[$b->volumeId] ?? PHP_INT_MAX;
-
-            return $aOrder - $bOrder;
-        });
-
-        foreach ($folders as $folder) {
-            $volumeKeys[] = 'folder:' . $folder->uid;
-        }
-
-        return $volumeKeys;
+        return $this->_volumeKeys = $allowedVolumes;
     }
 
     private function _getTransforms(): array
     {
+        if ($this->_transforms !== null) {
+            return $this->_transforms;
+        }
+
         if (!$this->availableTransforms) {
             return [];
         }
@@ -890,6 +907,6 @@ class VizyField extends Field
             }
         }
 
-        return $transformList;
+        return $this->_transforms = $transformList;
     }
 }

@@ -15,11 +15,21 @@ use craft\models\FieldLayout;
 
 class Service extends Component
 {
+    // Properties
+    // =========================================================================
+
+    private $_layoutsByUid = [];
+
+
     // Public Methods
     // =========================================================================
 
     public function getFieldLayoutByUid($layoutUid): ?FieldLayout
     {
+        if ($this->_layoutsByUid !== null && array_key_exists($layoutUid, $this->_layoutsByUid)) {
+            return $this->_layoutsByUid[$layoutUid];
+        }
+
         $result = (new Query)
             ->select([
                 'id',
@@ -27,10 +37,10 @@ class Service extends Component
                 'uid',
             ])
             ->from([Table::FIELDLAYOUTS])
-            ->where(['uid' => $layoutUid])
+            ->where(['dateDeleted' => null, 'uid' => $layoutUid])
             ->one();
 
-        return $result ? new FieldLayout($result) : null;
+        return $this->_layoutsByUid[$layoutUid] = $result ? new FieldLayout($result) : null;
     }
 
     public function getAllBlockTypes(): array
