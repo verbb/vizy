@@ -181,9 +181,6 @@ export default {
 
             // Setup listener for when toggling the code editor
             this.editor.on('vui:code-editor-toggle', this.setCodeEditor);
-
-            // Disable Craft delta-handling, which messes up saving the field in our case.
-            this.cleanDeltas();
         });
 
         // Keep track of any parent fields (at least their toolbars) so we can align them
@@ -413,24 +410,6 @@ export default {
 
             this.$refs.toolbar.$el.style.position = 'sticky';
             this.$refs.toolbar.$el.style.top = this.$el.scrollTop + headerBuffer + 'px';
-        },
-
-        cleanDeltas() {
-            var fieldHandle = `[${this.settings.fieldHandle}]`;
-
-            // Clean up deltas for this field, which would normally be helpful, but not so much for this field.
-            // Otherwise we end up sending partial data for just the inner fields (which are namespaced)
-            // which will mess up saving. We could add handling like Matrix does, but get's tricky handling
-            // things like block order, and other things. Much easier and more reliable to just send
-            // the full field value on each save.
-            Craft.deltaNames.forEach((name) => {
-                var index = Craft.deltaNames.indexOf(name);
-
-                // Strip out everything apart from the top-level field handle, which is all we want.
-                if (name.includes(fieldHandle) && name !== fieldHandle) {
-                    Craft.deltaNames.splice(index);
-                }
-            });
         },
 
         getParentInputs() {
