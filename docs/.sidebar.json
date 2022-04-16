@@ -38,12 +38,5 @@
             "developers/node-collection",
             "developers/graphql"
         ]
-    },
-    {
-        "title": "Support",
-        "collapsable": false,
-        "children": [
-            "support/get-support"
-        ]
     }
 ]
