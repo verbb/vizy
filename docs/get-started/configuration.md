@@ -13,7 +13,7 @@ return [
 ];
 ```
 
-### Configuration Options
+## Configuration options
 - `iconsPath` - Provide a file system path for a collection of SVG icons. These are available when creating your Block Types for a Vizy field. This also accepts environment variables or aliases.
 
 ## Control Panel

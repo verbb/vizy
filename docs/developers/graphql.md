@@ -3,7 +3,7 @@ Vizy fields support being queried via GraphQL. To give you the utmost flexibilit
 
 Using `nodes` to query your data is the most common scenario.
 
-### Query
+## Query
 ```json
 {
   entries(section:"blog") {
@@ -35,7 +35,7 @@ Using `nodes` to query your data is the most common scenario.
 }
 ```
 
-### Response
+## Response
 ```json
 {
   "data": {
@@ -73,7 +73,7 @@ In the above example, we're using inline fragments to access the different types
 
 In addition, for a Vizy Block node, we define inline fragments for each block type handle. You'll have access to some attributes of a Vizy Block node, as well as any custom fields. The above example has `plainText` and `media` as a Plain Text field and Assets field respectively.
 
-### The `VizyNodeInterface` interface
+## The `VizyNodeInterface` interface
 This is the interface implemented by all nodes.
 
 | Field | Type | Description
@@ -101,7 +101,7 @@ Available node type fragments are:
 - `VizyNode_OrderedList`
 - `VizyNode_Paragraph`
 
-### The `VizyBlockInterface` interface
+## The `VizyBlockInterface` interface
 This is the interface implemented by all Vizy Block nodes.
 
 | Field | Type | Description
@@ -118,7 +118,7 @@ This is the interface implemented by all Vizy Block nodes.
 
 You can use the `rawNodes` to return the entire node structure as a JSON string.
 
-### Query
+## Query
 ```json
 {
   entries(section:"blog") {
@@ -131,7 +131,7 @@ You can use the `rawNodes` to return the entire node structure as a JSON string.
 }
 ```
 
-### Response
+## Response
 ```json
 {
   "vizyField": {
@@ -142,7 +142,7 @@ You can use the `rawNodes` to return the entire node structure as a JSON string.
 
 Or, you can use `renderHtml` to return the generated HTML, as determined by Craft.
 
-### Query
+## Query
 ```json
 {
   entries(section:"blog") {
@@ -155,7 +155,7 @@ Or, you can use `renderHtml` to return the generated HTML, as determined by Craf
 }
 ```
 
-### Response
+## Response
 ```json
 {
   "vizyField": {
