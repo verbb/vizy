@@ -936,12 +936,34 @@ class VizyField extends Field
         foreach ($allVolumes as $volume) {
             $allowedBySettings = $this->availableVolumes === '*' || (is_array($this->availableVolumes) && in_array($volume->uid, $this->availableVolumes));
             
-            if ($allowedBySettings && ($this->showUnpermittedVolumes || $userService->checkPermission("viewVolume:$volume->uid"))) {
-                $allowedVolumes[] = 'volume:' . $volume->uid;
+            if ($allowedBySettings && ($this->showUnpermittedVolumes || $userService->checkPermission("viewVolume:{$volume->uid}"))) {
+                $allowedVolumes[] = $volume->uid;
             }
         }
 
-        return $this->_volumeKeys = $allowedVolumes;
+        $criteria['volumeId'] = Db::idsByUids('{{%volumes}}', $allowedVolumes);
+
+        $folders = Craft::$app->getAssets()->findFolders($criteria);
+
+        // Sort volumes in the same order as they are sorted in the CP
+        $sortedVolumeIds = Craft::$app->getVolumes()->getAllVolumeIds();
+        $sortedVolumeIds = array_flip($sortedVolumeIds);
+
+        $volumeKeys = [];
+
+        usort($folders, function($a, $b) use ($sortedVolumeIds) {
+            // In case Temporary volumes ever make an appearance in RTF modals, sort them to the end of the list.
+            $aOrder = $sortedVolumeIds[$a->volumeId] ?? PHP_INT_MAX;
+            $bOrder = $sortedVolumeIds[$b->volumeId] ?? PHP_INT_MAX;
+
+            return $aOrder - $bOrder;
+        });
+
+        foreach ($folders as $folder) {
+            $volumeKeys[] = 'folder:' . $folder->uid;
+        }
+
+        return $this->_volumeKeys = $volumeKeys;
     }
 
     private function _getTransforms(): array
