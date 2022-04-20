@@ -30,7 +30,7 @@ class VizyBlockInterface extends VizyNodeInterface
         $type = GqlEntityRegistry::createEntity(self::getName(), new InterfaceType([
             'name' => static::getName(),
             'fields' => self::class . '::getFieldDefinitions',
-            'description' => 'This is the interface implemented by all fields.',
+            'description' => 'This is the interface implemented by Vizy Block nodes.',
             'resolveType' => function($value) {
                 return $value->getGqlTypeName();
             },

@@ -101,6 +101,13 @@ Available node type fragments are:
 - `VizyNode_OrderedList`
 - `VizyNode_Paragraph`
 
+## The `VizyImageNodeInterface` interface
+This is the interface implemented by all image nodes.
+
+| Field | Type | Description
+| - | - | -
+| `asset`| `AssetInterface` | Returns the asset element used for this image.
+
 ## The `VizyBlockInterface` interface
 This is the interface implemented by all Vizy Block nodes.
 
