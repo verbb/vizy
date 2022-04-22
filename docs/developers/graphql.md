@@ -3,8 +3,12 @@ Vizy fields support being queried via GraphQL. To give you the utmost flexibilit
 
 Using `nodes` to query your data is the most common scenario.
 
-## Query
-```json
+## Nodes
+
+### Example
+
+:::code
+```graphql GraphQL
 {
   entries(section:"blog") {
     ... on vizy_blog_Entry {
@@ -35,8 +39,7 @@ Using `nodes` to query your data is the most common scenario.
 }
 ```
 
-## Response
-```json
+```json JSON Response
 {
   "data": {
     "entries": [
@@ -68,6 +71,7 @@ Using `nodes` to query your data is the most common scenario.
   }
 }
 ```
+:::
 
 In the above example, we're using inline fragments to access the different types of nodes available. 
 
@@ -125,8 +129,8 @@ This is the interface implemented by all Vizy Block nodes.
 
 You can use the `rawNodes` to return the entire node structure as a JSON string.
 
-## Query
-```json
+:::code
+```graphql GraphQL
 {
   entries(section:"blog") {
     ... on vizy_blog_Entry {
@@ -138,19 +142,19 @@ You can use the `rawNodes` to return the entire node structure as a JSON string.
 }
 ```
 
-## Response
-```json
+```json JSON Response
 {
   "vizyField": {
     "rawNodes": "[{\"type\":\"paragraph\",\"attrs\":{\"textAlign\":\"left\"},\"content\":[{\"type\":\"text\",\"text\":\"The name \"},{\"type\":\"text\",\"marks\":[{\"type\":\"link\",\"attrs\":{\"href\":\"https://en.wikipedia.org/wiki/Gin\",\"target\":\"_blank\"}}],\"text\":\"gin\"},{\"type\":\"text\",\"text\":\" is a \"},{\"type\":\"text\",\"marks\":[{\"type\":\"bold\"}],\"text\":\"shortened\"},{\"type\":\"text\",\"text\":\" form of the \"},{\"type\":\"text\",\"marks\":[{\"type\":\"italic\"}],\"text\":\"older\"},{\"type\":\"text\",\"text\":\" English word genever.\"}]}]"
   }
 }
 ```
+:::
 
 Or, you can use `renderHtml` to return the generated HTML, as determined by Craft.
 
-## Query
-```json
+:::code
+```graphql GraphQL
 {
   entries(section:"blog") {
     ... on vizy_blog_Entry {
@@ -162,14 +166,14 @@ Or, you can use `renderHtml` to return the generated HTML, as determined by Craf
 }
 ```
 
-## Response
-```json
+```json JSON Response
 {
   "vizyField": {
     "renderHtml": "<p class=\"text-left\">The name <a href=\"https://en.wikipedia.org/wiki/Gin\" target=\"_blank\" rel=\"noopener noreferrer nofollow\">gin</a> is a <strong>shortened</strong> form of the <em>older</em> English word genever.</p>"
   }
 }
 ```
+:::
 
 ## The `nodes` query
 This query is used to query for nodes, similar to how we would normally [query nodes](docs:template-guides/querying-nodes#querying-nodes).
@@ -183,7 +187,7 @@ This query is used to query for nodes, similar to how we would normally [query n
 ### Where
 Return all paragraph nodes, and no other node types. See [query nodes](docs:template-guides/querying-nodes#querying-nodes) for more examples of how to query. This must be a JSON-encoded string.
 
-```json
+```graphql
 nodes(where: "{ \"type\": \"paragraph\" }") {
     
 }
@@ -192,7 +196,7 @@ nodes(where: "{ \"type\": \"paragraph\" }") {
 ### Limit
 Return the first 2 nodes.
 
-```json
+```graphql
 nodes(limit: 2) {
     
 }
@@ -201,7 +205,7 @@ nodes(limit: 2) {
 ### Order By
 Return all nodes ordered by their type.
 
-```json
+```graphql
 nodes(orderBy: 'type DESC') {
     
 }
