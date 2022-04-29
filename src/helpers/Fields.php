@@ -26,10 +26,13 @@ class Fields
             'customizableUi' => true,
         ];
 
-        $tabs = $fieldLayout->getTabs();
+        $tabs = array_filter($fieldLayout->getTabs(), fn(FieldLayoutTab $tab) => !empty($tab->getElements()));
 
         if (!$config['customizableTabs']) {
-            $tab = array_shift($tabs) ?? new FieldLayoutTab();
+            $tab = array_shift($tabs) ?? new FieldLayoutTab([
+                    'uid' => StringHelper::UUID(),
+                    'layout' => $fieldLayout,
+                ]);
             $tab->name = $config['pretendTabName'] ?? Craft::t('app', 'Content');
 
             // Any extra tabs?
@@ -66,9 +69,8 @@ class Fields
         ]);
         $namespacedId = $view->namespaceInputId($config['id']);
 
-        // CHANGED
         $js = <<<JS
-new Craft.VizyFieldLayoutDesigner("#$namespacedId", $jsSettings);
+new Craft.FieldLayoutDesigner("#$namespacedId", $jsSettings);
 JS;
         $view->registerJs($js);
 
@@ -84,8 +86,12 @@ JS;
         self::_setLayoutOnElements($availableNativeFields, $fieldLayout);
         self::_setLayoutOnElements($availableUiElements, $fieldLayout);
 
-        $fieldLayoutConfig = $fieldLayout->getConfig();
-        $fieldLayoutConfig['uid'] = $fieldLayout->uid;
+        // Don't call FieldLayout::getConfig() here because we want to include *all* tabs, not just non-empty ones
+        $fieldLayoutConfig = [
+            'uid' => $fieldLayout->uid,
+            'tabs' => array_map(fn(FieldLayoutTab $tab) => $tab->getConfig(), $tabs),
+        ];
+
         if ($fieldLayout->id) {
             $fieldLayoutConfig['id'] = $fieldLayout->id;
         }
@@ -190,7 +196,7 @@ JS;
             ]) .
             Html::tag('span', $tab->name) .
             ($customizable
-                ? Html::a(null, null, [
+                ? Html::a('', null, [
                     'role' => 'button',
                     'class' => ['settings', 'icon'],
                     'title' => Craft::t('app', 'Edit'),
@@ -251,7 +257,6 @@ JS;
             ]),
             'data' => [
                 'uid' => !$forLibrary ? $element->uid : false,
-                'type' => $forLibrary ? str_replace('\\', '-', get_class($element)) : false,
                 'config' => $forLibrary ? ['type' => get_class($element)] + $element->toArray() : false,
                 'has-custom-width' => $element->hasCustomWidth(),
                 'settings-namespace' => $settingsNamespace,
