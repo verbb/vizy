@@ -116,6 +116,7 @@ class Nodes
             $text = LitEmoji::unicodeToShortcode($text);
 
             // Escape any HTML tags used in the text. Maybe we're writing HTML in text?
+            $text = StringHelper::htmlDecode($text);
             $text = StringHelper::htmlEncode($text);
 
             // Run anything else not caught in the above through purifier to be extra safe
