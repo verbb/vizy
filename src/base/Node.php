@@ -121,7 +121,7 @@ class Node extends Component
 
     public function renderHtml(): ?string
     {
-        return Template::raw($this->renderNode());
+        return Template::raw((string)$this->renderNode());
     }
 
     public function renderStaticHtml(): ?string
