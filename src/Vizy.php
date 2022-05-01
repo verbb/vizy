@@ -21,7 +21,7 @@ use craft\services\ProjectConfig;
 
 use yii\base\Event;
 
-use verbb\supertable\services\SuperTableService;
+use verbb\supertable\services\Service as SuperTableService;
 
 use craft\feedme\events\RegisterFeedMeFieldsEvent;
 use craft\feedme\services\Fields as FeedMeFields;
