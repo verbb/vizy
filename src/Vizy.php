@@ -54,11 +54,14 @@ class Vizy extends Plugin
 
         $this->_registerComponents();
         $this->_registerLogTarget();
-        $this->_registerCpRoutes();
         $this->_registerFieldTypes();
         $this->_registerProjectConfigEventListeners();
         $this->_registerGraphQl();
         $this->_registerThirdPartyEventListeners();
+
+        if (Craft::$app->getRequest()->getIsCpRequest()) {
+            $this->_registerCpRoutes();
+        }
     }
 
     public function getSettingsResponse(): mixed
