@@ -1,5 +1,24 @@
 # Changelog
 
+## 2.0.0-beta.4 - 2022-05-03
+
+### Added
+- Add checks for registering events for performance.
+
+### Changed
+- Migrate to Vite and Vue 3 for performance.
+- Rename base plugin methods.
+- Replace deprecated `Craft.postActionRequest()` for JS.
+- Improve field performance when editing in the control panel.
+
+### Fixed
+- Fix link sources having duplicate sources.
+- Fix a type error when trying to render empty HTML.
+- Fix Vizy field settings not picking up field layout changes when edited.
+
+### Removed
+- Remove `cleanDeltas()`, which is no longer needed in Craft 4.
+
 ## 2.0.0-beta.3 - 2022-04-13
 
 ### Changed
