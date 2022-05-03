@@ -1,5 +1,6 @@
 <template>
     <vue-autosuggest
+        v-model="inputProps.initialValue"
         :suggestions="filteredOptions"
         :get-suggestion-value="getSuggestionValue"
         :input-props="inputProps"
@@ -8,8 +9,9 @@
         @selected="onSelected"
         @focus="updateFilteredOptions"
         @blur="onBlur"
+        @update:model-value="onInputChange"
     >
-        <template slot-scope="{suggestion}">
+        <template #default="{suggestion}">
             {{ suggestion.item.name || suggestion.item }}
             <span v-if="suggestion.item.hint" class="light">– {{ suggestion.item.hint }}</span>
         </template>
@@ -17,7 +19,7 @@
 </template>
 
 <script>
-import { VueAutosuggest } from 'vue-autosuggest';
+import { VueAutosuggest } from '@/js/vendor/vue-autosuggest';
 
 export default {
     name: 'AutoSuggest',
@@ -34,14 +36,16 @@ export default {
 
         suggestions: {
             type: [Object, Array],
-            default: () => [],
+            default: () => { return []; },
         },
 
-        value: {
+        modelValue: {
             type: String,
             default: '',
         },
     },
+
+    emits: ['update:modelValue'],
 
     data() {
         return {
@@ -50,12 +54,10 @@ export default {
             filteredOptions: [],
             inputProps: {
                 class: 'text fullwidth',
-                onInputChange: this.onInputChange,
-                initialValue: this.value,
+                initialValue: this.modelValue,
                 style: '',
                 id: this.id,
                 name: this.id,
-                size: '',
                 maxlength: '',
                 autofocus: false,
                 disabled: false,
@@ -78,8 +80,8 @@ export default {
                 return;
             }
 
-            var filtered = [];
-            var i, j, sectionFilter, item, name;
+            const filtered = [];
+            let i, j, sectionFilter, item, name;
 
             for (i = 0; i < this.suggestions.length; i++) {
                 sectionFilter = [];
@@ -97,8 +99,8 @@ export default {
 
                 if (sectionFilter.length) {
                     sectionFilter.sort((a, b) => {
-                        var scoreA = this.scoreItem(a, this.query);
-                        var scoreB = this.scoreItem(b, this.query);
+                        const scoreA = this.scoreItem(a, this.query);
+                        const scoreB = this.scoreItem(b, this.query);
 
                         if (scoreA === scoreB) {
                             return 0;
@@ -118,7 +120,7 @@ export default {
         },
 
         scoreItem(item) {
-            var score = 0;
+            let score = 0;
 
             if (item.name.toLowerCase().indexOf(this.query) !== -1) {
                 score += 100 + this.query.length / item.name.length;
@@ -133,11 +135,11 @@ export default {
 
         onSelected(option) {
             this.selected = option.item;
-            this.$emit('input', option.item.name);
+            this.$emit('update:modelValue', option.item.name);
 
             // Bring focus back to the input if they selected an alias
             if (option.item.name[0] == '@') {
-                var input = this.$el.querySelector('input');
+                const input = this.$el.querySelector('input');
 
                 input.focus();
                 input.selectionStart = input.selectionEnd = input.value.length;

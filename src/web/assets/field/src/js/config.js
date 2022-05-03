@@ -1,66 +1,75 @@
-import Vue from 'vue';
-import Axios from 'axios';
-import { stringify } from 'qs';
+import { createApp } from 'vue';
+import mitt from 'mitt';
 
-import * as Plugins from './plugins';
-import * as Filters from './filters';
+// Vue plugins
+import VTooltip from 'floating-vue';
+import { vfmPlugin } from 'vue-final-modal';
+import VueUniqueId from '@/js/vendor/vue-unique-id';
 
-const globals = require('./utils/globals');
+// Allows us to create a Vue app with global properties and loading plugins
+export const createVueApp = (props) => {
+    const app = createApp({
+        // Set the delimeters to not mess around with Twig
+        delimiters: ['${', '}'],
 
-//
-// Create a config object to pass back to Vue.js when setting up for the first time
-//
+        // Add in any props defined for _this_ instance of the app, like components
+        // data, methods, etc.
+        ...props,
+    });
 
-const Config = {
-    install(Vue) {
-        // Global events can be accessed via `this.$events`
-        Vue.prototype.$events = new Vue();
+    // Fix Vue warnings
+    app.config.unwrapInjectedRef = true;
 
-        //
-        // Setup Globals
-        //
+    //
+    // Plugins
+    // Include any globally-available plugins for the app.
+    // Be careful about adding too much here. You can always include them per-app.
+    //
 
-        // Attach Axios instance to Vue, so we can use `this.$axios.get('/')`
-        Vue.prototype.$axios = Axios.create({
-            transformRequest: [
-                function(data, headers) {
-                    const craftHeaders = Craft._actionHeaders();
-                    headers['X-Requested-With'] = 'XMLHttpRequest';
-                    for (const k in craftHeaders) {
-                        if (Object.prototype.hasOwnProperty.call(craftHeaders, k)) {
-                            headers[k] = craftHeaders[k];
-                        }
-                    }
+    // Vue Final Modal
+    // https://v3.vue-final-modal.org/
+    app.use(vfmPlugin);
 
-                    // If this is FormData, no need to serialize
-                    if (data instanceof FormData) {
-                        return data;
-                    }
+    // Vue Unique ID
+    // Custom - waiting for https://github.com/berniegp/vue-unique-id
+    app.use(VueUniqueId);
 
-                    return stringify(data);
+    // Vue Tooltips
+    // https://github.com/Akryum/floating-vue
+    app.use(VTooltip, {
+        themes: {
+            'vui-tooltip': {
+                $extend: 'tooltip',
+                delay: {
+                    show: 0,
+                    hide: 0,
                 },
-            ],
-        });
+            },
+        },
+    });
 
-        // TODO: Try and figure out .env variables that aren't compiled
-        Vue.prototype.$isDebug = !process.env.NODE_ENV || process.env.NODE_ENV === 'development';
+    //
+    // Global properties
+    // Create global properties here, shared across multiple Vue apps.
+    //
 
-        //
-        // Setup Plugins
-        //
+    // Provide `t()` for Craft's translations in SFCs.
+    app.config.globalProperties.t = Craft.t;
 
-        Object.values(Plugins).forEach((Plugin) => {
-            Vue.use(Plugin);
-        });
+    // Global function to easily clone an object
+    app.config.globalProperties.clone = function(value) {
+        if (value === undefined) {
+            return undefined;
+        }
 
-        //
-        // Setup Filters
-        //
-
-        Object.values(Filters).forEach((Filter) => {
-            Vue.use(Filter);
-        });
+        return JSON.parse(JSON.stringify(value));
     },
-};
 
-export default Config;
+    // Global events. Accessible via `this.$events` in SFCs.
+    app.config.globalProperties.$events = mitt();
+
+    // TODO: Try and figure out .env variables that aren't compiled
+    app.config.globalProperties.$isDebug = !process.env.NODE_ENV || process.env.NODE_ENV === 'development';
+
+    return app;
+};

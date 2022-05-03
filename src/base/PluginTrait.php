@@ -5,11 +5,14 @@ use verbb\vizy\Vizy;
 use verbb\vizy\services\Icons;
 use verbb\vizy\services\Nodes;
 use verbb\vizy\services\Service;
+use verbb\vizy\web\assets\field\VizyAsset;
 use verbb\base\BaseHelper;
 
 use Craft;
 
 use yii\log\Logger;
+
+use nystudio107\pluginvite\services\VitePluginService;
 
 trait PluginTrait
 {
@@ -55,6 +58,11 @@ trait PluginTrait
         return $this->get('service');
     }
 
+    public function getVite(): VitePluginService
+    {
+        return $this->get('vite');
+    }
+
 
     // Private Methods
     // =========================================================================
@@ -65,6 +73,17 @@ trait PluginTrait
             'icons' => Icons::class,
             'nodes' => Nodes::class,
             'service' => Service::class,
+            'vite' => [
+                'class' => VitePluginService::class,
+                'assetClass' => VizyAsset::class,
+                'useDevServer' => true,
+                'devServerPublic' => 'http://localhost:4001/',
+                'errorEntry' => 'js/main.js',
+                'cacheKeySuffix' => '',
+                'devServerInternal' => 'http://localhost:4001/',
+                'checkDevServer' => true,
+                'includeReactRefreshShim' => false,
+            ],
         ]);
 
         BaseHelper::registerModule();

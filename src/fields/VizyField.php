@@ -6,6 +6,7 @@ use verbb\vizy\elements\Block as BlockElement;
 use verbb\vizy\events\ModifyVizyConfigEvent;
 use verbb\vizy\events\RegisterLinkOptionsEvent;
 use verbb\vizy\gql\types\NodeCollectionType;
+use verbb\vizy\helpers\Plugin;
 use verbb\vizy\models\BlockType;
 use verbb\vizy\models\NodeCollection;
 use verbb\vizy\nodes\VizyBlock;
@@ -129,7 +130,8 @@ class VizyField extends Field
 
         $idPrefix = StringHelper::randomString(10);
 
-        $view->registerAssetBundle(VizyAsset::class);
+        Plugin::registerAsset('field/src/js/vizy.js');
+
         $view->registerJs('new Craft.Vizy.Settings(' .
             Json::encode($idPrefix, JSON_UNESCAPED_UNICODE) . ', ' .
             Json::encode($fieldData, JSON_UNESCAPED_UNICODE) . ', ' .
@@ -218,7 +220,8 @@ class VizyField extends Field
         //     ');');
         // }
 
-        $view->registerAssetBundle(VizyAsset::class);
+        Plugin::registerAsset('field/src/js/vizy.js');
+
         $view->registerJs('new Craft.Vizy.Input(' .
             '"' . $view->namespaceInputId($id) . '", ' .
             '"' . $view->namespaceInputName($this->handle) . '"' .

@@ -8,17 +8,18 @@
         @confirm="confirmModal"
         @cancel="cancelModal"
     >
-        <template #title>{{ $attrs['modal-title'] | t('vizy') }}</template>
+        <template #title>{{ t('vizy', $attrs['modal-title']) }}</template>
 
+        <!-- eslint-disable vue/no-mutating-props -->
         <div id="url-field" class="field" :class="{ 'has-errors': errors.includes('url') }">
             <div class="heading">
-                <label id="url-label" class="required" for="url">{{ 'URL' | t('vizy') }}</label>
+                <label id="url-label" class="required" for="url">{{ t('vizy', 'URL') }}</label>
             </div>
 
             <div class="input ltr" :class="{ 'errors': errors.includes('url') }">
                 <input
                     id="url"
-                    v-model="value.url"
+                    v-model="modelValue.url"
                     type="text"
                     class="text fullwidth"
                     autofocus=""
@@ -28,40 +29,42 @@
             </div>
 
             <ul v-if="errors.includes('url')" class="errors">
-                <li>{{ 'URL cannot be blank.' | t('vizy') }}</li>
+                <li>{{ t('vizy', 'URL cannot be blank.') }}</li>
             </ul>
         </div>
 
         <div id="text-field" class="field">
             <div class="heading">
-                <label id="text-label" for="text">{{ 'Text' | t('vizy') }}</label>
+                <label id="text-label" for="text">{{ t('vizy', 'Text') }}</label>
             </div>
 
             <div class="input ltr">
                 <input
                     id="text"
-                    v-model="value.text"
+                    v-model="modelValue.text"
                     type="text"
                     class="text fullwidth"
                     autofocus=""
                     autocomplete="off"
                 >
-            </div>    
+            </div>
         </div>
 
-        <div id="target-field" class="checkboxfield field">            
+        <div id="target-field" class="checkboxfield field">
             <div class="input ltr">
                 <input
                     :id="targetId"
-                    v-model="value.target"
+                    v-model="modelValue.target"
                     type="checkbox"
                     class="checkbox"
                 >
                 <label :for="targetId">
-                    {{ 'Open link in new tab' | t('vizy') }}
+                    {{ t('vizy', 'Open link in new tab') }}
                 </label>
-            </div>    
+            </div>
         </div>
+
+        <!-- eslint-enable vue/no-mutating-props -->
     </menu-bar-modal>
 </template>
 
@@ -94,13 +97,15 @@ export default {
             default: false,
         },
 
-        value: {
+        modelValue: {
             type: Object,
             default: () => {
                 return this.proxyValue;
             },
         },
     },
+
+    emits: ['update:modelValue', 'close'],
 
     data() {
         return {
@@ -133,7 +138,7 @@ export default {
         },
 
         proxyValue(newValue) {
-            this.$emit('input', newValue);
+            this.$emit('update:modelValue', newValue);
         },
     },
 
@@ -145,20 +150,22 @@ export default {
         confirmModal() {
             this.errors = [];
 
-            if (!this.value.url) {
+            if (!this.modelValue.url) {
                 this.errors.push('url');
 
                 return;
             }
 
-            const data = { href: this.value.url, target: this.value.target ? '_blank' : '' };
+            const data = { href: this.modelValue.url, target: this.modelValue.target ? '_blank' : '' };
 
             // Save the cursor position so we can restore it afterwards
             const { selection } = this.editor.state.tr;
             const cursorPos = selection.$cursor ? selection.$cursor.pos : selection.from;
 
             // Update the text attributes. Text is a little tricky for the moment
-            this.editor.chain().focus().command(({ commands, tr, state, dispatch }) => {
+            this.editor.chain().focus().command(({
+                commands, tr, state, dispatch,
+            }) => {
                 // From the focused link, (cursor or highlighted text) get the full mark position range.
                 // We need this to properly update the text and attributes.
                 let range = getMarkRange(state.doc.resolve(tr.selection.anchor), state.schema.marks.link);
@@ -169,10 +176,10 @@ export default {
                     range = { from: tr.selection.from, to: tr.selection.to };
                 }
 
-                if (this.value.text) {
+                if (this.modelValue.text) {
                     // Cast as string, just in case.
-                    const text = this.value.text.toString();
-                    
+                    const text = this.modelValue.text.toString();
+
                     // Insert the new text, replacing the old range
                     tr.insertText(text, range.from, range.to);
 
@@ -183,7 +190,9 @@ export default {
                     // And re-select it so our attribute-update actually works.
                     tr.setSelection(new TextSelection($start, $end));
                 }
-            }).setLink(data).command(({ commands, tr, state, dispatch }) => {
+            }).setLink(data).command(({
+                commands, tr, state, dispatch,
+            }) => {
                 // Restore the cursor once the mark updates have been done
                 if (cursorPos) {
                     tr.setSelection(TextSelection.create(tr.doc, cursorPos));

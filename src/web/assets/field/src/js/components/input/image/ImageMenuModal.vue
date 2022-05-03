@@ -9,56 +9,57 @@
         @confirm="confirmModal"
         @cancel="cancelModal"
     >
-        <template #title>{{ $attrs['modal-title'] | t('vizy') }}</template>
+        <template #title>{{ t('vizy', $attrs['modal-title']) }}</template>
 
+        <!-- eslint-disable vue/no-mutating-props -->
         <div class="vizy-modal-image-preview">
-            <img :src="value.src">
+            <img :src="modelValue.src">
         </div>
 
         <div class="vizy-modal-image-fields">
             <div id="alt-field" class="field">
                 <div class="heading">
-                    <label id="alt-label" for="alt">{{ 'Alt Text' | t('vizy') }}</label>
+                    <label id="alt-label" for="alt">{{ t('vizy', 'Alt Text') }}</label>
                 </div>
 
                 <div class="input ltr">
                     <input
                         id="alt"
-                        v-model="value.alt"
+                        v-model="modelValue.alt"
                         type="text"
                         class="text fullwidth"
                         autofocus=""
                         autocomplete="off"
                     >
-                </div>    
+                </div>
             </div>
 
             <div id="title-field" class="field">
                 <div class="heading">
-                    <label id="title-label" for="title">{{ 'Title' | t('vizy') }}</label>
+                    <label id="title-label" for="title">{{ t('vizy', 'Title') }}</label>
                 </div>
 
                 <div class="input ltr">
                     <input
                         id="title"
-                        v-model="value.title"
+                        v-model="modelValue.title"
                         type="text"
                         class="text fullwidth"
                         autofocus=""
                         autocomplete="off"
                     >
-                </div>    
+                </div>
             </div>
 
             <div id="url-field" class="field">
                 <div class="heading">
-                    <label id="url-label" for="url">{{ 'URL' | t('vizy') }}</label>
+                    <label id="url-label" for="url">{{ t('vizy', 'URL') }}</label>
                 </div>
 
                 <div class="input ltr">
                     <input
                         id="url"
-                        v-model="value.url"
+                        v-model="modelValue.url"
                         type="text"
                         class="text fullwidth"
                         autofocus=""
@@ -67,38 +68,39 @@
                 </div>
             </div>
 
-            <div id="target-field" class="checkboxfield field">            
+            <div id="target-field" class="checkboxfield field">
                 <div class="input ltr">
                     <input
                         :id="targetId"
-                        v-model="value.target"
+                        v-model="modelValue.target"
                         type="checkbox"
                         class="checkbox"
                     >
                     <label :for="targetId">
-                        {{ 'Open link in new tab' | t('vizy') }}
+                        {{ t('vizy', 'Open link in new tab') }}
                     </label>
-                </div>    
+                </div>
             </div>
 
             <div id="transform-field" class="field first">
                 <div class="heading">
-                    <label id="transform-label" for="transform">{{ 'Transform' | t('vizy') }}</label>
+                    <label id="transform-label" for="transform">{{ t('vizy', 'Transform') }}</label>
                 </div>
 
                 <div class="input ltr">
                     <div class="select">
-                        <select id="transform" v-model="value.transform">
-                            <option value="">{{ 'No Transform' | t('vizy') }}</option>
+                        <select id="transform" v-model="modelValue.transform">
+                            <option value="">{{ t('vizy', 'No Transform') }}</option>
 
                             <option v-for="(transform, i) in transforms" :key="i" :value="transform.handle">
                                 {{ transform.name }}
                             </option>
                         </select>
                     </div>
-                </div>    
+                </div>
             </div>
         </div>
+        <!-- eslint-enable vue/no-mutating-props -->
     </menu-bar-modal>
 </template>
 
@@ -131,13 +133,15 @@ export default {
             default: false,
         },
 
-        value: {
+        modelValue: {
             type: Object,
             default: () => {
                 return this.proxyValue;
             },
         },
     },
+
+    emits: ['update:modelValue', 'close'],
 
     data() {
         return {
@@ -160,7 +164,7 @@ export default {
         elementSiteId() {
             return this.field.settings.elementSiteId;
         },
-        
+
         transforms() {
             return this.field.settings.transforms;
         },
@@ -178,17 +182,17 @@ export default {
         },
 
         proxyValue(newValue) {
-            this.$emit('input', newValue);
+            this.$emit('update:modelValue', newValue);
         },
     },
 
     methods: {
-        _buildAssetUrl: (assetId, assetUrl, transform) => assetUrl + '#asset:' + assetId + ':' + (transform ? 'transform:' + transform : 'url'),
+        _buildAssetUrl: (assetId, assetUrl, transform) => { return `${assetUrl}#asset:${assetId}:${transform ? `transform:${transform}` : 'url'}`; },
 
-        _removeTransformFromUrl: (url) => url.replace(/(.*)(_[a-z0-9+].*\/)(.*)/, '$1$3'),
+        _removeTransformFromUrl: (url) => { return url.replace(/(.*)(_[a-z0-9+].*\/)(.*)/, '$1$3'); },
 
         _getTransformUrl(assetId, handle, callback) {
-            var data = {
+            const data = {
                 assetId,
                 handle,
             };
@@ -207,26 +211,28 @@ export default {
         },
 
         confirmModal() {
+            /* eslint-disable vue/no-mutating-props */
             this.errors = [];
 
-            let url = this._removeTransformFromUrl(this.value.src.split('#')[0]);
+            const url = this._removeTransformFromUrl(this.modelValue.src.split('#')[0]);
 
             // Set the target value properly
-            this.value.target = this.value.target ? '_blank' : '';
+            this.modelValue.target = this.modelValue.target ? '_blank' : '';
 
-            if (this.value.transform) {
-                this._getTransformUrl(this.value.id, this.value.transform, (url) => {
-                    this.value.src = this._buildAssetUrl(this.value.id, url, this.value.transform);
+            if (this.modelValue.transform) {
+                this._getTransformUrl(this.modelValue.id, this.modelValue.transform, (url) => {
+                    this.modelValue.src = this._buildAssetUrl(this.modelValue.id, url, this.modelValue.transform);
 
-                    this.editor.chain().focus().setImage(this.value).run();
+                    this.editor.chain().focus().setImage(this.modelValue).run();
                 });
             } else {
-                this.value.src = url;
+                this.modelValue.src = url;
 
-                this.editor.chain().focus().setImage(this.value).run();
+                this.editor.chain().focus().setImage(this.modelValue).run();
             }
 
             this.proxyShow = false;
+            /* eslint-enable vue/no-mutating-props */
         },
     },
 };

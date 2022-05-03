@@ -1,5 +1,5 @@
 import { Node, mergeAttributes } from '@tiptap/core';
-import { VueNodeViewRenderer } from '@tiptap/vue-2';
+import { VueNodeViewRenderer } from '@tiptap/vue-3';
 import { Plugin, PluginKey, NodeSelection } from 'prosemirror-state';
 
 import VizyBlockView from './VizyBlock.vue';
@@ -31,7 +31,7 @@ export default Node.create({
         return [
             {
                 tag: 'vizy-block',
-                getAttrs: dom => JSON.parse(dom.innerHTML),
+                getAttrs: (dom) => { return JSON.parse(dom.innerHTML); },
             },
         ];
     },
@@ -42,16 +42,20 @@ export default Node.create({
 
     addCommands() {
         return {
-            setVizyBlock: (options) => ({ tr, dispatch, view, state }) => {
-                const { selection } = tr;
-                const node = this.type.create(options);
+            setVizyBlock: (options) => {
+                return ({
+                    tr, dispatch, view, state,
+                }) => {
+                    const { selection } = tr;
+                    const node = this.type.create(options);
 
-                if (dispatch) {
-                    tr.insert(selection.from, state.schema.nodes.paragraph.create());
-                    tr.replaceRangeWith(selection.from, selection.to, node);
-                }
+                    if (dispatch) {
+                        tr.insert(selection.from, state.schema.nodes.paragraph.create());
+                        tr.replaceRangeWith(selection.from, selection.to, node);
+                    }
 
-                return true;
+                    return true;
+                };
             },
         };
     },
@@ -65,11 +69,11 @@ export default Node.create({
             new Plugin({
                 props: {
                     handleKeyDown: (view, event) => {
-                        // Prevent _any_ key from clearing block. As soon as you start typing, 
+                        // Prevent _any_ key from clearing block. As soon as you start typing,
                         // and a block is focused, it'll blast the block away.
                         view.state.typing = true;
                     },
-                    
+
                     handlePaste: (view, event, slice) => {
                         // Prevent pasting overwriting block
                         view.state.pasting = true;
@@ -77,11 +81,11 @@ export default Node.create({
                 },
 
                 filterTransaction: (transaction, state) => {
-                    var result = true;
+                    let result = true;
 
                     // Check if our flags are set, and if the selected node is a vizy block
                     if (state.typing || state.pasting) {
-                        transaction.mapping.maps.forEach(map => {
+                        transaction.mapping.maps.forEach((map) => {
                             map.forEach((oldStart, oldEnd, newStart, newEnd) => {
                                 state.doc.nodesBetween(oldStart, oldEnd, (node, number, pos, parent, index) => {
                                     if (node.type.name === 'vizyBlock') {

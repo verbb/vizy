@@ -55,7 +55,7 @@ export const generateKebab = function(sourceValue) {
     kebab = Craft.asciiString(kebab);
 
     // Get the "words"
-    let words = Craft.filterArray(kebab.split(/[^a-z0-9]+/));
+    const words = Craft.filterArray(kebab.split(/[^a-z0-9]+/));
     kebab = words.join('-');
 
     return kebab;

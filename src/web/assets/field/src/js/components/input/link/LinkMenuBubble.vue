@@ -1,8 +1,8 @@
 <template>
     <div class="vui-link-menu-bubble" style="display: none;">
         <a :href="model.url" target="_blank" v-html="truncate(model.url, 30)"></a>
-        <a href="#" @click.prevent="edit">{{ 'Edit' | t('vizy') }}</a>
-        <a href="#" @click.prevent="unlink">{{ 'Unlink' | t('vizy') }}</a>
+        <a href="#" @click.prevent="edit">{{ t('vizy', 'Edit') }}</a>
+        <a href="#" @click.prevent="unlink">{{ t('vizy', 'Unlink') }}</a>
 
         <link-menu-modal
             v-model="model"
@@ -73,7 +73,7 @@ export default {
         renderBubble() {
             const { doc, selection, schema } = this.editor.view.state;
 
-            let range = getMarkRange(doc.resolve(selection.anchor), schema.marks.link);
+            const range = getMarkRange(doc.resolve(selection.anchor), schema.marks.link);
 
             if (range) {
                 const $node = this.editor.view.docView.domFromPos(range.from).node;
@@ -98,7 +98,7 @@ export default {
                         theme: 'vui-menu-bubble',
                         hideOnClick: true,
                         zIndex: 1000,
-                        appendTo: () => document.body,
+                        appendTo: () => { return document.body; },
                     });
                 }
             }
@@ -112,7 +112,7 @@ export default {
         },
 
         truncate(str, n) {
-            return (str && str.length > n) ? str.substr(0, n-1) + '&hellip;' : str;
+            return (str && str.length > n) ? `${str.substr(0, n - 1)}&hellip;` : str;
         },
 
         edit() {

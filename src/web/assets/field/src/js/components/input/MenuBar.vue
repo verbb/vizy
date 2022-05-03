@@ -36,7 +36,7 @@ export default {
 
         buttons: {
             type: Array,
-            default: () => [],
+            default: () => { return []; },
         },
     },
 
@@ -47,145 +47,145 @@ export default {
                     name: 'bold',
                     svg: 'bold',
                     title: Craft.t('vizy', 'Bold'),
-                    action: () => this.editor.chain().focus().toggleBold().run(),
-                    isActive: () => this.editor.isActive('bold'),
+                    action: () => { return this.editor.chain().focus().toggleBold().run(); },
+                    isActive: () => { return this.editor.isActive('bold'); },
                 },
                 {
                     name: 'italic',
                     svg: 'italic',
                     title: Craft.t('vizy', 'Italic'),
-                    action: () => this.editor.chain().focus().toggleItalic().run(),
-                    isActive: () => this.editor.isActive('italic'),
+                    action: () => { return this.editor.chain().focus().toggleItalic().run(); },
+                    isActive: () => { return this.editor.isActive('italic'); },
                 },
                 {
                     name: 'strikethrough',
                     svg: 'strikethrough',
                     title: Craft.t('vizy', 'Strike'),
-                    action: () => this.editor.chain().focus().toggleStrike().run(),
-                    isActive: () => this.editor.isActive('strike'),
+                    action: () => { return this.editor.chain().focus().toggleStrike().run(); },
+                    isActive: () => { return this.editor.isActive('strike'); },
                 },
                 {
                     name: 'subscript',
                     svg: 'subscript',
                     title: Craft.t('vizy', 'Subscript'),
-                    action: () => this.editor.chain().focus().toggleSubscript().run(),
-                    isActive: () => this.editor.isActive('subscript'),
+                    action: () => { return this.editor.chain().focus().toggleSubscript().run(); },
+                    isActive: () => { return this.editor.isActive('subscript'); },
                 },
                 {
                     name: 'superscript',
                     svg: 'superscript',
                     title: Craft.t('vizy', 'Superscript'),
-                    action: () => this.editor.chain().focus().toggleSuperscript().run(),
-                    isActive: () => this.editor.isActive('superscript'),
+                    action: () => { return this.editor.chain().focus().toggleSuperscript().run(); },
+                    isActive: () => { return this.editor.isActive('superscript'); },
                 },
                 {
                     name: 'underline',
                     svg: 'underline',
                     title: Craft.t('vizy', 'Underline'),
-                    action: () => this.editor.chain().focus().toggleUnderline().run(),
-                    isActive: () => this.editor.isActive('underline'),
+                    action: () => { return this.editor.chain().focus().toggleUnderline().run(); },
+                    isActive: () => { return this.editor.isActive('underline'); },
                 },
                 {
                     name: 'code',
                     svg: 'brackets-curly',
                     title: Craft.t('vizy', 'Inline Code'),
-                    action: () => this.editor.chain().focus().toggleCode().run(),
-                    isActive: () => this.editor.isActive('code'),
+                    action: () => { return this.editor.chain().focus().toggleCode().run(); },
+                    isActive: () => { return this.editor.isActive('code'); },
                 },
                 {
                     name: 'highlight',
                     icon: 'highlighter',
                     title: Craft.t('vizy', 'Highlight'),
-                    action: () => this.editor.chain().focus().toggleHighlight().run(),
-                    isActive: () => this.editor.isActive('highlight'),
+                    action: () => { return this.editor.chain().focus().toggleHighlight().run(); },
+                    isActive: () => { return this.editor.isActive('highlight'); },
                 },
                 {
                     name: 'paragraph',
                     icon: 'paragraph',
                     title: Craft.t('vizy', 'Paragraph'),
-                    action: () => this.editor.chain().focus().setParagraph().run(),
+                    action: () => { return this.editor.chain().focus().setParagraph().run(); },
                 },
                 {
                     name: 'unordered-list',
                     svg: 'list-ul',
                     title: Craft.t('vizy', 'Bullet List'),
-                    action: () => this.editor.chain().focus().toggleBulletList().run(),
-                    isActive: () => this.editor.isActive('bulletList'),
+                    action: () => { return this.editor.chain().focus().toggleBulletList().run(); },
+                    isActive: () => { return this.editor.isActive('bulletList'); },
                 },
                 {
                     name: 'ordered-list',
                     svg: 'list-ol',
                     title: Craft.t('vizy', 'Ordered List'),
-                    action: () => this.editor.chain().focus().toggleOrderedList().run(),
-                    isActive: () => this.editor.isActive('orderedList'),
+                    action: () => { return this.editor.chain().focus().toggleOrderedList().run(); },
+                    isActive: () => { return this.editor.isActive('orderedList'); },
                 },
                 {
                     name: 'code-block',
                     svg: 'code',
                     title: Craft.t('vizy', 'Code Block'),
-                    action: () => this.editor.chain().focus().toggleCodeBlock().run(),
-                    isActive: () => this.editor.isActive('codeBlock'),
+                    action: () => { return this.editor.chain().focus().toggleCodeBlock().run(); },
+                    isActive: () => { return this.editor.isActive('codeBlock'); },
                 },
                 {
                     name: 'quote',
                     icon: 'quote-right',
                     title: Craft.t('vizy', 'Blockquote'),
-                    action: () => this.editor.chain().focus().toggleBlockquote().run(),
-                    isActive: () => this.editor.isActive('blockquote'),
+                    action: () => { return this.editor.chain().focus().toggleBlockquote().run(); },
+                    isActive: () => { return this.editor.isActive('blockquote'); },
                 },
                 {
                     name: 'hr',
                     svg: 'horizontal-rule',
                     title: Craft.t('vizy', 'Horizontal Rule'),
-                    action: () => this.editor.chain().focus().setHorizontalRule().run(),
+                    action: () => { return this.editor.chain().focus().setHorizontalRule().run(); },
                 },
                 {
                     name: 'line-break',
                     svg: 'page-break',
                     title: Craft.t('vizy', 'Line Break'),
-                    action: () => this.editor.chain().focus().setHardBreak().run(),
+                    action: () => { return this.editor.chain().focus().setHardBreak().run(); },
                 },
                 {
                     name: 'clear-format',
                     svg: 'remove-format',
                     title: Craft.t('vizy', 'Clear Format'),
-                    action: () => this.editor.chain().focus().clearNodes().unsetAllMarks().run(),
+                    action: () => { return this.editor.chain().focus().clearNodes().unsetAllMarks().run(); },
                 },
                 {
                     name: 'undo',
                     svg: 'undo',
                     title: Craft.t('vizy', 'Undo'),
-                    action: () => this.editor.chain().focus().undo().run(),
+                    action: () => { return this.editor.chain().focus().undo().run(); },
                 },
                 {
                     name: 'redo',
                     svg: 'redo',
                     title: Craft.t('vizy', 'Redo'),
-                    action: () => this.editor.chain().focus().redo().run(),
+                    action: () => { return this.editor.chain().focus().redo().run(); },
                 },
                 {
                     name: 'align-left',
                     icon: 'align-left',
                     title: Craft.t('vizy', 'Align Left'),
-                    action: () => this.editor.chain().focus().setTextAlign('left').run(),
+                    action: () => { return this.editor.chain().focus().setTextAlign('left').run(); },
                 },
                 {
                     name: 'align-center',
                     icon: 'align-center',
                     title: Craft.t('vizy', 'Align Center'),
-                    action: () => this.editor.chain().focus().setTextAlign('center').run(),
+                    action: () => { return this.editor.chain().focus().setTextAlign('center').run(); },
                 },
                 {
                     name: 'align-right',
                     icon: 'align-right',
                     title: Craft.t('vizy', 'Align Right'),
-                    action: () => this.editor.chain().focus().setTextAlign('right').run(),
+                    action: () => { return this.editor.chain().focus().setTextAlign('right').run(); },
                 },
                 {
                     name: 'align-justify',
                     icon: 'align-justify',
                     title: Craft.t('vizy', 'Align Justify'),
-                    action: () => this.editor.chain().focus().setTextAlign('justify').run(),
+                    action: () => { return this.editor.chain().focus().setTextAlign('justify').run(); },
                 },
                 {
                     name: 'formatting',
@@ -199,42 +199,42 @@ export default {
                         {
                             name: 'code-block',
                             title: Craft.t('vizy', 'Code Block'),
-                            action: () => this.editor.chain().focus().toggleCodeBlock().run(),
+                            action: () => { return this.editor.chain().focus().toggleCodeBlock().run(); },
                         },
                         {
                             name: 'blockquote',
                             title: Craft.t('vizy', 'Blockquote'),
-                            action: () => this.editor.chain().focus().toggleBlockquote().run(),
+                            action: () => { return this.editor.chain().focus().toggleBlockquote().run(); },
                         },
                         {
                             name: 'h1',
                             title: Craft.t('vizy', 'Heading 1'),
-                            action: () => this.editor.chain().focus().toggleHeading({ level: 1 }).run(),
+                            action: () => { return this.editor.chain().focus().toggleHeading({ level: 1 }).run(); },
                         },
                         {
                             name: 'h2',
                             title: Craft.t('vizy', 'Heading 2'),
-                            action: () => this.editor.chain().focus().toggleHeading({ level: 2 }).run(),
+                            action: () => { return this.editor.chain().focus().toggleHeading({ level: 2 }).run(); },
                         },
                         {
                             name: 'h3',
                             title: Craft.t('vizy', 'Heading 3'),
-                            action: () => this.editor.chain().focus().toggleHeading({ level: 3 }).run(),
+                            action: () => { return this.editor.chain().focus().toggleHeading({ level: 3 }).run(); },
                         },
                         {
                             name: 'h4',
                             title: Craft.t('vizy', 'Heading 4'),
-                            action: () => this.editor.chain().focus().toggleHeading({ level: 4 }).run(),
+                            action: () => { return this.editor.chain().focus().toggleHeading({ level: 4 }).run(); },
                         },
                         {
                             name: 'h5',
                             title: Craft.t('vizy', 'Heading 5'),
-                            action: () => this.editor.chain().focus().toggleHeading({ level: 5 }).run(),
+                            action: () => { return this.editor.chain().focus().toggleHeading({ level: 5 }).run(); },
                         },
                         {
                             name: 'h6',
                             title: Craft.t('vizy', 'Heading 6'),
-                            action: () => this.editor.chain().focus().toggleHeading({ level: 6 }).run(),
+                            action: () => { return this.editor.chain().focus().toggleHeading({ level: 6 }).run(); },
                         },
                     ],
                 },
@@ -243,20 +243,20 @@ export default {
                     svg: 'link',
                     title: Craft.t('vizy', 'Link'),
                     component: 'LinkMenuBarItem',
-                    isActive: () => this.editor.isActive('link'),
+                    isActive: () => { return this.editor.isActive('link'); },
                 },
                 {
                     name: 'image',
                     icon: 'image',
                     title: Craft.t('vizy', 'Image'),
                     component: 'ImageMenuBarItem',
-                    isActive: () => this.editor.isActive('image'),
+                    isActive: () => { return this.editor.isActive('image'); },
                 },
                 {
                     name: 'html',
                     svg: 'file-code',
                     title: Craft.t('vizy', 'HTML'),
-                    action: () => this.editor.emit('vui:code-editor-toggle'),
+                    action: () => { return this.editor.emit('vui:code-editor-toggle'); },
                 },
             ],
         };
@@ -264,10 +264,10 @@ export default {
 
     computed: {
         availableButtons() {
-            var buttons = [];
+            const buttons = [];
 
-            this.buttons.forEach(buttonName => {
-                var button = this.allButtons.find(x => x.name === buttonName);
+            this.buttons.forEach((buttonName) => {
+                const button = this.allButtons.find((x) => { return x.name === buttonName; });
 
                 if (button) {
                     // Handle special-cases and sub-options. Maybe move to other components?
@@ -285,10 +285,10 @@ export default {
 
     methods: {
         getEnabledOptions(button, collection) {
-            var options = [];
+            const options = [];
 
-            collection.forEach(optionName => {
-                var option = button.options.find(x => x.name === optionName);
+            collection.forEach((optionName) => {
+                const option = button.options.find((x) => { return x.name === optionName; });
 
                 if (option) {
                     options.push(option);

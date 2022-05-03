@@ -1,5 +1,5 @@
 <template>
-    <button v-tooltip="title" class="btn vui-toolbar-btn" :class="{ 'active': active }" @click.prevent="runAction(action)" @mousedown="onMouseDown">
+    <button v-tooltip="{ content: title, theme: 'vui-tooltip' }" class="btn vui-toolbar-btn" :class="{ 'active': active }" @click.prevent="runAction(action)" @mousedown="onMouseDown">
         <svg-icon :content="{ icon, svg }" />
 
         <div v-if="hasDropdown()" class="vui-toolbar-dropdown-container" :class="'vui-toolbar-dropdown-' + name" style="display: none;">
@@ -32,12 +32,12 @@ export default {
             type: Object,
             default: null,
         },
-        
+
         icon: {
             type: String,
             default: null,
         },
-        
+
         svg: {
             type: String,
             default: null,
@@ -65,7 +65,7 @@ export default {
 
         options: {
             type: Array,
-            default: () => [],
+            default: () => { return []; },
         },
     },
 
@@ -84,7 +84,7 @@ export default {
     mounted() {
         this.$nextTick(() => {
             if (this.hasDropdown) {
-                const $template = this.$el.querySelector('.vui-toolbar-dropdown-' + this.name);
+                const $template = this.$el.querySelector(`.vui-toolbar-dropdown-${this.name}`);
                 const $button = this.$el;
 
                 if ($template && $button) {

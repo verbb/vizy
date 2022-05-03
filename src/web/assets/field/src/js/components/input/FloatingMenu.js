@@ -6,7 +6,7 @@ class Menu {
         this.options = {
             ...{
                 element: null,
-                onUpdate: () => false,
+                onUpdate: () => { return false; },
             },
             ...options,
         };
@@ -46,7 +46,7 @@ class Menu {
     }
 
     isNodeEmpty($node) {
-        var nodeJson = $node.toJSON();
+        const nodeJson = $node.toJSON();
 
         // Roll our own version of `isNodeEmpty` to handle text alignment and a few other cases.
         // We just check if the current node has no inner content.

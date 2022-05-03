@@ -11,7 +11,7 @@
 
                     <div class="vui-block-items-header">
                         <span class="vui-block-items-header-text" contenteditable="true" @blur="group.name = $event.target.innerText" v-html="group.name"></span>
-                        
+
                         <div class="vui-block-items-header-actions">
                             <button v-if="groupIndex > 0" class="vui-block-items-header-move" @click.prevent="moveGroupUp(group)">
                                 <!-- eslint-disable-next-line -->
@@ -22,9 +22,9 @@
                                 <svg aria-hidden="true" focusable="false" data-prefix="far" data-icon="arrow-down" class="svg-inline--fa fa-arrow-down fa-w-14" role="img" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><path fill="currentColor" d="M441.9 250.1l-19.8-19.8c-4.7-4.7-12.3-4.7-17 0L250 385.4V44c0-6.6-5.4-12-12-12h-28c-6.6 0-12 5.4-12 12v341.4L42.9 230.3c-4.7-4.7-12.3-4.7-17 0L6.1 250.1c-4.7 4.7-4.7 12.3 0 17l209.4 209.4c4.7 4.7 12.3 4.7 17 0l209.4-209.4c4.7-4.7 4.7-12.3 0-17z" /></svg>
                             </button>
 
-                            <button class="vui-block-items-header-delete" @click.prevent="deleteGroup(group)">{{ 'Delete' | t('site') }}</button>
-                        </div> 
-                    </div> 
+                            <button class="vui-block-items-header-delete" @click.prevent="deleteGroup(group)">{{ t('site', 'Delete') }}</button>
+                        </div>
+                    </div>
 
                     <div class="vui-block-items">
                         <div v-for="(blockType, blockTypeIndex) in group.blockTypes" :key="blockTypeIndex" class="vui-block-item" :class="{ 'active': selectedBlockType === blockType, 'has-error': hasErrors(blockType) }" @click.prevent="selectBlockType(blockType)">
@@ -46,8 +46,8 @@
                                 <span class="vui-block-item-heading">{{ blockType.name }}</span>
                                 <span class="vui-block-item-status" :class="{ 'on': blockType.enabled }"></span>
 
-                                <template v-if="!isSafari" slot="image" style="position: absolute">
-                                    <div class="vui-block-item" style="width: 90px; height: 45px; background: white;">
+                                <template v-if="!isSafari" #image>
+                                    <div class="vui-block-item" style="width: 90px; height: 62px; background: white;">
                                         <div v-html="blockType.icon ? blockType.icon.svg : emptySvg"></div>
                                         <span class="vui-block-item-heading">{{ blockType.name }}</span>
                                         <span class="vui-block-item-status" :class="{ 'on': blockType.enabled }"></span>
@@ -87,7 +87,7 @@
 
                             <!-- eslint-disable-next-line -->
                             <svg aria-hidden="true" focusable="false" data-prefix="far" data-icon="plus" role="img" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 384 512" class="svg-inline--fa fa-plus fa-w-12"><path fill="currentColor" d="M368 224H224V80c0-8.84-7.16-16-16-16h-32c-8.84 0-16 7.16-16 16v144H16c-8.84 0-16 7.16-16 16v32c0 8.84 7.16 16 16 16h144v144c0 8.84 7.16 16 16 16h32c8.84 0 16-7.16 16-16V288h144c8.84 0 16-7.16 16-16v-32c0-8.84-7.16-16-16-16z" /></svg>
-                            <span class="vui-block-item-heading">{{ 'Add Block' | t('vizy') }}</span>
+                            <span class="vui-block-item-heading">{{ t('vizy', 'Add Block') }}</span>
                         </div>
                     </div>
                 </div>
@@ -97,7 +97,7 @@
                 <div class="vui-block-item vui-block-new-item vui-block-new-group" @click.prevent="addGroup">
                     <!-- eslint-disable-next-line -->
                     <svg aria-hidden="true" focusable="false" data-prefix="far" data-icon="plus" role="img" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 384 512" class="svg-inline--fa fa-plus fa-w-12"><path fill="currentColor" d="M368 224H224V80c0-8.84-7.16-16-16-16h-32c-8.84 0-16 7.16-16 16v144H16c-8.84 0-16 7.16-16 16v32c0 8.84 7.16 16 16 16h144v144c0 8.84 7.16 16 16 16h32c8.84 0 16-7.16 16-16V288h144c8.84 0 16-7.16 16-16v-32c0-8.84-7.16-16-16-16z" /></svg>
-                    <span class="vui-block-item-heading">{{ 'Add Group' | t('vizy') }}</span>
+                    <span class="vui-block-item-heading">{{ t('vizy', 'Add Group') }}</span>
                 </div>
             </div>
         </div>
@@ -109,7 +109,7 @@
                 </div>
 
                 <div class="vui-block-titlebar-actions">
-                    <button class="vui-block-titlebar-delete" @click.prevent="deleteBlockType">{{ 'Delete' | t('vizy') }}</button>
+                    <button class="vui-block-titlebar-delete" @click.prevent="deleteBlockType">{{ t('vizy', 'Delete') }}</button>
 
                     <lightswitch-field v-model="selectedBlockType.enabled" :small="true" />
                 </div>
@@ -121,11 +121,11 @@
 
             <div class="field">
                 <div class="heading">
-                    <label id="name-field-label" class="required" for="name">{{ 'Name' | t('vizy') }}</label>
+                    <label id="name-field-label" class="required" for="name">{{ t('vizy', 'Name') }}</label>
                 </div>
 
                 <div id="name-field-instructions" class="instructions">
-                    <p>{{ 'What this block type will be called in the control panel.' | t('vizy') }}</p>
+                    <p>{{ t('vizy', 'What this block type will be called in the control panel.') }}</p>
                 </div>
 
                 <div class="input ltr">
@@ -149,11 +149,11 @@
 
             <div class="field">
                 <div class="heading">
-                    <label id="handle-field-label" class="required" for="handle">{{ 'Handle' | t('vizy') }}</label>
+                    <label id="handle-field-label" class="required" for="handle">{{ t('vizy', 'Handle') }}</label>
                 </div>
 
                 <div id="handle-field-instructions" class="instructions">
-                    <p>{{ 'How you’ll refer to this block type in the templates.' | t('vizy') }}</p>
+                    <p>{{ t('vizy', 'How you’ll refer to this block type in the templates.') }}</p>
                 </div>
 
                 <div class="input ltr">
@@ -174,11 +174,11 @@
 
             <div class="field">
                 <div class="heading">
-                    <label id="icon-field-label" class="required" for="icon">{{ 'Icon' | t('vizy') }}</label>
+                    <label id="icon-field-label" class="required" for="icon">{{ t('vizy', 'Icon') }}</label>
                 </div>
 
                 <div id="icon-field-instructions" class="instructions">
-                    <p>{{ 'Select an appropriate icon for the block type. Start typing to search via keywords.' | t('vizy') }}</p>
+                    <p>{{ t('vizy', 'Select an appropriate icon for the block type. Start typing to search via keywords.') }}</p>
                 </div>
 
                 <div class="input ltr">
@@ -192,11 +192,11 @@
 
             <div class="field">
                 <div class="heading">
-                    <label id="template-field-label" for="template">{{ 'Template' | t('vizy') }}</label>
+                    <label id="template-field-label" for="template">{{ t('vizy', 'Template') }}</label>
                 </div>
 
                 <div id="template-field-instructions" class="instructions">
-                    <p>{{ 'Provide the path for a template partial for rendering this block type.' | t('vizy') }}</p>
+                    <p>{{ t('vizy', 'Provide the path for a template partial for rendering this block type.') }}</p>
                 </div>
 
                 <div class="input ltr">
@@ -210,11 +210,11 @@
 
             <div class="field">
                 <div class="heading">
-                    <label id="layout-field-label" class="required" for="layout">{{ 'Layout' | t('vizy') }}</label>
+                    <label id="layout-field-label" class="required" for="layout">{{ t('vizy', 'Layout') }}</label>
                 </div>
 
                 <div id="layout-field-instructions" class="instructions">
-                    <p>{{ 'Define the field layout for this block type. Empty tabs are not allowed, and you must provide at least one element.' | t('vizy') }}</p>
+                    <p>{{ t('vizy', 'Define the field layout for this block type. Empty tabs are not allowed, and you must provide at least one element.') }}</p>
                 </div>
 
                 <div class="input ltr">
@@ -224,8 +224,8 @@
         </div>
 
         <div v-else class="vui-block-editor-empty">
-            <p v-if="fieldData.length">{{ 'Select a block to edit.' | t('vizy') }}</p>
-            <p v-else>{{ 'Add a new group to begin.' | t('vizy') }}</p>
+            <p v-if="fieldData.length">{{ t('vizy', 'Select a block to edit.') }}</p>
+            <p v-else>{{ t('vizy', 'Add a new group to begin.') }}</p>
 
             <!-- eslint-disable-next-line -->
             <svg xmlns="http://www.w3.org/2000/svg" width="68px" height="32.9px" viewBox="0 0 68 32.9"><path fill="currentColor" d="M8.2,32.9c-0.3,0-0.6-0.2-0.7-0.5c-0.7-2.2-2.3-3.6-3.9-5.1c-1.3-1.2-2.6-2.5-3.6-4.1c-0.1-0.2-0.1-0.5,0-0.7s0.3-0.4,0.6-0.4c2.1-0.2,9.2-1,11.8-3.2c0.3-0.3,0.8-0.2,1.1,0.1c0.3,0.3,0.2,0.8-0.1,1.1c-2.5,2.1-8.1,3-11.4,3.4c0.8,1,1.7,1.9,2.6,2.8C6.4,27.8,8.1,29.4,9,32c0.1,0.4-0.1,0.8-0.5,0.9C8.4,32.9,8.3,32.9,8.2,32.9z M30,30.8c-8.1,0-16.5-1.8-24-5.4c-0.4-0.2-0.5-0.6-0.4-1s0.6-0.5,1-0.4c14.3,6.9,32.1,7,44.2,0.4c9-4.9,14.4-13.1,15.7-23.8C66.6,0.2,67,0,67.4,0c0.4,0.1,0.7,0.4,0.7,0.8C66.7,12,61,20.6,51.5,25.7C45.4,29.1,37.8,30.8,30,30.8z"/></svg>
@@ -234,8 +234,8 @@
 </template>
 
 <script>
-import { Drag, Drop } from 'vue-drag-drop';
-import debounce from 'lodash/debounce';
+import { Drag, Drop } from '@/js/vendor/vue-drag-drop';
+import { debounce } from 'lodash-es';
 
 import VizyIconPicker from './settings/VizyIconPicker.vue';
 import FieldLayoutDesigner from './settings/FieldLayoutDesigner.vue';
@@ -283,7 +283,7 @@ export default {
 
     computed: {
         handleCollection() {
-            var collection = [];
+            const collection = [];
 
             if (Array.isArray(this.fieldData)) {
                 this.fieldData.forEach((group) => {
@@ -329,7 +329,7 @@ export default {
         },
 
         selectBlockType(blockType) {
-            // Hide the selected block if clicking again (toggling) 
+            // Hide the selected block if clicking again (toggling)
             if (this.selectedBlockType === blockType) {
                 this.selectedBlockType = null;
             } else {
@@ -338,15 +338,15 @@ export default {
         },
 
         getErrors(blockType, prop = '') {
-            var errors = [];
+            let errors = [];
 
             // Yii seems to have some stupid issues with deeply nested errors...
-            var errorKey = blockType.id + ':' + prop;
+            const errorKey = `${blockType.id}:${prop}`;
 
             if (this.errors) {
-                errors = Object.keys(this.errors).filter(key => {
+                errors = Object.keys(this.errors).filter((key) => {
                     return key.includes(errorKey);
-                }).map(key => {
+                }).map((key) => {
                     return this.errors[key][0];
                 });
             }
@@ -372,7 +372,7 @@ export default {
         },
 
         addGroup() {
-            let name = prompt(Craft.t('vizy', 'Give your group a name.'));
+            const name = prompt(Craft.t('vizy', 'Give your group a name.'));
 
             if (name) {
                 this.fieldData.push({
@@ -387,8 +387,8 @@ export default {
             const confirmationMessage = Craft.t('vizy', 'Are you sure you want to delete “{name}”? This will permanently delete all content created with this block type.', { name: this.selectedBlockType.name });
 
             if (confirm(confirmationMessage)) {
-                for (var i = 0; this.fieldData.length; i++) {
-                    var index = this.fieldData[i].blockTypes.indexOf(this.selectedBlockType);
+                for (let i = 0; this.fieldData.length; i++) {
+                    const index = this.fieldData[i].blockTypes.indexOf(this.selectedBlockType);
 
                     if (index !== -1) {
                         this.fieldData[i].blockTypes.splice(index, 1);
@@ -404,7 +404,7 @@ export default {
             const confirmationMessage = Craft.t('vizy', 'Are you sure you want to delete “{name}”? This will permanently delete all content created with any of these block types.', { name: group.name });
 
             if (confirm(confirmationMessage)) {
-                var index = this.fieldData.indexOf(group);
+                const index = this.fieldData.indexOf(group);
 
                 if (index !== -1) {
                     this.fieldData.splice(index, 1);
@@ -416,7 +416,7 @@ export default {
         moveGroupUp(group) {
             const sourceGroupIndex = this.fieldData.indexOf(group);
             const groupIndex = sourceGroupIndex - 1;
-            const [ groupData ] = this.fieldData.splice(sourceGroupIndex, 1);
+            const [groupData] = this.fieldData.splice(sourceGroupIndex, 1);
 
             this.fieldData.splice(groupIndex, 0, groupData);
         },
@@ -424,26 +424,41 @@ export default {
         moveGroupDown(group) {
             const sourceGroupIndex = this.fieldData.indexOf(group);
             const groupIndex = sourceGroupIndex + 1;
-            const [ groupData ] = this.fieldData.splice(sourceGroupIndex, 1);
+            const [groupData] = this.fieldData.splice(sourceGroupIndex, 1);
 
             this.fieldData.splice(groupIndex, 0, groupData);
         },
 
         dragEnter(data, event) {
+            // Prevent firing too quickly
+            if (!event) {
+                return;
+            }
+
             event.target.parentNode.classList.add('is-active');
         },
 
         dragLeave(data, event) {
+            // Prevent firing too quickly
+            if (!event) {
+                return;
+            }
+
             event.target.parentNode.classList.remove('is-active');
         },
 
         dragDrop(data, event) {
+            // Prevent firing too quickly
+            if (!event) {
+                return;
+            }
+
             event.target.parentNode.classList.remove('is-active');
 
             const sourceGroupIndex = parseInt(data.groupIndex);
             const sourceBlockTypeIndex = parseInt(data.blockTypeIndex);
 
-            let groupIndex = parseInt(event.target.getAttribute('data-group'));
+            const groupIndex = parseInt(event.target.getAttribute('data-group'));
             let blockTypeIndex = parseInt(event.target.getAttribute('data-block'));
 
             // Just guard against not actually moving columns
@@ -463,7 +478,7 @@ export default {
             }
 
             // Remove the old column
-            const [ blockTypeData ] = this.fieldData[sourceGroupIndex].blockTypes.splice(sourceBlockTypeIndex, 1);
+            const [blockTypeData] = this.fieldData[sourceGroupIndex].blockTypes.splice(sourceBlockTypeIndex, 1);
 
             // Add the new row
             if (!this.fieldData[groupIndex].blockTypes) {
@@ -564,8 +579,8 @@ export default {
         position: absolute;
         top: 5px;
         right: 5px;
-        width: 5px;
-        height: 5px;
+        width: 7px;
+        height: 7px;
         border: 1px solid transparent;
         border-radius: 100%;
         border-color: rgba(96, 125, 159, 0.8);

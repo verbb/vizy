@@ -1,5 +1,6 @@
 <script>
 import FloatingMenu from './FloatingMenu';
+import { h } from 'vue';
 
 export default {
     props: {
@@ -9,6 +10,8 @@ export default {
         },
     },
 
+    emits: ['show', 'hide'],
+
     data() {
         return {
             menu: {
@@ -16,7 +19,22 @@ export default {
                 left: 0,
                 bottom: 0,
             },
+
         };
+    },
+
+    computed: {
+        variables() {
+            return {
+                focused: this.editor.view.focused,
+                focus: this.editor.focus,
+                commands: this.editor.commands,
+                isActive: this.editor.isActive,
+                getMarkAttrs: this.editor.getAttributes.bind(this.editor),
+                getNodeAttrs: this.editor.getAttributes.bind(this.editor),
+                menu: this.menu,
+            };
+        },
     },
 
     watch: {
@@ -28,14 +46,14 @@ export default {
                         editor.registerPlugin(FloatingMenu({
                             editor,
                             element: this.$el,
-                            onUpdate: menu => {
+                            onUpdate: (menu) => {
                                 // the second check ensures event is fired only once
                                 if (menu.isActive && this.menu.isActive === false) {
                                     this.$emit('show', menu);
                                 } else if (!menu.isActive && this.menu.isActive === true) {
                                     this.$emit('hide', menu);
                                 }
-                                
+
                                 this.menu = menu;
                             },
                         }));
@@ -45,7 +63,7 @@ export default {
         },
     },
 
-    beforeDestroy() {
+    beforeUnmount() {
         // this.editor.unregisterPlugin('floatingMenu');
     },
 
@@ -54,7 +72,7 @@ export default {
             return null;
         }
 
-        return this.$scopedSlots.default({
+        return h('div', null, this.$slots.default({
             focused: this.editor.view.focused,
             focus: this.editor.focus,
             commands: this.editor.commands,
@@ -62,8 +80,9 @@ export default {
             getMarkAttrs: this.editor.getAttributes.bind(this.editor),
             getNodeAttrs: this.editor.getAttributes.bind(this.editor),
             menu: this.menu,
-        });
+        }));
     },
+
 
 };
 

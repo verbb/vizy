@@ -1,8 +1,8 @@
 <template>
     <div class="vui-image-menu-bubble" style="display: none;">
-        <a href="#" @click.prevent="imageEditor">{{ 'Image Editor' | t('vizy') }}</a>
-        <a href="#" @click.prevent="edit">{{ 'Edit' | t('vizy') }}</a>
-        <a href="#" @click.prevent="unlink">{{ 'Delete' | t('vizy') }}</a>
+        <a href="#" @click.prevent="imageEditor">{{ t('vizy', 'Image Editor') }}</a>
+        <a href="#" @click.prevent="edit">{{ t('vizy', 'Edit') }}</a>
+        <a href="#" @click.prevent="unlink">{{ t('vizy', 'Delete') }}</a>
 
         <image-menu-modal
             v-model="model"
@@ -17,7 +17,7 @@
 </template>
 
 <script>
-import size from 'lodash/size';
+import { size } from 'lodash-es';
 import ImageMenuModal from './ImageMenuModal.vue';
 
 import { findChildrenByType } from '@utils/tiptap/nodes';
@@ -81,7 +81,7 @@ export default {
             const { view } = this.editor;
 
             // Prevent empty models from proceeding. Happens for nested Vizy fields.
-            var model = this.editor.getAttributes('image');
+            const model = this.editor.getAttributes('image');
 
             if (!size(model)) {
                 return;
@@ -109,7 +109,7 @@ export default {
                 theme: 'vui-menu-bubble',
                 mouseEvent: event,
                 zIndex: 1000,
-                appendTo: () => document.body,
+                appendTo: () => { return document.body; },
             });
         },
 
@@ -135,7 +135,7 @@ export default {
 
         imageEditor() {
             if (this.model.id) {
-                var settings = {
+                const settings = {
                     allowSavingAsNew: false,
                     onSave: this.reloadImage.bind(this),
                     allowDegreeFractions: Craft.isImagick,
@@ -150,19 +150,19 @@ export default {
         reloadImage() {
             const imageNodes = findChildrenByType(this.editor.state.doc, this.editor.schema.nodes.image);
 
-            imageNodes.forEach(node => {
+            imageNodes.forEach((node) => {
                 if (!node.node.attrs.src) {
                     return;
                 }
 
-                var matches = node.node.attrs.src.match(/(.*)#asset:(\d+)(:transform:(.*))?/i);
+                const matches = node.node.attrs.src.match(/(.*)#asset:(\d+)(:transform:(.*))?/i);
 
                 // Find all instances of THIS asset.
                 if (matches && matches[2] == this.model.id) {
                     // Not a transform
                     if (!matches[4]) {
-                        var attributes = {
-                            src: matches[1] + '?' + (new Date().getTime()) + '#asset:' + matches[2],
+                        const attributes = {
+                            src: `${matches[1]}?${new Date().getTime()}#asset:${matches[2]}`,
                         };
 
                         this.editor.view.dispatch(this.editor.state.tr.setNodeMarkup(node.pos, null, {
@@ -170,15 +170,15 @@ export default {
                             ...attributes,
                         }));
                     } else {
-                        var params = {
+                        const params = {
                             assetId: matches[2],
                             handle: matches[4],
                         };
 
                         Craft.sendActionRequest('POST', 'assets/generate-transform', { params })
                             .then((response) => {
-                                var attributes = {
-                                    src: response.data.url + '?' + (new Date().getTime()) + '#asset:' + matches[2] + ':transform:' + matches[4],
+                                const attributes = {
+                                    src: `${response.data.url}?${new Date().getTime()}#asset:${matches[2]}:transform:${matches[4]}`,
                                 };
 
                                 this.editor.view.dispatch(this.editor.state.tr.setNodeMarkup(node.pos, null, {

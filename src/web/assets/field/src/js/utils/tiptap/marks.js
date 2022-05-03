@@ -11,7 +11,7 @@ export const getMarkRange = ($pos, type) => {
         return;
     }
 
-    const link = start.node.marks.find(mark => mark.type === type);
+    const link = start.node.marks.find((mark) => { return mark.type === type; });
 
     if (!link) {
         return;

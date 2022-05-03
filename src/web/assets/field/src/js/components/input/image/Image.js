@@ -50,11 +50,11 @@ export default Image.extend({
 
         if (HTMLAttributes.url) {
             return ['figure', figAttributes, ['a', linkAttributes, ['img', imgAttributes]]];
-        } else {
-            return ['figure', figAttributes, ['img', imgAttributes]];
         }
+        return ['figure', figAttributes, ['img', imgAttributes]];
+
     },
-  
+
     addProseMirrorPlugins() {
         return [
             new Plugin({

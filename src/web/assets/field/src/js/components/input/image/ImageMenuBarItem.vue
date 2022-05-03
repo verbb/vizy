@@ -1,6 +1,6 @@
 <template>
     <div>
-        <button v-tooltip="title" class="btn vui-toolbar-btn" :class="{ 'active': active }" @click.prevent="runAction" @mousedown="onMouseDown">
+        <button v-tooltip="{ content: title, theme: 'vui-tooltip' }" class="btn vui-toolbar-btn" :class="{ 'active': active }" @click.prevent="runAction" @mousedown="onMouseDown">
             <svg-icon :content="{ icon, svg }" />
         </button>
 
@@ -44,12 +44,12 @@ export default {
             type: Object,
             default: null,
         },
-        
+
         icon: {
             type: String,
             default: null,
         },
-        
+
         svg: {
             type: String,
             default: null,
@@ -87,15 +87,15 @@ export default {
         active() {
             return this.isActive && this.isActive();
         },
-        
+
         volumes() {
             return this.field.settings.volumes;
         },
-        
+
         transforms() {
             return this.field.settings.transforms;
         },
-        
+
         elementSiteId() {
             return this.field.settings.elementSiteId;
         },
@@ -114,12 +114,12 @@ export default {
     },
 
     methods: {
-        _buildAssetUrl: (assetId, assetUrl, transform) => assetUrl + '#asset:' + assetId + ':' + (transform ? 'transform:' + transform : 'url'),
+        _buildAssetUrl: (assetId, assetUrl, transform) => { return `${assetUrl}#asset:${assetId}:${transform ? `transform:${transform}` : 'url'}`; },
 
-        _isTransformUrl: (url) => /(.*)(_[a-z0-9+].*\/)(.*)/.test(url),
+        _isTransformUrl: (url) => { return /(.*)(_[a-z0-9+].*\/)(.*)/.test(url); },
 
         _getTransformUrl(assetId, handle, callback) {
-            var data = {
+            const data = {
                 assetId,
                 handle,
             };
@@ -159,7 +159,7 @@ export default {
 
                             // If transform was selected or we don't have a default, no _real_ processing.
                             if (isTransform || this.defaultTransform.length == 0) {
-                                data['asset' + asset.id] = {
+                                data[`asset${asset.id}`] = {
                                     id: asset.id,
                                     src: this._buildAssetUrl(asset.id, asset.url, isTransform ? transform : this.defaultTransform),
                                     alt: asset.label,
@@ -174,8 +174,8 @@ export default {
                                 }
                             // Otherwise, get the transform url for the default transform.
                             } else {
-                                let url = this._getTransformUrl(asset.id, this.defaultTransform, (url) => {
-                                    data['asset' + asset.id] = {
+                                const url = this._getTransformUrl(asset.id, this.defaultTransform, (url) => {
+                                    data[`asset${asset.id}`] = {
                                         id: asset.id,
                                         src: this._buildAssetUrl(asset.id, url, this.defaultTransform),
                                         alt: asset.label,
@@ -193,7 +193,7 @@ export default {
                         }.bind(this);
 
                         processAssetUrls(assets, () => {
-                            Object.keys(data).forEach(key => {
+                            Object.keys(data).forEach((key) => {
                                 this.model = { ...this.model, ...data[key] };
 
                                 this.showEditModal = true;

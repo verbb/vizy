@@ -13,9 +13,9 @@
 </template>
 
 <script>
-import find from 'lodash/find';
+import { find } from 'lodash-es';
 
-import { Editor, EditorContent } from '@tiptap/vue-2';
+import { Editor, EditorContent } from '@tiptap/vue-3';
 
 // TipTap - Marks
 import Bold from '@tiptap/extension-bold';
@@ -85,6 +85,8 @@ export default {
         },
     },
 
+    emits: ['content-update', 'init'],
+
     data() {
         return {
             isLivePreview: false,
@@ -126,7 +128,7 @@ export default {
         // Setup config for editor, from field config
         this.editor = new Editor({
             extensions: this.getExtensions(),
-            content: this.valueToContent(clone(this.value)),
+            content: this.valueToContent(this.clone(this.value)),
             autofocus: false,
             onUpdate: () => {
                 this.json = this.editor.getJSON().content;
@@ -142,10 +144,10 @@ export default {
         this.html = this.editor.getHTML();
 
         // Prepare all vizy blocks be caching their HTML/JS
-        this.json.forEach(block => {
+        this.json.forEach((block) => {
             if (block.type === 'vizyBlock') {
-                var { id } = block.attrs;
-                var value = find(this.settings.blocks, { id });
+                const { id } = block.attrs;
+                const value = find(this.settings.blocks, { id });
 
                 if (value) {
                     this.setCachedFieldHtml(id, value.fieldsHtml);
@@ -202,23 +204,23 @@ export default {
         }
     },
 
-    beforeDestroy() {
+    beforeUnmount() {
         this.editor.destroy();
     },
 
     methods: {
         getFormattingOptions() {
-            var options = ['paragraph', 'code-block', 'blockquote', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6'];
+            let options = ['paragraph', 'code-block', 'blockquote', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6'];
 
             if (this.settings.vizyConfig.formatting && this.settings.vizyConfig.formatting.length) {
-                options = this.settings.vizyConfig.formatting; 
+                options = this.settings.vizyConfig.formatting;
             }
 
             return options;
         },
 
         getExtensions() {
-            let extensions = [
+            const extensions = [
                 // Core Extensions
                 Document,
                 Dropcursor,
@@ -300,7 +302,7 @@ export default {
             }
 
             // The most easiest/efficient way to convert htmlentities...
-            var txt = document.createElement('textarea');
+            const txt = document.createElement('textarea');
             txt.innerHTML = html;
 
             return JSON.parse(txt.value);
@@ -313,13 +315,13 @@ export default {
         getParsedBlockHtml(html, id) {
             if (typeof html === 'string') {
                 return html.replace(new RegExp(`__BLOCK_TYPE_${this.settings.placeholderKey}__`, 'g'), id);
-            } else {
-                return '';
             }
+            return '';
+
         },
 
         getCachedFieldHtml(blockId) {
-            var html = this.cachedFieldHtml[blockId];
+            let html = this.cachedFieldHtml[blockId];
 
             // When serialized, htmlentities are used, so decode them
             if (typeof html === 'string') {
@@ -336,7 +338,7 @@ export default {
         },
 
         getCachedFieldJs(blockId) {
-            var html = this.cachedFieldJs[blockId];
+            let html = this.cachedFieldJs[blockId];
 
             // When serialized, htmlentities are used, so decode them
             if (typeof html === 'string') {
@@ -345,7 +347,7 @@ export default {
                 });
             }
 
-            var fieldJs = this.getParsedBlockHtml(html, blockId);
+            let fieldJs = this.getParsedBlockHtml(html, blockId);
 
             // When re-rendering the block, we'll want to remove some things that are initialized
             // multiple times. This will likely grow as we find more incompatible fields...
@@ -399,7 +401,7 @@ export default {
             headerBuffer = headerBuffer + this.parentToolbarOffset;
 
             this.$refs.toolbar.$el.style.position = 'sticky';
-            this.$refs.toolbar.$el.style.top = this.$el.scrollTop + headerBuffer + 'px';
+            this.$refs.toolbar.$el.style.top = `${this.$el.scrollTop + headerBuffer}px`;
         },
 
         updateFixedToolbarEditor(event) {
@@ -409,12 +411,12 @@ export default {
             headerBuffer = headerBuffer + this.parentToolbarOffset;
 
             this.$refs.toolbar.$el.style.position = 'sticky';
-            this.$refs.toolbar.$el.style.top = this.$el.scrollTop + headerBuffer + 'px';
+            this.$refs.toolbar.$el.style.top = `${this.$el.scrollTop + headerBuffer}px`;
         },
 
         getParentInputs() {
-            var parents = [];
-            var node = this.$parent;
+            const parents = [];
+            let node = this.$parent;
 
             for (; node; node = node.$parent) {
                 if (node.$options._componentTag === 'vizy-input') {
@@ -428,15 +430,15 @@ export default {
         refreshUnloadData() {
             // Give it a second for everything to be ready
             setTimeout(() => {
-                var $forms = $('form[data-confirm-unload]');
+                const $forms = $('form[data-confirm-unload]');
 
                 // Re-serialize the form data, to prevent unload warnings for nested Vizy fields
-                for (var i = 0; i < $forms.length; i++) {
-                    var $form = $($forms[i]);
-                    var data = $form.data('initialSerializedValue');
+                for (let i = 0; i < $forms.length; i++) {
+                    const $form = $($forms[i]);
+                    const data = $form.data('initialSerializedValue');
 
                     if (data) {
-                        var serialized = data;
+                        let serialized = data;
 
                         if (typeof $form.data('serializer') === 'function') {
                             serialized = $form.data('serializer')();
@@ -460,7 +462,7 @@ export default {
 </script>
 
 <style lang="scss">
-@import '~craftcms-sass/mixins';
+@import 'craftcms-sass/mixins';
 
 // ==========================================================================
 // Editor
@@ -554,7 +556,7 @@ export default {
         pointer-events: none;
     }
 }
-   
+
 .vui-editor-img-wrap {
     display: block;
     outline: 0;

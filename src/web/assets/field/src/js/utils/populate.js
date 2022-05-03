@@ -36,7 +36,6 @@
         }
 
         // only proceed if element is set
-        // console.log(name)
         var element = form.find('[name="' + name + '"]');
         if (! element) {
             continue;

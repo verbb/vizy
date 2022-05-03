@@ -14,7 +14,6 @@
         }]"
         :aria-labelledby="`${id}-label`"
         :aria-checked="proxyValue ? 'true' : (indeterminate ? 'mixed' : 'false')"
-        v-on="$listeners"
         @mouseup="onMouseUp"
         @keydown="onKeyDown"
     >
@@ -29,34 +28,27 @@
 <script>
 import { toBoolean } from '@utils/bool';
 
-// import FormulateInputMixin from '@braid/vue-formulate/src/FormulateInputMixin';
-
 export default {
     name: 'LightswitchField',
-
-    // mixins: [FormulateInputMixin],
 
     props: {
         small: {
             type: Boolean,
             default: false,
         },
-        
+
         extraSmall: {
             type: Boolean,
             default: false,
         },
 
-        indeterminate: {
-            type: Boolean,
-            default: false,
-        },
-
-        value: {
+        modelValue: {
             type: Boolean,
             default: false,
         },
     },
+
+    emits: ['update:modelValue'],
 
     data() {
         return {
@@ -65,14 +57,11 @@ export default {
             dragging: false,
             innerStyle: {},
             proxyValue: false,
+            indeterminate: false,
         };
     },
 
     computed: {
-        // localClasses() {
-        //     return this.context.attributes.classes;
-        // },
-
         offMargin() {
             if (this.small) {
                 return -10;
@@ -81,15 +70,15 @@ export default {
             return -12;
         },
     },
-  
+
     watch: {
         proxyValue(newValue) {
-            this.$emit('input', newValue);
+            this.$emit('update:modelValue', newValue);
         },
     },
 
     created() {
-        this.proxyValue = this.value;
+        this.proxyValue = this.modelValue;
     },
 
     mounted() {
@@ -111,7 +100,7 @@ export default {
         });
     },
 
-    beforeDestroy() {
+    beforeUnmount() {
         if (this.dragger) {
             this.dragger.destroy();
         }
@@ -169,8 +158,7 @@ export default {
             case Garnish.RIGHT_KEY: {
                 if (Craft.orientation === 'ltr') {
                     this.turnOn();
-                }
-                else {
+                } else {
                     this.turnOff();
                 }
 
@@ -180,8 +168,7 @@ export default {
             case Garnish.LEFT_KEY: {
                 if (Craft.orientation === 'ltr') {
                     this.turnOff();
-                }
-                else {
+                } else {
                     this.turnOn();
                 }
 

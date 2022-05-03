@@ -31,7 +31,7 @@
 
                 <div v-else class="vui-block-items-none">
                     <hr>
-                    {{ 'No blocks found for “{search}”.' | t('vizy', { search: search }) }}
+                    {{ t('vizy', 'No blocks found for “{search}”.', { search: search }) }}
                 </div>
             </div>
         </div>
@@ -67,7 +67,7 @@ export default {
 
         blockGroups: {
             type: Array,
-            default: () => [],
+            default: () => { return []; },
         },
     },
 
@@ -81,11 +81,11 @@ export default {
     computed: {
         filteredBlockGroups() {
             return this.blockGroups.reduce((acc, blockGroup) => {
-                const blockTypes = blockGroup.blockTypes.filter(blockType => {
+                const blockTypes = blockGroup.blockTypes.filter((blockType) => {
                     return blockType.name.toLowerCase().includes(this.search.toLowerCase());
                 });
 
-                return !blockTypes.length ? acc : acc.concat(Object.assign({}, blockGroup, { blockTypes }));
+                return !blockTypes.length ? acc : acc.concat({ ...blockGroup, blockTypes });
             }, []);
         },
     },
@@ -124,7 +124,7 @@ export default {
 
             // Wait for a tick to get the DOM updated
             setTimeout(() => {
-                this.$events.$emit('vizy-blocks:addedBlock');
+                this.$events.emit('vizy-blocks:addedBlock');
             }, 50);
 
             // Close the popover
@@ -138,7 +138,7 @@ export default {
 
 
 <style lang="scss">
-@import '~craftcms-sass/mixins';
+@import 'craftcms-sass/mixins';
 
 // ==========================================================================
 // Block Menu
@@ -155,7 +155,7 @@ export default {
     transform: translate(-50%, -6px);
     transition: opacity 0.2s, visibility 0.2s, color 0.2s, background 0.2s;
     margin-top: 1px;
-    
+
     &.is-active {
         opacity: 1;
         visibility: visible;
@@ -238,6 +238,7 @@ export default {
 
     svg {
         display: inline-block;
+        vertical-align: initial;
         width: 20px !important;
         height: 20px !important;
     }
@@ -255,7 +256,6 @@ export default {
 .vui-block-items-none {
     color: #596673;
 }
-
 
 
 // ==========================================================================

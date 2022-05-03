@@ -41,14 +41,14 @@
             </div>
 
             <div v-else class="vui-no-icons">
-                {{ 'No icons match your query.' | t('vizy') }}
+                {{ t('vizy', 'No icons match your query.') }}
             </div>
         </div>
     </div>
 </template>
 
 <script>
-import isEmpty from 'lodash/isEmpty';
+import { isEmpty } from 'lodash-es';
 
 import tippy from 'tippy.js';
 import 'tippy.js/dist/tippy.css';
@@ -63,11 +63,13 @@ export default {
             default: () => {},
         },
 
-        value: {
+        modelValue: {
             type: Object,
             default: () => {},
         },
     },
+
+    emits: ['update:modelValue'],
 
     data() {
         return {
@@ -88,25 +90,25 @@ export default {
             }
 
             return this.icons.reduce((acc, iconGroup) => {
-                const icons = iconGroup.icons.filter(icon => {
+                const icons = iconGroup.icons.filter((icon) => {
                     return icon.label.toLowerCase().includes(this.search.toLowerCase());
                 });
 
-                return !icons.length ? acc : acc.concat(Object.assign({}, iconGroup, { icons }));
+                return !icons.length ? acc : acc.concat({ ...iconGroup, icons });
             }, []);
         },
     },
-  
+
     watch: {
         selected(newValue) {
-            this.$emit('input', newValue);
+            this.$emit('update:modelValue', newValue);
         },
     },
 
     created() {
-        if (this.value) {
-            this.selected = this.value;
-        }  
+        if (this.modelValue) {
+            this.selected = this.modelValue;
+        }
     },
 
     mounted() {
@@ -144,7 +146,7 @@ export default {
                 self.isFetching = true;
 
                 fetch(Craft.getActionUrl('vizy/icons'))
-                    .then((response) => response.json())
+                    .then((response) => { return response.json(); })
                     .then((json) => {
                         self.icons = json;
                     })
@@ -350,7 +352,6 @@ export default {
 }
 
 
-
 // ==========================================================================
 // Loading
 // ==========================================================================
@@ -437,4 +438,3 @@ export default {
 }
 
 </style>
-

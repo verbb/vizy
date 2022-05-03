@@ -6,14 +6,13 @@
         content-class="vui-modal-content"
         overlay-class="vui-modal-overlay"
         :lock-scroll="false"
-        v-on="$listeners"
         @opened="opened"
     >
         <div class="vui-modal-header">
             <slot name="title"></slot>
-            <div class="vui-modal-close" @click.prevent="$emit('input', false)"></div>
+            <div class="vui-modal-close" @click.prevent="$emit('update:modelValue', false)"></div>
         </div>
-        
+
         <div class="vui-modal-body">
             <slot></slot>
         </div>
@@ -23,11 +22,11 @@
 
             <div class="buttons right">
                 <div role="button" class="btn" tabindex="0" @click.prevent="$emit('cancel')">
-                    {{ cancelButton | t('vizy') }}
+                    {{ t('vizy', cancelButton) }}
                 </div>
-                
+
                 <div role="button" class="btn submit" @click.prevent="$emit('confirm')">
-                    {{ confirmButton | t('vizy') }}
+                    {{ t('vizy', confirmButton) }}
                 </div>
             </div>
         </div>
@@ -52,6 +51,8 @@ export default {
             default: 'Confirm',
         },
     },
+
+    emits: ['update:modelValue', 'confirm', 'cancel'],
 
     methods: {
         opened() {

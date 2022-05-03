@@ -1,9 +1,9 @@
 <template>
     <div>
-        <button v-tooltip="title" class="btn vui-toolbar-btn" :class="{ 'active': active }" @click.prevent="() => {}" @mousedown="onMouseDown">
+        <button v-tooltip="{ content: title, theme: 'vui-tooltip' }" class="btn vui-toolbar-btn" :class="{ 'active': active }" @click.prevent="() => {}" @mousedown="onMouseDown">
             <svg-icon :content="{ icon, svg }" />
         </button>
-        
+
         <div class="vui-toolbar-dropdown-container vui-toolbar-dropdown-link" style="display: none;">
             <div v-if="!active">
                 <button
@@ -13,18 +13,18 @@
                 </button>
 
                 <button class="vui-toolbar-dropdown vui-toolbar-dropdown-item-link" @click.prevent="openNewModal">
-                    {{ 'Insert Link' | t('vizy') }}
+                    {{ t('vizy', 'Insert Link') }}
                 </button>
             </div>
 
             <div v-else>
                 <button class="vui-toolbar-dropdown vui-toolbar-dropdown-item-link" @click.prevent="openEditModal">
-                    {{ 'Edit Link' | t('vizy') }}
+                    {{ t('vizy', 'Edit Link') }}
                 </button>
             </div>
 
             <button class="vui-toolbar-dropdown vui-toolbar-dropdown-item-unlink" @click.prevent="unlinkAction">
-                {{ 'Unlink' | t('vizy') }}
+                {{ t('vizy', 'Unlink') }}
             </button>
         </div>
 
@@ -73,7 +73,7 @@ export default {
             type: String,
             default: null,
         },
-        
+
         svg: {
             type: String,
             default: null,
@@ -103,7 +103,7 @@ export default {
         active() {
             return this.isActive && this.isActive();
         },
-        
+
         linkOptions() {
             return this.field.settings.linkOptions;
         },
@@ -183,7 +183,7 @@ export default {
             this.resetModel();
 
             Craft.createElementSelectorModal(selectedElement.elementType, {
-                storageKey: 'VizyInput.LinkTo.' + selectedElement.elementType,
+                storageKey: `VizyInput.LinkTo.${selectedElement.elementType}`,
                 sources: selectedElement.sources,
                 criteria: selectedElement.criteria,
                 defaultSiteId: this.elementSiteId,
@@ -192,7 +192,7 @@ export default {
                     if (elements.length) {
                         const [element] = elements;
 
-                        this.model.url = element.url + '#' + selectedElement.refHandle + ':' + element.id + '@' + element.siteId,
+                        this.model.url = `${element.url}#${selectedElement.refHandle}:${element.id}@${element.siteId}`,
                         this.model.text = this.getSelectedText() || element.label;
 
                         this.tippy.hide();

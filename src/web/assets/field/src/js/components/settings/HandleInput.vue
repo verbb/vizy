@@ -29,14 +29,16 @@ export default {
 
         collection: {
             type: Array,
-            default: () => [],
+            default: () => { return []; },
         },
 
-        value: {
+        modelValue: {
             type: String,
             default: '',
         },
     },
+
+    emits: ['update:modelValue'],
 
     data() {
         return {
@@ -54,20 +56,20 @@ export default {
         },
 
         proxyValue(newValue) {
-            this.$emit('input', newValue);
+            this.$emit('update:modelValue', newValue);
         },
     },
 
     created() {
         // Save the original, persisted value for the handle, so we can see if we should
         // be updating with a generating handle or not
-        this.savedValue = this.value;
-        this.proxyValue = this.value;
+        this.savedValue = this.modelValue;
+        this.proxyValue = this.modelValue;
     },
 
     methods: {
         generateHandle(e) {
-            var generatedHandle = generateHandle(this.sourceValue);
+            let generatedHandle = generateHandle(this.sourceValue);
 
             if (this.collection.length) {
                 generatedHandle = getNextAvailableHandle(this.collection, generatedHandle, 0);

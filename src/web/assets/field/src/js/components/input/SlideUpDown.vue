@@ -1,4 +1,5 @@
 <script>
+import { h } from 'vue';
 
 export default {
     name: 'SlideUpDown',
@@ -25,11 +26,15 @@ export default {
         },
     },
 
-    data: () => ({
-        style: {},
-        initial: false,
-        hidden: false,
-    }),
+    emits: ['open-start', 'open-end', 'close-start', 'close-end'],
+
+    data: () => {
+        return {
+            style: {},
+            initial: false,
+            hidden: false,
+        };
+    },
 
     computed: {
         el() {
@@ -72,11 +77,11 @@ export default {
                 this.$emit('open-start');
 
                 if (this.initial) {
-                    this.setHeight('0px', () => this.el.scrollHeight + 'px');
+                    this.setHeight('0px', () => { return `${this.el.scrollHeight}px`; });
                 }
             } else {
                 this.$emit('close-start');
-                this.setHeight(this.el.scrollHeight + 'px', () => '0px');
+                this.setHeight(`${this.el.scrollHeight}px`, () => { return '0px'; });
             }
         },
 
@@ -100,14 +105,14 @@ export default {
                     overflow: 'hidden',
                     'transition-property': 'height',
                     'transition-timing-function': 'ease-out',
-                    'transition-duration': this.duration + 'ms',
+                    'transition-duration': `${this.duration}ms`,
                 };
             });
         },
 
         onTransitionEnd(event) {
             // Don't do anything if the transition doesn't belong to the container
-            if (event.target !== this.el) return;
+            if (event.target !== this.el) { return; }
 
             if (this.active) {
                 this.style = {};
@@ -124,7 +129,7 @@ export default {
         },
     },
 
-    render(h) {
+    render() {
         return h(
             this.tag,
             {
@@ -133,7 +138,7 @@ export default {
                 ref: 'container',
                 on: { transitionend: this.onTransitionEnd },
             },
-            this.$slots.default
+            this.$slots.default(),
         );
     },
 };

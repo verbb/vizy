@@ -100,3 +100,5 @@
     };
 })(jQuery);
 /* eslint-enable */
+
+export default {};

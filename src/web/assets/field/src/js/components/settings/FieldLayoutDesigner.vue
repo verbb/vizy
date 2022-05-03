@@ -17,8 +17,7 @@
 </template>
 
 <script>
-import Vue from 'vue';
-import debounce from 'lodash/debounce';
+import { debounce } from 'lodash-es';
 
 export default {
     name: 'FieldLayoutDesigner',
@@ -39,11 +38,13 @@ export default {
             default: null,
         },
 
-        value: {
-            type: [Object, Array],
+        modelValue: {
+            type: [Object, Array, String],
             default: () => {},
         },
     },
+
+    emits: ['update:modelValue'],
 
     data() {
         return {
@@ -54,21 +55,21 @@ export default {
             proxyValue: {},
         };
     },
-  
+
     watch: {
         proxyValue(newValue) {
-            this.$emit('input', newValue);
+            this.$emit('update:modelValue', newValue);
         },
     },
 
     created() {
-        this.proxyValue = this.value;
+        this.proxyValue = this.modelValue;
     },
 
     mounted() {
         this.loading = true;
 
-        var fieldIds = [];
+        const fieldIds = [];
 
         if (this.fieldId) {
             fieldIds.push(this.fieldId);
@@ -82,42 +83,44 @@ export default {
             fieldIds.push(result[1]);
         }
 
-        var data = {
+        const data = {
             fieldIds,
             layoutUid: this.layoutUid,
             blockTypeId: this.blockTypeId,
             layout: this.proxyValue,
         };
 
-        this.$axios.post(Craft.getActionUrl('vizy/field/layout-designer'), data).then((response) => {
-            if (response.data.html) {
-                this.$el.innerHTML = response.data.html;
-                Craft.appendBodyHtml(response.data.footHtml);
+        Craft.sendActionRequest('POST', 'vizy/field/layout-designer', { data })
+            .then((response) => {
+                if (response.data.html) {
+                    this.$el.innerHTML = response.data.html;
+                    Craft.appendBodyHtml(response.data.footHtml);
 
-                this.watchForChanges();
+                    this.watchForChanges();
 
-                this.mounted = true;
-            } else {
-                throw new Error(response.data);
-            }
-        }).catch(error => {
-            this.error = true;
-            this.errorMessage = error;
-            this.loading = false;
-        });
+                    this.mounted = true;
+                } else {
+                    throw new Error(response.data);
+                }
+            })
+            .catch((error) => {
+                this.error = true;
+                this.errorMessage = error;
+                this.loading = false;
+            });
     },
 
     methods: {
         watchForChanges() {
-            var updateFunction = debounce(this.serializeLayout, 250);
+            const updateFunction = debounce(this.serializeLayout, 250);
 
             // Use MutationObserver to detect _any_ change in the field layout designer, and be sure to debounce
             // calls as there are a lot of changes. Far more easier than overriding the FLD
-            var observer = new MutationObserver(( mutations ) => {
+            const observer = new MutationObserver((mutations) => {
                 updateFunction();
             });
 
-            observer.observe(this.$el, { 
+            observer.observe(this.$el, {
                 childList: true,
                 attributes: true,
                 subtree: true,
@@ -131,7 +134,7 @@ export default {
                 return;
             }
 
-            var fieldLayoutData = this.$el.querySelector('input[name="fieldLayout"]').value;
+            const fieldLayoutData = this.$el.querySelector('input[name="fieldLayout"]').value;
 
             this.proxyValue = fieldLayoutData;
         },

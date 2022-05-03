@@ -1,5 +1,5 @@
 <template>
-    <node-view-wrapper 
+    <node-view-wrapper
         v-if="!isEmpty(blockType)"
         class="vizyblock"
         :class="{ 'active': selected }"
@@ -61,16 +61,15 @@
 </template>
 
 <script>
-import get from 'lodash/get';
-import find from 'lodash/find';
-import debounce from 'lodash/debounce';
-import isEmpty from 'lodash/isEmpty';
+import {
+    get, find, debounce, isEmpty,
+} from 'lodash-es';
 
 import tippy from 'tippy.js';
 import 'tippy.js/dist/tippy.css';
 import 'tippy.js/themes/light-border.css';
 
-import { NodeViewWrapper } from '@tiptap/vue-2';
+import { NodeViewWrapper } from '@tiptap/vue-3';
 
 import LightswitchField from '../settings/LightswitchField.vue';
 import VizyBlockFields from './VizyBlockFields.vue';
@@ -102,7 +101,7 @@ export default {
 
         decorations: {
             type: Array,
-            default: () => [],
+            default: () => { return []; },
         },
 
         selected: {
@@ -154,11 +153,11 @@ export default {
         },
 
         blockType() {
-            var blockType = {};
+            let blockType = {};
 
             if (!isEmpty(this.blockGroups)) {
                 this.blockGroups.forEach((blockGroup) => {
-                    var foundBlockType = find(blockGroup.blockTypes, { id: this.values.type });
+                    const foundBlockType = find(blockGroup.blockTypes, { id: this.values.type });
 
                     if (foundBlockType) {
                         blockType = foundBlockType;
@@ -178,7 +177,11 @@ export default {
                 return this.node.attrs.enabled && this.blockType.enabled;
             },
             set(enabled) {
-                return this.updateAttributes({ enabled });
+                // eslint-disable-next-line vue/no-mutating-props
+                this.node.attrs.enabled = enabled;
+
+                // Some obscure issue using this for some resaon in Vue 3...
+                // return this.updateAttributes({ enabled });
             },
         },
 
@@ -192,26 +195,27 @@ export default {
         },
 
         preview() {
-            var previewHtml = '';
+            let previewHtml = '';
 
             if (this.mounted) {
-                var $fields = $(this.$refs.fields.$el).children().children();
+                const $fields = $(this.$refs.fields.$el).children().children();
 
-                for (var i = 0; i < $fields.length; i++) {
-                    var $field = $($fields[i]),
-                        $inputs = $field.children('.input').find('select,input[type!="hidden"],textarea,.label'),
-                        inputPreviewText = '';
+                for (let i = 0; i < $fields.length; i++) {
+                    const $field = $($fields[i]);
+                    const $inputs = $field.children('.input').find('select,input[type!="hidden"],textarea,.label');
 
-                    for (var j = 0; j < $inputs.length; j++) {
-                        var $input = $($inputs[j]),
-                            value;
+                    let inputPreviewText = '';
+
+                    for (let j = 0; j < $inputs.length; j++) {
+                        const $input = $($inputs[j]);
+                        let value;
 
                         if ($input.hasClass('vui-json-content')) {
                             continue;
                         }
 
                         if ($input.hasClass('label')) {
-                            var $maybeLightswitchContainer = $input.parent().parent();
+                            const $maybeLightswitchContainer = $input.parent().parent();
 
                             if ($maybeLightswitchContainer.hasClass('lightswitch') && (
                                 ($maybeLightswitchContainer.hasClass('on') && $input.hasClass('off')) ||
@@ -221,8 +225,7 @@ export default {
                             }
 
                             value = $input.text();
-                        }
-                        else {
+                        } else {
                             value = Craft.getText(Garnish.getInputPostVal($input));
                         }
 
@@ -254,10 +257,10 @@ export default {
     },
 
     watch: {
-        'node.attrs.enabled'(newValue, oldValue) {
+        'node.attrs.enabled': function(newValue, oldValue) {
             this.collapsed = !newValue;
         },
-        'node.attrs.id'(newValue, oldValue) {
+        'node.attrs.id': function(newValue, oldValue) {
             // When blocks are moved, they'll be re-ordered and re-rendered in their new order, But this really messes
             // up our DOM handling for fields. So keep track of when the ID changes to detect when blocks have been
             // updated by moving. We then need to fetch the cached HTML, and re-init any JS.
@@ -278,7 +281,7 @@ export default {
         // Listen to an even raised (when moving a block) to serialize the DOM content of this block.
         // This is because Vue will re-render all blocks from scratch, and we'll loose our block content.
         // So save it before we re-render, after which, it'll render the saved HTML on-render.
-        this.$events.$on('vizy-blocks:updateDOM', this.onUpdateDOM);
+        this.$events.on('vizy-blocks:updateDOM', this.onUpdateDOM);
 
         // Set the HTML for the block's fields
         this.fieldsHtml = this.vizyField.getCachedFieldHtml(this.node.attrs.id);
@@ -312,15 +315,15 @@ export default {
                 });
             }
 
-            // This is a dirty hack to fix Firefox's inability to select inputs/textareas when the 
+            // This is a dirty hack to fix Firefox's inability to select inputs/textareas when the
             // parent element is set to draggable. Note the direct DOM update instead of a prop.
             this.$el.setAttribute('draggable', false);
         });
     },
 
-    beforeDestroy() {
+    beforeUnmount() {
         // Destroy event listeners for this block
-        this.$events.$off('vizy-blocks:updateDOM', this.onUpdateDOM);
+        this.$events.off('vizy-blocks:updateDOM', this.onUpdateDOM);
     },
 
     methods: {
@@ -331,17 +334,17 @@ export default {
         onUpdateDOM() {
             this.$nextTick(() => {
                 if (this.$refs.fields) {
-                    var $fieldsHtml = $(this.$refs.fields.$el.childNodes).clone();
+                    const $fieldsHtml = $(this.$refs.fields.$el.childNodes).clone();
 
                     // Special-case for Redactor. We need to reset it to its un-initialized form
                     // because it doesn't have better double-binding checks.
                     if ($fieldsHtml.find('.redactor-box').length) {
                         // Rip out the `textarea` which is all we need
-                        var $textarea = $fieldsHtml.find('.redactor-box textarea').htmlize();
+                        const $textarea = $fieldsHtml.find('.redactor-box textarea').htmlize();
                         $fieldsHtml.find('.redactor-box').replaceWith($textarea);
                     }
 
-                    var fieldsHtml = $fieldsHtml.htmlize();
+                    const fieldsHtml = $fieldsHtml.htmlize();
 
                     this.vizyField.setCachedFieldHtml(this.node.attrs.id, fieldsHtml);
                 }
@@ -351,9 +354,9 @@ export default {
         clickTab(index) {
             this.activeTab = index;
 
-            var $tabs = this.$refs.fields.$el.querySelectorAll('.vizyblock-fields > div');
+            const $tabs = this.$refs.fields.$el.querySelectorAll('.vizyblock-fields > div');
 
-            $tabs.forEach($tab => {
+            $tabs.forEach(($tab) => {
                 if ($tab.getAttribute('id').includes(this.activeTab)) {
                     $tab.classList.remove('hidden');
                 } else {
@@ -370,8 +373,8 @@ export default {
 
         appendJs() {
             // Add any JS required by fields
-            var footHtml = this.vizyField.getCachedFieldJs(this.node.attrs.id);
-            var $script = document.querySelector('#script-' + this.node.attrs.id);
+            const footHtml = this.vizyField.getCachedFieldJs(this.node.attrs.id);
+            const $script = document.querySelector(`#script-${this.node.attrs.id}`);
 
             if (footHtml) {
                 // But first check if already output. Otherwise, multiple bindings!
@@ -390,7 +393,7 @@ export default {
             // Give it a second to hide tippy first
             setTimeout(() => {
                 const pos = this.getPos();
-                const range = { from: pos, to: pos + this.node.nodeSize };
+                const range = { from: pos, to: pos + (this.node.nodeSize - 1) };
 
                 this.editor.chain().focus().deleteRange(range).run();
             }, 200);
@@ -411,7 +414,7 @@ export default {
         clickMove() {
             // Before we move blocks, save the dom state. Use an event to notify all blocks, because Vue will
             // re-render all blocks, due to how tiptap/prosemirror renders.
-            this.$events.$emit('vizy-blocks:updateDOM');
+            this.$events.emit('vizy-blocks:updateDOM');
         },
 
         onFieldUpdate() {
@@ -419,7 +422,7 @@ export default {
         },
 
         findContentBlocksForBlock(content) {
-            var foundContent = {};
+            let foundContent = {};
 
             if (!isEmpty(content)) {
                 // Special-handling when in the element slideout
@@ -429,7 +432,7 @@ export default {
                     // eslint-disable-next-line
                     content = Object.values(content)[0];
                 }
-                
+
                 Object.entries(content.fields).forEach(([fieldHandle, fieldBlocks]) => {
                     if (!isEmpty(fieldBlocks.blocks)) {
                         Object.entries(fieldBlocks.blocks).forEach(([blockId, blockFields]) => {
@@ -447,15 +450,15 @@ export default {
         },
 
         serializeFieldContent() {
-            var postData = Garnish.getPostData(this.$refs.fields.$el);
-            var content = Craft.expandPostArray(postData);
-            var fieldContent = this.findContentBlocksForBlock(content);
+            const postData = Garnish.getPostData(this.$refs.fields.$el);
+            const content = Craft.expandPostArray(postData);
+            const fieldContent = this.findContentBlocksForBlock(content);
 
             // Generate a POST data object, and save it
-            let values = Object.assign({}, this.values);
+            const values = { ...this.values };
 
             values.content = fieldContent;
-            
+
             this.updateAttributes({ values });
         },
     },

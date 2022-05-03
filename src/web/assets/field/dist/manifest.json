@@ -1,0 +1,10 @@
+{
+  "field/src/js/vizy.js": {
+    "file": "assets/vizy.7db39419.js",
+    "src": "field/src/js/vizy.js",
+    "isEntry": true,
+    "css": [
+      "assets/vizy.cdfa98c5.css"
+    ]
+  }
+}

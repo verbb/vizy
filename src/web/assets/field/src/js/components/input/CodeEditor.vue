@@ -1,9 +1,9 @@
 <template>
-    <codemirror v-if="visible" v-model="proxyValue" class="vui-code-editor" :options="options" />
+    <Codemirror v-if="visible" v-model:value="proxyValue" class="vui-code-editor" :options="options" />
 </template>
 
 <script>
-import { codemirror } from 'vue-codemirror-lite';
+import Codemirror from 'codemirror-editor-vue3';
 import beautify from 'js-beautify';
 
 import 'codemirror/mode/vue/vue';
@@ -13,7 +13,7 @@ export default {
     name: 'CodeEditor',
 
     components: {
-        codemirror,
+        Codemirror,
     },
 
     props: {
@@ -32,11 +32,13 @@ export default {
             default: false,
         },
 
-        value: {
+        modelValue: {
             type: String,
             default: '',
         },
     },
+
+    emits: ['update:modelValue'],
 
     data() {
         return {
@@ -56,14 +58,14 @@ export default {
         visible(newValue) {
             if (newValue) {
                 // eslint-disable-next-line
-                this.proxyValue = beautify.html(this.value, { indent_size: 4 });
+                this.proxyValue = beautify.html(this.modelValue, { indent_size: 4 });
             }
 
             this.resizeHandler();
         },
 
         proxyValue(newValue) {
-            this.$emit('input', newValue);
+            this.$emit('update:modelValue', newValue);
         },
     },
 
@@ -78,8 +80,8 @@ export default {
                 this.$nextTick(() => {
                     const { width, height } = this.editor.view.dom.getBoundingClientRect();
 
-                    this.$el.style.width = width + 'px';
-                    this.$el.style.height = height + 'px';
+                    this.$el.style.width = `${width}px`;
+                    this.$el.style.height = `${height}px`;
                 });
             }
         },
@@ -89,6 +91,10 @@ export default {
 </script>
 
 <style lang="scss">
+
+.CodeMirror-code {
+    font-family: Menlo, Monaco, Consolas, "Courier New", monospace;
+}
 
 .vui-code-editor {
     position: absolute;

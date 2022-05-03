@@ -9,7 +9,7 @@ export default {
                 const event = instance.props.mouseEvent;
                 const isCursorOverReference = event.target ? reference.contains(event.target) : true;
                 const { clientX, clientY } = event;
-                
+
                 const rect = reference.getBoundingClientRect();
                 const relativeX = clientX - rect.left;
                 const relativeY = clientY - rect.top;

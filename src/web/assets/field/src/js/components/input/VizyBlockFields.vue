@@ -1,5 +1,6 @@
 <script>
-import debounce from 'lodash/debounce';
+import { h } from 'vue';
+import { debounce } from 'lodash-es';
 
 export default {
     name: 'VizyBlockFields',
@@ -14,6 +15,8 @@ export default {
             default: '',
         },
     },
+
+    emits: ['update'],
 
     mounted() {
         this.$nextTick(() => {
@@ -33,18 +36,18 @@ export default {
 
     methods: {
         watchFieldChanges() {
-            var updateFunction = debounce(this.emitUpdate, 250);
+            const updateFunction = debounce(this.emitUpdate, 250);
 
             // Use MutationObserver to detect _any_ change in the block, and be sure to debounce
             // calls as there are a lot of changes. Far more effective than all the hundreds of different
             // plugins, edge-cases and dynamic DOM elements we have to deal with to get this to work
             // "normally" and more efficiently by say checking input events. Notably, dealing with hidden
             // input change events, tag fields, ST/Matrix fields, and lots more.
-            var observer = new MutationObserver(( mutations ) => {
+            const observer = new MutationObserver((mutations) => {
                 updateFunction();
             });
 
-            observer.observe(this.$el, { 
+            observer.observe(this.$el, {
                 childList: true,
                 attributes: true,
                 subtree: true,
@@ -114,7 +117,7 @@ export default {
             //     observer.observe(element, { childList: true, subtree: true });
             // });
 
-            // // Handle asset element select fields, where they 
+            // // Handle asset element select fields, where they
 
             // // Special case for Matrix blocks.
             // $(this.$el).find('.matrix').each((index, element) => {
@@ -158,7 +161,7 @@ export default {
         },
 
         applyRedactorFix() {
-            var $redactorToolbar = this.$el.querySelector('.redactor-toolbar');
+            const $redactorToolbar = this.$el.querySelector('.redactor-toolbar');
 
             if ($redactorToolbar) {
                 // This prevents focus being taken off the Redactor editor
@@ -185,12 +188,10 @@ export default {
         },
     },
 
-    render(h) {
+    render() {
         // Apply our dynamically provided template, rendered via Craft.
         return h('div', {
-            domProps: {
-                innerHTML: this.template,
-            },
+            innerHTML: this.template,
         });
     },
 };
