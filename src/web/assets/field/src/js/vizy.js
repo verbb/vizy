@@ -51,3 +51,9 @@ Craft.Vizy.Settings = Garnish.Base.extend({
         app.mount(`.${idPrefix}-vizy-configurator`);
     },
 });
+
+// Due to current issues with the element slide-out, we need to initialize in here, due to some
+// depenancy resolution not working. We'll figure it out!
+document.querySelectorAll('.vizy-input-component').forEach((element) => {
+    new Craft.Vizy.Input(element.getAttribute('id'), element.getAttribute('name'));
+});

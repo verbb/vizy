@@ -130,6 +130,7 @@ class VizyField extends Field
 
         $idPrefix = StringHelper::randomString(10);
 
+        $view->registerAssetBundle(VizyAsset::class);
         Plugin::registerAsset('field/src/js/vizy.js');
 
         $view->registerJs('new Craft.Vizy.Settings(' .
@@ -220,12 +221,7 @@ class VizyField extends Field
         //     ');');
         // }
 
-        Plugin::registerAsset('field/src/js/vizy.js');
-
-        $view->registerJs('new Craft.Vizy.Input(' .
-            '"' . $view->namespaceInputId($id) . '", ' .
-            '"' . $view->namespaceInputName($this->handle) . '"' .
-            ');');
+        Plugin::registerAsset('field/src/js/vizy.js', $view);
 
         return $view->renderTemplate('vizy/field/input', [
             'id' => $id,
