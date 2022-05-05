@@ -1,8 +1,7 @@
 # Events
-
 Vizy provides a collection of events for extending its functionality. Modules and plugins can register event listeners, typically in their `init()` methods, to modify Vizy’s behavior.
 
-### The `registerNodes` event
+## The `registerNodes` event
 The event that is triggered for registration of nodes.
 
 ```php
@@ -16,7 +15,7 @@ Event::on(Nodes::class, Nodes::EVENT_REGISTER_NODES, function(RegisterNodesEvent
 });
 ```
 
-### The `registerMarks` event
+## The `registerMarks` event
 The event that is triggered for registration of marks.
 
 ```php
@@ -30,7 +29,7 @@ Event::on(Nodes::class, Nodes::EVENT_REGISTER_MARKS, function(RegistermarksEvent
 });
 ```
 
-### The `modifyNodeTag` event
+## The `modifyNodeTag` event
 The event that is triggered for when a node's HTML tag is rendered.
 
 ```php
@@ -47,7 +46,7 @@ Event::on(Paragraph::class, Paragraph::EVENT_MODIFY_TAG, function(ModifyNodeTagE
 });
 ```
 
-### The `modifyMarkTag` event
+## The `modifyMarkTag` event
 The event that is triggered for when a mark's HTML tag is rendered.
 
 ```php
@@ -64,7 +63,7 @@ Event::on(Bold::class, Bold::EVENT_MODIFY_TAG, function(ModifyMarkTagEvent $even
 });
 ```
 
-### The `registerLinkOptions` event
+## The `registerLinkOptions` event
 The event that is triggered when registering the link options for the field.
 
 ```php
@@ -78,7 +77,7 @@ Event::on(VizyField::class, VizyField::EVENT_REGISTER_LINK_OPTIONS, function(Reg
 });
 ```
 
-### The `defineVizyConfig` event
+## The `defineVizyConfig` event
 The event that is triggered when loading the editor config.
 
 ```php

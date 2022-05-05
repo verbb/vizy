@@ -57,7 +57,7 @@ Your `_vizy` folder might look similar to the below, where we've created an indi
 
 Let's go through the content of some of these templates.
 
-### `paragraph.html`
+## `paragraph.html`
 This file might be quite lengthly, in order to deal with all possible nested [Mark](docs:developers/mark) inside a paragraph node.
 
 ```twig
@@ -78,14 +78,14 @@ This file might be quite lengthly, in order to deal with all possible nested [Ma
 </p>
 ```
 
-### `default.html` 
+## `default.html` 
 This file acts as a fallback for when you templates try to include a template partial that doesn't exist. As such, we can use `renderHtml()` to let Vizy handle the default behaviour. That way, our template partials exist only as overrides.
 
 ```twig
 {{ node.renderHtml() }}
 ```
 
-### `vizyBlock.html`
+## `vizyBlock.html`
 For this file we'll want to do the same modular technique, but this time on the Block Type, which will have different fields, therefore different templates.
 
 ```twig

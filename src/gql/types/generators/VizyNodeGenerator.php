@@ -3,8 +3,12 @@ namespace verbb\vizy\gql\types\generators;
 
 use verbb\vizy\Vizy;
 use verbb\vizy\gql\interfaces\VizyNodeInterface;
+use verbb\vizy\gql\interfaces\VizyImageNodeInterface;
 use verbb\vizy\gql\types\VizyNodeType;
+use verbb\vizy\gql\types\generators\VizyBlockTypeGenerator;
+use verbb\vizy\gql\types\generators\VizyImageNodeGenerator;
 use verbb\vizy\nodes\VizyBlock;
+use verbb\vizy\nodes\Image;
 
 use craft\gql\base\GeneratorInterface;
 use craft\gql\GqlEntityRegistry;
@@ -19,15 +23,25 @@ class VizyNodeGenerator implements GeneratorInterface
         $nodeClasses = Vizy::$plugin->getNodes()->getRegisteredNodes();
 
         $gqlTypes = [];
-        $interfaceFields = VizyNodeInterface::getFieldDefinitions();
+
+        $interfaceClasses = [
+            Image::class => VizyImageNodeInterface::getFieldDefinitions(),
+        ];
+
+        $generatorClasses = [
+            VizyBlock::class => VizyBlockTypeGenerator::generateTypes(),
+        ];
 
         foreach ($nodeClasses as $nodeClass) {
-            // Handle these on a per-field basis.
-            if ($nodeClass === VizyBlock::class) {
-                /** @noinspection SlowArrayOperationsInLoopInspection */
-                $gqlTypes = array_merge($gqlTypes, VizyBlockTypeGenerator::generateTypes());
+            // Special handling for some nodes
+            $generatorClass = $generatorClasses[$nodeClass] ?? null;
+
+            if ($generatorClass) {
+                $gqlTypes = array_merge($gqlTypes, $generatorClass);
                 continue;
             }
+
+            $interfaceFields = $interfaceClasses[$nodeClass] ?? VizyNodeInterface::getFieldDefinitions();
 
             $node = new $nodeClass;
             $node->setField($field);

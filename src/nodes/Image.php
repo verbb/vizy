@@ -5,6 +5,8 @@ use verbb\vizy\base\Node;
 use verbb\vizy\helpers\Nodes;
 use verbb\vizy\marks\Link;
 
+use Craft;
+use craft\elements\Asset;
 use craft\helpers\ArrayHelper;
 
 class Image extends Node
@@ -15,6 +17,7 @@ class Image extends Node
     public static ?string $type = 'image';
     public mixed $tagName = 'img';
 
+    private $_elementId = null;
 
     // Public Methods
     // =========================================================================
@@ -48,7 +51,7 @@ class Image extends Node
     public function getTag(): array
     {
         // Don't include certain attributes in rendering
-        ArrayHelper::remove($this->attrs, 'id');
+        $this->_elementId = ArrayHelper::remove($this->attrs, 'id');
         ArrayHelper::remove($this->attrs, 'url');
         ArrayHelper::remove($this->attrs, 'target');
         ArrayHelper::remove($this->attrs, 'transform');
@@ -64,5 +67,17 @@ class Image extends Node
         }
 
         return parent::getTag();
+    }
+
+    public function getAsset()
+    {
+        $id = $this->attrs['id'] ?? $this->_elementId ?? null;
+        $siteId = $this->element->siteId ?? null;
+
+        if ($id) {
+            return Craft::$app->getElements()->getElementById($id, Asset::class, $siteId);
+        }
+
+        return null;
     }
 }

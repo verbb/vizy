@@ -1,5 +1,4 @@
 # Configuration
-
 Create a `vizy.php` file under your `/config` directory with the following options available to you. You can also use multi-environment options to change these per environment.
 
 The below shows the defaults already used by Vizy, so you don't need to add these options unless you want to modify the values.
@@ -14,7 +13,7 @@ return [
 ];
 ```
 
-### Configuration Options
+## Configuration options
 - `iconsPath` - Provide a file system path for a collection of SVG icons. These are available when creating your Block Types for a Vizy field. This also accepts environment variables or aliases.
 
 ## Control Panel
