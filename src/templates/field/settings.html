@@ -53,7 +53,11 @@
 
     {% set fieldName = craft.app.view.namespaceInputName('fieldData') %}
 
-    <div class="{{ idPrefix }}-vizy-configurator vizy-configurator">
+    <div {{ attr({
+        class: 'vizy-configurator',
+        'data-field-data': componentData.fieldData,
+        'data-settings': componentData.settings,
+    }) }}>
         <vizy-settings field-name="{{ fieldName }}" :errors="{{ field.getErrors() | json_encode }}"></vizy-settings>
     </div>
 </div>
