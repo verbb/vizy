@@ -132,6 +132,13 @@ class VizyField extends Field
 
         Plugin::registerAsset('field/src/js/vizy.js');
 
+        // Use `setTimeout()` to handle some scenarios like Ajax-loading in field settings and slide-outs
+        $view->registerJs('setTimeout(function() { new Craft.Vizy.Settings(' .
+            Json::encode($idPrefix, JSON_UNESCAPED_UNICODE) . ', ' .
+            Json::encode($fieldData, JSON_UNESCAPED_UNICODE) . ', ' .
+            Json::encode($settings, JSON_UNESCAPED_UNICODE) .
+        '); }, 200);');
+
         $volumeOptions = [];
 
         foreach (Craft::$app->getVolumes()->getAllVolumes() as $volume) {
@@ -220,6 +227,12 @@ class VizyField extends Field
         // }
 
         Plugin::registerAsset('field/src/js/vizy.js');
+
+        // Use `setTimeout()` to handle some scenarios like Ajax-loading in field settings and slide-outs
+        $view->registerJs('setTimeout(function() { new Craft.Vizy.Input(' .
+            '"' . $view->namespaceInputId($id) . '", ' .
+            '"' . $view->namespaceInputName($this->handle) . '"' .
+        '); }, 200);');
 
         return $view->renderTemplate('vizy/field/input', [
             'id' => $id,
