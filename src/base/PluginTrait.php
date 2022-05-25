@@ -2,6 +2,7 @@
 namespace verbb\vizy\base;
 
 use verbb\base\BaseHelper;
+use verbb\vizy\services\Cache;
 use verbb\vizy\services\Icons;
 use verbb\vizy\services\Nodes;
 use verbb\vizy\services\Service;
@@ -20,6 +21,11 @@ trait PluginTrait
 
     // Public Methods
     // =========================================================================
+
+    public function getCache(): Cache
+    {
+        return $this->get('cache');
+    }
 
     public function getIcons(): Icons
     {
@@ -53,6 +59,7 @@ trait PluginTrait
     private function _setPluginComponents()
     {
         $this->setComponents([
+            'cache' => Cache::class,
             'icons' => Icons::class,
             'nodes' => Nodes::class,
             'service' => Service::class,
