@@ -119,9 +119,6 @@ class Nodes
             $text = StringHelper::htmlDecode($text);
             $text = StringHelper::htmlEncode($text);
 
-            // Run anything else not caught in the above through purifier to be extra safe
-            $text = HtmlPurifier::process($text, self::purifierConfig());
-
             $rawNode['content'][$key]['text'] = $text;
 
             // If this is now an empty text node, remove it. Tiptap won't like it.
@@ -149,25 +146,6 @@ class Nodes
         }
 
         return $rawNode;
-    }
-
-    private static function purifierConfig(): HTMLPurifier_Config
-    {
-        $purifierConfig = HTMLPurifier_Config::createDefault();
-        $purifierConfig->autoFinalize = false;
-
-        $config = [
-            'Attr.AllowedFrameTargets' => ['_blank'],
-            'Attr.EnableID' => true,
-            'HTML.SafeIframe' => true,
-            'URI.SafeIframeRegexp' => '%^(https?:)?//(www\.youtube(-nocookie)?\.com/embed/|player\.vimeo\.com/video/)%',
-        ];
-
-        foreach ($config as $option => $value) {
-            $purifierConfig->set($option, $value);
-        }
-
-        return $purifierConfig;
     }
     
 }
