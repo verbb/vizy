@@ -12,6 +12,7 @@
 
 <script>
 import tippy from 'tippy.js';
+import 'tippy.js/themes/light-border.css';
 
 import SvgIcon from './SvgIcon.vue';
 
