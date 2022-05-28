@@ -5,6 +5,7 @@
         :input-props="inputProps"
         :limit="limit"
         :component-attr-id-autosuggest="id"
+        @input="onInput"
         @selected="onSelected"
         @focus="updateFilteredOptions"
         @blur="onBlur"
@@ -70,6 +71,13 @@ export default {
         onInputChange(q) {
             this.query = (q || '').toLowerCase();
             this.updateFilteredOptions();
+        },
+
+        onInput(e) {
+            // Allow blank input to trigger an update
+            if (!e.target.value) {
+                this.$emit('input', '');
+            }
         },
 
         updateFilteredOptions() {
