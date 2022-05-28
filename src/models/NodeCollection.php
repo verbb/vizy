@@ -102,7 +102,7 @@ class NodeCollection extends Markup
         return $this->rawNodes;
     }
 
-    public function renderHtml($config = []): ?string
+    public function renderHtml($config = []): ?Markup
     {
         $html = [];
 
