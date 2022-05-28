@@ -23,6 +23,20 @@
 ### Removed
 - Remove `cleanDeltas()`, which is no longer needed in Craft 4.
 
+## 1.0.14 - 2022-05-28
+
+### Added
+- Add `VizyImageNodeInterface` and the ability to query `asset` on image nodes.
+- Add `Image::getAsset()` for image nodes.
+- Add caching for block type definitions for each field, to speed up rendering of large Vizy fields.
+- Improve field performance when editing in the control panel.
+
+### Fixed
+- Fix being unable to remove the template path for a Vizy blocktype when editing the field settings.
+- Remove HTMLPurifier due to performance issues, as we can rely on proper HTML encoding via `StringHelper::htmlEncode`.
+- Fix double-encoding of HTML strings.
+- Fix volumes not working for selecting images.
+
 ## 1.0.13 - 2022-04-13
 
 ### Added
