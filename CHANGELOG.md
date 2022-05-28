@@ -1,5 +1,15 @@
 # Changelog
 
+## 2.0.1 - 2022-05-28
+
+### Added
+- Add changes/improvements from `1.0.14`.
+
+### Fixed
+- Fix `renderHtml()` not rendering HTML correctly.
+- Fix JS initialization for input and settings.
+- Fix field settings not initializing in some cases.
+
 ## 2.0.0 - 2022-05-05
 
 ### Added
