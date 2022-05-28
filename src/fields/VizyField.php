@@ -577,6 +577,11 @@ class VizyField extends Field
 
     private function _getBlockGroupsForInput($value, $placeholderKey, ElementInterface $element = null): array
     {
+        // Get from the cache, if we've already prepped this field's block groups
+        if ($blockGroups = Vizy::$plugin->getCache()->getBlockGroupsForInput($this->handle)) {
+            return $blockGroups;
+        }
+
         $view = Craft::$app->getView();
 
         $data = $this->fieldData;
@@ -637,6 +642,9 @@ class VizyField extends Field
             $data[$groupKey]['blockTypes'] = array_values($data[$groupKey]['blockTypes']);
         }
 
+        // Store this in a cache for performance
+        Vizy::$plugin->getCache()->setBlockGroupsForInput($this->handle, $data);
+        
         return $data;
     }
 
