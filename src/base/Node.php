@@ -12,6 +12,8 @@ use craft\helpers\Template;
 use GraphQL\Type\Definition\Type;
 use GraphQL\Type\Definition\ScalarType;
 
+use Twig\Markup;
+
 class Node extends Component
 {
     // Constants
@@ -119,12 +121,12 @@ class Node extends Component
         return Vizy::$plugin->getNodes()->renderNode($this);
     }
 
-    public function renderHtml(): ?string
+    public function renderHtml(): ?Markup
     {
         return Template::raw((string)$this->renderNode());
     }
 
-    public function renderStaticHtml(): ?string
+    public function renderStaticHtml(): ?Markup
     {
         return $this->renderHtml();
     }

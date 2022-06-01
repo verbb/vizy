@@ -122,7 +122,7 @@ class NodeCollection extends Markup
         return Template::raw($html);
     }
 
-    public function renderStaticHtml($config = []): ?string
+    public function renderStaticHtml($config = []): ?Markup
     {
         $html = [];
 
