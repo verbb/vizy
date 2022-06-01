@@ -12,6 +12,8 @@ use craft\helpers\Html;
 use craft\helpers\Json;
 use craft\web\View;
 
+use Twig\Markup;
+
 class VizyBlock extends Node
 {
     // Properties
@@ -153,7 +155,7 @@ class VizyBlock extends Node
         return $view->renderTemplate($this->_blockType->template, $variables, View::TEMPLATE_MODE_SITE);
     }
 
-    public function renderStaticHtml(): ?string
+    public function renderStaticHtml(): ?Markup
     {
         $html = '';
 
