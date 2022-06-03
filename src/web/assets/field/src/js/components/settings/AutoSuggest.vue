@@ -46,7 +46,7 @@ export default {
         },
     },
 
-    emits: ['update:modelValue'],
+    emits: ['update:modelValue', 'input'],
 
     data() {
         return {

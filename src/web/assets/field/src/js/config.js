@@ -6,6 +6,9 @@ import VTooltip from 'floating-vue';
 import { vfmPlugin } from 'vue-final-modal';
 import VueUniqueId from '@/js/vendor/vue-unique-id';
 
+import { clone } from '@utils/object';
+import { t } from '@utils/translations';
+
 // Allows us to create a Vue app with global properties and loading plugins
 export const createVueApp = (props) => {
     const app = createApp({
@@ -53,17 +56,11 @@ export const createVueApp = (props) => {
     // Create global properties here, shared across multiple Vue apps.
     //
 
-    // Provide `t()` for Craft's translations in SFCs.
-    app.config.globalProperties.t = Craft.t;
+    // Provide `this.t()` for translations in SFCs.
+    app.config.globalProperties.t = t;
 
-    // Global function to easily clone an object
-    app.config.globalProperties.clone = function(value) {
-        if (value === undefined) {
-            return undefined;
-        }
-
-        return JSON.parse(JSON.stringify(value));
-    },
+    // Provide `this.clone()` for easy object cloning in SFCs.
+    app.config.globalProperties.clone = clone,
 
     // Global events. Accessible via `this.$events` in SFCs.
     app.config.globalProperties.$events = mitt();
