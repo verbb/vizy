@@ -33,6 +33,11 @@
 ### Removed
 - Remove `cleanDeltas()`, which is no longer needed in Craft 4.
 
+## 1.0.15 - 2022-06-04
+
+### Fixed
+- Fix incorrectly encoding quotes for Vizy field content.
+
 ## 1.0.14 - 2022-05-28
 
 ### Added
