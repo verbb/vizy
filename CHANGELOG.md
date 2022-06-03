@@ -1,5 +1,11 @@
 # Changelog
 
+## 2.0.2 - 2022-06-04
+
+### Fixed
+- Fix an error with JS translations.
+- Fix return types for `node.renderHtml()`.
+
 ## 2.0.1 - 2022-05-28
 
 ### Added
