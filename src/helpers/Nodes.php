@@ -116,8 +116,9 @@ class Nodes
             $text = LitEmoji::unicodeToShortcode($text);
 
             // Escape any HTML tags used in the text. Maybe we're writing HTML in text?
+            // But don't encode quotes, things like `&quot;` are invalid in JSON
             $text = StringHelper::htmlDecode($text);
-            $text = StringHelper::htmlEncode($text);
+            $text = StringHelper::htmlEncode($text, ENT_NOQUOTES);
 
             $rawNode['content'][$key]['text'] = $text;
 

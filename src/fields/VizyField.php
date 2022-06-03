@@ -218,11 +218,31 @@ class VizyField extends Field
             '"' . $view->namespaceInputName($this->handle) . '"' .
         ');');
 
+        $rawNodes = $value->getRawNodes();
+
+        // Normalise the content a little to handle special characters. 
+        // TODO: This is temporary, but helps transition people with issues _now_ but is 
+        // handled in `Nodes::serializeContent()` and `StringHelper::htmlEncode($text, ENT_NOQUOTES)`
+        foreach ($rawNodes as $rawNodeKey => $rawNode) {
+            $content = $rawNode['content'] ?? [];
+
+            foreach ($content as $contentKey => $block) {
+                // We only want to modify simple nodes and their text content, not complicated
+                // nodes like VizyBlocks, which could mess things up as fields control their content.
+                $text = $block['text'] ?? '';
+
+                // Decode some HTML entities
+                $text = StringHelper::htmlDecode($text);
+
+                $rawNodes[$rawNodeKey]['content'][$contentKey]['text'] = $text;
+            }
+        }
+
         return $view->renderTemplate('vizy/field/input', [
             'id' => $id,
             'name' => $this->handle,
             'field' => $this,
-            'value' => Json::encode($value->getRawNodes(), JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_QUOT),
+            'value' => Json::encode($rawNodes, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_QUOT),
             'settings' => Json::encode($settings, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_QUOT),
         ]);
     }
