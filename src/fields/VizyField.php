@@ -67,8 +67,8 @@ class VizyField extends Field
     public string $vizyConfig = '';
     public string $configSelectionMode = 'choose';
     public string $manualConfig = '';
-    public string $availableVolumes = '*';
-    public string $availableTransforms = '*';
+    public string|array|null $availableVolumes = '*';
+    public string|array|null $availableTransforms = '*';
     public bool $showUnpermittedVolumes = false;
     public bool $showUnpermittedFiles = false;
     public string $defaultTransform = '';
