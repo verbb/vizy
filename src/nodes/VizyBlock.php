@@ -10,6 +10,7 @@ use craft\base\ElementInterface;
 use craft\errors\InvalidFieldException;
 use craft\helpers\Html;
 use craft\helpers\Json;
+use craft\helpers\Template;
 use craft\web\View;
 
 use Twig\Markup;
@@ -162,7 +163,7 @@ class VizyBlock extends Node
         $fieldLayout = $this->getFieldLayout();
 
         if (!$fieldLayout) {
-            return $html;
+            return Template::raw($html);
         }
 
         // Create a fake element with the same fieldtype as our block
@@ -174,9 +175,9 @@ class VizyBlock extends Node
             }
         }
 
-        return Html::tag('div', $html, [
+        return Template::raw(Html::tag('div', $html, [
             'class' => 'vizyblock',
-        ]);
+        ]));
     }
 
     public function getFieldContext(): string
