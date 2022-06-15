@@ -158,12 +158,14 @@ export default {
         },
 
         applyRedactorFix() {
-            var $redactorToolbar = this.$el.querySelector('.redactor-toolbar');
+            var $redactorToolbars = this.$el.querySelectorAll('.redactor-toolbar');
 
-            if ($redactorToolbar) {
-                // This prevents focus being taken off the Redactor editor
-                $redactorToolbar.addEventListener('mousedown', (e) => {
-                    e.preventDefault();
+            if ($redactorToolbars.length) {
+                $redactorToolbars.forEach($redactorToolbar => {
+                    // This prevents focus being taken off the Redactor editor
+                    $redactorToolbar.addEventListener('mousedown', (e) => {
+                        e.preventDefault();
+                    });
                 });
             }
         },
