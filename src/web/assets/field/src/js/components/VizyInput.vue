@@ -230,7 +230,9 @@ export default {
                 Paragraph,
                 Text,
                 VizyBlock,
-                Focus.configure({ className: 'has-focus', mode: 'deepest' }),
+
+                // Remove due to strange behaviour with nested Vizy fields and gapcursor focusing
+                // Focus.configure({ className: 'has-focus', mode: 'deepest' }),
 
                 // Optional Marks
                 Bold,

@@ -2,7 +2,7 @@
     <node-view-wrapper 
         v-if="!isEmpty(blockType)"
         class="vizyblock"
-        :class="{ 'active': selected }"
+        :class="{ 'has-focus': selected }"
         contenteditable="false"
         @copy.stop
         @paste.stop
