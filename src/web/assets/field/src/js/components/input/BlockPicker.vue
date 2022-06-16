@@ -103,9 +103,10 @@ export default {
                 arrow: true,
                 interactive: true,
                 placement: 'right',
-                theme: 'light-border',
+                theme: 'vui-block-picker light-border',
                 maxWidth: '300px',
                 zIndex: 10,
+                appendTo: () => document.body,
                 hideOnClick: true,
             });
         }
@@ -261,18 +262,18 @@ export default {
 // Tooltips/Popover
 // ==========================================================================
 
-.vui-editor-insert .tippy-box {
+[data-theme*="vui-block-picker"].tippy-box {
     width: 335px;
     max-height: 90vh;
 
     .tippy-content {
-        padding: 16px 16px 26px;
+        padding: 12px 12px 26px;
         max-height: 480px;
-        overflow: scroll;
+        overflow-y: auto;
     }
 
     hr {
-        margin: 16px 0 !important;
+        margin: 12px 0 !important;
     }
 }
 
