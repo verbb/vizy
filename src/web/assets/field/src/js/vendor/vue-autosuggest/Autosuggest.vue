@@ -354,7 +354,7 @@ export default {
     /**
      * Support initialValue
      */
-    value: {
+    modelValue: {
       handler(newValue){
         this.internalValue = newValue
       },
