@@ -101,10 +101,20 @@ export default Node.create({
                         }
 
                         // Is the Vizy field that's closest to clicked the same as this one?
-                        // If not, return `true` to prevent default behaviour
+                        // If not, return `true` to prevent default behaviour. This prevents nested Vizy fields from
+                        // having all their parent blocks also selected.
                         var $parentField = $clickedBlock.closest('.ProseMirror');
 
                         if ($parentField !== view.dom) {
+                            return true;
+                        }
+
+                        // Only allow clicking on the Vizy Block header to select the block
+                        // Also check if we're clicking on the tabs or actions
+                        var $blockHeader = event.target.closest('.vizyblock-header');
+                        var $blockHeaderActions = event.target.closest('.vizyblock-header .actions-tabs');
+
+                        if (!$blockHeader || $blockHeaderActions) {
                             return true;
                         }
                     },

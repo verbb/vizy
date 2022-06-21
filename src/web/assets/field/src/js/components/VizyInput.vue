@@ -110,6 +110,10 @@ export default {
         toolbarFixed() {
             return this.settings.vizyConfig.toolbarFixed;
         },
+
+        isRoot() {
+            return this.settings.isRoot;
+        },
     },
 
     watch: {
