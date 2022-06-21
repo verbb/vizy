@@ -183,8 +183,10 @@ class VizyField extends Field
         $placeholderKey = StringHelper::randomString(10);
 
         $settings = [
-            'blockGroups' => $this->_getBlockGroupsForInput($value, $placeholderKey, $element),
+            // The order of `blocks` and `blockGroups` is important here, to ensure that the blocks
+            // are rendered with content, where `blockGroups` is just the template for new blocks.
             'blocks' => $this->_getBlocksForInput($value, $placeholderKey, $element),
+            'blockGroups' => $this->_getBlockGroupsForInput($value, $placeholderKey, $element),
             'vizyConfig' => $this->_getVizyConfig(),
             'defaultTransform' => $defaultTransform,
             'elementSiteId' => $site->id,
