@@ -430,17 +430,19 @@ export default {
                     content = Object.values(content)[0];
                 }
                 
-                Object.entries(content.fields).forEach(([fieldHandle, fieldBlocks]) => {
-                    if (!isEmpty(fieldBlocks.blocks)) {
-                        Object.entries(fieldBlocks.blocks).forEach(([blockId, blockFields]) => {
-                            if (blockId === this.node.attrs.id) {
-                                foundContent = blockFields;
-                            } else {
-                                foundContent = this.findContentBlocksForBlock(blockFields);
-                            }
-                        });
-                    }
-                });
+                if (!isEmpty(content.fields)) {
+                    Object.entries(content.fields).forEach(([fieldHandle, fieldBlocks]) => {
+                        if (!isEmpty(fieldBlocks.blocks)) {
+                            Object.entries(fieldBlocks.blocks).forEach(([blockId, blockFields]) => {
+                                if (blockId === this.node.attrs.id) {
+                                    foundContent = blockFields;
+                                } else {
+                                    foundContent = this.findContentBlocksForBlock(blockFields);
+                                }
+                            });
+                        }
+                    });
+                }
             }
 
             return foundContent;

@@ -328,7 +328,7 @@ export default {
 
         getParsedBlockHtml(html, id) {
             if (typeof html === 'string') {
-                return html.replace(new RegExp(`__BLOCK_TYPE_${this.settings.placeholderKey}__`, 'g'), id);
+                return html.replace(new RegExp(`__VIZY_BLOCK_TYPE_${this.settings.placeholderKey}__`, 'g'), id);
             } else {
                 return '';
             }
