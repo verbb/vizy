@@ -448,7 +448,7 @@ export default {
 
                 // Strip out everything apart from the top-level field handle, which is all we want.
                 if (name.includes(fieldHandle) && name !== fieldHandle) {
-                    Craft.deltaNames.splice(index);
+                    Craft.deltaNames.splice(index, 1);
                 }
             });
         },
