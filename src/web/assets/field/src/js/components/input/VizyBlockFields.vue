@@ -15,24 +15,19 @@ export default {
         },
     },
 
-    created() {
-        // Only start watching when focusing on on _any_ Vizy field. This helps to not re-trigger changed data
-        // for nested Vizy fields, which can alter slightly from PHP to JS.
-        // Be careful to only trigger this once, as it'll be raised when focusing on the field
-        this.$events.$once('vizy-field:focused', () => {
-            // Watch all field content for changes to serialize them to our text inputs that are stored in JSON blocks.
-            this.watchFieldChanges();
-
-            // Special fix for Redactor. For some reason, when clicking on formatting buttons, we lose
-            // focus on ProseMirror. One day, we'll figure out what's really going on here
-            this.applyRedactorFix();
-        });
-    },
-
     mounted() {
         this.$nextTick(() => {
             // Ensure any Craft fields are prepped.
             Craft.initUiElements(this.$el);
+
+            this.$nextTick(() => {
+                // Watch all field content for changes to serialize them to our text inputs that are stored in JSON blocks.
+                this.watchFieldChanges();
+
+                // Special fix for Redactor. For some reason, when clicking on formatting buttons, we lose
+                // focus on ProseMirror. One day, we'll figure out what's really going on here
+                this.applyRedactorFix();
+            });
         });
     },
 

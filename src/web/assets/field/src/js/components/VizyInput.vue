@@ -136,13 +136,6 @@ export default {
                 this.json = this.editor.getJSON().content;
                 this.html = this.editor.getHTML();
             },
-            onFocus: () => {
-                // Set a flag to start watching for field changes. This is because for nested fields
-                // on-load there's likely some changes coming from PHP to JS that are otherwise incosequential
-                // e.g. `""` to `false`, but that triggers the unload warning which isn't nice.
-                // So when we focus on the field, start watching for changes.
-                this.$events.$emit('vizy-field:focused');
-            },
         });
 
         // Store this input against the editor for each access everywhere.
