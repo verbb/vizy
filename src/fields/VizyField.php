@@ -191,6 +191,7 @@ class VizyField extends Field
             'showAllUploaders' => $this->showUnpermittedFiles,
             'placeholderKey' => $placeholderKey,
             'fieldHandle' => $this->handle,
+            'isRoot' => true,
         ];
 
         // Only include some options if we need them - for performance
@@ -200,6 +201,11 @@ class VizyField extends Field
             $settings['linkOptions'] = $this->_getLinkOptions($element);
             $settings['volumes'] = $this->_getVolumeKeys();
             $settings['transforms'] = $this->_getTransforms();
+        }
+
+        // Let the field know if this is the root field for nested fields
+        if ($element instanceof BlockElement) {
+            $settings['isRoot'] = false;
         }
 
         // No need to output JS for any nested fields, all settings are rendered in the template
