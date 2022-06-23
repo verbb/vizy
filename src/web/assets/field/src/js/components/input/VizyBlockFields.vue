@@ -33,7 +33,7 @@ export default {
 
     methods: {
         watchFieldChanges() {
-            var updateFunction = debounce(this.emitUpdate, 250);
+            var updateFunction = debounce(this.emitUpdate, 50);
 
             // Use MutationObserver to detect _any_ change in the block, and be sure to debounce
             // calls as there are a lot of changes. Far more effective than all the hundreds of different
