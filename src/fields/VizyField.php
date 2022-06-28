@@ -699,7 +699,7 @@ class VizyField extends Field
                     $blockElement = $block->getBlockElement($element);
 
                     $originalNamespace = $view->getNamespace();
-                    $namespace = $view->namespaceInputName($this->handle . "[blocks][{$blockId}]", $originalNamespace);
+                    $namespace = $view->namespaceInputName($this->handle . "[blocks][__VIZY_BLOCK_{$placeholderKey}__]", $originalNamespace);
                     $view->setNamespace($namespace);
 
                     $fieldsHtml = $view->namespaceInputs($fieldLayout->createForm($blockElement)->render());
@@ -708,7 +708,7 @@ class VizyField extends Field
                     $view->setNamespace($originalNamespace);
 
                     if ($footHtml) {
-                        $footHtml = '<script id="script-' . $blockId . '">' . $footHtml . '</script>';
+                        $footHtml = '<script id="script-__VIZY_BLOCK_' . $placeholderKey . '__">' . $footHtml . '</script>';
                     }
 
                     $blocks[] = [
