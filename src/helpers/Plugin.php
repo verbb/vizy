@@ -13,17 +13,24 @@ class Plugin
     {
         $viteService = Vizy::$plugin->getVite();
 
-        $options = [
+        $scriptOptions = [
+            'depends' => [
+                VizyAsset::class,
+            ],
+            'onload' => "document.dispatchEvent(new CustomEvent('vite-script-loaded',{detail:{path:'$path'}}));",
+        ];
+
+        $styleOptions = [
             'depends' => [
                 VizyAsset::class,
             ],
         ];
 
-        $viteService->register($path, false, $options, $options);
+        $viteService->register($path, false, $scriptOptions, $styleOptions);
 
         // Provide nice build errors - only in dev
         if ($viteService->devServerRunning()) {
-            $viteService->register('@vite/client', false, $options, $options);
+            $viteService->register('@vite/client', false);
         }
     }
 
