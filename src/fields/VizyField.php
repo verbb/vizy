@@ -180,12 +180,16 @@ class VizyField extends Field
             $defaultTransform = $transform->handle;
         }
 
-        $placeholderKey = StringHelper::randomString(10);
+        // Cache the placeholder key for the fields' JS. Because we're caching the block type HTML/JS
+        // we also need to cache the placeholder key to match that cached data.
+        $placeholderKey = Vizy::$plugin->getCache()->getOrSet($this->getCacheKey('placeholderKey'), function() {
+            return StringHelper::randomString(10);
+        });
 
         $settings = [
             // The order of `blocks` and `blockGroups` is important here, to ensure that the blocks
             // are rendered with content, where `blockGroups` is just the template for new blocks.
-            'blocks' => $this->_getBlocksForInput($value, $element),
+            'blocks' => $this->_getBlocksForInput($value, $placeholderKey, $element),
             'blockGroups' => $this->_getBlockGroupsForInput($value, $placeholderKey, $element),
             'vizyConfig' => $this->_getVizyConfig(),
             'defaultTransform' => $defaultTransform,
@@ -557,6 +561,11 @@ class VizyField extends Field
     // Private Methods
     // =========================================================================
 
+    private function getCacheKey($key)
+    {
+        return $this->id . '-' . $this->handle . '-' . $key;
+    }
+
     private function _getNestedValues($value, $key, &$items = [])
     {
         foreach ($value as $k => $v) {
@@ -600,70 +609,75 @@ class VizyField extends Field
 
     private function _getBlockGroupsForInput($value, $placeholderKey, ElementInterface $element = null)
     {
-        $view = Craft::$app->getView();
+        // Get from the cache, if we've already prepped this field's block groups.
+        // The blocks HTML/JS is unique to this fields' ID and handle. Even if used multiple
+        // times in an element, or nested, we only need to generate this once.
+        return Vizy::$plugin->getCache()->getOrSet($this->getCacheKey('blockGroups'), function() use ($value, $placeholderKey, $element) {
+            $view = Craft::$app->getView();
 
-        $data = $this->fieldData;
+            $data = $this->fieldData;
 
-        foreach ($data as $groupKey => $group) {
-            $blocks = $group['blockTypes'] ?? [];
+            foreach ($data as $groupKey => $group) {
+                $blocks = $group['blockTypes'] ?? [];
 
-            foreach ($blocks as $blockTypeKey => $blockTypeData) {
-                // Skip any disabled blocktypes
-                $enabled = $blockTypeData['enabled'] ?? true;
+                foreach ($blocks as $blockTypeKey => $blockTypeData) {
+                    // Skip any disabled blocktypes
+                    $enabled = $blockTypeData['enabled'] ?? true;
 
-                if (!$enabled) {
-                    continue;
+                    if (!$enabled) {
+                        continue;
+                    }
+
+                    $blockType = new BlockType($blockTypeData);
+
+                    $fieldLayout = $blockType->getFieldLayout();
+
+                    if (!$fieldLayout) {
+                        // Discard the blocktype
+                        unset($data[$groupKey]['blockTypes'][$blockTypeKey]);
+
+                        continue;
+                    }
+
+                    $blockTypeArray = $blockType->toArray();
+
+                    $view->startJsBuffer();
+
+                    // Create a fake element with the same fieldtype as our block
+                    $blockElement = new BlockElement();
+                    $blockElement->setFieldLayout($fieldLayout);
+                    $blockElement->setOwner($element);
+
+                    $originalNamespace = $view->getNamespace();
+                    $namespace = $view->namespaceInputName($this->handle . "[blocks][__VIZY_BLOCK_{$placeholderKey}__]", $originalNamespace);
+                    $view->setNamespace($namespace);
+
+                    $form = $fieldLayout->createForm($blockElement);
+                    $blockTypeArray['tabs'] = $form->getTabMenu();
+                    $blockTypeArray['fieldsHtml'] = $view->namespaceInputs($form->render());
+
+                    $footHtml = $view->clearJsBuffer(false);
+
+                    $view->setNamespace($originalNamespace);
+
+                    if ($footHtml) {
+                        $footHtml = '<script id="script-__VIZY_BLOCK_' . $placeholderKey . '__">' . $footHtml . '</script>';
+                    }
+
+                    $blockTypeArray['footHtml'] = $footHtml;
+
+                    $data[$groupKey]['blockTypes'][$blockTypeKey] = $blockTypeArray;
                 }
 
-                $blockType = new BlockType($blockTypeData);
-
-                $fieldLayout = $blockType->getFieldLayout();
-
-                if (!$fieldLayout) {
-                    // Discard the blocktype
-                    unset($data[$groupKey]['blockTypes'][$blockTypeKey]);
-
-                    continue;
-                }
-
-                $blockTypeArray = $blockType->toArray();
-
-                $view->startJsBuffer();
-
-                // Create a fake element with the same fieldtype as our block
-                $blockElement = new BlockElement();
-                $blockElement->setFieldLayout($fieldLayout);
-                $blockElement->setOwner($element);
-
-                $originalNamespace = $view->getNamespace();
-                $namespace = $view->namespaceInputName($this->handle . "[blocks][__VIZY_BLOCK_TYPE_{$placeholderKey}__]", $originalNamespace);
-                $view->setNamespace($namespace);
-
-                $form = $fieldLayout->createForm($blockElement);
-                $blockTypeArray['tabs'] = $form->getTabMenu();
-                $blockTypeArray['fieldsHtml'] = $view->namespaceInputs($form->render());
-
-                $footHtml = $view->clearJsBuffer(false);
-
-                $view->setNamespace($originalNamespace);
-
-                if ($footHtml) {
-                    $footHtml = '<script id="script-__VIZY_BLOCK_TYPE_' . $placeholderKey . '__">' . $footHtml . '</script>';
-                }
-
-                $blockTypeArray['footHtml'] = $footHtml;
-
-                $data[$groupKey]['blockTypes'][$blockTypeKey] = $blockTypeArray;
+                // Ensure we reset array indexes to play nicely with JS
+                $data[$groupKey]['blockTypes'] = array_values($data[$groupKey]['blockTypes']);
             }
 
-            // Ensure we reset array indexes to play nicely with JS
-            $data[$groupKey]['blockTypes'] = array_values($data[$groupKey]['blockTypes']);
-        }
-
-        return $data;
+            return $data;
+        });
     }
 
-    private function _getBlocksForInput($value, ElementInterface $element = null)
+    private function _getBlocksForInput($value, $placeholderKey, ElementInterface $element = null)
     {
         $view = Craft::$app->getView();
 
