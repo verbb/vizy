@@ -51,6 +51,7 @@
         "js-beautify": "^1.14.3",
         "qs": "^6.10.3",
         "tippy.js": "^6.3.7",
+        "vite-plugin-compression": "^0.5.1",
         "vue": "^3.2.33",
         "vue-autosuggest": "^2.2.0",
         "vue-final-modal": "^3.4.3",

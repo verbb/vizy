@@ -3,6 +3,7 @@ import path from 'path';
 // Vite Plugins
 import VuePlugin from '@vitejs/plugin-vue';
 import EslintPlugin from 'vite-plugin-eslint';
+import CompressionPlugin from 'vite-plugin-compression';
 
 // Rollup Plugins
 import { nodeResolve } from '@rollup/plugin-node-resolve';
@@ -43,15 +44,19 @@ export default ({ command }) => ({
 
         // Vue 3 support
         // https://github.com/vitejs/vite/tree/main/packages/plugin-vue
-        VuePlugin({
-            isProduction: true,
-        }),
+        VuePlugin(),
 
         // Analyze bundle size
         // https://github.com/doesdev/rollup-plugin-analyzer
         AnalyzePlugin({
             summaryOnly: true,
             limit: 15,
+        }),
+
+        // Gzip assets
+        // https://github.com/vbenjs/vite-plugin-compression
+        CompressionPlugin({
+            filter: /\.(js|mjs|json|css|map)$/i,
         }),
 
         // Ensure Vite can find the modules it needs
