@@ -72,11 +72,55 @@ export default Node.create({
                         // Prevent _any_ key from clearing block. As soon as you start typing,
                         // and a block is focused, it'll blast the block away.
                         view.state.typing = true;
+
+                        // Remove selected state on a Vizy Block when pressing escape
+                        if (event.key === 'Escape') {
+                            const from = view.state.selection.$from.pos;
+                            const to = view.state.selection.$to.pos;
+                            const beforeNode = ((from - 1) < 0) ? 0 : from - 1;
+
+                            this.editor
+                                .chain()
+                                .setTextSelection({ from: beforeNode, to: beforeNode })
+                                .blur()
+                                .run();
+
+                            return true;
+                        }
                     },
 
                     handlePaste: (view, event, slice) => {
                         // Prevent pasting overwriting block
                         view.state.pasting = true;
+                    },
+
+                    handleClickOn: (view, pos, node, nodePos, event, direct) => {
+                        // Check for the number of child vizyblocks for the root of the field that
+                        // we're clicking on. We only care about the deepest
+                        const $clickedBlock = event.target.closest('.vizyblock');
+
+                        // Not clicking on a Vizy Block, so skip
+                        if (!$clickedBlock) {
+                            return false;
+                        }
+
+                        // Is the Vizy field that's closest to clicked the same as this one?
+                        // If not, return `true` to prevent default behaviour. This prevents nested Vizy fields from
+                        // having all their parent blocks also selected.
+                        const $parentField = $clickedBlock.closest('.ProseMirror');
+
+                        if ($parentField !== view.dom) {
+                            return true;
+                        }
+
+                        // Only allow clicking on the Vizy Block header to select the block
+                        // Also check if we're clicking on the tabs or actions
+                        const $blockHeader = event.target.closest('.vizyblock-header');
+                        const $blockHeaderActions = event.target.closest('.vizyblock-header .actions-tabs');
+
+                        if (!$blockHeader || $blockHeaderActions) {
+                            return true;
+                        }
                     },
                 },
 

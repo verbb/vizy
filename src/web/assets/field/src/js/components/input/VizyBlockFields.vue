@@ -36,7 +36,7 @@ export default {
 
     methods: {
         watchFieldChanges() {
-            const updateFunction = debounce(this.emitUpdate, 250);
+            const updateFunction = debounce(this.emitUpdate, 50);
 
             // Use MutationObserver to detect _any_ change in the block, and be sure to debounce
             // calls as there are a lot of changes. Far more effective than all the hundreds of different
@@ -161,12 +161,14 @@ export default {
         },
 
         applyRedactorFix() {
-            const $redactorToolbar = this.$el.querySelector('.redactor-toolbar');
+            const $redactorToolbars = this.$el.querySelectorAll('.redactor-toolbar');
 
-            if ($redactorToolbar) {
-                // This prevents focus being taken off the Redactor editor
-                $redactorToolbar.addEventListener('mousedown', (e) => {
-                    e.preventDefault();
+            if ($redactorToolbars.length) {
+                $redactorToolbars.forEach(($redactorToolbar) => {
+                    // This prevents focus being taken off the Redactor editor
+                    $redactorToolbar.addEventListener('mousedown', (e) => {
+                        e.preventDefault();
+                    });
                 });
             }
         },

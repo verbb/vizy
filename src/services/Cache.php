@@ -9,20 +9,33 @@ class Cache extends Component
     // Properties
     // =========================================================================
 
-    private $_blockGroupsForInput = [];
+    private $_cacheData = [];
 
 
     // Public Methods
     // =========================================================================
 
-    public function getBlockGroupsForInput($key)
+    public function get($key)
     {
-        return $this->_blockGroupsForInput[$key] ?? [];
+        return $this->_cacheData[$key] ?? false;
     }
 
-    public function setBlockGroupsForInput($key, $value)
+    public function set($key, $value)
     {
-        $this->_blockGroupsForInput[$key] = $value;
+        $this->_cacheData[$key] = $value;
+    }
+
+    public function getOrSet($key, $callable)
+    {
+        if (($value = $this->get($key)) !== false) {
+            return $value;
+        }
+
+        $value = call_user_func($callable, $this);
+
+        $this->set($key, $value);
+
+        return $value;
     }
 
 }

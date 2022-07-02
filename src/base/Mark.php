@@ -59,7 +59,7 @@ class Mark extends Component
         return [
             [
                 'tag' => $this->tagName,
-                'attrs' => $this->attrs,
+                'attrs' => array_filter($this->attrs),
             ],
         ];
     }

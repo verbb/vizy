@@ -1,7 +1,32 @@
 import { Plugin, PluginKey } from 'prosemirror-state';
+import { mergeAttributes } from '@tiptap/core';
 import Link from '@tiptap/extension-link';
 
 export default Link.extend({
+    addOptions() {
+        return {
+            ...this.parent?.(),
+
+            // Reset the default attributes to not assume `target="_blank"`
+            HTMLAttributes: {
+                target: null,
+                rel: null,
+                class: null,
+            },
+        };
+    },
+
+    renderHTML({ HTMLAttributes }) {
+        const attrs = mergeAttributes(this.options.HTMLAttributes, HTMLAttributes);
+
+        // Only output `rel` if setting a target
+        if (attrs.target === '_blank') {
+            attrs.rel = 'noopener noreferrer';
+        }
+
+        return ['a', attrs, 0];
+    },
+
     addProseMirrorPlugins() {
         return [
             new Plugin({

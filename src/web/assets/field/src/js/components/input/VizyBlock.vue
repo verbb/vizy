@@ -2,7 +2,7 @@
     <node-view-wrapper
         v-if="!isEmpty(blockType)"
         class="vizyblock"
-        :class="{ 'active': selected }"
+        :class="{ 'has-focus': selected }"
         contenteditable="false"
         @copy.stop
         @paste.stop
@@ -433,17 +433,19 @@ export default {
                     content = Object.values(content)[0];
                 }
 
-                Object.entries(content.fields).forEach(([fieldHandle, fieldBlocks]) => {
-                    if (!isEmpty(fieldBlocks.blocks)) {
-                        Object.entries(fieldBlocks.blocks).forEach(([blockId, blockFields]) => {
-                            if (blockId === this.node.attrs.id) {
-                                foundContent = blockFields;
-                            } else {
-                                foundContent = this.findContentBlocksForBlock(blockFields);
-                            }
-                        });
-                    }
-                });
+                if (!isEmpty(content.fields)) {
+                    Object.entries(content.fields).forEach(([fieldHandle, fieldBlocks]) => {
+                        if (!isEmpty(fieldBlocks.blocks)) {
+                            Object.entries(fieldBlocks.blocks).forEach(([blockId, blockFields]) => {
+                                if (blockId === this.node.attrs.id) {
+                                    foundContent = blockFields;
+                                } else {
+                                    foundContent = this.findContentBlocksForBlock(blockFields);
+                                }
+                            });
+                        }
+                    });
+                }
             }
 
             return foundContent;
@@ -483,16 +485,16 @@ export default {
         box-shadow: 0 0 0 1px #127fbf, 0 0 0 3px rgb(18 127 191 / 50%);
     }
 
-    &::before {
-        content: "";
-        margin: -10px 0 0 0;
-        height: 10px;
-        display: block;
-    }
-
     .vizy-static & {
         padding-top: 12px;
     }
+}
+
+// Provide a bigger gap for two Vizy blocks directly after one another
+// and be sure to check if the gapcursor has been inserted, as that's the same behavior
+.vizyblock + .vizyblock,
+.vizyblock + .ProseMirror-gapcursor + .vizyblock {
+    margin-top: 20px;
 }
 
 .vizyblock-header {
@@ -601,6 +603,42 @@ export default {
 
 .vizyblock-fields {
     padding-top: 14px;
+}
+
+// Fix overflow issues from Craft's field layout, causing cursor issues in the editor
+// Selectors also need to be very specific to override Craft.
+#content .vizyblock-fields :not(.meta) > .flex-fields {
+    margin-left: 0 !important;
+    margin-right: 0 !important;
+    width: 100% !important;
+
+    > :not(h2):not(hr),
+    > :not(h2):not(hr):last-child {
+        margin-left: 0 !important;
+        margin-right: 0 !important;
+        width: 100% !important;
+
+        @media only screen and (min-width: 1536px) {
+            &.width-25 {
+                width: 25% !important;
+            }
+
+            &.width-50 {
+                width: 50% !important;
+            }
+
+            &.width-75 {
+                width: 75% !important;
+            }
+        }
+
+        @media only screen and (min-width: 500px) and (max-width: 1535px) {
+            &.width-25,
+            &.width-50 {
+                width: 50% !important;
+            }
+        }
+    }
 }
 
 .vizyblock-fields .field > .heading > label {

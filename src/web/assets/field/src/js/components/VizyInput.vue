@@ -112,6 +112,10 @@ export default {
         toolbarFixed() {
             return this.settings.vizyConfig.toolbarFixed;
         },
+
+        isRoot() {
+            return this.settings.isRoot;
+        },
     },
 
     watch: {
@@ -229,7 +233,9 @@ export default {
                 Paragraph,
                 Text,
                 VizyBlock,
-                Focus.configure({ className: 'has-focus', mode: 'deepest' }),
+
+                // Remove due to strange behaviour with nested Vizy fields and gapcursor focusing
+                // Focus.configure({ className: 'has-focus', mode: 'deepest' }),
 
                 // Optional Marks
                 Bold,
@@ -309,12 +315,19 @@ export default {
         },
 
         contentToValue(content) {
+            // Prevent a single empty paragraph from being generated when the field is empty
+            if (content && Array.isArray(content) && content.length === 1) {
+                if (content[0].type === 'paragraph' && !content[0].content) {
+                    return null;
+                }
+            }
+
             return JSON.stringify(content);
         },
 
         getParsedBlockHtml(html, id) {
             if (typeof html === 'string') {
-                return html.replace(new RegExp(`__BLOCK_TYPE_${this.settings.placeholderKey}__`, 'g'), id);
+                return html.replace(new RegExp(`__VIZY_BLOCK_${this.settings.placeholderKey}__`, 'g'), id);
             }
             return '';
 
