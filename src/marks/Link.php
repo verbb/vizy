@@ -19,10 +19,13 @@ class Link extends Mark
     // =========================================================================
 
     public function getTag()
-    {
+    {   
+        // Reset
+        $this->attrs['rel'] = null;
+
         if (isset($this->attrs['target'])) {
             if ($this->attrs['target'] === '_blank') {
-                $this->attrs['rel'] = 'noopener noreferrer nofollow';
+                $this->attrs['rel'] = 'noopener noreferrer';
             }
         }
 
