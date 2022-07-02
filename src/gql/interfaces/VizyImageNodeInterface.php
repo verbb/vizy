@@ -18,7 +18,7 @@ class VizyImageNodeInterface extends VizyNodeInterface
 
     public static function getFieldDefinitions(): array
     {
-        return TypeManager::prepareFieldDefinitions(array_merge(parent::getFieldDefinitions(), [
+        return Craft::$app->getGql()->prepareFieldDefinitions(array_merge(parent::getFieldDefinitions(), [
             'asset' => [
                 'name' => 'asset',
                 'type' => AssetInterface::getType(),
