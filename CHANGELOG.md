@@ -1,5 +1,21 @@
 # Changelog
 
+## 2.0.3 - 2022-07-02
+
+### Added
+- Add `vite-plugin-compression` to generate gzipped JS/CSS assets.
+- Add better handling for JS scripts on-load, to prevent against missing JS execution in some cases. (thanks @khalwat).
+
+### Changed
+- Update CP template `content` block.
+
+### Fixed
+- Fix a GQL deprecation notice.
+- Fix HMR not working when making changes to `vizy.js`.
+- Fix updating Block Type template not working correctly.
+- Fix en error when trying to limit “Available Volumes” or “Available Transforms”.
+- Fix an error when rendering an entry revision for nested Vizy fields.
+
 ## 2.0.2 - 2022-06-04
 
 ### Fixed
