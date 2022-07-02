@@ -1,5 +1,29 @@
 # Changelog
 
+## 1.0.16 - 2022-07-02
+
+### Added
+- Add `isRoot` for Vue component top-level fields.
+
+### Changed
+- Update all tiptap dependancies to latest beta versions.
+- Exclude any falsey attributes for a node when rendering.
+- Lower debounce time for watched Vizy Block field changes.
+- Only clicking on the header of Vizy Blocks selects a block.
+
+### Fixed
+- Fix link nodes always including `target` and `rel` attributes.
+- Fix newly created Vizy blocks not having the correct namespace in some instances.
+- Fix JS not initializing correctly for complex Vizy fields and in combination with Neo/SuperTable/Matrix.
+- Fix an error where delta values for other fields was being stripped out when including a Vizy field.
+- Fix an error when saving nested Vizy fields with validation errors and blocks losing their content.
+- Fix unload warning when no content has been changed.
+- Fix Vizy Block field alignment of fields.
+- Fix selected state issues on nested Vizy fields and Vizy blocks, and add support for “Escape” key to remove selected Vizy Block.
+- Fix being unable to click properly between Vizy blocks to add a new node, and fix gap cursor alignment.
+- Fix an overlay issue for nested Vizy fields when picking Vizy blocks.
+- Fix multiple Redactor fields in a single Vizy block not working correctly.
+
 ## 1.0.15 - 2022-06-04
 
 ### Fixed
