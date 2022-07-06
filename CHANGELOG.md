@@ -1,5 +1,10 @@
 # Changelog
 
+## 2.0.4 - 2022-07-06
+
+### Fixed
+- Fix an error when making GraphQL queries.
+
 ## 2.0.3 - 2022-07-02
 
 ### Added
