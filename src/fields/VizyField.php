@@ -243,11 +243,14 @@ class VizyField extends Field
 
         Plugin::registerAsset('field/src/js/vizy.js');
 
-        // Use `setTimeout()` to handle some scenarios like Ajax-loading in field settings and slide-outs
-        $view->registerJs('setTimeout(function() { new Craft.Vizy.Input(' .
-            '"' . $view->namespaceInputId($id) . '", ' .
-            '"' . $view->namespaceInputName($this->handle) . '"' .
-        '); }, 200);');
+        $view->registerJs('document.addEventListener("vite-script-loaded", function(e) {' .
+            'if (e.detail.path === "field/src/js/vizy.js") {' .
+                'new Craft.Vizy.Input(' .
+                    '"' . $view->namespaceInputId($id) . '", ' .
+                    '"' . $view->namespaceInputName($this->handle) . '"' .
+                ');' .
+            '}' .
+        '});');
 
         $rawNodes = $value->getRawNodes();
 
