@@ -217,14 +217,16 @@ class VizyBlock extends Node
         // Create a fake element with the same fieldtype as our block
         $block = $this->getBlockElement($element);
 
-        foreach ($block->getFieldLayout()->getCustomFields() as $field) {
-            // Ensure each field's content is serialized properly
-            $serializedFieldValues = $field->serializeValue($block->getFieldValue($field->handle), $block);
-            $value['attrs']['values']['content']['fields'][$field->handle] = $serializedFieldValues;
+        if ($fieldLayout = $block->getFieldLayout()) {
+            foreach ($fieldLayout->getCustomFields() as $field) {
+                // Ensure each field's content is serialized properly
+                $serializedFieldValues = $field->serializeValue($block->getFieldValue($field->handle), $block);
+                $value['attrs']['values']['content']['fields'][$field->handle] = $serializedFieldValues;
 
-            // Ensure we call each field's `afterElementSave` method. This would be auto-done
-            // if a VizyBlock node was an element, and we were saving that.
-            $field->afterElementSave($block, true);
+                // Ensure we call each field's `afterElementSave` method. This would be auto-done
+                // if a VizyBlock node was an element, and we were saving that.
+                $field->afterElementSave($block, true);
+            }
         }
 
         return $value;
