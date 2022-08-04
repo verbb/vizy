@@ -105,8 +105,8 @@ export default {
                 placement: 'right',
                 theme: 'vui-block-picker light-border',
                 maxWidth: '300px',
-                zIndex: 10,
-                appendTo: () => { return document.body; },
+                zIndex: 100, // Needs a higher z-index for Live Preview
+                appendTo: () => document.body,
                 hideOnClick: true,
             });
         }
