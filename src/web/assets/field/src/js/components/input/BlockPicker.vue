@@ -106,7 +106,7 @@ export default {
                 theme: 'vui-block-picker light-border',
                 maxWidth: '300px',
                 zIndex: 100, // Needs a higher z-index for Live Preview
-                appendTo: () => document.body,
+                appendTo: () => { return document.body; },
                 hideOnClick: true,
             });
         }
