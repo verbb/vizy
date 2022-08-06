@@ -33,6 +33,11 @@ class VizyNodeGenerator implements GeneratorInterface
         ];
 
         foreach ($nodeClasses as $nodeClass) {
+            // Skip anything without a field instance
+            if (!$field) {
+                continue;
+            }
+            
             // Special handling for some nodes
             $generatorClass = $generatorClasses[$nodeClass] ?? null;
 
