@@ -1,5 +1,13 @@
 # Changelog
 
+## 2.0.5 - 2022-08-09
+
+### Fixed
+- Fix GraphQL queries throwing an error when fields aren’t initialized fully.
+- Fix blocktype picker not appearing in Live Preview.
+- Fix potential error for blocktypes.
+- Update Vizy loading for input to handle proper loading using Vite.
+
 ## 2.0.4 - 2022-07-06
 
 ### Fixed
