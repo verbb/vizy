@@ -60,6 +60,11 @@
 ### Removed
 - Remove `cleanDeltas()`, which is no longer needed in Craft 4.
 
+## 1.0.17 - 2022-08-09
+
+### Fixed
+- Fix blocktype picker not appearing in Live Preview.
+
 ## 1.0.16 - 2022-07-02
 
 ### Added
