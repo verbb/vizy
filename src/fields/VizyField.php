@@ -132,15 +132,18 @@ class VizyField extends Field
 
         Plugin::registerAsset('field/src/js/vizy.js');
 
+        // Create the Vizy Settings Vue component
+        $js = 'new Craft.Vizy.Settings(' .
+            Json::encode($idPrefix, JSON_UNESCAPED_UNICODE) . ', ' .
+            Json::encode($fieldData, JSON_UNESCAPED_UNICODE) . ', ' .
+            Json::encode($settings, JSON_UNESCAPED_UNICODE) .
+        ');';
+
+        // Wait for Vizy JS to be loaded, either through an event listener, or by a flag.
+        // This covers if this script is run before, or after the Vizy JS has loaded
         $view->registerJs('document.addEventListener("vite-script-loaded", function(e) {' .
-            'if (e.detail.path === "field/src/js/vizy.js") {' .
-                'new Craft.Vizy.Settings(' .
-                    Json::encode($idPrefix, JSON_UNESCAPED_UNICODE) . ', ' .
-                    Json::encode($fieldData, JSON_UNESCAPED_UNICODE) . ', ' .
-                    Json::encode($settings, JSON_UNESCAPED_UNICODE) .
-                ');' .
-            '}' .
-        '});');
+            'if (e.detail.path === "field/src/js/vizy.js") {' . $js . '}' .
+        '}); if (Craft.VizyReady) {' . $js . '}');
 
         $volumeOptions = [];
 
@@ -243,14 +246,17 @@ class VizyField extends Field
 
         Plugin::registerAsset('field/src/js/vizy.js');
 
+        // Create the Vizy Input Vue component
+        $js = 'new Craft.Vizy.Input(' .
+            '"' . $view->namespaceInputId($id) . '", ' .
+            '"' . $view->namespaceInputName($this->handle) . '"' .
+        ');';
+
+        // Wait for Vizy JS to be loaded, either through an event listener, or by a flag.
+        // This covers if this script is run before, or after the Vizy JS has loaded
         $view->registerJs('document.addEventListener("vite-script-loaded", function(e) {' .
-            'if (e.detail.path === "field/src/js/vizy.js") {' .
-                'new Craft.Vizy.Input(' .
-                    '"' . $view->namespaceInputId($id) . '", ' .
-                    '"' . $view->namespaceInputName($this->handle) . '"' .
-                ');' .
-            '}' .
-        '});');
+            'if (e.detail.path === "field/src/js/vizy.js") {' . $js . '}' .
+        '}); if (Craft.VizyReady) {' . $js . '}');
 
         $rawNodes = $value->getRawNodes();
 

@@ -44,9 +44,6 @@ Craft.Vizy.Settings = Garnish.Base.extend({
             components: {
                 VizySettings,
             },
-            // document.querySelectorAll('.vizy-configurator').forEach((element) => {
-            //     const fieldData = JSON.parse(element.getAttribute('data-field-data'));
-            //     const settings = JSON.parse(element.getAttribute('data-settings'));
 
             data() {
                 return {
@@ -65,5 +62,8 @@ Craft.Vizy.Settings = Garnish.Base.extend({
 // are not executed, which happens in the field Settings page, and in slideouts
 // Do this after the document is ready to ensure proper execution order
 $(document).ready(() => {
+    // Create a global-loaded flag when switching entry types. This won't be fired multiple times.
+    Craft.VizyReady = true;
+
     document.dispatchEvent(new CustomEvent('vite-script-loaded', { detail: { path: 'field/src/js/vizy.js' } }));
 });
