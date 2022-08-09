@@ -616,6 +616,8 @@ export default {
     > :not(h2):not(hr):last-child {
         margin-left: 0 !important;
         margin-right: 0 !important;
+        padding-left: 0 !important;
+        padding-right: 0 !important;
         width: 100% !important;
 
         @media only screen and (min-width: 1536px) {
