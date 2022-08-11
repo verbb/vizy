@@ -1,5 +1,13 @@
 # Changelog
 
+## 1.0.18 - 2022-08-11
+
+### Changed
+- Update all tiptap dependancies to latest beta versions.
+
+### Fixed
+- Fix Vizy node content being reset when inserting other nodes directly before it
+
 ## 1.0.17 - 2022-08-09
 
 ### Fixed
