@@ -278,7 +278,9 @@ export default {
         // Listen to an even raised (when moving a block) to serialize the DOM content of this block.
         // This is because Vue will re-render all blocks from scratch, and we'll loose our block content.
         // So save it before we re-render, after which, it'll render the saved HTML on-render.
-        this.$events.$on('vizy-blocks:updateDOM', this.onUpdateDOM);
+        this.$nextTick(() => {
+            this.$events.$on('vizy-blocks:updateDOM', this.onUpdateDOM);
+        });
 
         // Set the HTML for the block's fields
         this.fieldsHtml = this.vizyField.getCachedFieldHtml(this.node.attrs.id);
@@ -319,6 +321,12 @@ export default {
     },
 
     beforeDestroy() {
+        // If we insert a new node before this Vizy node, it'll cause a re-render. But due to how
+        // Tiptap works, it will wipe out all non-saved content. Because we're not fully data-driven
+        // in our components, we need to cache the HTML now, before the component gets re-rendered as a 
+        // new Vue component instance. Test this by adding a Vizy block, then a paragraph directly before
+        this.onUpdateDOM();
+
         // Destroy event listeners for this block
         this.$events.$off('vizy-blocks:updateDOM', this.onUpdateDOM);
     },
@@ -329,23 +337,21 @@ export default {
         },
 
         onUpdateDOM() {
-            this.$nextTick(() => {
-                if (this.$refs.fields) {
-                    var $fieldsHtml = $(this.$refs.fields.$el.childNodes).clone();
+            if (this.$refs.fields) {
+                var $fieldsHtml = $(this.$refs.fields.$el.childNodes).clone();
 
-                    // Special-case for Redactor. We need to reset it to its un-initialized form
-                    // because it doesn't have better double-binding checks.
-                    if ($fieldsHtml.find('.redactor-box').length) {
-                        // Rip out the `textarea` which is all we need
-                        var $textarea = $fieldsHtml.find('.redactor-box textarea').htmlize();
-                        $fieldsHtml.find('.redactor-box').replaceWith($textarea);
-                    }
-
-                    var fieldsHtml = $fieldsHtml.htmlize();
-
-                    this.vizyField.setCachedFieldHtml(this.node.attrs.id, fieldsHtml);
+                // Special-case for Redactor. We need to reset it to its un-initialized form
+                // because it doesn't have better double-binding checks.
+                if ($fieldsHtml.find('.redactor-box').length) {
+                    // Rip out the `textarea` which is all we need
+                    var $textarea = $fieldsHtml.find('.redactor-box textarea').htmlize();
+                    $fieldsHtml.find('.redactor-box').replaceWith($textarea);
                 }
-            });
+
+                var fieldsHtml = $fieldsHtml.htmlize();
+
+                this.vizyField.setCachedFieldHtml(this.node.attrs.id, fieldsHtml);
+            }
         },
 
         clickTab(index) {
