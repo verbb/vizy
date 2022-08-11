@@ -1,5 +1,13 @@
 # Changelog
 
+## 2.0.6 - 2022-08-11
+
+### Fixed
+- Fix Vizy node content being reset when inserting other nodes directly before it.
+- Fix a field alignment issue in nested Vizy fields.
+- Fix Vizy fields not initializing when switching entry types.
+- Fix fields not working correctly in element slideouts, in some instances.
+
 ## 2.0.5 - 2022-08-09
 
 ### Fixed
