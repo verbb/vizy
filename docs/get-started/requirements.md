@@ -1,7 +1,7 @@
 # Requirements
 
 ## Craft CMS
-Vizy requires Craft CMS 3.6 or greater.
+Vizy requires Craft CMS 4.0 or greater.
 
 ## PHP
-Vizy requires PHP 7.2.5 or greater.
+Vizy requires PHP 8.0.2 or greater.
