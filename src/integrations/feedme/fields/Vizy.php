@@ -8,7 +8,7 @@ use craft\helpers\Json;
 use craft\feedme\base\Field;
 use craft\feedme\base\FieldInterface;
 
-use HtmlToProseMirror\Renderer;
+use Tiptap\Editor;
 
 class Vizy extends Field implements FieldInterface
 {
@@ -41,8 +41,9 @@ class Vizy extends Field implements FieldInterface
     {
         $value = $this->fetchValue();
 
-        $renderer = new Renderer();
-        $doc = $renderer->render($value);
+        $doc = (new Editor)
+            ->setContent($value)
+            ->getDocument();
 
         return Json::encode($doc['content']);
     }
