@@ -25,6 +25,7 @@ use craft\helpers\FileHelper;
 use craft\helpers\Html;
 use craft\helpers\Json;
 use craft\helpers\StringHelper;
+use craft\fields\Matrix;
 use craft\models\FieldLayout;
 use craft\models\Section;
 use craft\web\twig\variables\Cp;
@@ -441,7 +442,18 @@ class VizyField extends Field
                             $blockTypeId = $rawNode['attrs']['values']['type'] ?? '';
                             $fields = $translatableFields[$blockTypeId] ?? [];
 
-                            foreach ($fields as $field) {
+                            foreach ($fields as $fieldHandle) {
+                                // If this is a Matrix field, that's a different story, as they have their own
+                                // propagation settings. Check those, and only proceed with swapping content if
+                                // "Only save blocks to the site they were created in" (none) is selected
+                                $field = Craft::$app->getFields()->getFieldByHandle($fieldHandle);
+
+                                if ($field instanceof Matrix) {
+                                    if ($field->propagationMethod !== Matrix::PROPAGATION_METHOD_NONE) {
+                                        continue;
+                                    }
+                                }                                
+
                                 // Ensure we find the right block to update
                                 foreach ($newNodes as $key => $newNode) {
                                     $newBlockId = $newNode['attrs']['id'] ?? '';
@@ -449,7 +461,7 @@ class VizyField extends Field
                                     if ($newBlockId === $blockId) {
                                         $hasUpdatedContent = true;
 
-                                        $newNodes[$key]['attrs']['values']['content']['fields'][$field] = $rawNode['attrs']['values']['content']['fields'][$field] ?? '';
+                                        $newNodes[$key]['attrs']['values']['content']['fields'][$fieldHandle] = $rawNode['attrs']['values']['content']['fields'][$fieldHandle] ?? '';
                                     }
                                 }
                             }
