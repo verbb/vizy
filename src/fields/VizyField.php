@@ -25,6 +25,7 @@ use craft\helpers\FileHelper;
 use craft\helpers\Html;
 use craft\helpers\Json;
 use craft\helpers\StringHelper;
+use craft\fields\BaseRelationField;
 use craft\fields\Matrix;
 use craft\models\FieldLayout;
 use craft\models\Section;
@@ -444,19 +445,25 @@ class VizyField extends Field
                             $fields = $translatableFields[$blockTypeId] ?? [];
 
                             foreach ($fields as $fieldHandle) {
-                                // If this is a Matrix field, that's a different story, as they have their own
-                                // propagation settings. Check those, and only proceed with swapping content if
-                                // "Only save blocks to the site they were created in" (none) is selected
+                                // For some fields, they control their own propagation settings. 
+                                // Check those, and only proceed with swapping content if not managing per-site.
                                 $field = Craft::$app->getFields()->getFieldByHandle($fieldHandle);
 
+                                // "Only save blocks to the site they were created in" (none) is selected
                                 if ($field instanceof Matrix && $field->propagationMethod !== Matrix::PROPAGATION_METHOD_NONE) {
                                     continue;
                                 }
 
+                                // "Only save blocks to the site they were created in" (none) is selected
                                 if (Craft::$app->getPlugins()->isPluginEnabled('super-table')) {
                                     if ($field instanceof SuperTable && $field->propagationMethod !== SuperTable::PROPAGATION_METHOD_NONE) {
                                         continue;
                                     }
+                                }
+
+                                // "Manage relations on a per-site basis" is disabled
+                                if ($field instanceof BaseRelationField && !$field->localizeRelations) {
+                                    continue;
                                 }
 
                                 // Ensure we find the right block to update
