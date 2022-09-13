@@ -8,12 +8,17 @@ use verbb\vizy\helpers\Matrix;
 use Craft;
 use craft\base\ElementInterface;
 use craft\errors\InvalidFieldException;
+use craft\fields\Matrix as MatrixField;
 use craft\helpers\Html;
 use craft\helpers\Json;
 use craft\helpers\Template;
 use craft\web\View;
 
 use Twig\Markup;
+
+use Throwable;
+
+use verbb\supertable\fields\SuperTableField as SuperTable;
 
 class VizyBlock extends Node
 {
@@ -219,13 +224,34 @@ class VizyBlock extends Node
 
         if ($fieldLayout = $block->getFieldLayout()) {
             foreach ($fieldLayout->getCustomFields() as $field) {
+                $fieldValue = $block->getFieldValue($field->handle);
+
                 // Ensure each field's content is serialized properly
-                $serializedFieldValues = $field->serializeValue($block->getFieldValue($field->handle), $block);
+                $serializedFieldValues = $field->serializeValue($fieldValue, $block);
                 $value['attrs']['values']['content']['fields'][$field->handle] = $serializedFieldValues;
 
                 // Ensure we call each field's `afterElementSave` method. This would be auto-done
                 // if a VizyBlock node was an element, and we were saving that.
                 $field->afterElementSave($block, true);
+
+                // Process all Matrix/Super Table fields and their blocks in the same manner.
+                if ($field instanceof MatrixField || $field instanceof SuperTable) {
+                    foreach ($fieldValue->all() as $matrixBlock) {
+                        if ($matrixFieldLayout = $matrixBlock->getFieldLayout()) {
+                            foreach ($matrixFieldLayout->getCustomFields() as $matrixBlockField) {
+                                try {
+                                    $matrixBlockField->afterElementSave($matrixBlock, true);
+                                } catch (Throwable $e) {
+                                    // Assets (and other relational fields) will likely throw an error here, because
+                                    // when saving a Matrix block, it'll try and create an entry in the relations table
+                                    // but without a real element to relate to as the source, this will fail.
+                                    // This is okay for our needs, as all we care about are fields running their `afterElementSave()`
+                                    // anyway, which for assets is moving from the temp folder to their correct directory.
+                                }
+                            }
+                        }
+                    }
+                }
             }
         }
 
