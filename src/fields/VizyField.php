@@ -36,6 +36,7 @@ use Throwable;
 
 use GraphQL\Type\Definition\Type;
 
+use verbb\supertable\fields\SuperTableField as SuperTable;
 
 class VizyField extends Field
 {
@@ -448,11 +449,15 @@ class VizyField extends Field
                                 // "Only save blocks to the site they were created in" (none) is selected
                                 $field = Craft::$app->getFields()->getFieldByHandle($fieldHandle);
 
-                                if ($field instanceof Matrix) {
-                                    if ($field->propagationMethod !== Matrix::PROPAGATION_METHOD_NONE) {
+                                if ($field instanceof Matrix && $field->propagationMethod !== Matrix::PROPAGATION_METHOD_NONE) {
+                                    continue;
+                                }
+
+                                if (Craft::$app->getPlugins()->isPluginEnabled('super-table')) {
+                                    if ($field instanceof SuperTable && $field->propagationMethod !== SuperTable::PROPAGATION_METHOD_NONE) {
                                         continue;
                                     }
-                                }                                
+                                }
 
                                 // Ensure we find the right block to update
                                 foreach ($newNodes as $key => $newNode) {
