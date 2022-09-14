@@ -26,6 +26,7 @@ use craft\helpers\Html;
 use craft\helpers\Json;
 use craft\helpers\StringHelper;
 use craft\fields\BaseRelationField;
+use craft\fields\conditions\EmptyFieldConditionRule;
 use craft\fields\Matrix;
 use craft\models\FieldLayout;
 use craft\models\Section;
@@ -315,6 +316,14 @@ class VizyField extends Field
         }
 
         return $value;
+    }
+
+    /**
+     * @inheritdoc
+     */
+    public function getElementConditionRuleType(): array|string|null
+    {
+        return EmptyFieldConditionRule::class;
     }
 
     public function getStaticHtml(mixed $value, ElementInterface $element): string
