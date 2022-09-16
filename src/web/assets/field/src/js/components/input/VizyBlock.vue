@@ -357,7 +357,8 @@ export default {
         clickTab(index) {
             this.activeTab = index;
 
-            var $tabs = this.$refs.fields.$el.querySelectorAll('.vizyblock-fields > div');
+            // Only select immediate children of `.vizyblock-fields` to not affect nested Vizy fields
+            var $tabs = this.$refs.fields.$el.querySelectorAll(':scope > div');
 
             $tabs.forEach($tab => {
                 if ($tab.getAttribute('id').includes(this.activeTab)) {
