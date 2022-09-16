@@ -50,9 +50,22 @@ class Vizy extends Field implements FieldInterface
     {
         $value = $this->fetchValue();
 
+        if (!$value) {
+            return '';
+        }
+
         $renderer = new Renderer();
         $doc = $renderer->render($value);
 
-        return Json::encode($doc['content']);
+        $json = Json::encode($doc['content']);
+
+        // Hack for now, better support for nodes in Vizy 2.
+        $json = str_replace('bullet_list', 'bulletList', $json);
+        $json = str_replace('code_block', 'codeBlock', $json);
+        $json = str_replace('hard_break', 'hardBreak', $json);
+        $json = str_replace('horizontal_rule', 'horizontalRule', $json);
+        $json = str_replace('ordered_list', 'orderedList', $json);
+
+        return $json;
     }
 }
