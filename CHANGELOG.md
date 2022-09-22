@@ -1,5 +1,14 @@
 # Changelog
 
+## 1.0.19 - 2022-09-23
+
+### Fixed
+- Fix display issues with Vizy fields in Live Preview.
+- Fix an overflow issue for small screens for the block picker.
+- Fix a legacy error where in some cases blocks were missing their block type.
+- Fix toggling field tabs not working correctly for nested Vizy fields.
+- Fix legacy handling of `HtmlToProseMirror` package when importing content via Feed Me.
+
 ## 1.0.18 - 2022-08-11
 
 ### Changed
