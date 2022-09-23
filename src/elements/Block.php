@@ -16,6 +16,11 @@ class Block extends Element
         return true;
     }
 
+    public static function isLocalized(): bool
+    {
+        return true;
+    }
+
 
     // Properties
     // =========================================================================
