@@ -210,17 +210,7 @@ class NodeCollection extends Markup
                 }
             }
 
-            // Check if when a missing block, it's a Vizy Block. Not needed for Vizy 2.
-            $type = $node['type'] ?? null;
-
-            if (!$type) {
-                // We can tell if this is a Vizy Block if the key is `vizy-block-xxxxx`.
-                if (strstr((array_keys($node)[0] ?? ''), 'vizy2-block-')) {
-                    $type = 'vizyBlock';
-                }
-            }
-
-            if ($class = ($this->_registeredNodesByType[$type] ?? null)) {
+            if ($class = ($this->_registeredNodesByType[$node['type']] ?? null)) {
                 unset($node['type']);
                 
                 $nodeClass = Craft::createObject(array_merge($node, [
