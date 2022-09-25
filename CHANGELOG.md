@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.0.20 - 2022-09-25
+
+### Fixed
+- Fix an issue where nested Vizy fields in Matrix/Super Table/etc fields weren’t having their content serialized correctly.
+
 ## 1.0.19 - 2022-09-23
 
 ### Fixed
