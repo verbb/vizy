@@ -171,11 +171,11 @@ export default {
                 window.addEventListener('resize', this.updateFixedToolbar);
 
                 // Handle the element editor slideout
-                const slideout = document.querySelector('.slideout[data-element-editor].so-visible .so-body');
+                const $slideout = document.querySelector('.slideout[data-element-editor].so-visible .so-body');
 
-                if (slideout) {
-                    slideout.addEventListener('scroll', this.updateFixedToolbarEditor);
-                    slideout.addEventListener('resize', this.updateFixedToolbarEditor);
+                if ($slideout) {
+                    $slideout.addEventListener('scroll', this.updateFixedToolbarEditor);
+                    $slideout.addEventListener('resize', this.updateFixedToolbarEditor);
                 }
 
                 Garnish.on(Craft.Preview, 'open', this.openLivePreviewCallback);
@@ -397,6 +397,14 @@ export default {
 
         openLivePreviewCallback() {
             this.isLivePreview = true;
+
+            // Handle the Live Preview scroll
+            const $livePreview = document.querySelector('.lp-editor-container .lp-editor');
+
+            if ($livePreview) {
+                $livePreview.addEventListener('scroll', this.updateFixedToolbar);
+                $livePreview.addEventListener('resize', this.updateFixedToolbar);
+            }
         },
 
         closeLivePreviewCallback() {
@@ -407,7 +415,7 @@ export default {
             let headerBuffer = document.querySelector('body.fixed-header #header') ? document.querySelector('body.fixed-header #header').offsetHeight : 0;
 
             if (this.isLivePreview) {
-                headerBuffer = document.querySelector('.lp-editor-container header.flex') ? document.querySelector('.lp-editor-container header.flex').offsetHeight : 0;
+                headerBuffer = document.querySelector('.lp-editor-container header.flex') ? document.querySelector('.lp-editor-container header.flex').offsetHeight - parseFloat(window.getComputedStyle(document.querySelector('.lp-editor-container .lp-editor'), null).getPropertyValue('padding-top')) : 0;
             }
 
             // Apply any parent Vizy fields toolbars, otherwise we get multiple toolbar overlaps
@@ -602,6 +610,11 @@ export default {
 // Fix Redactor incompatibility with ProseMirror style
 .ProseMirror [contenteditable="false"] .redactor [contenteditable="true"] {
     white-space: normal;
+}
+
+// Fix Live Preview overlapping
+.lp-editor-container > header {
+    z-index: 100;
 }
 
 </style>

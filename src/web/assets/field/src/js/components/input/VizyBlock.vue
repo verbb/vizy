@@ -360,7 +360,8 @@ export default {
         clickTab(index) {
             this.activeTab = index;
 
-            const $tabs = this.$refs.fields.$el.querySelectorAll('.vizyblock-fields > div');
+            // Only select immediate children of `.vizyblock-fields` to not affect nested Vizy fields
+            const $tabs = this.$refs.fields.$el.querySelectorAll(':scope > div');
 
             $tabs.forEach(($tab) => {
                 if ($tab.getAttribute('id').includes(this.activeTab)) {
@@ -445,7 +446,12 @@ export default {
                             Object.entries(fieldBlocks.blocks).forEach(([blockId, blockFields]) => {
                                 if (blockId === this.node.attrs.id) {
                                     foundContent = blockFields;
-                                } else {
+                                } else if (isEmpty(foundContent)) {
+                                    // Because we recurively iterate down many children to find the _first_
+                                    // instance where our block data exists, we want to check if it's already set.
+                                    // It's more critical for nested Vizy fields which have the serialized content 
+                                    // and the POST content from fields (which we don't want). Otherwise, we just
+                                    // end up overwriting the data we want!
                                     foundContent = this.findContentBlocksForBlock(blockFields);
                                 }
                             });
