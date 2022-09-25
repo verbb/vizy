@@ -449,7 +449,7 @@ export default {
                                 } else if (isEmpty(foundContent)) {
                                     // Because we recurively iterate down many children to find the _first_
                                     // instance where our block data exists, we want to check if it's already set.
-                                    // It's more critical for nested Vizy fields which have the serialized content 
+                                    // It's more critical for nested Vizy fields which have the serialized content
                                     // and the POST content from fields (which we don't want). Otherwise, we just
                                     // end up overwriting the data we want!
                                     foundContent = this.findContentBlocksForBlock(blockFields);
