@@ -1,5 +1,22 @@
 # Changelog
 
+## 2.0.7 - 2022-09-25
+
+### Added
+- Add support for entries conditions for Vizy fields.
+
+### Changed
+- Switch deprecated `ueberdosis/html-to-prosemirror` package to `ueberdosis/tiptap-php`.
+
+### Fixed
+- Fix Vizy blocks not being site-aware.
+- Fix “Open link in new tab” not saving correctly for link nodes.
+- Fix asset fields within Matrix/Super Table fields not moving from the temporary upload directory.
+- Fix an error when propagating element fields’s content for un-translated Vizy/SuperTable/Inner fields.
+- Fix an error when propagating Super Table rows for un-translated Vizy/SuperTable/Inner fields.
+- Fix an error when propagating Matrix blocks for un-translated Vizy/Matrix/Inner fields.
+- Fix importing nodes via Feed Me not working for some node types.
+
 ## 2.0.6 - 2022-08-11
 
 ### Fixed
