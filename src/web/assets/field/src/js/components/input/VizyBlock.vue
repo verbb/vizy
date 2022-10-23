@@ -432,8 +432,8 @@ export default {
             let foundContent = {};
 
             if (!isEmpty(content)) {
-                // Special-handling when in the element slideout
-                const slideout = document.querySelector('.slideout[data-element-editor].so-visible .so-body');
+                // Special-handling when this field is in the element slideout
+                const slideout = this.$el.closest('.slideout.element-editor .ee-body');
 
                 if (slideout) {
                     // eslint-disable-next-line
