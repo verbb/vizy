@@ -1,5 +1,10 @@
 # Changelog
 
+## 2.0.8 - 2022-10-23
+
+### Fixed
+- Fix handling of Vizy fields inside element slideouts, instead of block relationship fields when being edited.
+
 ## 2.0.7 - 2022-09-25
 
 ### Added
