@@ -37,6 +37,10 @@ class FieldController extends Controller
             $fieldLayout = FieldLayout::createFromConfig(Json::decode($layoutConfig));
         }
 
+        if (!$fieldLayout) {
+            $fieldLayout = new FieldLayout();
+        }
+
         // Fetch the available custom fields for the layout - we want to add some exceptions
         $availableCustomFields = $fieldLayout->getAvailableCustomFields();
 
