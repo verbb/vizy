@@ -1,5 +1,11 @@
 # Changelog
 
+## 2.0.8 - 2022-11-09
+
+### Fixed
+- Fix Feed Me importing not supporting all node types (just plain text).
+- Fix an error where field settings for a block’s field layout can be corrupted.
+
 ## 2.0.8 - 2022-10-23
 
 ### Fixed
