@@ -41,9 +41,20 @@ class Vizy extends Field implements FieldInterface
     {
         $value = $this->fetchValue();
 
-        $doc = (new Editor)
-            ->setContent($value)
-            ->getDocument();
+        $editor = new Editor([
+            'content' => $value,
+            'extensions' => [
+                new \Tiptap\Extensions\StarterKit,
+                new \Tiptap\Nodes\Image,
+                new \Tiptap\Marks\Highlight,
+                new \Tiptap\Marks\Link,
+                new \Tiptap\Marks\Subscript,
+                new \Tiptap\Marks\Superscript,
+                new \Tiptap\Marks\Underline,
+            ],
+        ]);
+
+        $doc = $editor->getDocument();
 
         return Json::encode($doc['content']);
     }
