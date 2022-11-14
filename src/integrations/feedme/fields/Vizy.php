@@ -56,6 +56,10 @@ class Vizy extends Field implements FieldInterface
 
         $doc = $editor->getDocument();
 
-        return Json::encode($doc['content']);
+        if (is_array($doc) && array_key_exists('content', $doc)) {
+            return Json::encode($doc['content']);
+        }
+
+        return '';
     }
 }
