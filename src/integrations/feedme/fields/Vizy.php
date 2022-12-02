@@ -39,7 +39,7 @@ class Vizy extends Field implements FieldInterface
      */
     public function parseField(): string
     {
-        $value = $this->fetchValue();
+        $value = $this->fetchValue() ?? [ 'content' => '' ];
 
         $editor = new Editor([
             'content' => $value,
