@@ -16,6 +16,20 @@ class Link extends Mark
     // Public Methods
     // =========================================================================
 
+    public function init(): void
+    {
+        parent::init();
+
+        // On-load, parse the link URL for ref tags
+        $href = $this->attrs['href'] ?? '';
+
+        if ($href) {
+            $siteId = $this->getElement()->siteId ?? null;
+
+            $this->attrs['href'] = Nodes::parseRefTags($href, $siteId);
+        }
+    }
+
     public function getTag(): array
     {
         // Reset
@@ -23,15 +37,6 @@ class Link extends Mark
 
         if (isset($this->attrs['target']) && $this->attrs['target'] === '_blank') {
             $this->attrs['rel'] = 'noopener noreferrer';
-        }
-
-        // Parse the link URL for ref tags
-        $href = $this->attrs['href'] ?? '';
-
-        if ($href) {
-            $siteId = $this->getElement()->siteId ?? null;
-
-            $this->attrs['href'] = Nodes::parseRefTags($href, $siteId);
         }
 
         return parent::getTag();
