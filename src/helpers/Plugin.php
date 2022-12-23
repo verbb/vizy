@@ -17,7 +17,7 @@ class Plugin
             'depends' => [
                 VizyAsset::class,
             ],
-            'onload' => '',
+            'onload' => null,
         ];
 
         $styleOptions = [
