@@ -571,6 +571,12 @@ export default {
         text-decoration: underline;
     }
 
+    .h1, .h2, .h3, .h4, h1, h2, h3, h4 {
+        font-weight: 700;
+        line-height: 1.2;
+        margin: 14px 0;
+    }
+
     &.code-view {
         opacity: 0;
         visibility: hidden;
