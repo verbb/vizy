@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.0.22 - 2022-12-25
+
+### Fixed
+- Fix GraphQL queries throwing an error when fields aren’t initialized fully.
+
 ## 1.0.21 - 2022-10-23
 
 ### Fixed
