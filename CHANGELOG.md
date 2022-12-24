@@ -1,5 +1,15 @@
 # Changelog
 
+## 2.0.10 - 2022-12-25
+
+### Changed
+- Link marks now automatically parse for reference tags in their `href`.
+
+### Fixed
+- Fix GraphQL queries throwing an error when fields aren’t initialized fully.
+- Fix heading styles in editor.
+- Fix an error importing via Feed Me, in some cases.
+
 ## 2.0.9 - 2022-11-09
 
 ### Fixed
