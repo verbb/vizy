@@ -77,6 +77,7 @@ class VizyField extends Field
     public bool $showUnpermittedFiles = false;
     public string $defaultTransform = '';
     public bool $trimEmptyParagraphs = true;
+    public int $initialRows = 7;
     public string $columnType = Schema::TYPE_TEXT;
 
     private ?array $_blockTypesById = [];
@@ -102,6 +103,15 @@ class VizyField extends Field
         }
 
         parent::__construct($config);
+    }
+
+    protected function defineRules(): array
+    {
+        $rules = parent::defineRules();
+
+        $rules[] = [['initialRows'], 'number', 'integerOnly' => true];
+
+        return $rules;
     }
 
     public function getContentColumnType(): array|string
@@ -222,6 +232,7 @@ class VizyField extends Field
             'placeholderKey' => $placeholderKey,
             'fieldHandle' => $this->handle,
             'isRoot' => true,
+            'initialRows' => $this->initialRows,
         ];
 
         // Only include some options if we need them - for performance

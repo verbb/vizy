@@ -1,6 +1,6 @@
 <template>
     <div>
-        <div v-if="editor" class="vui-rich-text" :class="{ 'has-focus': isFocused() }">
+        <div v-if="editor" class="vui-rich-text" :class="{ 'has-focus': isFocused() }" :style="{ '--rows': settings.initialRows }">
             <menu-bar v-if="buttons.length" ref="toolbar" :buttons="buttons" :editor="editor" :field="this" />
             <code-editor v-model="codeEditorHtml" :visible="showCodeEditor" :editor="editor" :field="this" />
             <editor-content :class="{ 'code-view': showCodeEditor }" class="vui-editor" :editor="editor" />
@@ -490,6 +490,8 @@ export default {
 // ==========================================================================
 
 .vui-rich-text {
+    --rows: 7;
+
     position: relative;
     border-radius: 3px;
     border: 1px solid rgba(96, 125, 159, 0.25);
@@ -504,7 +506,7 @@ export default {
         outline: none;
         word-wrap: normal;
         padding: 16px;
-        min-height: 10rem;
+        min-height: calc(2rem + (var(--rows) * 1rem));
         background-color: #fbfcfe;
         background-clip: padding-box;
 
