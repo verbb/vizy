@@ -19,7 +19,7 @@ class VizyBlockInterface extends VizyNodeInterface
         return VizyBlockTypeGenerator::class;
     }
 
-    public static function getType($fields = null): Type
+    public static function getType($context = null): Type
     {
         if ($type = GqlEntityRegistry::getEntity(self::getName())) {
             return $type;
@@ -34,7 +34,7 @@ class VizyBlockInterface extends VizyNodeInterface
             },
         ]));
 
-        VizyBlockTypeGenerator::generateTypes($fields);
+        VizyBlockTypeGenerator::generateTypes($context);
 
         return $type;
     }

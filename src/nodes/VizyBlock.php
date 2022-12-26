@@ -22,6 +22,15 @@ use verbb\supertable\fields\SuperTableField as SuperTable;
 
 class VizyBlock extends Node
 {
+    // Static Methods
+    // =========================================================================
+
+    public static function gqlTypeNameByContext(mixed $context): string
+    {
+        return $context->getField()->handle . '_' . $context->handle . '_BlockType';
+    }
+
+
     // Properties
     // =========================================================================
 
@@ -194,11 +203,6 @@ class VizyBlock extends Node
     {
         // Make sure the value has been normalized
         return $this->normalizeFieldValue($fieldHandle);
-    }
-
-    public function getGqlTypeName(): string
-    {
-        return $this->getField()->handle . '_' . $this->handle . '_BlockType';
     }
 
     public function serializeValue(ElementInterface $element = null): ?array

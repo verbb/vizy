@@ -22,6 +22,18 @@ class Node extends Component
     public const EVENT_MODIFY_TAG = 'modifyTag';
 
 
+    // Static Methods
+    // =========================================================================
+
+    public static function gqlTypeNameByContext(mixed $context): string
+    {
+        $classNameParts = explode('\\', static::class);
+        $end = array_pop($classNameParts);
+
+        return 'VizyNode_' . $end;
+    }
+
+
     // Properties
     // =========================================================================
 
@@ -163,10 +175,7 @@ class Node extends Component
 
     public function getGqlTypeName(): string
     {
-        $classNameParts = explode('\\', static::class);
-        $end = array_pop($classNameParts);
-
-        return 'VizyNode_' . $end;
+        return static::gqlTypeNameByContext($this->getField());
     }
 
     public function getContentGqlType($context): ScalarType
