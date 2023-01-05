@@ -43,8 +43,9 @@ class Node extends Component
     public array $content = [];
     public array $attrs = [];
     public array $marks = [];
-    public ?string $text = null;
     public array $rawNode = [];
+
+    protected ?string $text = null;
 
     private mixed $element = null;
     private mixed $field = null;
@@ -113,9 +114,14 @@ class Node extends Component
         return $this->attrs;
     }
 
-    public function getText(): ?string
+    public function getText(): ?Markup
     {
-        return $this->text;
+        return Template::raw((string)$this->text);
+    }
+
+    public function setText($value): void
+    {
+        $this->text = $value;
     }
 
     public function getEnabled(): bool
