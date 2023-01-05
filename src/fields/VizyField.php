@@ -308,6 +308,19 @@ class VizyField extends Field
             return $value;
         }
 
+        // To avoid collisions with other POST items, we store all serialized Vizy content in `vizyData` 
+        // which is all we care about. Due to how Craft works, we'll get lots of other field content coming
+        // through which we can discard. For example:
+        //
+        // fields[richContent][blocks][vizy-block-X2y6Pysezv][fields][image][]: 6
+        // fields[richContent][blocks][vizy-block-X2y6Pysezv][fields][text]: Some Text
+        // fields[richContent]: [{"type":"vizyBlock","attrs": ...}]
+        //
+        // We're after just the last item, but its order cannot be guaranteed. It's safer to store that as `fields[richContent][vizyData]`.
+        if (is_array($value) && isset($value['vizyData'])) {
+            $value = $value['vizyData'];
+        }
+
         if (is_string($value) && !empty($value)) {
             $value = Json::decodeIfJson($value);
         }
