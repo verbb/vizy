@@ -5,6 +5,8 @@ use verbb\vizy\helpers\Matrix;
 
 use craft\base\Element;
 use craft\models\FieldLayout;
+use verbb\vizy\models\BlockType;
+use verbb\vizy\fields\VizyField;
 
 class Block extends Element
 {
@@ -27,6 +29,7 @@ class Block extends Element
 
     private ?FieldLayout $_fieldLayout = null;
     private mixed $_owner = null;
+    private ?BlockType $_type = null;
 
 
     // Public Methods
@@ -37,9 +40,29 @@ class Block extends Element
         return $this->_fieldLayout;
     }
 
-    public function setFieldLayout($fieldLayout): void
+    public function setFieldLayout(?FieldLayout $fieldLayout): void
     {
         $this->_fieldLayout = $fieldLayout;
+    }
+
+    public function getType(): ?BlockType
+    {
+        return $this->_type;
+    }
+
+    public function setType(?BlockType $type): void
+    {
+        $this->_type = $type;
+    }
+
+    public function getField(): ?VizyField
+    {
+        return $this->_field;
+    }
+
+    public function setField(?VizyField $field): void
+    {
+        $this->_field = $field;
     }
 
     public function setFieldValues(array $values): void

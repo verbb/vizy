@@ -721,6 +721,8 @@ class VizyField extends Field
                     $blockElement = new BlockElement();
                     $blockElement->setFieldLayout($fieldLayout);
                     $blockElement->setOwner($element);
+                    $blockElement->setType($blockType);
+                    $blockElement->setField($this);
 
                     $originalNamespace = $view->getNamespace();
                     $namespace = $view->namespaceInputName($this->handle . "[blocks][__VIZY_BLOCK_{$placeholderKey}__]", $originalNamespace);
@@ -771,6 +773,8 @@ class VizyField extends Field
 
                     // Create a fake element with the same fieldtype as our block
                     $blockElement = $block->getBlockElement($element);
+                    $blockElement->setType($block->getBlockType());
+                    $blockElement->setField($this);
 
                     $originalNamespace = $view->getNamespace();
                     $namespace = $view->namespaceInputName($this->handle . "[blocks][__VIZY_BLOCK_{$placeholderKey}__]", $originalNamespace);
