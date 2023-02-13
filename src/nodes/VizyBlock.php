@@ -27,6 +27,10 @@ class VizyBlock extends Node
 
     public static function gqlTypeNameByContext(mixed $context): string
     {
+        if (!($context instanceof VizyBlock)) {
+            return '';
+        }
+
         return $context->getField()->handle . '_' . $context->handle . '_BlockType';
     }
 
