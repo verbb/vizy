@@ -37,7 +37,7 @@ class Content extends Component
 
         $matchedData = [];
 
-        foreach ($vizyFields as $vizyField) {
+        foreach ($this->vizyFields as $vizyField) {
             $settings = Json::decode($vizyField['settings']);
 
             foreach (($settings['fieldData'] ?? []) as $data) {
