@@ -8,10 +8,12 @@ use verbb\vizy\helpers\Matrix;
 use Craft;
 use craft\base\ElementInterface;
 use craft\errors\InvalidFieldException;
+use craft\events\ElementEvent;
 use craft\fields\Matrix as MatrixField;
 use craft\helpers\Html;
 use craft\helpers\Json;
 use craft\helpers\Template;
+use craft\services\Elements;
 use craft\web\View;
 
 use Twig\Markup;
@@ -229,6 +231,12 @@ class VizyBlock extends Node
 
         // Create a fake element with the same fieldtype as our block
         $block = $this->getBlockElement($element);
+
+        // Trigger the before-save event (on the element service) to prep the element. Preparse requires this to work.
+        Craft::$app->getElements()->trigger(Elements::EVENT_BEFORE_SAVE_ELEMENT, new ElementEvent([
+            'element' => $block,
+            'isNew' => true,
+        ]));
 
         if ($fieldLayout = $block->getFieldLayout()) {
             foreach ($fieldLayout->getCustomFields() as $field) {
