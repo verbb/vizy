@@ -1,12 +1,12 @@
 <?php
 namespace verbb\vizy\elements;
 
+use verbb\vizy\fields\VizyField;
 use verbb\vizy\helpers\Matrix;
+use verbb\vizy\models\BlockType;
 
 use craft\base\Element;
 use craft\models\FieldLayout;
-use verbb\vizy\models\BlockType;
-use verbb\vizy\fields\VizyField;
 
 class Block extends Element
 {
@@ -30,6 +30,7 @@ class Block extends Element
     private ?FieldLayout $_fieldLayout = null;
     private mixed $_owner = null;
     private ?BlockType $_type = null;
+    private ?VizyField $_field = null;
 
 
     // Public Methods
