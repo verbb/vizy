@@ -1,5 +1,22 @@
 # Changelog
 
+## 2.0.11 - 2023-02-21
+
+### Added
+- Add support for Preparse plugin.
+- Add content service to handle updating Vizy field content (mostly for [Hyper](https://github.com/verbb/hyper).
+- Add `$_type` and `$_field` to Block. (thanks @leevigraham).
+- Add the ability to set the initial number of rows for a field, to control its initial height.
+
+### Changed
+- Change Vizy field data to be stored in `vizyData` to prevent collisions with inner fields (which are not needed but can override Vizy serialized content).
+- Only admins are now allowed to access plugin settings.
+- `text` for nodes is now automatically run through the `raw` Twig filter to decode HTML special characters.
+
+### Fixed
+- Fix a GraphQL type error for VizyBlocks.
+- Fix node types not appearing in the Explorer or Introspection for GraphQL.
+
 ## 2.0.10 - 2022-12-25
 
 ### Changed
