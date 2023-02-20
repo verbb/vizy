@@ -6,10 +6,13 @@ use verbb\vizy\fields\VizyField;
 use Craft;
 use craft\base\Component;
 use craft\db\Query;
+use craft\fields\Matrix;
 use craft\helpers\ArrayHelper;
 use craft\helpers\Db;
 use craft\helpers\ElementHelper;
 use craft\helpers\Json;
+
+use verbb\supertable\fields\SuperTableField;
 
 class Content extends Component
 {
@@ -17,6 +20,8 @@ class Content extends Component
     // =========================================================================
 
     protected array $vizyFields = []; 
+    protected array $matrixFields = []; 
+    protected array $superTableFields = []; 
 
 
     // Public Methods
@@ -35,6 +40,42 @@ class Content extends Component
                 ->all();
         }
 
+        if (!$this->matrixFields) {
+            $matrixFields = (new Query())
+                ->select(['uid'])
+                ->from('{{%fields}}')
+                ->where(['type' => Matrix::class])
+                ->column();
+
+            foreach ($matrixFields as $uid) {
+                if ($matrixField = Craft::$app->getFields()->getFieldByUid($uid)) {
+                    foreach ($matrixField->getBlockTypes() as $blockType) {
+                        foreach ($blockType->getCustomFields() as $innerField) {
+                            $this->matrixFields[] = $uid . ':' . $innerField->uid;
+                        }
+                    }
+                }
+            }
+        }
+
+        if (!$this->superTableFields && class_exists(SuperTableField::class)) {
+            $superTableFields = (new Query())
+                ->select(['uid'])
+                ->from('{{%fields}}')
+                ->where(['type' => SuperTableField::class])
+                ->column();
+
+            foreach ($superTableFields as $uid) {
+                if ($superTableField = Craft::$app->getFields()->getFieldByUid($uid)) {
+                    foreach ($superTableField->getBlockTypes() as $blockType) {
+                        foreach ($blockType->getCustomFields() as $innerField) {
+                            $this->superTableFields[] = $uid . ':' . $innerField->uid;
+                        }
+                    }
+                }
+            }
+        }
+
         $matchedData = [];
 
         foreach ($this->vizyFields as $vizyField) {
@@ -46,11 +87,18 @@ class Content extends Component
                         foreach (($tab['elements'] ?? []) as $element) {
                             $elementFieldUid = $element['fieldUid'] ?? null;
 
+                            if (in_array($elementFieldUid . ':' . $fieldUid, $this->superTableFields) || in_array($elementFieldUid . ':' . $fieldUid, $this->matrixFields)) {
+                                $matchedData[] = [
+                                    'vizyFieldUid' => $vizyField['uid'],
+                                    'blockTypeId' => $blockType['id'],
+                                ];
+                            }
+
                             if ($elementFieldUid === $fieldUid) {
                                 $matchedData[] = [
                                     'vizyFieldUid' => $vizyField['uid'],
                                     'blockTypeId' => $blockType['id'],
-                                ]; 
+                                ];
                             }
                         }
                     }
@@ -124,11 +172,11 @@ class Content extends Component
                             // Find the field and block that matches our content for the field. We use flatten to handle
                             // nested Vizy content with ease with dot-notation get/set.
                             foreach (self::flatten($content) as $flatKey => $flatContent) {
-                                $searchKey = 'content.fields.' . $targetField->handle;
+                                $searchKey = 'fields.' . $targetField->handle;
 
-                                if (strstr($flatKey, $searchKey)) {
+                                if (str_ends_with($flatKey, $searchKey)) {
                                     // Only fetch the preceeding data, so `0.attrs.values` or `1.attrs.values.content.fields.vizy.0.attrs.values`
-                                    $blockPaths[] = substr($flatKey, 0, (strpos($flatKey, $searchKey) - 1));
+                                    $blockPaths[] = substr($flatKey, 0, (strrpos($flatKey, 'content.fields') - 1));
                                 }
                             }
 
