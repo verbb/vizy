@@ -36,7 +36,7 @@ class VizyNodeGenerator implements GeneratorInterface
 
             $typeName = $nodeClass::gqlTypeNameByContext($context);
 
-            //if (!GqlEntityRegistry::getEntity($typeName)) {
+            if (!GqlEntityRegistry::getEntity($typeName)) {
                 // Determine the interface
                 $interfaceFields = $interfaceClasses[$nodeClass] ?? VizyNodeInterface::getFieldDefinitions();
 
@@ -46,7 +46,7 @@ class VizyNodeGenerator implements GeneratorInterface
                         return $interfaceFields;
                     },
                 ]));
-            //}
+            }
         }
 
         // Generate the types for Vizy Blocks

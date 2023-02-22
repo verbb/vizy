@@ -181,7 +181,7 @@ class Node extends Component
 
     public function getGqlTypeName(): string
     {
-        return static::gqlTypeNameByContext($this->getField());
+        return static::gqlTypeNameByContext($this);
     }
 
     public function getContentGqlType($context): ScalarType
