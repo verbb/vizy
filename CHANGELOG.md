@@ -1,5 +1,10 @@
 # Changelog
 
+## 2.0.12 - 2023-02-27
+
+### Fixed
+- Fix an error when querying Vizy blocks with GraphQL.
+
 ## 2.0.11 - 2023-02-21
 
 ### Added
