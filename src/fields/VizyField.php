@@ -717,7 +717,14 @@ class VizyField extends Field
                     $blockElement->setField($this);
 
                     $originalNamespace = $view->getNamespace();
-                    $namespace = $view->namespaceInputName($this->handle . "[blocks][__VIZY_BLOCK_{$placeholderKey}__]", $originalNamespace);
+                    
+                    // Because Vizy Vue components serialize the input into JSON (including nested fields), we
+                    // actually don't want the rendered block fields to use the same `fields` namespace as other
+                    // fields do. It's not required for the field, and only used to serialize into JSON.
+                    // We don't have control over the output of fields to remove `name` attributes, so changing
+                    // the namespace is the way to go. This also prevents Craft's JS detecting field changes.
+                    $newNamespace = ($originalNamespace === 'fields') ? 'vizyBlockFields' : $originalNamespace;
+                    $namespace = $view->namespaceInputName($this->handle . "[blocks][__VIZY_BLOCK_{$placeholderKey}__]", $newNamespace);
                     $view->setNamespace($namespace);
 
                     $form = $fieldLayout->createForm($blockElement);
@@ -769,7 +776,14 @@ class VizyField extends Field
                     $blockElement->setField($this);
 
                     $originalNamespace = $view->getNamespace();
-                    $namespace = $view->namespaceInputName($this->handle . "[blocks][__VIZY_BLOCK_{$placeholderKey}__]", $originalNamespace);
+
+                    // Because Vizy Vue components serialize the input into JSON (including nested fields), we
+                    // actually don't want the rendered block fields to use the same `fields` namespace as other
+                    // fields do. It's not required for the field, and only used to serialize into JSON.
+                    // We don't have control over the output of fields to remove `name` attributes, so changing
+                    // the namespace is the way to go. This also prevents Craft's JS detecting field changes.
+                    $newNamespace = ($originalNamespace === 'fields') ? 'vizyBlockFields' : $originalNamespace;
+                    $namespace = $view->namespaceInputName($this->handle . "[blocks][__VIZY_BLOCK_{$placeholderKey}__]", $newNamespace);
                     $view->setNamespace($namespace);
 
                     $fieldsHtml = $view->namespaceInputs($fieldLayout->createForm($blockElement)->render());

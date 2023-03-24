@@ -439,8 +439,8 @@ export default {
                     content = Object.values(content)[0];
                 }
 
-                if (!isEmpty(content.fields)) {
-                    Object.entries(content.fields).forEach(([fieldHandle, fieldBlocks]) => {
+                if (!isEmpty(content.vizyBlockFields)) {
+                    Object.entries(content.vizyBlockFields).forEach(([fieldHandle, fieldBlocks]) => {
                         if (!isEmpty(fieldBlocks.blocks)) {
                             Object.entries(fieldBlocks.blocks).forEach(([blockId, blockFields]) => {
                                 if (blockId === this.node.attrs.id) {
