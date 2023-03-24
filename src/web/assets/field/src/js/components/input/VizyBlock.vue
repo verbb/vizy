@@ -578,7 +578,7 @@ export default {
     margin-right: 10px;
     font-size: 16px;
     display: flex;
-    color: rgba(123, 135, 147, 0.5);
+    color: #78838e;
     outline: 0;
 
     &:hover {
