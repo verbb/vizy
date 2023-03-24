@@ -596,6 +596,7 @@ export default {
 
 .vizyblock-header .tab {
     display: inline-block;
+    height: 31px;
     padding: 5px 10px;
     color: #576575;
     font-size: 12px;
