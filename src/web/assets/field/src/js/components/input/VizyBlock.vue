@@ -439,8 +439,15 @@ export default {
                     content = Object.values(content)[0];
                 }
 
-                if (!isEmpty(content.vizyBlockFields)) {
-                    Object.entries(content.vizyBlockFields).forEach(([fieldHandle, fieldBlocks]) => {
+                // We change the root `fields` to `vizyBlockFields` but not for nested items.
+                let contentRoot = content.vizyBlockFields;
+
+                if (isEmpty(contentRoot)) {
+                    contentRoot = content.fields;
+                }
+
+                if (!isEmpty(contentRoot)) {
+                    Object.entries(contentRoot).forEach(([fieldHandle, fieldBlocks]) => {
                         if (!isEmpty(fieldBlocks.blocks)) {
                             Object.entries(fieldBlocks.blocks).forEach(([blockId, blockFields]) => {
                                 if (blockId === this.node.attrs.id) {
