@@ -11,91 +11,93 @@
     >
         <template #title>{{ t('vizy', $attrs['modal-title']) }}</template>
 
-        <!-- eslint-disable vue/no-mutating-props -->
-        <div class="vizy-modal-image-preview">
-            <img :src="modelValue.src">
-        </div>
-
-        <div class="vizy-modal-image-fields">
-            <div id="alt-field" class="field">
-                <div class="heading">
-                    <label id="alt-label" for="alt">{{ t('vizy', 'Alt Text') }}</label>
-                </div>
-
-                <div class="input ltr">
-                    <input
-                        id="alt"
-                        v-model="modelValue.alt"
-                        type="text"
-                        class="text fullwidth"
-                        autofocus=""
-                        autocomplete="off"
-                    >
-                </div>
+        <div class="vui-modal-body-wrap">
+            <!-- eslint-disable vue/no-mutating-props -->
+            <div class="vizy-modal-image-preview">
+                <img :src="modelValue.src">
             </div>
 
-            <div id="title-field" class="field">
-                <div class="heading">
-                    <label id="title-label" for="title">{{ t('vizy', 'Title') }}</label>
+            <div class="vizy-modal-image-fields">
+                <div id="alt-field" class="field">
+                    <div class="heading">
+                        <label id="alt-label" for="alt">{{ t('vizy', 'Alt Text') }}</label>
+                    </div>
+
+                    <div class="input ltr">
+                        <input
+                            id="alt"
+                            v-model="modelValue.alt"
+                            type="text"
+                            class="text fullwidth"
+                            autofocus=""
+                            autocomplete="off"
+                        >
+                    </div>
                 </div>
 
-                <div class="input ltr">
-                    <input
-                        id="title"
-                        v-model="modelValue.title"
-                        type="text"
-                        class="text fullwidth"
-                        autofocus=""
-                        autocomplete="off"
-                    >
-                </div>
-            </div>
+                <div id="title-field" class="field">
+                    <div class="heading">
+                        <label id="title-label" for="title">{{ t('vizy', 'Title') }}</label>
+                    </div>
 
-            <div id="url-field" class="field">
-                <div class="heading">
-                    <label id="url-label" for="url">{{ t('vizy', 'URL') }}</label>
-                </div>
-
-                <div class="input ltr">
-                    <input
-                        id="url"
-                        v-model="modelValue.url"
-                        type="text"
-                        class="text fullwidth"
-                        autofocus=""
-                        autocomplete="off"
-                    >
-                </div>
-            </div>
-
-            <div id="target-field" class="checkboxfield field">
-                <div class="input ltr">
-                    <input
-                        :id="targetId"
-                        v-model="modelValue.target"
-                        type="checkbox"
-                        class="checkbox"
-                    >
-                    <label :for="targetId">
-                        {{ t('vizy', 'Open link in new tab') }}
-                    </label>
-                </div>
-            </div>
-
-            <div id="transform-field" class="field first">
-                <div class="heading">
-                    <label id="transform-label" for="transform">{{ t('vizy', 'Transform') }}</label>
+                    <div class="input ltr">
+                        <input
+                            id="title"
+                            v-model="modelValue.title"
+                            type="text"
+                            class="text fullwidth"
+                            autofocus=""
+                            autocomplete="off"
+                        >
+                    </div>
                 </div>
 
-                <div class="input ltr">
-                    <div class="select">
-                        <select id="transform" v-model="modelValue.transform">
-                            <option value="">{{ t('vizy', 'No Transform') }}</option>
+                <div id="url-field" class="field">
+                    <div class="heading">
+                        <label id="url-label" for="url">{{ t('vizy', 'URL') }}</label>
+                    </div>
 
-                            <option v-for="(transform, i) in transforms" :key="i" :value="transform.handle">
-                                {{ transform.name }}
-                            </option>
-                        </select>
+                    <div class="input ltr">
+                        <input
+                            id="url"
+                            v-model="modelValue.url"
+                            type="text"
+                            class="text fullwidth"
+                            autofocus=""
+                            autocomplete="off"
+                        >
+                    </div>
+                </div>
+
+                <div id="target-field" class="checkboxfield field">
+                    <div class="input ltr">
+                        <input
+                            :id="targetId"
+                            v-model="modelValue.target"
+                            type="checkbox"
+                            class="checkbox"
+                        >
+                        <label :for="targetId">
+                            {{ t('vizy', 'Open link in new tab') }}
+                        </label>
+                    </div>
+                </div>
+
+                <div id="transform-field" class="field first">
+                    <div class="heading">
+                        <label id="transform-label" for="transform">{{ t('vizy', 'Transform') }}</label>
+                    </div>
+
+                    <div class="input ltr">
+                        <div class="select">
+                            <select id="transform" v-model="modelValue.transform">
+                                <option value="">{{ t('vizy', 'No Transform') }}</option>
+
+                                <option v-for="(transform, i) in transforms" :key="i" :value="transform.handle">
+                                    {{ transform.name }}
+                                </option>
+                            </select>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -247,12 +249,16 @@ export default {
 }
 
 .vui-modal-image-edit .vui-modal-body {
+    padding: 0;
+    // margin: 0 -16px;
+}
+
+.vui-modal-body-wrap {
     display: flex;
-    margin: 0 -16px;
 }
 
 .vizy-modal-image-preview {
-    padding: 0 16px;
+    padding: 16px;
     width: 200px;
 
     img {
@@ -263,7 +269,7 @@ export default {
 }
 
 .vizy-modal-image-fields {
-    padding: 0 16px;
+    padding: 16px;
     flex: 1;
 }
 
