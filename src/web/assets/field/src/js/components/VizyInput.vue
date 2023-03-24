@@ -85,8 +85,6 @@ export default {
         },
     },
 
-    emits: ['content-update', 'init'],
-
     data() {
         return {
             isLivePreview: false,
@@ -119,10 +117,6 @@ export default {
     },
 
     watch: {
-        jsonContent(newValue) {
-            this.$emit('content-update', newValue);
-        },
-
         codeEditorHtml(newValue) {
             this.editor.chain().setContent(newValue, true).run();
         },
@@ -162,12 +156,6 @@ export default {
 
         this.$nextTick(() => {
             this.mounted = true;
-
-            this.$emit('init', this);
-
-            // Modify the jQuery data for `ElementEditor.js`, otherwise a change will be detected, and the draft saved.
-            // This is due to jQuery kicking in and serializing the form before Vue kicks in.
-            this.updateInitialSerializedValue();
 
             // Setup listeners for fixed toolbar option
             if (this.toolbarFixed) {
@@ -283,23 +271,6 @@ export default {
             }
 
             this.showCodeEditor = !this.showCodeEditor;
-        },
-
-        updateInitialSerializedValue() {
-            const $mainForm = $('form#main-form');
-
-            if ($mainForm.length) {
-                const elementEditor = $mainForm.data('elementEditor');
-
-                if (elementEditor) {
-                    // Serialize the form again, now Vue is ready
-                    const formData = elementEditor.serializeForm(true);
-
-                    // Update the local cache, and the DOM cache
-                    elementEditor.lastSerializedValue = formData;
-                    $mainForm.data('initialSerializedValue', formData);
-                }
-            }
         },
 
         valueToContent(value) {
@@ -458,12 +429,14 @@ export default {
 
         getParentInputs() {
             const parents = [];
-            let node = this.$parent;
+            let node = this;
 
-            for (; node; node = node.$parent) {
-                if (node.$options._componentTag === 'vizy-input') {
+            while (node) {
+                if (node.$options.name === 'VizyInput') {
                     parents.push(node);
                 }
+
+                node = node.$parent;
             }
 
             return parents;

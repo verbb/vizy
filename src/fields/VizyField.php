@@ -244,34 +244,26 @@ class VizyField extends Field
             $settings['transforms'] = $this->_getTransforms();
         }
 
-        // Let the field know if this is the root field for nested fields
-        if ($element instanceof BlockElement) {
-            $settings['isRoot'] = false;
-        }
-
         // No need to output JS for any nested fields, all settings are rendered in the template
         // as Vue takes over and processes the props.
-        // if (!$element instanceof BlockElement) {
-        //     $view->registerAssetBundle(VizyAsset::class);
-        //     $view->registerJs('new Craft.Vizy.Input(' .
-        //         '"' . $view->namespaceInputId($id) . '", ' .
-        //         '"' . $view->namespaceInputName($this->handle) . '"' .
-        //     ');');
-        // }
+        if (!$element instanceof BlockElement) {
+            // Register the Vizy JS for Vite
+            Plugin::registerAsset('field/src/js/vizy.js');
 
-        Plugin::registerAsset('field/src/js/vizy.js');
+            $js = 'new Craft.Vizy.Input(' .
+                '"' . $view->namespaceInputId($id) . '", ' .
+                '"' . $view->namespaceInputName($this->handle) . '"' .
+            ');';
 
-        // Create the Vizy Input Vue component
-        $js = 'new Craft.Vizy.Input(' .
-            '"' . $view->namespaceInputId($id) . '", ' .
-            '"' . $view->namespaceInputName($this->handle) . '"' .
-        ');';
-
-        // Wait for Vizy JS to be loaded, either through an event listener, or by a flag.
-        // This covers if this script is run before, or after the Vizy JS has loaded
-        $view->registerJs('document.addEventListener("vite-script-loaded", function(e) {' .
-            'if (e.detail.path === "field/src/js/vizy.js") {' . $js . '}' .
-        '}); if (Craft.VizyReady) {' . $js . '}');
+            // Wait for Vizy JS to be loaded, either through an event listener, or by a flag.
+            // This covers if this script is run before, or after the Vizy JS has loaded
+            $view->registerJs('document.addEventListener("vite-script-loaded", function(e) {' .
+                'if (e.detail.path === "field/src/js/vizy.js") {' . $js . '}' .
+            '}); if (Craft.VizyReady) {' . $js . '}');
+        } else {
+            // Let the field know if this is the root field for nested fields
+            $settings['isRoot'] = false;
+        }
 
         $rawNodes = $value->getRawNodes();
 

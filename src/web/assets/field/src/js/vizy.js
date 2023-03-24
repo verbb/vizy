@@ -25,14 +25,10 @@ Craft.Vizy.Input = Garnish.Base.extend({
             components: {
                 VizyInput,
             },
-
-            methods: {
-                onInputInit() {
-                    // Not used here at root level, only for nested fields.
-                    // Omitting would produce an error as it's referenced in template calls.
-                },
-            },
         });
+
+        // Import globally, as these are included in nested field content to be compiled
+        app.component('VizyInput', VizyInput);
 
         app.mount(`#${idPrefix}-field`);
     },
