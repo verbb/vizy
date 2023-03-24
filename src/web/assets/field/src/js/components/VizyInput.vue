@@ -413,8 +413,10 @@ export default {
             // Apply any parent Vizy fields toolbars, otherwise we get multiple toolbar overlaps
             headerBuffer = headerBuffer + this.parentToolbarOffset;
 
-            this.$refs.toolbar.$el.style.position = 'sticky';
-            this.$refs.toolbar.$el.style.top = `${this.$el.scrollTop + headerBuffer}px`;
+            if (this.$refs.toolbar) {
+                this.$refs.toolbar.$el.style.position = 'sticky';
+                this.$refs.toolbar.$el.style.top = `${this.$el.scrollTop + headerBuffer}px`;
+            }
         },
 
         updateFixedToolbarEditor(event) {
@@ -423,8 +425,10 @@ export default {
             // Apply any parent Vizy fields toolbars, otherwise we get multiple toolbar overlaps
             headerBuffer = headerBuffer + this.parentToolbarOffset;
 
-            this.$refs.toolbar.$el.style.position = 'sticky';
-            this.$refs.toolbar.$el.style.top = `${this.$el.scrollTop + headerBuffer}px`;
+            if (this.$refs.toolbar) {
+                this.$refs.toolbar.$el.style.position = 'sticky';
+                this.$refs.toolbar.$el.style.top = `${this.$el.scrollTop + headerBuffer}px`;
+            }
         },
 
         getParentInputs() {

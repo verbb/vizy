@@ -23,12 +23,22 @@
 
                 <div class="actions">
                     <lightswitch-field v-model="enabled" :extra-small="true" />
+
                     <a
-                        class="settings icon" title="Actions" aria-label="Actions" role="button" tabindex="0"
-                        aria-haspopup="listbox" aria-expanded="false"
+                        class="settings icon"
+                        :title="t('vizy', 'Actions')"
+                        :aria-title="t('vizy', 'Actions')"
+                        role="button"
+                        tabindex="0"
+                        aria-haspopup="listbox"
+                        aria-expanded="false"
                     ></a>
                     <a
-                        class="move icon" title="Reorder" aria-label="Reorder" data-drag-handle role="button"
+                        class="move icon"
+                        :title="t('vizy', 'Reorder')"
+                        :aria-title="t('vizy', 'Reorder')"
+                        data-drag-handle
+                        role="button"
                         @mousedown="clickMove"
                     ></a>
                 </div>
@@ -36,17 +46,17 @@
                 <div id="vizy-block-settings-template" class="vizy-menu" style="display: none;">
                     <ul class="padded" role="listbox" aria-hidden="true">
                         <li v-if="collapsed">
-                            <a data-icon="expand" role="option" tabindex="-1" @click.prevent="expandBlock">Expand</a>
+                            <a data-icon="expand" role="option" tabindex="-1" @click.prevent="expandBlock">{{ t('vizy', 'Expand') }}</a>
                         </li>
 
                         <li v-else>
-                            <a data-icon="collapse" role="option" tabindex="-1" @click.prevent="collapseBlock">Collapse</a>
+                            <a data-icon="collapse" role="option" tabindex="-1" @click.prevent="collapseBlock">{{ t('vizy', 'Collapse') }}</a>
                         </li>
 
                         <hr>
 
                         <li>
-                            <a class="error" data-icon="remove" role="option" tabindex="-1" @click.prevent="deleteBlock">Delete</a>
+                            <a class="error" data-icon="remove" role="option" tabindex="-1" @click.prevent="deleteBlock">{{ t('vizy', 'Delete') }}</a>
                         </li>
                     </ul>
                 </div>
