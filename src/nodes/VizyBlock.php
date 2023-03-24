@@ -9,6 +9,7 @@ use Craft;
 use craft\base\ElementInterface;
 use craft\errors\InvalidFieldException;
 use craft\events\ElementEvent;
+use craft\fields\BaseRelationField;
 use craft\fields\Matrix as MatrixField;
 use craft\helpers\Html;
 use craft\helpers\Json;
@@ -241,6 +242,13 @@ class VizyBlock extends Node
                 // Ensure each field's content is serialized properly
                 $serializedFieldValues = $field->serializeValue($fieldValue, $block);
                 $value['attrs']['values']['content']['fields'][$field->handle] = $serializedFieldValues;
+
+                // Fix relation fields in their `afterElementSave` function trying to create relations
+                // We still want relation fields to run `afterElementSave` however (see Asset fields)
+                if ($field instanceof BaseRelationField) {
+                    $field->maintainHierarchy = false;
+                    $field->localizeRelations = false;
+                }
 
                 // Ensure we call each field's `afterElementSave` method. This would be auto-done
                 // if a VizyBlock node was an element, and we were saving that.
