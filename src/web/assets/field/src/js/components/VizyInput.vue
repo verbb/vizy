@@ -615,6 +615,10 @@ export default {
     display: none !important;
 }
 
+.vizyblock-fields .field .status-badge {
+    display: none !important;
+}
+
 // Fix Redactor incompatibility with ProseMirror style
 .ProseMirror [contenteditable="false"] .redactor [contenteditable="true"] {
     white-space: normal;
