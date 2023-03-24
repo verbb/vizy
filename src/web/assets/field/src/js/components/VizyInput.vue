@@ -165,6 +165,10 @@ export default {
 
             this.$emit('init', this);
 
+            // Modify the jQuery data for `ElementEditor.js`, otherwise a change will be detected, and the draft saved.
+            // This is due to jQuery kicking in and serializing the form before Vue kicks in.
+            this.updateInitialSerializedValue();
+
             // Setup listeners for fixed toolbar option
             if (this.toolbarFixed) {
                 window.addEventListener('scroll', this.updateFixedToolbar);
@@ -279,6 +283,23 @@ export default {
             }
 
             this.showCodeEditor = !this.showCodeEditor;
+        },
+
+        updateInitialSerializedValue() {
+            const $mainForm = $('form#main-form');
+
+            if ($mainForm.length) {
+                const elementEditor = $mainForm.data('elementEditor');
+
+                if (elementEditor) {
+                    // Serialize the form again, now Vue is ready
+                    const formData = elementEditor.serializeForm(true);
+
+                    // Update the local cache, and the DOM cache
+                    elementEditor.lastSerializedValue = formData;
+                    $mainForm.data('initialSerializedValue', formData);
+                }
+            }
         },
 
         valueToContent(value) {
