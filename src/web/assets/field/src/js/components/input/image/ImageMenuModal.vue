@@ -250,7 +250,6 @@ export default {
 
 .vui-modal-image-edit .vui-modal-body {
     padding: 0;
-    // margin: 0 -16px;
 }
 
 .vui-modal-body-wrap {
