@@ -239,6 +239,78 @@ export default {
                     ],
                 },
                 {
+                    name: 'table',
+                    svg: 'table',
+                    title: Craft.t('vizy', 'Table'),
+                    options: [
+                        {
+                            name: 'insert-table',
+                            title: Craft.t('vizy', 'Insert Table'),
+                            action: () => { return this.editor.chain().focus().insertTable({ rows: 3, cols: 3, withHeaderRow: true }).run(); },
+                        },
+                        {
+                            name: 'delete-table',
+                            title: Craft.t('vizy', 'Delete Table'),
+                            action: () => { return this.editor.chain().focus().deleteTable().run(); },
+                        },
+                        {
+                            name: 'add-col-before',
+                            title: Craft.t('vizy', 'Add Column Before'),
+                            action: () => { return this.editor.chain().focus().addColumnBefore().run(); },
+                        },
+                        {
+                            name: 'add-col-after',
+                            title: Craft.t('vizy', 'Add Column After'),
+                            action: () => { return this.editor.chain().focus().addColumnAfter().run(); },
+                        },
+                        {
+                            name: 'delete-col',
+                            title: Craft.t('vizy', 'Delete Column'),
+                            action: () => { return this.editor.chain().focus().deleteColumn().run(); },
+                        },
+                        {
+                            name: 'add-row-before',
+                            title: Craft.t('vizy', 'Add Row Before'),
+                            action: () => { return this.editor.chain().focus().addRowBefore().run(); },
+                        },
+                        {
+                            name: 'add-row-after',
+                            title: Craft.t('vizy', 'Add Row After'),
+                            action: () => { return this.editor.chain().focus().addRowAfter().run(); },
+                        },
+                        {
+                            name: 'delete-row',
+                            title: Craft.t('vizy', 'Delete Row'),
+                            action: () => { return this.editor.chain().focus().deleteRow().run(); },
+                        },
+                        {
+                            name: 'merge-cells',
+                            title: Craft.t('vizy', 'Merge Cells'),
+                            action: () => { return this.editor.chain().focus().mergeCells().run(); },
+                        },
+                        {
+                            name: 'split-cells',
+                            title: Craft.t('vizy', 'Split Cells'),
+                            action: () => { return this.editor.chain().focus().splitCell().run(); },
+                        },
+                        {
+                            name: 'toggle-header-column',
+                            title: Craft.t('vizy', 'Toggle Header Column'),
+                            action: () => { return this.editor.chain().focus().toggleHeaderColumn().run(); },
+                        },
+                        {
+                            name: 'toggle-header-row',
+                            title: Craft.t('vizy', 'Toggle Header Row'),
+                            action: () => { return this.editor.chain().focus().toggleHeaderRow().run(); },
+                        },
+                        {
+                            name: 'toggle-header-cell',
+                            title: Craft.t('vizy', 'Toggle Header Cell'),
+                            action: () => { return this.editor.chain().focus().toggleHeaderCell().run(); },
+                        },
+                    ],
+                },
+                {
                     name: 'link',
                     svg: 'link',
                     title: Craft.t('vizy', 'Link'),
@@ -273,6 +345,10 @@ export default {
                     // Handle special-cases and sub-options. Maybe move to other components?
                     if (button.name === 'formatting') {
                         button.options = this.getEnabledOptions(button, this.field.getFormattingOptions());
+                    }
+
+                    if (button.name === 'table') {
+                        button.options = this.getEnabledOptions(button, this.field.getTableOptions());
                     }
 
                     buttons.push(button);

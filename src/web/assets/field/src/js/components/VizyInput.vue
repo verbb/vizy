@@ -38,6 +38,10 @@ import HorizontalRule from '@tiptap/extension-horizontal-rule';
 import ListItem from '@tiptap/extension-list-item';
 import OrderedList from '@tiptap/extension-ordered-list';
 import Paragraph from '@tiptap/extension-paragraph';
+import Table from '@tiptap/extension-table';
+import TableCell from '@tiptap/extension-table-cell';
+import TableHeader from '@tiptap/extension-table-header';
+import TableRow from '@tiptap/extension-table-row';
 import Text from '@tiptap/extension-text';
 
 // TipTap - Extensions
@@ -215,6 +219,30 @@ export default {
             return options;
         },
 
+        getTableOptions() {
+            let options = [
+                'insert-table',
+                'delete-table',
+                'add-col-before',
+                'add-col-after',
+                'delete-col',
+                'add-row-before',
+                'add-row-after',
+                'delete-row',
+                'merge-cells',
+                'split-cells',
+                'toggle-header-column',
+                'toggle-header-row',
+                'toggle-header-cell',
+            ];
+
+            if (this.settings.vizyConfig.table && this.settings.vizyConfig.table.length) {
+                options = this.settings.vizyConfig.table;
+            }
+
+            return options;
+        },
+
         getExtensions() {
             const extensions = [
                 // Core Extensions
@@ -247,6 +275,12 @@ export default {
                 HorizontalRule,
                 ListItem,
                 OrderedList,
+                Table.configure({
+                    resizable: true,
+                }),
+                TableRow,
+                TableHeader,
+                TableCell,
 
                 // Optional Extensions
                 History,
@@ -600,6 +634,72 @@ export default {
         img {
             outline: 2px solid #3397ff !important;
         }
+    }
+}
+
+// Table styles
+.vui-editor {
+    .ProseMirror {
+        table {
+            border-collapse: collapse;
+            table-layout: fixed;
+            width: 100%;
+            margin: 0;
+            overflow: hidden;
+
+            td,
+            th {
+                min-width: 1em;
+                border: 2px solid #ced4da;
+                padding: 3px 5px;
+                vertical-align: top;
+                box-sizing: border-box;
+                position: relative;
+
+                > * {
+                    margin-bottom: 0;
+                }
+            }
+
+            th {
+                font-weight: bold;
+                text-align: left;
+                background-color: #f1f3f5;
+            }
+
+            .selectedCell:after {
+                z-index: 2;
+                position: absolute;
+                content: "";
+                left: 0; right: 0; top: 0; bottom: 0;
+                background: rgba(200, 200, 255, 0.4);
+                pointer-events: none;
+            }
+
+            .column-resize-handle {
+                position: absolute;
+                right: -2px;
+                top: 0;
+                bottom: -2px;
+                width: 4px;
+                background-color: #adf;
+                pointer-events: none;
+            }
+
+            p {
+                margin: 0;
+            }
+        }
+    }
+
+    .tableWrapper {
+        padding: 1rem 0;
+        overflow-x: auto;
+    }
+
+    .resize-cursor {
+        cursor: ew-resize;
+        cursor: col-resize;
     }
 }
 

@@ -62,7 +62,7 @@ Property | Value
 Property | Value
 --- | ---
 `type` | `codeBlock`
-`tagName = ['pre', 'code'];
+`tagName` | `['pre', 'code']`
 
 
 ### Hard Break
@@ -160,6 +160,46 @@ Property | Value
 --- | ---
 `type` | `paragraph`
 `tagName` | `p`
+
+
+### Table
+
+#### Properties
+
+Property | Value
+--- | ---
+`type` | `table`
+`tagName` | `table`
+
+
+### Table Row
+
+#### Properties
+
+Property | Value
+--- | ---
+`type` | `tableRow`
+`tagName` | `tr`
+
+
+### Table Cell
+
+#### Properties
+
+Property | Value
+--- | ---
+`type` | `tableCell`
+`tagName` | `td`
+
+
+### Table Header
+
+#### Properties
+
+Property | Value
+--- | ---
+`type` | `tableHeader`
+`tagName` | `th`
 
 
 ### Vizy Block
