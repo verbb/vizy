@@ -148,6 +148,10 @@ export default {
     width: 32px;
     margin: 0 2px;
 
+    [data-icon] {
+        margin: 0 !important;
+    }
+
     &:focus,
     &:hover {
         background-color: #edf3fa !important;
