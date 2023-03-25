@@ -330,6 +330,18 @@ export default {
                     title: Craft.t('vizy', 'HTML'),
                     action: () => { return this.editor.emit('vui:code-editor-toggle'); },
                 },
+                {
+                    name: 'iframe',
+                    svg: 'rectangle-code',
+                    title: Craft.t('vizy', 'iFrame'),
+                    action: () => {
+                        const url = window.prompt('URL');
+
+                        if (url) {
+                            return this.editor.chain().focus().setIframe({ src: url }).run();
+                        }
+                    },
+                },
             ],
         };
     },
