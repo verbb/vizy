@@ -53,6 +53,14 @@
                             <a data-icon="collapse" role="option" tabindex="-1" @click.prevent="collapseBlock">{{ t('vizy', 'Collapse') }}</a>
                         </li>
 
+                        <li v-if="canCollapseAll">
+                            <a data-icon="collapse" role="option" tabindex="-1" @click.prevent="collapseAll">{{ t('vizy', 'Collapse All') }}</a>
+                        </li>
+
+                        <li v-if="canExpandAll">
+                            <a data-icon="expand" role="option" tabindex="-1" @click.prevent="expandAll">{{ t('vizy', 'Expand All') }}</a>
+                        </li>
+
                         <hr>
 
                         <li>
@@ -203,6 +211,34 @@ export default {
             },
         },
 
+        canCollapseAll() {
+            let anyExpanded = false;
+
+            this.editor.state.doc?.content?.content.forEach((node) => {
+                if (node.type.name === 'vizyBlock') {
+                    if (!node.attrs.collapsed) {
+                        anyExpanded = true;
+                    }
+                }
+            });
+
+            return anyExpanded;
+        },
+
+        canExpandAll() {
+            let anyCollapsed = false;
+
+            this.editor.state.doc?.content?.content.forEach((node) => {
+                if (node.type.name === 'vizyBlock') {
+                    if (node.attrs.collapsed) {
+                        anyCollapsed = true;
+                    }
+                }
+            });
+
+            return anyCollapsed;
+        },
+
         preview() {
             let previewHtml = '';
 
@@ -296,6 +332,9 @@ export default {
 
         // Set the HTML for the block's fields
         this.fieldsHtml = this.vizyField.getCachedFieldHtml(this.node.attrs.id);
+
+        this.$events.on('vizy-blocks:collapseAll', this.collapseBlock);
+        this.$events.on('vizy-blocks:expandAll', this.expandBlock);
     },
 
     mounted() {
@@ -404,7 +443,9 @@ export default {
 
         deleteBlock() {
             // Hide, don't destory, because of how Tiptap re-renders blocks
-            this.tippy.hide();
+            if (this.tippy) {
+                this.tippy.hide();
+            }
 
             // Give it a second to hide tippy first
             setTimeout(() => {
@@ -418,13 +459,25 @@ export default {
         collapseBlock() {
             this.collapsed = true;
 
-            this.tippy.hide();
+            if (this.tippy) {
+                this.tippy.hide();
+            }
         },
 
         expandBlock() {
             this.collapsed = false;
 
-            this.tippy.hide();
+            if (this.tippy) {
+                this.tippy.hide();
+            }
+        },
+
+        collapseAll() {
+            this.$events.emit('vizy-blocks:collapseAll');
+        },
+
+        expandAll() {
+            this.$events.emit('vizy-blocks:expandAll');
         },
 
         clickMove() {
