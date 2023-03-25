@@ -3,6 +3,8 @@
         v-if="!isEmpty(blockType)"
         class="vizyblock"
         contenteditable="false"
+        :data-vizy-block="true"
+        :data-type="blockType.handle"
         @copy.stop
         @paste.stop
         @cut.stop
