@@ -136,6 +136,26 @@ export default {
                 });
             }
         });
+
+        // Create keyboard shortcuts
+        this._keyListener = function(e) {
+            // Only watch events for the currently-focused input
+            if (!this.editor.vizyField.isFocused()) {
+                return;
+            }
+
+            if (e.key === 'k' && (e.ctrlKey || e.metaKey)) {
+                e.preventDefault();
+
+                this.openNewModal();
+            }
+        };
+
+        document.addEventListener('keydown', this._keyListener.bind(this));
+    },
+
+    beforeUnmount() {
+        document.removeEventListener('keydown', this._keyListener);
     },
 
     methods: {
