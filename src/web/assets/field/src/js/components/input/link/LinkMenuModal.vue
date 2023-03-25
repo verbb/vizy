@@ -64,6 +64,27 @@
             </div>
         </div>
 
+        <a :class="['fieldtoggle', { 'expanded': advancedPane }]" data-target="advanced" @click.prevent="toggleAdvanced">{{ t('app', 'Advanced') }}</a>
+
+        <div :class="{ 'hidden': !advancedPane }">
+            <div id="classes-field" class="field">
+                <div class="heading">
+                    <label id="classes-label" for="classes">{{ t('vizy', 'Classes') }}</label>
+                </div>
+
+                <div class="input ltr">
+                    <input
+                        id="classes"
+                        v-model="modelValue.class"
+                        type="text"
+                        class="text fullwidth"
+                        autofocus=""
+                        autocomplete="off"
+                    >
+                </div>
+            </div>
+        </div>
+
         <!-- eslint-enable vue/no-mutating-props -->
     </menu-bar-modal>
 </template>
@@ -115,8 +136,10 @@ export default {
                 url: null,
                 text: null,
                 target: null,
+                class: null,
             },
             errors: [],
+            advancedPane: false,
         };
     },
 
@@ -157,6 +180,10 @@ export default {
             this.proxyShow = false;
         },
 
+        toggleAdvanced() {
+            this.advancedPane = !this.advancedPane;
+        },
+
         confirmModal() {
             this.errors = [];
 
@@ -166,7 +193,11 @@ export default {
                 return;
             }
 
-            const data = { href: this.modelValue.url, target: this.modelValue.target ? '_blank' : '' };
+            const data = {
+                href: this.modelValue.url,
+                target: this.modelValue.target ? '_blank' : '',
+                class: this.modelValue.class,
+            };
 
             // Save the cursor position so we can restore it afterwards
             const { selection } = this.editor.state.tr;

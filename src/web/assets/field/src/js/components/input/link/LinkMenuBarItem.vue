@@ -144,6 +144,7 @@ export default {
                 url: null,
                 text: null,
                 target: null,
+                class: null,
             };
         },
 
@@ -171,6 +172,7 @@ export default {
             this.model.text = $node.textContent;
             this.model.url = attrs.href;
             this.model.target = attrs.target;
+            this.model.class = attrs.class;
 
             this.showEditModal = true;
         },
