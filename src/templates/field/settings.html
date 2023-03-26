@@ -77,8 +77,26 @@
     instructions: 'Set the initial rows for the field. This indirectly controls the height of the field when no content has been added.' | t('vizy'),
     name: 'initialRows',
     value: field.initialRows,
-    size: 10,
+    size: 2,
     errors: field.getErrors('initialRows'),
+}) }}
+
+{{ forms.textField({
+    label: 'Min Blocks' | t('vizy'),
+    instructions: 'The minimum number of Vizy blocks the field must have.' | t('vizy'),
+    name: 'minBlocks',
+    value: field.minBlocks,
+    size: 2,
+    errors: field.getErrors('minBlocks'),
+}) }}
+
+{{ forms.textField({
+    label: 'Max Blocks' | t('vizy'),
+    instructions: 'The maximum number of Vizy blocks the field is allowed to have.' | t('vizy'),
+    name: 'maxBlocks',
+    value: field.maxBlocks,
+    size: 2,
+    errors: field.getErrors('maxlocks'),
 }) }}
 
 {{ forms.checkboxField({

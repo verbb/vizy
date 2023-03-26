@@ -30,6 +30,7 @@ use craft\fields\conditions\EmptyFieldConditionRule;
 use craft\fields\Matrix;
 use craft\models\FieldLayout;
 use craft\models\Section;
+use craft\validators\ArrayValidator;
 use craft\web\twig\variables\Cp;
 
 use yii\db\Schema;
@@ -78,6 +79,8 @@ class VizyField extends Field
     public string $defaultTransform = '';
     public bool $trimEmptyParagraphs = true;
     public int $initialRows = 7;
+    public ?int $minBlocks = null;
+    public ?int $maxBlocks = null;
     public string $columnType = Schema::TYPE_TEXT;
 
     private ?array $_blockTypesById = [];
@@ -109,7 +112,7 @@ class VizyField extends Field
     {
         $rules = parent::defineRules();
 
-        $rules[] = [['initialRows'], 'number', 'integerOnly' => true];
+        $rules[] = [['initialRows', 'minBlocks', 'maxBlocks'], 'integer', 'min' => 0];
 
         return $rules;
     }
@@ -233,6 +236,8 @@ class VizyField extends Field
             'fieldHandle' => $this->handle,
             'isRoot' => true,
             'initialRows' => $this->initialRows,
+            'minBlocks' => $this->minBlocks,
+            'maxBlocks' => $this->maxBlocks,
         ];
 
         // Only include some options if we need them - for performance
@@ -584,6 +589,26 @@ class VizyField extends Field
 
             if (!$blockElement->validate()) {
                 $element->addModelErrors($blockElement, "{$this->handle}[{$i}]");
+            }
+        }
+
+        if ($this->minBlocks || $this->maxBlocks) {
+            $arrayValidator = new ArrayValidator([
+                'min' => $this->minBlocks ?: null,
+                'max' => $this->maxBlocks ?: null,
+                'tooFew' => $this->minBlocks ? Craft::t('app', '{attribute} should contain at least {min, number} {min, plural, one{block} other{blocks}}.', [
+                    'attribute' => Craft::t('site', $this->name),
+                    'min' => $this->minBlocks, // Need to pass this in now
+                ]) : null,
+                'tooMany' => $this->maxBlocks ? Craft::t('app', '{attribute} should contain at most {max, number} {max, plural, one{block} other{blocks}}.', [
+                    'attribute' => Craft::t('site', $this->name),
+                    'max' => $this->maxBlocks, // Need to pass this in now
+                ]) : null,
+                'skipOnEmpty' => false,
+            ]);
+
+            if (!$arrayValidator->validate($blocks, $error)) {
+                $element->addError($this->handle, $error);
             }
         }
     }
