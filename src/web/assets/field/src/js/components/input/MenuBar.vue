@@ -108,6 +108,7 @@ export default {
                     icon: 'paragraph',
                     title: Craft.t('vizy', 'Paragraph'),
                     action: () => { return this.editor.chain().focus().setParagraph().run(); },
+                    isActive: () => { return this.editor.isActive('paragraph'); },
                 },
                 {
                     name: 'unordered-list',
@@ -184,6 +185,7 @@ export default {
                     svg: 'horizontal-rule',
                     title: Craft.t('vizy', 'Horizontal Rule'),
                     action: () => { return this.editor.chain().focus().setHorizontalRule().run(); },
+                    isActive: () => { return this.editor.isActive('hr'); },
                 },
                 {
                     name: 'line-break',
@@ -241,6 +243,7 @@ export default {
                         {
                             name: 'paragraph',
                             title: Craft.t('vizy', 'Paragraph'),
+                            action: () => { return this.editor.chain().focus().setParagraph().run(); },
                         },
                         {
                             name: 'code-block',
