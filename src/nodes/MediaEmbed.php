@@ -10,4 +10,12 @@ class MediaEmbed extends Node
 
     public static ?string $type = 'mediaEmbed';
 
+
+    // Public Methods
+    // =========================================================================
+
+    public function renderNode(): ?string
+    {
+        return $this->attrs['data']['html'] ?? null;
+    }
 }
