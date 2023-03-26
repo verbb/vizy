@@ -150,6 +150,14 @@ Property | Value
 --- | ---
 `type` | `mediaEmbed`
 
+#### Attributes
+These can be accessed via `attrs`.
+
+Attribute | Description
+--- | ---
+`url` | The URL provided for the embed.
+`data` | The raw data (usually oembed) fetched from the URL.
+
 
 ### Ordered List
 
