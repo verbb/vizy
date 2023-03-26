@@ -55,6 +55,7 @@ Option | Description
 `h4` | Allow the use of `<h4>` heading tags.
 `h5` | Allow the use of `<h5>` heading tags.
 `h6` | Allow the use of `<h6>` heading tags.
+`paragraph` | Allow text to be shown as a paragraph.
 `bold` | Allow text to be bold.
 `italic` | Allow text to be italic.
 `underline` | Allow text to be underlined.
