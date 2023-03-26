@@ -142,6 +142,15 @@ Property | Value
 `tagName` | `li`
 
 
+### Media Embed
+
+#### Properties
+
+Property | Value
+--- | ---
+`type` | `mediaEmbed`
+
+
 ### Ordered List
 
 #### Properties

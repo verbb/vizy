@@ -56,6 +56,7 @@ import VizyBlock from './input/VizyBlock';
 import Link from './input/link/Link';
 import Image from './input/image/Image';
 import Iframe from './input/iframe/Iframe';
+import MediaEmbed from './input/media-embed/MediaEmbed';
 
 import MenuBar from './input/MenuBar.vue';
 import BlockPicker from './input/BlockPicker.vue';
@@ -294,6 +295,7 @@ export default {
                 Link.configure({ openOnClick: false }),
                 Image,
                 Iframe,
+                MediaEmbed,
             ];
 
             return extensions;
@@ -702,30 +704,6 @@ export default {
     .resize-cursor {
         cursor: ew-resize;
         cursor: col-resize;
-    }
-}
-
-// iFrame
-.vui-editor {
-    .iframe-wrapper {
-        position: relative;
-        padding-bottom: 75%;
-        height: 0;
-        overflow: hidden;
-        width: 100%;
-        height: auto;
-
-        &.ProseMirror-selectednode {
-            outline: 3px solid #68CEF8;
-        }
-
-        iframe {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-        }
     }
 }
 

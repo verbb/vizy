@@ -39,6 +39,7 @@ class Nodes extends Component
             allnodes\Iframe::class,
             allnodes\Image::class,
             allnodes\ListItem::class,
+            allnodes\MediaEmbed::class,
             allnodes\OrderedList::class,
             allnodes\Paragraph::class,
             allnodes\Table::class,

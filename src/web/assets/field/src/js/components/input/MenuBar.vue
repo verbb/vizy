@@ -15,12 +15,16 @@
 import MenuBarItem from './MenuBarItem.vue';
 import LinkMenuBarItem from './link/LinkMenuBarItem.vue';
 import ImageMenuBarItem from './image/ImageMenuBarItem.vue';
+import IframeMenuBarItem from './iframe/IframeMenuBarItem.vue';
+import MediaEmbedMenuBarItem from './media-embed/MediaEmbedMenuBarItem.vue';
 
 export default {
     components: {
         MenuBarItem,
         LinkMenuBarItem,
         ImageMenuBarItem,
+        IframeMenuBarItem,
+        MediaEmbedMenuBarItem,
     },
 
     props: {
@@ -334,13 +338,15 @@ export default {
                     name: 'iframe',
                     svg: 'rectangle-code',
                     title: Craft.t('vizy', 'iFrame'),
-                    action: () => {
-                        const url = window.prompt('URL');
-
-                        if (url) {
-                            return this.editor.chain().focus().setIframe({ src: url }).run();
-                        }
-                    },
+                    component: 'IframeMenuBarItem',
+                    isActive: () => { return this.editor.isActive('iframe'); },
+                },
+                {
+                    name: 'media-embed',
+                    svg: 'photo-film',
+                    title: Craft.t('vizy', 'Media Embed'),
+                    component: 'MediaEmbedMenuBarItem',
+                    isActive: () => { return this.editor.isActive('mediaEmbed'); },
                 },
             ],
         };

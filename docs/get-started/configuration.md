@@ -80,6 +80,7 @@ Option | Description
 `link` | Allow text to be shown as a link.
 `image` | Allow an image to be inserted.
 `iframe` | Allow the creation of `<iframe>` elements.
+`media-embed` | Allow embedding of videos and other remote content.
 `formatting` | Allow a dropdown for formatting options. See below for configuration.
 `table` | Allow a dropdown for table options. See below for configuration.
 
@@ -151,7 +152,7 @@ The below is a "kitchen sink" example that contains everything.
 
 ```json
 {
-    "buttons": ["html", "formatting", "h1", "h2", "h3", "h4", "h5", "h6", "bold", "italic", "underline", "strikethrough", "subscript", "superscript", "ordered-list", "unordered-list", "code-block", "hr", "highlight", "align-left", "align-right", "align-center", "align-justify", "clear-format", "line-break", "link", "image", "table", "undo", "redo"],
+    "buttons": ["html", "formatting", "h1", "h2", "h3", "h4", "h5", "h6", "bold", "italic", "underline", "strikethrough", "subscript", "superscript", "ordered-list", "unordered-list", "code-block", "hr", "highlight", "align-left", "align-right", "align-center", "align-justify", "clear-format", "line-break", "link", "image", "table", "media-embed", "undo", "redo"],
     "formatting": ["paragraph", "code-block", "blockquote", "h1", "h2", "h3", "h4", "h5", "h6"],
     "table": ["insert-table", "delete-table", "add-col-before", "add-col-after", "delete-col", "add-row-before", "add-row-after", "delete-row", "merge-cells", "split-cells", "toggle-header-column", "toggle-header-row", "toggle-header-cell"],
     "toolbarFixed": true

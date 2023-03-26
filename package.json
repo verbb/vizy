@@ -29,6 +29,7 @@
         "vite-plugin-eslint": "^1.8.1"
     },
     "dependencies": {
+        "@extractus/oembed-extractor": "^3.1.8",
         "@fortawesome/fontawesome-svg-core": "^6.3.0",
         "@fortawesome/free-regular-svg-icons": "^6.3.0",
         "@fortawesome/free-solid-svg-icons": "^6.3.0",
