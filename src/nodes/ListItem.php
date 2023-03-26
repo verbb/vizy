@@ -10,5 +10,21 @@ class ListItem extends Node
 
     public static ?string $type = 'listItem';
     public mixed $tagName = 'li';
+    
+
+    // Public Methods
+    // =========================================================================
+
+    public function init(): void
+    {
+        // Fix ProseMirror wrapping node items with inner paragraph
+        $firstChild = $this->content[0] ?? null;
+
+        if ($firstChild instanceof Paragraph) {
+            $this->content = $firstChild['content'] ?? [];
+        }
+
+        parent::init();
+    }
 
 }
