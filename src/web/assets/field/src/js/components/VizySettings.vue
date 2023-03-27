@@ -192,6 +192,20 @@
 
             <div class="field">
                 <div class="heading">
+                    <label id="layout-field-label" class="required" for="layout">{{ t('vizy', 'Layout') }}</label>
+                </div>
+
+                <div id="layout-field-instructions" class="instructions">
+                    <p>{{ t('vizy', 'Define the field layout for this block type. Empty tabs are not allowed, and you must provide at least one element.') }}</p>
+                </div>
+
+                <div class="input ltr">
+                    <field-layout-designer v-model="selectedBlockType.layout" :layout-uid="selectedBlockType.layoutUid" :field-id="settings.fieldId" :block-type-id="selectedBlockType.id" />
+                </div>
+            </div>
+
+            <div class="field">
+                <div class="heading">
                     <label id="template-field-label" for="template">{{ t('vizy', 'Template') }}</label>
                 </div>
 
@@ -210,16 +224,60 @@
 
             <div class="field">
                 <div class="heading">
-                    <label id="layout-field-label" class="required" for="layout">{{ t('vizy', 'Layout') }}</label>
+                    <label id="minBlocks-field-label" for="minBlocks">{{ t('vizy', 'Min Blocks') }}</label>
                 </div>
 
-                <div id="layout-field-instructions" class="instructions">
-                    <p>{{ t('vizy', 'Define the field layout for this block type. Empty tabs are not allowed, and you must provide at least one element.') }}</p>
+                <div id="minBlocks-field-instructions" class="instructions">
+                    <p>{{ t('vizy', 'The minimum number of blocks of this type the field is allowed to have.') }}</p>
                 </div>
 
                 <div class="input ltr">
-                    <field-layout-designer v-model="selectedBlockType.layout" :layout-uid="selectedBlockType.layoutUid" :field-id="settings.fieldId" :block-type-id="selectedBlockType.id" />
+                    <input
+                        id="minBlocks"
+                        ref="minBlocks-field"
+                        v-model="selectedBlockType.minBlocks"
+                        type="text"
+                        class="text"
+                        autocomplete="off"
+                        autocorrect="off"
+                        autocapitalize="off"
+                        size="2"
+                        :class="{ 'error': hasErrors(selectedBlockType, 'minBlocks')}"
+                    >
                 </div>
+
+                <ul v-if="getErrors(selectedBlockType, 'minBlocks')" class="errors">
+                    <li v-for="(error, index) in getErrors(selectedBlockType, 'minBlocks')" :key="index">{{ error }}</li>
+                </ul>
+            </div>
+
+            <div class="field">
+                <div class="heading">
+                    <label id="maxBlocks-field-label" for="maxBlocks">{{ t('vizy', 'Max Blocks') }}</label>
+                </div>
+
+                <div id="maxBlocks-field-instructions" class="instructions">
+                    <p>{{ t('vizy', 'The maximum number of blocks of this type the field is allowed to have.') }}</p>
+                </div>
+
+                <div class="input ltr">
+                    <input
+                        id="maxBlocks"
+                        ref="maxBlocks-field"
+                        v-model="selectedBlockType.maxBlocks"
+                        type="text"
+                        class="text"
+                        autocomplete="off"
+                        autocorrect="off"
+                        autocapitalize="off"
+                        size="2"
+                        :class="{ 'error': hasErrors(selectedBlockType, 'maxBlocks')}"
+                    >
+                </div>
+
+                <ul v-if="getErrors(selectedBlockType, 'maxBlocks')" class="errors">
+                    <li v-for="(error, index) in getErrors(selectedBlockType, 'maxBlocks')" :key="index">{{ error }}</li>
+                </ul>
             </div>
         </div>
 

@@ -579,9 +579,14 @@ class VizyField extends Field
 
     public function validateBlocks(ElementInterface $element): void
     {
+        $scenario = $element->getScenario();
+
+        if ($scenario !== Element::SCENARIO_LIVE) {
+            return;
+        }
+
         $value = $element->getFieldValue($this->handle);
         $blocks = $value->query()->where(['type' => 'vizyBlock'])->all();
-        $scenario = $element->getScenario();
 
         foreach ($blocks as $i => $block) {
             $blockElement = $block->getBlockElement($element);
@@ -609,6 +614,43 @@ class VizyField extends Field
 
             if (!$arrayValidator->validate($blocks, $error)) {
                 $element->addError($this->handle, $error);
+            }
+        }
+
+        // Validate block types
+        $blockTypesCount = [];
+        $blockTypesById = [];
+
+        foreach ($this->getBlockTypes() as $blockType) {
+            $blockTypesCount[$blockType->id] = 0;
+            $blockTypesById[$blockType->id] = $blockType;
+        }
+
+        foreach ($blocks as $i => $block) {
+            if ($block->enabled) {
+                $blockTypesCount[$block->blockType->id] += 1;
+            }
+        }
+
+        foreach ($blockTypesCount as $blockTypeId => $blockTypeCount) {
+            $blockType = $blockTypesById[$blockTypeId];
+
+            if ($blockType->minBlocks > 0 && $blockTypeCount < $blockType->minBlocks) {
+                $element->addError($this->handle, Craft::t('neo', '{attribute} should contain at least {minBlockTypeBlocks, number} {minBlockTypeBlocks, plural, one{block} other{blocks}} of type {blockType}.', [
+                        'attribute' => Craft::t('site', $this->name),
+                        'minBlockTypeBlocks' => $blockType->minBlocks,
+                        'blockType' => $blockType->name,
+                    ])
+                );
+            }
+
+            if ($blockType->maxBlocks > 0 && $blockTypeCount > $blockType->maxBlocks) {
+                $element->addError($this->handle, Craft::t('vizy', '{attribute} should contain at most {maxBlockTypeBlocks, number} {maxBlockTypeBlocks, plural, one{block} other{blocks}} of type {blockType}.', [
+                        'attribute' => Craft::t('site', $this->name),
+                        'maxBlockTypeBlocks' => $blockType->maxBlocks,
+                        'blockType' => $blockType->name,
+                    ])
+                );
             }
         }
     }

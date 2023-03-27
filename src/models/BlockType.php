@@ -56,6 +56,8 @@ class BlockType extends Model
     public ?string $layoutUid = null;
     public ?array $layoutConfig = null;
     public ?int $fieldId = null;
+    public ?int $minBlocks = null;
+    public ?int $maxBlocks = null;
 
     private ?FieldLayout $_fieldLayout = null;
 
