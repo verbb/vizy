@@ -99,57 +99,61 @@
     errors: field.getErrors('maxlocks'),
 }) }}
 
-{{ forms.checkboxField({
-    label: 'Show unpermitted volumes' | t('app'),
-    instructions: 'Whether to show volumes that the user doesn’t have permission to view.' | t('app'),
-    id: 'showUnpermittedVolumes',
-    name: 'showUnpermittedVolumes',
-    checked: field.showUnpermittedVolumes,
-}) }}
+<a class="fieldtoggle" data-target="asset-settings">{{ 'Asset Settings' | t('vizy') }}</a>
 
-{{ forms.checkboxField({
-    label: 'Show unpermitted files' | t('app'),
-    instructions: 'Whether to show files that the user doesn’t have permission to view, per the “View files uploaded by other users” permission.' | t('app'),
-    id: 'showUnpermittedFiles',
-    name: 'showUnpermittedFiles',
-    checked: field.showUnpermittedFiles,
-}) }}
+<div id="asset-settings" class="hidden">
+    {{ forms.checkboxField({
+        label: 'Show unpermitted volumes' | t('app'),
+        instructions: 'Whether to show volumes that the user doesn’t have permission to view.' | t('app'),
+        id: 'showUnpermittedVolumes',
+        name: 'showUnpermittedVolumes',
+        checked: field.showUnpermittedVolumes,
+    }) }}
 
-{{ forms.checkboxSelectField({
-    id: 'availableVolumes',
-    name: 'availableVolumes',
-    label: 'Available Volumes' | t('vizy'),
-    instructions: 'The volumes that should be available when selecting assets (if the selected config has an Image or File button).' | t('vizy'),
-    options: volumeOptions,
-    values: field.availableVolumes,
-    showAllOption: volumeOptions | length ? true : false,
-}) }}
+    {{ forms.checkboxField({
+        label: 'Show unpermitted files' | t('app'),
+        instructions: 'Whether to show files that the user doesn’t have permission to view, per the “View files uploaded by other users” permission.' | t('app'),
+        id: 'showUnpermittedFiles',
+        name: 'showUnpermittedFiles',
+        checked: field.showUnpermittedFiles,
+    }) }}
 
-{{ forms.checkboxSelectField({
-    id: 'availableTransforms',
-    name: 'availableTransforms',
-    label: 'Available Transforms' | t('vizy'),
-    instructions: 'The transforms that should be available when inserting images.' | t('vizy'),
-    options: transformOptions,
-    values: field.availableTransforms,
-    showAllOption: transformOptions | length ? true : false,
-}) }}
+    {{ forms.checkboxSelectField({
+        id: 'availableVolumes',
+        name: 'availableVolumes',
+        label: 'Available Volumes' | t('vizy'),
+        instructions: 'The volumes that should be available when selecting assets (if the selected config has an Image or File button).' | t('vizy'),
+        options: volumeOptions,
+        values: field.availableVolumes,
+        showAllOption: volumeOptions | length ? true : false,
+    }) }}
 
-{{ forms.selectField({
-    id: 'defaultTransform',
-    name: 'defaultTransform',
-    label: 'Default Transform' | t('vizy'),
-    instructions: 'The default transform that should be applied when inserting images.' | t('vizy'),
-    options: defaultTransformOptions,
-    value: field.defaultTransform,
-}) }}
+    {{ forms.checkboxSelectField({
+        id: 'availableTransforms',
+        name: 'availableTransforms',
+        label: 'Available Transforms' | t('vizy'),
+        instructions: 'The transforms that should be available when inserting images.' | t('vizy'),
+        options: transformOptions,
+        values: field.availableTransforms,
+        showAllOption: transformOptions | length ? true : false,
+    }) }}
+
+    {{ forms.selectField({
+        id: 'defaultTransform',
+        name: 'defaultTransform',
+        label: 'Default Transform' | t('vizy'),
+        instructions: 'The default transform that should be applied when inserting images.' | t('vizy'),
+        options: defaultTransformOptions,
+        value: field.defaultTransform,
+    }) }}
+</div>
 
 <hr>
 
-<a class="fieldtoggle" data-target="advanced">{{ 'Advanced' | t('vizy') }}</a>
+{% if craft.app.db.isMysql %}
+    <a class="fieldtoggle" data-target="advanced">{{ 'Advanced' | t('vizy') }}</a>
 
-<div id="advanced" class="hidden">
-    {% if craft.app.db.isMysql %}
+    <div id="advanced" class="hidden">
         {{ forms.selectField({
             label: 'Column Type' | t('vizy'),
             instructions: 'The type of column this field should get in the database.' | t('vizy'),
@@ -163,5 +167,5 @@
             value: field.columnType,
             warning: (field.id ? "Changing this may result in data loss." | t('vizy')),
         }) }}
-    {% endif %}
-</div>
+    </div>
+{% endif %}
