@@ -105,7 +105,7 @@ export default {
                 },
                 {
                     name: 'paragraph',
-                    icon: 'paragraph',
+                    svg: 'text',
                     title: Craft.t('vizy', 'Paragraph'),
                     action: () => { return this.editor.chain().focus().setParagraph().run(); },
                     isActive: () => { return this.editor.isActive('paragraph'); },
