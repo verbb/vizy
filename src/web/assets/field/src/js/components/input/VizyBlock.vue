@@ -362,6 +362,7 @@ export default {
                     placement: 'bottom',
                     theme: 'light-border vizy-tippy-menu',
                     maxWidth: '300px',
+                    duration: 200,
                     zIndex: 1000,
                     hideOnClick: true,
                 });

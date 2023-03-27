@@ -130,6 +130,7 @@ export default {
                     interactive: true,
                     placement: 'bottom-start',
                     theme: 'light-border toolbar-dropdown',
+                    duration: 200,
                     zIndex: 1000,
                     hideOnClick: true,
                     offset: [0, 1],

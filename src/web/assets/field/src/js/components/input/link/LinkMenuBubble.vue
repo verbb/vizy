@@ -99,6 +99,7 @@ export default {
                         placement: 'top',
                         theme: 'vui-menu-bubble',
                         hideOnClick: true,
+                        duration: 200,
                         zIndex: 1000,
                         appendTo: () => { return document.body; },
                     });

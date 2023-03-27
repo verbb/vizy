@@ -126,6 +126,7 @@ export default {
             placement: 'bottom-start',
             theme: 'light-border icon-picker',
             maxWidth: 'none',
+            duration: 200,
             zIndex: 10,
             hideOnClick: false,
 

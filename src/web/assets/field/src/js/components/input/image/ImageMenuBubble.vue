@@ -107,6 +107,7 @@ export default {
                 followCursor: 'initial',
                 plugins: [followCursor],
                 theme: 'vui-menu-bubble',
+                duration: 200,
                 mouseEvent: event,
                 zIndex: 1000,
                 appendTo: () => { return document.body; },
