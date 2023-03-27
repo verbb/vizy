@@ -375,8 +375,12 @@ export default {
             // Remove the ghost when moving a block. Most of the time, it's in the way
             this.$el.addEventListener('dragstart', (event) => {
                 if (event.srcElement instanceof Element || event.srcElement instanceof HTMLDocument) {
-                    console.log(event.srcElement);
-                    const $ghost = event.srcElement.querySelector('.vizyblock-header');
+                    let $ghost = null;
+                    if (event.srcElement.classList.contains('vizyblock')) {
+                        $ghost = event.srcElement.querySelector('.vizyblock-header');
+                    } else {
+                        $ghost = event.srcElement.closest('.vizyblock-header');
+                    }
 
                     if ($ghost) {
                         const id = `vui-${this.uid}-ghost`;
