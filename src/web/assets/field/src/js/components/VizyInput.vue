@@ -261,7 +261,9 @@ export default {
             const extensions = [
                 // Core Extensions
                 Document,
-                Dropcursor,
+                Dropcursor.configure({
+                    class: 'vui-dropcursor',
+                }),
                 Gapcursor,
                 HardBreak,
                 Paragraph,

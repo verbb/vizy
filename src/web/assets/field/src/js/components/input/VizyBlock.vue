@@ -371,6 +371,16 @@ export default {
             // This is a dirty hack to fix Firefox's inability to select inputs/textareas when the
             // parent element is set to draggable. Note the direct DOM update instead of a prop.
             this.$el.setAttribute('draggable', false);
+
+            // Remove the ghost when moving a block. Most of the time, it's in the way
+            this.$el.addEventListener('dragstart', (event) => {
+                const blankCanvas = document.createElement('canvas');
+                blankCanvas.width = 1;
+                blankCanvas.height = 1;
+                event.dataTransfer.setDragImage(blankCanvas, 0, 0);
+
+                document.body.appendChild(blankCanvas);
+            }, false);
         });
     },
 
@@ -795,6 +805,11 @@ export default {
     ul.padded li a.sel.error:before {
         color: #CF1124;
     }
+}
+
+.vui-dropcursor {
+    outline: #3778eb 1px solid;
+    margin-top: -3px;
 }
 
 
