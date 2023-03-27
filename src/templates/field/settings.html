@@ -72,6 +72,14 @@
     errors: field.getErrors('trimEmptyParagraphs'),
 }) }}
 
+{{ forms.lightswitchField({
+    label: 'Plain Text Paste' | t('vizy'),
+    instructions: 'Whether content pasted into the field should always be in plain text.' | t('vizy'),
+    name: 'pasteAsPlainText',
+    on: field.pasteAsPlainText,
+    errors: field.getErrors('pasteAsPlainText'),
+}) }}
+
 {{ forms.textField({
     label: 'Initial Rows' | t('vizy'),
     instructions: 'Set the initial rows for the field. This indirectly controls the height of the field when no content has been added.' | t('vizy'),

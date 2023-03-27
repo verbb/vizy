@@ -78,6 +78,7 @@ class VizyField extends Field
     public bool $showUnpermittedFiles = false;
     public string $defaultTransform = '';
     public bool $trimEmptyParagraphs = true;
+    public bool $pasteAsPlainText = false;
     public int $initialRows = 7;
     public ?int $minBlocks = null;
     public ?int $maxBlocks = null;
@@ -238,6 +239,7 @@ class VizyField extends Field
             'initialRows' => $this->initialRows,
             'minBlocks' => $this->minBlocks,
             'maxBlocks' => $this->maxBlocks,
+            'pasteAsPlainText' => $this->pasteAsPlainText,
         ];
 
         // Only include some options if we need them - for performance

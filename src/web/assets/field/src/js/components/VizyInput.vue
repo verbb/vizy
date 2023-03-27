@@ -138,6 +138,18 @@ export default {
                 this.json = this.editor.getJSON().content;
                 this.html = this.editor.getHTML();
             },
+            editorProps: {
+                transformPastedHTML: ((html) => {
+                    if (this.settings.pasteAsPlainText) {
+                        const tempDivElement = document.createElement('div');
+                        tempDivElement.innerHTML = html;
+
+                        return tempDivElement.textContent || tempDivElement.innerText || '';
+                    }
+
+                    return html;
+                }),
+            },
         });
 
         // Store this input against the editor for each access everywhere.
