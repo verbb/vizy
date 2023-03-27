@@ -112,7 +112,7 @@ export default {
 
     methods: {
         watchForChanges() {
-            const updateFunction = debounce(this.serializeLayout, 250);
+            const updateFunction = debounce(this.serializeLayout, 150);
 
             // Use MutationObserver to detect _any_ change in the field layout designer, and be sure to debounce
             // calls as there are a lot of changes. Far more easier than overriding the FLD
