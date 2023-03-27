@@ -30,7 +30,7 @@ Craft.Vizy.Input = Garnish.Base.extend({
         // Import globally, as these are included in nested field content to be compiled
         app.component('VizyInput', VizyInput);
 
-        app.mount(`#${idPrefix}-field`);
+        app.mount(`#${idPrefix}-field .input`);
     },
 });
 
