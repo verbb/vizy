@@ -374,12 +374,16 @@ export default {
 
             // Remove the ghost when moving a block. Most of the time, it's in the way
             this.$el.addEventListener('dragstart', (event) => {
-                const blankCanvas = document.createElement('canvas');
-                blankCanvas.width = 1;
-                blankCanvas.height = 1;
-                event.dataTransfer.setDragImage(blankCanvas, 0, 0);
+                const $ghost = event.srcElement.querySelector('.vizyblock-header');
+                const id = `vui-${this.uid}-ghost`;
 
-                document.body.appendChild(blankCanvas);
+                const ghost = (document.querySelector(`#${id}`)) ? document.querySelector(`#${id}`) : document.createElement('div');
+                ghost.id = id;
+                ghost.classList = 'vui-block-ghost';
+                ghost.innerHTML = $ghost.outerHTML;
+                document.body.appendChild(ghost);
+
+                event.dataTransfer.setDragImage(ghost, 0, 0);
             }, false);
         });
     },
@@ -810,6 +814,27 @@ export default {
 .vui-dropcursor {
     outline: #3778eb 1px solid;
     margin-top: -3px;
+}
+
+.vui-block-ghost {
+    width: 200px;
+    height: 50px;
+    border-radius: 6px;
+    border: 1px #cdd9e4 solid;
+    overflow: hidden;
+    background: #fff;
+    opacity: 1;
+    position: absolute;
+    top: -99999px;
+
+    .vizyblock-header {
+        width: 100%;
+        margin: 0;
+
+        .actions-tabs {
+            display: none;
+        }
+    }
 }
 
 
