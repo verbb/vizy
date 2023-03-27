@@ -242,6 +242,16 @@ class VizyField extends Field
             'pasteAsPlainText' => $this->pasteAsPlainText,
         ];
 
+        foreach ($this->getBlockTypes() as $blockType) {
+            if ($blockType->minBlocks) {
+                $settings['minBlockTypeBlocks'][$blockType->id] = $blockType->minBlocks;
+            }
+
+            if ($blockType->maxBlocks) {
+                $settings['maxBlockTypeBlocks'][$blockType->id] = $blockType->maxBlocks;
+            }
+        }
+
         // Only include some options if we need them - for performance
         $buttons = $settings['vizyConfig']['buttons'] ?? [];
 

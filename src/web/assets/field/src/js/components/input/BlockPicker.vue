@@ -21,7 +21,7 @@
                         <div class="vui-block-items-header">{{ group.name }}</div>
 
                         <div class="vui-block-items">
-                            <div v-for="(blockType, blockIndex) in group.blockTypes" :key="blockIndex" class="vui-block-item" @click="addBlock(blockType)">
+                            <div v-for="(blockType, blockIndex) in group.blockTypes" :key="blockIndex" class="vui-block-item" :class="{ 'disabled': blockTypeDisabled(blockType) }" @click="addBlock(blockType)">
                                 <div v-html="blockType.icon.svg"></div>
                                 <span class="vui-block-item-heading">{{ blockType.name }}</span>
                             </div>
@@ -39,6 +39,7 @@
 </template>
 
 <script>
+import { get } from 'lodash-es';
 import tippy from 'tippy.js';
 import 'tippy.js/dist/tippy.css';
 import 'tippy.js/themes/light-border.css';
@@ -114,6 +115,10 @@ export default {
 
     methods: {
         addBlock(blockType) {
+            if (this.blockTypeDisabled(blockType)) {
+                return;
+            }
+
             const id = getId('vizy-block-');
             const values = { type: blockType.id };
             const { fieldsHtml, footHtml } = blockType;
@@ -130,6 +135,41 @@ export default {
 
             // Close the popover
             this.tippy.hide();
+        },
+
+        blockTypeDisabled(blockType) {
+            let blockCount = 0;
+            const blockTypesCount = {};
+
+            this.blockGroups.forEach((blockGroup) => {
+                blockGroup.blockTypes.forEach((type) => {
+                    blockTypesCount[type.id] = 0;
+                });
+            });
+
+            this.editor.state.doc?.content?.content.forEach((node) => {
+                if (node.type.name === 'vizyBlock' && node.attrs.enabled) {
+                    blockCount += 1;
+                    blockTypesCount[node.attrs.values.type] += 1;
+                }
+            });
+
+            const { maxBlocks, maxBlockTypeBlocks } = this.editor.vizyField.settings;
+
+            // Check if we're at the max number of blocks for the field
+            if (maxBlocks && blockCount >= maxBlocks) {
+                return true;
+            }
+
+            // Check if we're at the max number of blocks for the type
+            const maxBlockType = get(maxBlockTypeBlocks, blockType.id);
+            const blockTypeCount = get(blockTypesCount, blockType.id);
+
+            if (blockTypeCount >= maxBlockType) {
+                return true;
+            }
+
+            return false;
         },
     },
 
@@ -233,8 +273,12 @@ export default {
     transition: background-color 0.3s ease;
     user-select: none;
 
-    &:hover {
+    &:hover:not(.disabled) {
         background-color: #f3f7fb;
+    }
+
+    &.disabled {
+        cursor: inherit;
     }
 
     svg {
