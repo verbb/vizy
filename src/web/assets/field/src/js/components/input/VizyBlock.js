@@ -92,6 +92,17 @@ export default Node.create({
                     handlePaste: (view, event, slice) => {
                         // Prevent pasting overwriting block
                         view.state.pasting = true;
+
+                        const { supportedBlockTypes } = this.editor.vizyField;
+
+                        // Check if the content contains a Vizy block that's not supported for this field
+                        slice.content.content.forEach((node, index) => {
+                            if (node.type.name == 'vizyBlock') {
+                                if (!supportedBlockTypes.includes(node.attrs.values.type)) {
+                                    slice.content.content.splice(index, 1);
+                                }
+                            }
+                        });
                     },
 
                     handleClickOn: (view, pos, node, nodePos, event, direct) => {
