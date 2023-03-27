@@ -13,7 +13,7 @@
 </template>
 
 <script>
-import { find } from 'lodash-es';
+import { find, get } from 'lodash-es';
 
 import { Editor, EditorContent } from '@tiptap/vue-3';
 
@@ -105,6 +105,7 @@ export default {
             cachedFieldHtml: {},
             cachedFieldJs: {},
             renderedJsCache: {},
+            selectedBlockType: null,
         };
     },
 
@@ -119,6 +120,18 @@ export default {
 
         isRoot() {
             return this.settings.isRoot;
+        },
+
+        supportedBlockTypes() {
+            const blockTypes = [];
+
+            this.settings.blockGroups.forEach((blockGroup) => {
+                blockGroup.blockTypes.forEach((blockType) => {
+                    blockTypes.push(blockType.id);
+                });
+            });
+
+            return blockTypes;
         },
     },
 
@@ -149,6 +162,14 @@ export default {
 
                     return html;
                 }),
+                handleDrop: (view, event, slice, moved) => {
+                    // Check if we have a selected blocktype for _this_ input, which happens when you click on the move handle. // If null, that means it's been recorded for another field, and we're moving between inputs - not allowed.
+                    if (!this.selectedBlockType) {
+                        return true;
+                    }
+
+                    return false;
+                },
             },
         });
 

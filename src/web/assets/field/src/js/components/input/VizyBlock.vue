@@ -511,6 +511,9 @@ export default {
             // Before we move blocks, save the dom state. Use an event to notify all blocks, because Vue will
             // re-render all blocks, due to how tiptap/prosemirror renders.
             this.$events.emit('vizy-blocks:updateDOM');
+
+            // Record which block type is clicked on to help us add checks for allowing between inputs
+            this.vizyField.selectedBlockType = this.blockType.id;
         },
 
         onFieldUpdate() {
