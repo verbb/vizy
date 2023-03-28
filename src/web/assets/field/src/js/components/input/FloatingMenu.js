@@ -50,6 +50,9 @@ class Menu {
                         this.isActive = true;
                         this.top = top;
 
+                        // Record the position against the field, so we can use it to set the cursor
+                        this.options.editor.vizyField.currentNodeHoverPosition = position;
+
                         this.sendUpdate();
                     }
                 }, 10);

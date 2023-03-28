@@ -106,6 +106,7 @@ export default {
             cachedFieldJs: {},
             renderedJsCache: {},
             selectedBlockType: null,
+            currentNodeHoverPosition: null,
         };
     },
 

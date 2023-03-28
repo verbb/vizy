@@ -5,7 +5,7 @@
             :class="{ 'is-active': menu.isActive }"
             :style="`top: ${menu.top}px`"
         >
-            <button type="button" aria-label="Add block" aria-haspopup="true" aria-expanded="false" class="vui-editor-insert-btn">
+            <button type="button" aria-label="Add block" aria-haspopup="true" aria-expanded="false" class="vui-editor-insert-btn" @click="onClick">
                 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 384 512"><path fill="currentColor" d="M368 224H224V80c0-8.84-7.16-16-16-16h-32c-8.84 0-16 7.16-16 16v144H16c-8.84 0-16 7.16-16 16v32c0 8.84 7.16 16 16 16h144v144c0 8.84 7.16 16 16 16h32c8.84 0 16-7.16 16-16V288h144c8.84 0 16-7.16 16-16v-32c0-8.84-7.16-16-16-16z" /></svg>
             </button>
 
@@ -44,6 +44,8 @@
 
 <script>
 import { get } from 'lodash-es';
+import { NodeSelection, TextSelection } from 'prosemirror-state';
+
 import tippy from 'tippy.js';
 import 'tippy.js/dist/tippy.css';
 import 'tippy.js/themes/light-border.css';
@@ -185,6 +187,19 @@ export default {
             }
 
             return false;
+        },
+
+        onClick() {
+            const { blockTypeBehaviour } = this.editor.vizyField.settings;
+
+            // When set to show the picked on hover, we need to set the cursor before inserting new blocks
+            if (blockTypeBehaviour === 'hover') {
+                const { view } = this.editor;
+                const selection = TextSelection.create(view.state.doc, this.editor.vizyField.currentNodeHoverPosition);
+                const tr = view.state.tr.setSelection(selection);
+
+                view.dispatch(tr);
+            }
         },
     },
 
