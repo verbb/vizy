@@ -15,11 +15,54 @@ class Menu {
         this.editorView = editorView;
         this.isActive = false;
         this.top = 0;
+        this.behaviour = this.options.editor.vizyField.settings.blockTypeBehaviour;
 
-        this.options.element.addEventListener('mousedown', this.mousedownHandler.bind(this), { capture: true });
-        this.options.editor.on('focus', this.focusHandler.bind(this));
-        this.options.editor.on('blur', this.blurHandler.bind(this));
-        this.options.editor.on('resize', this.resizeHandler.bind(this));
+        if (this.behaviour === 'click') {
+            this.options.element.addEventListener('mousedown', this.mousedownHandler.bind(this), { capture: true });
+            this.options.editor.on('focus', this.focusHandler.bind(this));
+            this.options.editor.on('blur', this.blurHandler.bind(this));
+            this.options.editor.on('resize', this.resizeHandler.bind(this));
+        }
+
+        if (this.behaviour === 'hover') {
+            this.options.editor.view.dom.addEventListener('mousemove', this.mouseenterHandler.bind(this));
+            this.options.editor.view.dom.addEventListener('mouseleave', this.mouseleaveHandler.bind(this));
+        }
+    }
+
+    mouseenterHandler(e) {
+        const { view } = this.options.editor;
+        const pos = view.posAtCoords({ left: e.clientX, top: e.clientY });
+
+        if (pos.pos && pos.inside > -1) {
+            const position = pos.pos;
+            const node = view.state.doc.resolve(position).parent;
+
+            if (isNodeEmpty(node)) {
+                setTimeout(() => {
+                    const parent = this.options.element.offsetParent;
+                    const parentBox = parent.getBoundingClientRect();
+                    const cursorCoords = view.coordsAtPos(position);
+                    const top = cursorCoords.top - parentBox.top;
+
+                    this.isActive = true;
+                    this.top = top;
+
+                    this.sendUpdate();
+                }, 10);
+            } else {
+                this.hide();
+            }
+        }
+    }
+
+    mouseleaveHandler(event) {
+        // Don't close when hovering over the button (technically "out")
+        if (event.relatedTarget.classList.contains('vui-editor-insert-btn')) {
+            return;
+        }
+
+        this.hide();
     }
 
     mousedownHandler() {
@@ -109,10 +152,17 @@ class Menu {
     }
 
     destroy() {
-        this.options.element.removeEventListener('mousedown', this.mousedownHandler);
-        this.options.editor.off('focus', this.focusHandler);
-        this.options.editor.off('blur', this.blurHandler);
-        this.options.editor.off('resize', this.resizeHandler);
+        if (this.behaviour === 'click') {
+            this.options.element.removeEventListener('mousedown', this.mousedownHandler);
+            this.options.editor.off('focus', this.focusHandler);
+            this.options.editor.off('blur', this.blurHandler);
+            this.options.editor.off('resize', this.resizeHandler);
+        }
+
+        if (this.behaviour === 'hover') {
+            this.options.editor.view.dom.removeEventListener('mousemove', this.mouseenterHandler);
+            this.options.editor.view.dom.removeEventListener('mouseleave', this.mouseleaveHandler);
+        }
     }
 
 }

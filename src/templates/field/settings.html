@@ -64,6 +64,18 @@
 
 <hr>
 
+{{ forms.selectField({
+    label: 'Block Type Picker Behaviour' | t('vizy'),
+    instructions: 'Select the behaviour for picking block types for the field.' | t('vizy'),
+    name: 'blockTypeBehaviour',
+    value: field.blockTypeBehaviour,
+    options: [
+        { label: 'Click' | t('vizy'), value: 'click' },
+        { label: 'Hover' | t('vizy'), value: 'hover' },
+    ],
+    errors: field.getErrors('blockTypeBehaviour'),
+}) }}
+
 {{ forms.lightswitchField({
     label: 'Remove Empty Paragraphs' | t('vizy'),
     instructions: 'Whether empty paragraphs should be trimmed automatically from field output.' | t('vizy'),

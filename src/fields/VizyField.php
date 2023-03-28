@@ -50,6 +50,9 @@ class VizyField extends Field
     public const EVENT_MODIFY_PURIFIER_CONFIG = 'modifyPurifierConfig';
     public const EVENT_REGISTER_LINK_OPTIONS = 'registerLinkOptions';
 
+    public const PICKER_BEHAVIOUR_CLICK = 'click';
+    public const PICKER_BEHAVIOUR_HOVER = 'hover';
+
 
     // Static Methods
     // =========================================================================
@@ -82,6 +85,7 @@ class VizyField extends Field
     public int $initialRows = 7;
     public ?int $minBlocks = null;
     public ?int $maxBlocks = null;
+    public string $blockTypeBehaviour = self::PICKER_BEHAVIOUR_CLICK;
     public string $columnType = Schema::TYPE_TEXT;
 
     private ?array $_blockTypesById = [];
@@ -240,6 +244,7 @@ class VizyField extends Field
             'minBlocks' => $this->minBlocks,
             'maxBlocks' => $this->maxBlocks,
             'pasteAsPlainText' => $this->pasteAsPlainText,
+            'blockTypeBehaviour' => $this->blockTypeBehaviour,
         ];
 
         foreach ($this->getBlockTypes() as $blockType) {
