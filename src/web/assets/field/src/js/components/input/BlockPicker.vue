@@ -10,7 +10,7 @@
             </button>
 
             <div id="vizy-blocks-template" style="display: none;">
-                <div>
+                <div v-if="totalBlockCount">
                     <input v-model="search" type="text" class="text fullwidth" placeholder="Search for blocks">
                 </div>
 
@@ -29,9 +29,13 @@
                     </div>
                 </div>
 
-                <div v-else class="vui-block-items-none">
+                <div v-else-if="search" class="vui-block-items-none">
                     <hr>
                     {{ t('vizy', 'No blocks found for “{search}”.', { search: search }) }}
+                </div>
+
+                <div v-else class="vui-block-items-empty">
+                    {{ t('vizy', 'No blocks available.') }}
                 </div>
             </div>
         </div>
@@ -88,6 +92,16 @@ export default {
 
                 return !blockTypes.length ? acc : acc.concat({ ...blockGroup, blockTypes });
             }, []);
+        },
+
+        totalBlockCount() {
+            let count = 0;
+
+            this.blockGroups.forEach((blockGroup) => {
+                count += blockGroup.blockTypes.length;
+            });
+
+            return count;
         },
     },
 
@@ -301,6 +315,12 @@ export default {
 
 .vui-block-items-none {
     color: #596673;
+}
+
+.vui-block-items-empty {
+    text-align: center;
+    color: #596673;
+    margin: 1rem 0 0;
 }
 
 

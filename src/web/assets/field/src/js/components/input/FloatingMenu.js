@@ -41,14 +41,17 @@ class Menu {
             if (isNodeEmpty(node)) {
                 setTimeout(() => {
                     const parent = this.options.element.offsetParent;
-                    const parentBox = parent.getBoundingClientRect();
-                    const cursorCoords = view.coordsAtPos(position);
-                    const top = cursorCoords.top - parentBox.top;
 
-                    this.isActive = true;
-                    this.top = top;
+                    if (parent) {
+                        const parentBox = parent.getBoundingClientRect();
+                        const cursorCoords = view.coordsAtPos(position);
+                        const top = cursorCoords.top - parentBox.top;
 
-                    this.sendUpdate();
+                        this.isActive = true;
+                        this.top = top;
+
+                        this.sendUpdate();
+                    }
                 }, 10);
             } else {
                 this.hide();
@@ -58,7 +61,7 @@ class Menu {
 
     mouseleaveHandler(event) {
         // Don't close when hovering over the button (technically "out")
-        if (event.relatedTarget.classList.contains('vui-editor-insert-btn')) {
+        if (event.relatedTarget && event.relatedTarget.classList.contains('vui-editor-insert-btn')) {
             return;
         }
 
