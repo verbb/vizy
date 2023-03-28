@@ -58,6 +58,7 @@ class Vizy extends Plugin
         $this->_registerProjectConfigEventListeners();
         $this->_registerGraphQl();
         $this->_registerThirdPartyEventListeners();
+        $this->_registerCraftEventListeners();
 
         if (Craft::$app->getRequest()->getIsCpRequest()) {
             $this->_registerCpRoutes();
@@ -124,5 +125,11 @@ class Vizy extends Plugin
                 $event->fields[] = FeedMeVizyField::class;
             });
         }
+    }
+
+    private function _registerCraftEventListeners(): void
+    {
+        Event::on(Fields::class, Fields::EVENT_AFTER_SAVE_FIELD, [$this->getContent(), 'onSaveField']);
+        Event::on(Fields::class, Fields::EVENT_AFTER_DELETE_FIELD, [$this->getContent(), 'onDeleteField']);
     }
 }
