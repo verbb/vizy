@@ -112,6 +112,10 @@ export default {
 
     created() {
         this.resetModel();
+
+        this.editor.on('vui:link-modal-open', () => {
+            this.openNewModal();
+        });
     },
 
     mounted() {

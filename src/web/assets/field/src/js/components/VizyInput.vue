@@ -57,6 +57,8 @@ import Link from './input/link/Link';
 import Image from './input/image/Image';
 import Iframe from './input/iframe/Iframe';
 import MediaEmbed from './input/media-embed/MediaEmbed';
+import Commands from './input/commands/Commands';
+import Suggestion from './input/commands/Suggestion';
 
 import MenuBar from './input/MenuBar.vue';
 import BlockPicker from './input/BlockPicker.vue';
@@ -332,6 +334,9 @@ export default {
                 Image,
                 Iframe,
                 MediaEmbed,
+                Commands.configure({
+                    suggestion: Suggestion,
+                }),
             ];
 
             return extensions;

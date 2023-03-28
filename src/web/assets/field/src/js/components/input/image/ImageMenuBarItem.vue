@@ -111,6 +111,10 @@ export default {
 
     created() {
         this.resetModel();
+
+        this.editor.on('vui:image-modal-open', () => {
+            this.runAction();
+        });
     },
 
     methods: {
