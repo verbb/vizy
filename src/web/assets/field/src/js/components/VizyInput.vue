@@ -1,10 +1,10 @@
 <template>
     <div>
         <div v-if="editor" class="vui-rich-text" :class="{ 'has-focus': isFocused() }" :style="{ '--rows': settings.initialRows }">
-            <menu-bar v-if="buttons.length" ref="toolbar" :buttons="buttons" :editor="editor" :field="this" />
-            <code-editor v-model="codeEditorHtml" :visible="showCodeEditor" :editor="editor" :field="this" />
+            <menu-bar v-if="buttons.length && richTextEnabled" ref="toolbar" :buttons="buttons" :editor="editor" :field="this" />
+            <code-editor v-if="richTextEnabled" v-model="codeEditorHtml" :visible="showCodeEditor" :editor="editor" :field="this" />
             <editor-content :class="{ 'code-view': showCodeEditor }" class="vui-editor" :editor="editor" />
-            <block-picker :editor="editor" :field="this" :block-groups="settings.blockGroups" />
+            <block-picker v-if="blocksEnabled" :editor="editor" :field="this" :block-groups="settings.blockGroups" />
         </div>
 
         <div v-if="$isDebug" class="input text" style="margin-top: 20px;">{{ jsonContent }}</div>
@@ -136,6 +136,22 @@ export default {
 
             return blockTypes;
         },
+
+        blocksEnabled() {
+            if (this.settings.editorMode === 'richText') {
+                return false;
+            }
+
+            return true;
+        },
+
+        richTextEnabled() {
+            if (this.settings.editorMode === 'blocks') {
+                return false;
+            }
+
+            return true;
+        },
     },
 
     watch: {
@@ -172,6 +188,25 @@ export default {
                     }
 
                     return false;
+                },
+                handleKeyDown: (view, event) => {
+                    // Prevent typing entirely if set to blocks-only
+                    if (!this.richTextEnabled) {
+                        // Only the command is allowed, but need to provide some extras to remove or navigate
+                        const allowedKeys = ['/', 'Backspace', 'Delete', 'Enter', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'];
+
+                        if (allowedKeys.includes(event.key)) {
+                            return false;
+                        }
+
+                        return true;
+                    }
+                },
+                handlePaste: (view, event) => {
+                    // Prevent pasting entirely if set to blocks-only
+                    if (!this.richTextEnabled) {
+                        return true;
+                    }
                 },
             },
         });
@@ -282,7 +317,7 @@ export default {
         },
 
         getExtensions() {
-            const extensions = [
+            let extensions = [
                 // Core Extensions
                 Document,
                 Dropcursor.configure({
@@ -290,13 +325,17 @@ export default {
                 }),
                 Gapcursor,
                 HardBreak,
-                Paragraph,
                 Text,
-                VizyBlock,
+                Paragraph,
+                Commands.configure({
+                    suggestion: Suggestion,
+                }),
 
                 // Remove due to strange behaviour with nested Vizy fields and gapcursor focusing
                 // Focus.configure({ className: 'has-focus', mode: 'deepest' }),
+            ];
 
+            const richText = [
                 // Optional Marks
                 Bold,
                 Code,
@@ -334,10 +373,21 @@ export default {
                 Image,
                 Iframe,
                 MediaEmbed,
-                Commands.configure({
-                    suggestion: Suggestion,
-                }),
             ];
+
+            const blocks = [
+                // Despite block-only, we include Paragraph, as ProseMirror requires _something_
+                // and it will otherwise try and create an empty Vizy Block node, which is very bad.
+                VizyBlock,
+            ];
+
+            if (this.richTextEnabled) {
+                extensions = extensions.concat(richText);
+            }
+
+            if (this.blocksEnabled) {
+                extensions = extensions.concat(blocks);
+            }
 
             return extensions;
         },

@@ -165,9 +165,13 @@ export default {
             });
 
             this.editor.state.doc?.content?.content.forEach((node) => {
-                if (node.type.name === 'vizyBlock' && node.attrs.enabled) {
+                const nodeType = get(node, 'type.name');
+                const nodeEnabled = get(node, 'type.attrs.enabled');
+                const blockTypeName = get(node, 'attrs.values.type');
+
+                if (nodeType === 'vizyBlock' && nodeEnabled) {
                     blockCount += 1;
-                    blockTypesCount[node.attrs.values.type] += 1;
+                    blockTypesCount[blockTypeName] += 1;
                 }
             });
 

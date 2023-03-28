@@ -10,7 +10,7 @@ import CommandsList from './CommandsList.vue';
 
 export default {
     items: (options) => {
-        const items = [
+        let items = [
             {
                 svg: 'h1',
                 title: Craft.t('vizy', 'Heading 1'),
@@ -102,6 +102,10 @@ export default {
                 },
             },
         ];
+
+        if (!options.editor.vizyField.richTextEnabled) {
+            items = [];
+        }
 
         options.editor.vizyField.settings.blockGroups.forEach((blockGroup) => {
             blockGroup.blockTypes.forEach((blockType) => {

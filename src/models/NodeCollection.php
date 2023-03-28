@@ -2,7 +2,9 @@
 namespace verbb\vizy\models;
 
 use verbb\vizy\Vizy;
+use verbb\vizy\fields\VizyField;
 use verbb\vizy\helpers\Nodes;
+use verbb\vizy\nodes\VizyBlock;
 
 use Craft;
 use craft\base\ElementInterface;
@@ -156,6 +158,14 @@ class NodeCollection extends Markup
 
         foreach ($this->getNodes() as $nodeKey => $node) {
             $rawNode = $node->serializeValue($element);
+            $rawNodeType = $rawNode['type'] ?? null;
+
+            // Extra check if we are in blocks-only mode
+            if ($this->field->editorMode === VizyField::MODE_BLOCKS) {
+                if ($rawNodeType !== VizyBlock::$type) {
+                    continue;
+                }
+            }
 
             // Handle serializing any emoji's in text nodes
             $values[$nodeKey] = Nodes::serializeContent($rawNode);
