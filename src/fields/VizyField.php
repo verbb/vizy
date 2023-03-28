@@ -53,6 +53,10 @@ class VizyField extends Field
     public const PICKER_BEHAVIOUR_CLICK = 'click';
     public const PICKER_BEHAVIOUR_HOVER = 'hover';
 
+    public const MODE_COMBINED = 'combined';
+    public const MODE_BLOCKS = 'blocks';
+    public const MODE_RICH_TEXT = 'richText';
+
 
     // Static Methods
     // =========================================================================
@@ -86,6 +90,7 @@ class VizyField extends Field
     public ?int $minBlocks = null;
     public ?int $maxBlocks = null;
     public string $blockTypeBehaviour = self::PICKER_BEHAVIOUR_CLICK;
+    public string $editorMode = self::MODE_COMBINED;
     public string $columnType = Schema::TYPE_TEXT;
 
     private ?array $_blockTypesById = [];
@@ -245,6 +250,7 @@ class VizyField extends Field
             'maxBlocks' => $this->maxBlocks,
             'pasteAsPlainText' => $this->pasteAsPlainText,
             'blockTypeBehaviour' => $this->blockTypeBehaviour,
+            'editorMode' => $this->editorMode,
         ];
 
         foreach ($this->getBlockTypes() as $blockType) {
