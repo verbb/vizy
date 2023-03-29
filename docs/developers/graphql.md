@@ -85,7 +85,7 @@ This is the interface implemented by all nodes.
 | `type`| `string` | The type of the node.
 | `tagName`| `string` | The HTML tag name of the node.
 | `attrs`| `json` | The attributes of the node.
-| `marks`| `json` | The marks of the node.
+| `marks`| `[VizyMarkInterface]` | The marks of the node.
 | `content`| `json` | The content of the node as structured node JSON, including nested marks and text content.
 | `html`| `string` | The content of the node as rendered HTML.
 | `text`| `string` | The inner text of the node, if applicable.
@@ -111,6 +111,35 @@ This is the interface implemented by all image nodes.
 | Field | Type | Description
 | - | - | -
 | `asset`| `AssetInterface` | Returns the asset element used for this image.
+
+## The `VizyMarkInterface` interface
+This is the interface implemented by all marks.
+
+| Field | Type | Description
+| - | - | -
+| `type`| `string` | The type of the mark.
+| `tagName`| `string` | The HTML tag name of the mark.
+| `attrs`| `json` | The attributes of the mark.
+
+Available mark type fragments are:
+
+- `VizyMark_Bold`
+- `VizyMark_Code`
+- `VizyMark_Highlight`
+- `VizyMark_Italic`
+- `VizyMark_Link`
+- `VizyMark_Strike`
+- `VizyMark_Subscript`
+- `VizyMark_Superscript`
+- `VizyMark_Underline`
+
+## The `VizyLinkMarkInterface` interface
+This is the interface implemented by all link marks.
+
+| Field | Type | Description
+| - | - | -
+| `element`| `ElementInterface` | Returns the element used for this link (if any).
+
 
 ## The `VizyBlockInterface` interface
 This is the interface implemented by all Vizy Block nodes.

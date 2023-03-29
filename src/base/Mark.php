@@ -8,12 +8,27 @@ use craft\base\Component;
 use craft\base\ElementInterface;
 use craft\base\FieldInterface;
 
+use GraphQL\Type\Definition\Type;
+use GraphQL\Type\Definition\ScalarType;
+
 class Mark extends Component implements MarkInterface
 {
     // Constants
     // =========================================================================
 
     public const EVENT_MODIFY_TAG = 'modifyTag';
+
+
+    // Static Methods
+    // =========================================================================
+
+    public static function gqlTypeNameByContext(mixed $context): string
+    {
+        $classNameParts = explode('\\', static::class);
+        $end = array_pop($classNameParts);
+
+        return 'VizyMark_' . $end;
+    }
 
 
     // Properties
@@ -94,6 +109,16 @@ class Mark extends Component implements MarkInterface
         $this->trigger(self::EVENT_MODIFY_TAG, $event);
 
         return Nodes::renderClosingTag($event->tag);
+    }
+
+    public function getGqlTypeName(): string
+    {
+        return static::gqlTypeNameByContext($this);
+    }
+
+    public function getContentGqlType(): ScalarType
+    {
+        return Type::string();
     }
 
 }
