@@ -4,6 +4,8 @@
             class="vui-editor-insert"
             :class="{ 'is-active': menu.isActive }"
             :style="`top: ${menu.top}px`"
+            @keydown.left.prevent="moveSelectionLeft"
+            @keydown.right.prevent="moveSelectionRight"
         >
             <button type="button" aria-label="Add block" aria-haspopup="true" aria-expanded="false" class="vui-editor-insert-btn" @click="onClick">
                 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 384 512"><path fill="currentColor" d="M368 224H224V80c0-8.84-7.16-16-16-16h-32c-8.84 0-16 7.16-16 16v144H16c-8.84 0-16 7.16-16 16v32c0 8.84 7.16 16 16 16h144v144c0 8.84 7.16 16 16 16h32c8.84 0 16-7.16 16-16V288h144c8.84 0 16-7.16 16-16v-32c0-8.84-7.16-16-16-16z" /></svg>
@@ -21,7 +23,7 @@
                         <div class="vui-block-items-header">{{ group.name }}</div>
 
                         <div class="vui-block-items">
-                            <div v-for="(blockType, blockIndex) in group.blockTypes" :key="blockIndex" class="vui-block-item" :class="{ 'disabled': blockTypeDisabled(blockType) }" @click="addBlock(blockType)">
+                            <div v-for="(blockType, blockIndex) in group.blockTypes" :key="blockIndex" class="vui-block-item" :class="{ 'disabled': blockTypeDisabled(blockType), 'is-selected': selectedIndex === blockType.countIndex }" @click="addBlock(blockType)">
                                 <div v-html="blockType.icon.svg"></div>
                                 <span class="vui-block-item-heading">{{ blockType.name }}</span>
                             </div>
@@ -82,12 +84,25 @@ export default {
         return {
             tippy: null,
             search: '',
+            selectedIndex: 0,
         };
     },
 
     computed: {
         filteredBlockGroups() {
-            return this.blockGroups.reduce((acc, blockGroup) => {
+            const { blockGroups } = this;
+            let count = 0;
+
+            // Add a sequential count to each block type, so we can handle a `selectedIndex``
+            blockGroups.forEach((blockGroup) => {
+                blockGroup.blockTypes.forEach((blockType) => {
+                    blockType.countIndex = count;
+
+                    count++;
+                });
+            });
+
+            return blockGroups.reduce((acc, blockGroup) => {
                 const blockTypes = blockGroup.blockTypes.filter((blockType) => {
                     return blockType.name.toLowerCase().includes(this.search.toLowerCase());
                 });
@@ -108,29 +123,47 @@ export default {
     },
 
     mounted() {
-        const $template = this.$el.querySelector('#vizy-blocks-template');
+        this.$nextTick(() => {
+            const $template = this.$el.querySelector('#vizy-blocks-template');
 
-        if ($template) {
-            $template.style.display = 'block';
+            if ($template) {
+                $template.style.display = 'block';
 
-            this.tippy = tippy(this.$el.querySelector('.vui-editor-insert-btn'), {
-                content: $template,
-                trigger: 'click',
-                allowHTML: true,
-                arrow: true,
-                interactive: true,
-                placement: 'right',
-                theme: 'vui-block-picker light-border',
-                maxWidth: '300px',
-                duration: 200,
-                zIndex: 100, // Needs a higher z-index for Live Preview
-                appendTo: () => { return document.body; },
-                hideOnClick: true,
-            });
-        }
+                this.tippy = tippy(this.$el.querySelector('.vui-editor-insert-btn'), {
+                    content: $template,
+                    trigger: 'click',
+                    allowHTML: true,
+                    arrow: true,
+                    interactive: true,
+                    placement: 'right',
+                    theme: 'vui-block-picker light-border',
+                    maxWidth: '300px',
+                    duration: 200,
+                    zIndex: 100, // Needs a higher z-index for Live Preview
+                    appendTo: () => { return document.body; },
+                    hideOnClick: true,
+                });
+            }
+        });
     },
 
     methods: {
+        moveSelectionLeft() {
+            if (this.selectedIndex > 0) {
+                this.selectedIndex--;
+            }
+        },
+
+        moveSelectionRight() {
+            const flatBlockTypes = Object.values(this.filteredBlockGroups)
+                .map((group) => { return group.blockTypes; })
+                .flat();
+
+            if (this.selectedIndex < flatBlockTypes.length - 1) {
+                this.selectedIndex++;
+            }
+        },
+
         addBlock(blockType) {
             if (this.blockTypeDisabled(blockType)) {
                 return;
@@ -307,6 +340,7 @@ export default {
     transition: background-color 0.3s ease;
     user-select: none;
 
+    &.is-selected,
     &:hover:not(.disabled) {
         background-color: #f3f7fb;
     }
