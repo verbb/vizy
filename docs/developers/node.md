@@ -29,7 +29,7 @@ Method | Description
 `getContent()` | Returns an array of nested [Node](docs:developers/node) objects.
 `getText()` | Returns any body text for this node.
 `renderNode()` | Renders the node using in-built defaults.
-`renderHtml()` | Returns the result from `renderNode()` in raw HTML.
+`renderHtml(config)` | Returns the result from `renderNode()` in raw HTML.
 `renderOpeningTag()` | Renders the opening tag for the node.
 `renderClosingTag()` | Renders the closing tag for the node.
 

@@ -147,7 +147,7 @@ class VizyBlock extends Node
         return !array_filter(array_values($content));
     }
 
-    public function renderNode(): ?string
+    public function renderNode(array $config = []): ?string
     {
         // If a template has been defined on the block, use that to render
         if (!$this->_blockType->template) {

@@ -85,6 +85,16 @@ This file acts as a fallback for when you templates try to include a template pa
 {{ node.renderHtml() }}
 ```
 
+You can also pass it any options you might be use to with [Rendering HTML](docs:template-guides/modify-nodes) at the field level.
+
+```twig
+{{ node.renderHtml({
+    attrs: {
+        class: 'text-lg',
+    },
+}) }}
+```
+
 ## `vizyBlock.html`
 For this file we'll want to do the same modular technique, but this time on the Block Type, which will have different fields, therefore different templates.
 

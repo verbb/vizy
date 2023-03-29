@@ -5,6 +5,7 @@ use verbb\vizy\Vizy;
 use verbb\vizy\events\ModifyNodeTagEvent;
 use verbb\vizy\helpers\Nodes;
 
+use Craft;
 use craft\base\Component;
 use craft\base\ElementInterface;
 use craft\helpers\Template;
@@ -134,14 +135,16 @@ class Node extends Component
         return !($this->getContent() || $this->getText());
     }
 
-    public function renderNode(): ?string
+    public function renderNode(array $config = []): ?string
     {
+        Craft::configure($this, $config);
+
         return Vizy::$plugin->getNodes()->renderNode($this);
     }
 
-    public function renderHtml(): ?Markup
+    public function renderHtml(array $config = []): ?Markup
     {
-        return Template::raw((string)$this->renderNode());
+        return Template::raw((string)$this->renderNode($config));
     }
 
     public function renderStaticHtml(): ?Markup

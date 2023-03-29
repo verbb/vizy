@@ -27,7 +27,7 @@ class Image extends Node
         return true;
     }
 
-    public function renderNode(): ?string
+    public function renderNode(array $config = []): ?string
     {
         if (isset($this->attrs['url'])) {
             $renderClass = new Link([
@@ -39,13 +39,13 @@ class Image extends Node
             ]);
 
             $html = $renderClass->renderOpeningTag();
-            $html .= parent::renderNode();
+            $html .= parent::renderNode($config);
             $html .= $renderClass->renderClosingTag();
 
             return $html;
         }
 
-        return parent::renderNode();
+        return parent::renderNode($config);
     }
 
     public function getTag(): array

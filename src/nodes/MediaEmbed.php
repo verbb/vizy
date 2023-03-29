@@ -14,7 +14,7 @@ class MediaEmbed extends Node
     // Public Methods
     // =========================================================================
 
-    public function renderNode(): ?string
+    public function renderNode(array $config = []): ?string
     {
         return $this->attrs['data']['html'] ?? null;
     }
