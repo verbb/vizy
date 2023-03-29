@@ -110,7 +110,7 @@ class Nodes extends Component
         return $this->_registeredMarksByType;
     }
 
-    public function renderNode(Node $node, ?Node $prevNode = null, ?Node $nextNode = null): string
+    public function renderNode(NodeInterface $node, ?NodeInterface $prevNode = null, ?NodeInterface $nextNode = null): string
     {
         $html = [];
 

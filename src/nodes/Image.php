@@ -18,6 +18,7 @@ class Image extends Node
     public mixed $tagName = 'img';
 
     private ?int $_elementId = null;
+    
 
     // Public Methods
     // =========================================================================
