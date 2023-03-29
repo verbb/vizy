@@ -153,6 +153,11 @@ class Node extends Component implements NodeInterface
         return $this->renderHtml();
     }
 
+    public function getStaticText(): string
+    {
+        return trim(implode('', $this->_getNestedValues($this->rawNode, 'text')));
+    }
+
     public function renderOpeningTag(): ?string
     {
         $tag = $this->getTag();
@@ -196,5 +201,24 @@ class Node extends Component implements NodeInterface
     public function serializeValue(?ElementInterface $element = null): ?array
     {
         return $this->rawNode;
+    }
+
+
+    // Public Methods
+    // =========================================================================
+
+    private function _getNestedValues($value, $key, &$items = []): array
+    {
+        foreach ($value as $k => $v) {
+            if ((string)$k === $key) {
+                $items[] = $v;
+            }
+
+            if (is_array($v)) {
+                $this->_getNestedValues($v, $key, $items);
+            }
+        }
+
+        return $items;
     }
 }

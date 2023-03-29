@@ -86,7 +86,6 @@ class VizyNodeInterface extends BaseInterfaceType
             'marks' => [
                 'name' => 'marks',
                 'description' => 'The nested marks for this node.',
-                // 'type' => ArrayType::getType(),
                 'type' => Type::listOf(VizyMarkInterface::getType()),
                 'resolve' => function($source) {
                     $marks = [];
@@ -96,7 +95,6 @@ class VizyNodeInterface extends BaseInterfaceType
                         if (isset($node['marks'])) {
                             $marks = array_merge($marks, $node['marks']);
                         }
-                        // code...
                     }
 
                     return $marks;
@@ -107,7 +105,7 @@ class VizyNodeInterface extends BaseInterfaceType
                 'description' => 'The textual content for this node.',
                 'type' => Type::string(),
                 'resolve' => function($source) {
-                    return $source->rawNode['text'] ?? '';
+                    return $source->getStaticText();
                 },
             ],
             'rawNode' => [
