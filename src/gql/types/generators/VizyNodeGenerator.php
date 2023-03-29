@@ -2,12 +2,9 @@
 namespace verbb\vizy\gql\types\generators;
 
 use verbb\vizy\Vizy;
-use verbb\vizy\gql\interfaces\VizyBlockInterface;
 use verbb\vizy\gql\interfaces\VizyNodeInterface;
 use verbb\vizy\gql\interfaces\VizyImageNodeInterface;
 use verbb\vizy\gql\types\VizyNodeType;
-use verbb\vizy\gql\types\generators\VizyBlockTypeGenerator;
-use verbb\vizy\gql\types\generators\VizyImageNodeGenerator;
 use verbb\vizy\nodes\VizyBlock;
 use verbb\vizy\nodes\Image;
 
@@ -51,8 +48,6 @@ class VizyNodeGenerator implements GeneratorInterface
 
         // Generate the types for Vizy Blocks
         $generatorTypes = VizyBlockTypeGenerator::generateTypes($context);
-        $gqlTypes = array_merge($gqlTypes, $generatorTypes);
-
-        return $gqlTypes;
+        return array_merge($gqlTypes, $generatorTypes);
     }
 }

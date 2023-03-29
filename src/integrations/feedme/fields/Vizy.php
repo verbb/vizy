@@ -9,6 +9,13 @@ use craft\feedme\base\Field;
 use craft\feedme\base\FieldInterface;
 
 use Tiptap\Editor;
+use Tiptap\Marks\Underline;
+use Tiptap\Marks\Superscript;
+use Tiptap\Marks\Subscript;
+use Tiptap\Marks\Link;
+use Tiptap\Marks\Highlight;
+use Tiptap\Nodes\Image;
+use Tiptap\Extensions\StarterKit;
 
 class Vizy extends Field implements FieldInterface
 {
@@ -44,13 +51,13 @@ class Vizy extends Field implements FieldInterface
         $editor = new Editor([
             'content' => $value,
             'extensions' => [
-                new \Tiptap\Extensions\StarterKit,
-                new \Tiptap\Nodes\Image,
-                new \Tiptap\Marks\Highlight,
-                new \Tiptap\Marks\Link,
-                new \Tiptap\Marks\Subscript,
-                new \Tiptap\Marks\Superscript,
-                new \Tiptap\Marks\Underline,
+                new StarterKit,
+                new Image,
+                new Highlight,
+                new Link,
+                new Subscript,
+                new Superscript,
+                new Underline,
             ],
         ]);
 

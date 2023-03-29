@@ -69,7 +69,7 @@ class Content extends Component
 
     public function onDeleteField(FieldEvent $event): void
     {
-        $field = $event->field;
+
     }
 
     public function modifyFieldContent(string $fieldUid, string $fieldHandle, $callback, $db = null): void
@@ -152,13 +152,13 @@ class Content extends Component
         }
         
         if ($matchedData) {
-            foreach ($matchedData as $key => $data) {
+            foreach ($matchedData as $data) {
                 if ($vizyField = Craft::$app->getFields()->getFieldByUid($data['vizyFieldUid'])) {
                     $contentTable = '{{%content}}';
                     $column = ElementHelper::fieldColumn($vizyField->columnPrefix, $vizyField->handle, $vizyField->columnSuffix);
 
                     // Check if this field is in a Matrix field
-                    if (strstr($vizyField->context, 'matrixBlockType')) {
+                    if (str_contains($vizyField->context, 'matrixBlockType')) {
                         // Get the Matrix field, and the content table
                         $blockTypeUid = explode(':', $vizyField->context)[1];
 
@@ -172,7 +172,7 @@ class Content extends Component
                             $matrixFieldId = $matrixInfo['fieldId'];
                             $matrixBlockTypeHandle = $matrixInfo['handle'];
 
-                            $matrixField = Craft::$app->getFields()->getFieldById($matrixFieldId, false);
+                            $matrixField = Craft::$app->getFields()->getFieldById($matrixFieldId);
 
                             if ($matrixField) {
                                 $contentTable = $matrixField->contentTable;
@@ -183,7 +183,7 @@ class Content extends Component
                     }
 
                     // Check if this field is in a Super Table field
-                    if (strstr($vizyField->context, 'superTableBlockType')) {
+                    if (str_contains($vizyField->context, 'superTableBlockType')) {
                         // Get the Super Table field, and the content table
                         $blockTypeUid = explode(':', $vizyField->context)[1];
 
@@ -193,7 +193,7 @@ class Content extends Component
                             ->where(['uid' => $blockTypeUid])
                             ->scalar();
 
-                        $superTableField = Craft::$app->getFields()->getFieldById($superTableFieldId, false);
+                        $superTableField = Craft::$app->getFields()->getFieldById($superTableFieldId);
 
                         if ($superTableField) {
                             $contentTable = $superTableField->contentTable;
@@ -219,7 +219,7 @@ class Content extends Component
                             $searchKey = 'fields.' . $fieldHandle;
 
                             if (str_ends_with($flatKey, $searchKey)) {
-                                // Only fetch the preceeding data, so `0.attrs.values` or `1.attrs.values.content.fields.vizy.0.attrs.values`
+                                // Only fetch the preceding data, so `0.attrs.values` or `1.attrs.values.content.fields.vizy.0.attrs.values`
                                 $blockPaths[] = substr($flatKey, 0, (strrpos($flatKey, 'content.fields') - 1));
                             }
                         }

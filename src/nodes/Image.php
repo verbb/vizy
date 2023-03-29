@@ -17,7 +17,7 @@ class Image extends Node
     public static ?string $type = 'image';
     public mixed $tagName = 'img';
 
-    private $_elementId = null;
+    private ?int $_elementId = null;
 
     // Public Methods
     // =========================================================================
@@ -72,7 +72,7 @@ class Image extends Node
     public function getAsset()
     {
         $id = $this->attrs['id'] ?? $this->_elementId ?? null;
-        $siteId = $this->element->siteId ?? null;
+        $siteId = $this->getElement()->siteId ?? null;
 
         if ($id) {
             return Craft::$app->getElements()->getElementById($id, Asset::class, $siteId);

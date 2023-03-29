@@ -1,6 +1,8 @@
 <?php
 namespace verbb\vizy\services;
 
+use verbb\vizy\base\MarkInterface;
+use verbb\vizy\base\NodeInterface;
 use verbb\vizy\events\RegisterNodesEvent;
 use verbb\vizy\events\RegisterMarksEvent;
 use verbb\vizy\nodes as allnodes;
@@ -108,7 +110,7 @@ class Nodes extends Component
         return $this->_registeredMarksByType;
     }
 
-    public function renderNode($node, $prevNode = null, $nextNode = null): string
+    public function renderNode(Node $node, ?Node $prevNode = null, ?Node $nextNode = null): string
     {
         $html = [];
 
@@ -128,7 +130,6 @@ class Nodes extends Component
                 $nextNestedNode = $node->content[$index + 1] ?? null;
 
                 $html[] = $this->renderNode($nestedNode, $prevNestedNode, $nextNestedNode);
-                $prevNode = $nestedNode;
             }
         } else if ($text = $node->getText()) {
             $html[] = $text;
@@ -153,17 +154,17 @@ class Nodes extends Component
     // Private Methods
     // =========================================================================
 
-    private function markShouldOpen($mark, $prevNode): bool
+    private function markShouldOpen(?MarkInterface $mark, ?NodeInterface $prevNode): bool
     {
         return $this->nodeHasMark($prevNode, $mark);
     }
 
-    private function markShouldClose($mark, $nextNode): bool
+    private function markShouldClose(?MarkInterface $mark, ?NodeInterface $nextNode): bool
     {
         return $this->nodeHasMark($nextNode, $mark);
     }
 
-    private function nodeHasMark($node, $mark): bool
+    private function nodeHasMark(?NodeInterface $node, ?MarkInterface $mark): bool
     {
         if (!$node) {
             return true;

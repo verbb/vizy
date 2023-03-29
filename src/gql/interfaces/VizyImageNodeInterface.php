@@ -4,7 +4,6 @@ namespace verbb\vizy\gql\interfaces;
 use Craft;
 use craft\gql\arguments\elements\Asset as AssetArguments;
 use craft\gql\interfaces\elements\Asset as AssetInterface;
-use craft\gql\TypeManager;
 
 class VizyImageNodeInterface extends VizyNodeInterface
 {

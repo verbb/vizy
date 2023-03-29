@@ -65,11 +65,11 @@ class VizyBlock extends Node
                 // Save as shortcut to the blocktype handle, for templating ease
                 $this->handle = $this->_blockType->handle;
 
-                // Add in the blocktype enabled/disabled state, independant on the block enabled/disabled
+                // Add in the blocktype enabled/disabled state, independent on the block enabled/disabled
                 $this->attrs['values']['typeEnabled'] = $this->_blockType->enabled;
 
                 if ($this->_fieldLayout) {
-                    foreach ($this->_fieldLayout->getCustomFields() as $key => $field) {
+                    foreach ($this->_fieldLayout->getCustomFields() as $field) {
                         $this->_fieldsByHandle[$field->handle] = $this->_fieldLayout->getFieldByHandle($field->handle);
                     }
                 }
@@ -140,7 +140,7 @@ class VizyBlock extends Node
         return parent::isDeleted();
     }
 
-    public function isEmpty()
+    public function isEmpty(): bool
     {
         $content = $this->attrs['values']['content']['fields'] ?? [];
 

@@ -12,7 +12,7 @@ import { t } from '@utils/translations';
 // Allows us to create a Vue app with global properties and loading plugins
 export const createVueApp = (props) => {
     const app = createApp({
-        // Set the delimeters to not mess around with Twig
+        // Set the delimiters to not mess around with Twig
         delimiters: ['${', '}'],
 
         // Add in any props defined for _this_ instance of the app, like components

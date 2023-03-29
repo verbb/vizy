@@ -180,8 +180,8 @@ class NodeCollection extends Markup
 
     public function isEmpty(): bool
     {
-        // Don't rely on `renderHtml()` as this is trigger on-load in the CP when editing a field
-        // and it does plenty of unnesesary things. Instead, work with the `rawNodes` directly.
+        // Don't rely on `renderHtml()` as this is trigger on-load in the CP when editing a field,
+        // and it does plenty of unnecessary things. Instead, work with the `rawNodes` directly.
         $results = [];
 
         foreach ($this->getNodes() as $node) {

@@ -18,7 +18,7 @@ class Service extends Component
     // Properties
     // =========================================================================
 
-    private $_layoutsByUid = [];
+    private array $_layoutsByUid = [];
 
 
     // Public Methods
@@ -80,13 +80,12 @@ class Service extends Component
     public function saveField($fieldData, $event = null): void
     {
         $fieldsService = Craft::$app->getFields();
-        $projectConfigService = Craft::$app->getProjectConfig();
 
         // Ensure we update all field layouts, for each blocktype
-        foreach ($fieldData as $groupKey => $group) {
+        foreach ($fieldData as $group) {
             $blockTypes = $group['blockTypes'] ?? [];
 
-            foreach ($blockTypes as $blockTypeKey => $blockType) {
+            foreach ($blockTypes as $blockType) {
                 $layoutUid = $blockType['layoutUid'] ?? '';
                 $layoutConfig = $blockType['layoutConfig'] ?? [];
 
@@ -155,7 +154,6 @@ class Service extends Component
         $data = $event->oldValue ?? [];
 
         $fieldsService = Craft::$app->getFields();
-        $projectConfigService = Craft::$app->getProjectConfig();
 
         if (!is_array($data)) {
             return;
@@ -170,10 +168,10 @@ class Service extends Component
         $fieldData = $data['settings']['fieldData'] ?? [];
         $fieldData = ProjectConfigHelper::unpackAssociativeArrays($fieldData);
 
-        foreach ($fieldData as $groupKey => $group) {
+        foreach ($fieldData as $group) {
             $blockTypes = $group['blockTypes'] ?? [];
 
-            foreach ($blockTypes as $blockTypeKey => $blockType) {
+            foreach ($blockTypes as $blockType) {
                 $layoutUid = $blockType['layoutUid'] ?? '';
 
                 // Add an extra check in here to ensure the layout exists, before deleting it. Deleting via ID may throw an error

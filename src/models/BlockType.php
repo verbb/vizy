@@ -124,7 +124,7 @@ class BlockType extends Model
 
         // Add in the SVG for the icon fresh
         if (isset($array['icon']['value'])) {
-            if ($icon = Vizy::$plugin->getIcons()->getIconForValue($array['icon']['value'], true)) {
+            if ($icon = Vizy::$plugin->getIcons()->getIconForValue($array['icon']['value'])) {
                 $array['icon'] = $icon;
             }
         }

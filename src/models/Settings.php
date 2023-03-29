@@ -1,7 +1,6 @@
 <?php
 namespace verbb\vizy\models;
 
-use Craft;
 use craft\base\Model;
 use craft\helpers\App;
 use craft\helpers\FileHelper;

@@ -8,6 +8,7 @@ use verbb\vizy\helpers\Nodes;
 use Craft;
 use craft\base\Component;
 use craft\base\ElementInterface;
+use craft\base\FieldInterface;
 use craft\helpers\Template;
 
 use GraphQL\Type\Definition\Type;
@@ -15,7 +16,7 @@ use GraphQL\Type\Definition\ScalarType;
 
 use Twig\Markup;
 
-class Node extends Component
+class Node extends Component implements NodeInterface
 {
     // Constants
     // =========================================================================
@@ -48,8 +49,8 @@ class Node extends Component
 
     protected ?string $text = null;
 
-    private mixed $element = null;
-    private mixed $field = null;
+    private ?ElementInterface $element = null;
+    private ?FieldInterface $field = null;
 
 
     // Public Methods
@@ -90,22 +91,22 @@ class Node extends Component
         return $this->content;
     }
 
-    public function getField()
+    public function getField(): ?FieldInterface
     {
         return $this->field;
     }
 
-    public function setField($value): void
+    public function setField(FieldInterface $value): void
     {
         $this->field = $value;
     }
 
-    public function getElement()
+    public function getElement(): ?ElementInterface
     {
         return $this->element;
     }
 
-    public function setElement($value): void
+    public function setElement(ElementInterface $value): void
     {
         $this->element = $value;
     }
@@ -120,7 +121,7 @@ class Node extends Component
         return Template::raw((string)$this->text);
     }
 
-    public function setText($value): void
+    public function setText(mixed $value): void
     {
         $this->text = $value;
     }
@@ -130,7 +131,7 @@ class Node extends Component
         return true;
     }
 
-    public function isEmpty()
+    public function isEmpty(): bool
     {
         return !($this->getContent() || $this->getText());
     }
@@ -187,12 +188,12 @@ class Node extends Component
         return static::gqlTypeNameByContext($this);
     }
 
-    public function getContentGqlType($context): ScalarType
+    public function getContentGqlType(): ScalarType
     {
         return Type::string();
     }
 
-    public function serializeValue(ElementInterface $element = null): ?array
+    public function serializeValue(?ElementInterface $element = null): ?array
     {
         return $this->rawNode;
     }

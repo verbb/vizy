@@ -56,9 +56,7 @@ class NodeCollectionType extends ObjectType
                                 $arguments['where'] = Json::decode($arguments['where']);
                             }
 
-                            $query = Craft::configure($source->query(), $arguments);
-
-                            return $query->all();
+                            return Craft::configure($source->query(), $arguments)->all();
                         },
                     ],
                     'rawNodes' => [

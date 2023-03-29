@@ -3,13 +3,10 @@ namespace verbb\vizy\helpers;
 
 use Craft;
 use craft\helpers\Html;
-use craft\helpers\HtmlPurifier;
 use craft\helpers\StringHelper;
 use craft\validators\HandleValidator;
 
 use LitEmoji\LitEmoji;
-
-use HTMLPurifier_Config;
 
 class Nodes
 {
@@ -53,7 +50,7 @@ class Nodes
         return implode('', array_map(function($item) {
             $tags = (array)$item['tag'];
 
-            return implode('', array_map(function($tag) use ($item) {
+            return implode('', array_map(function($tag) {
                 return "</{$tag}>";
             }, $tags));
         }, $tags));
@@ -128,7 +125,7 @@ class Nodes
         return $rawNode;
     }
 
-    public static function normalizeContent($rawNode)
+    public static function normalizeContent($rawNode): array
     {
         $content = $rawNode['content'] ?? [];
 

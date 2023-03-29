@@ -20,7 +20,6 @@ use craft\elements\Asset;
 use craft\elements\Category;
 use craft\elements\Entry;
 use craft\helpers\ArrayHelper;
-use craft\helpers\Db;
 use craft\helpers\FileHelper;
 use craft\helpers\Html;
 use craft\helpers\Json;
@@ -237,7 +236,7 @@ class VizyField extends Field
             // The order of `blocks` and `blockGroups` is important here, to ensure that the blocks
             // are rendered with content, where `blockGroups` is just the template for new blocks.
             'blocks' => $this->_getBlocksForInput($value, $placeholderKey, $element),
-            'blockGroups' => $this->_getBlockGroupsForInput($value, $placeholderKey, $element),
+            'blockGroups' => $this->_getBlockGroupsForInput($placeholderKey, $element),
             'vizyConfig' => $this->_getVizyConfig(),
             'defaultTransform' => $defaultTransform,
             'elementSiteId' => $site->id,
@@ -387,7 +386,6 @@ class VizyField extends Field
             return false;
         }
 
-        $request = Craft::$app->getRequest();
         $errors = [];
 
         // Prepare the setting data to be saved
@@ -552,8 +550,8 @@ class VizyField extends Field
             return $this->_blockTypesById[$blockTypeId];
         }
 
-        foreach ($this->fieldData as $groupKey => $group) {
-            foreach ($group['blockTypes'] as $blockTypeKey => $block) {
+        foreach ($this->fieldData as $group) {
+            foreach ($group['blockTypes'] as $block) {
                 if ($block['id'] === $blockTypeId) {
                     return $this->_blockTypesById[$blockTypeId] = new BlockType($block);
                 }
@@ -567,12 +565,12 @@ class VizyField extends Field
     {
         $blockTypes = [];
 
-        foreach ($this->fieldData as $groupKey => $group) {
+        foreach ($this->fieldData as $group) {
             $blocks = $group['blockTypes'] ?? [];
 
-            foreach ($blocks as $blockTypeKey => $blockTypeData) {
+            foreach ($blocks as $blockTypeData) {
                 // Remove this before populating the model
-                $layout = ArrayHelper::remove($blockTypeData, 'layout');
+                ArrayHelper::remove($blockTypeData, 'layout');
 
                 $blockType = new BlockType($blockTypeData);
                 $blockType->fieldId = $this->id;
@@ -649,7 +647,7 @@ class VizyField extends Field
             $blockTypesById[$blockType->id] = $blockType;
         }
 
-        foreach ($blocks as $i => $block) {
+        foreach ($blocks as $block) {
             if ($block->enabled) {
                 $blockTypesCount[$block->blockType->id] += 1;
             }
@@ -689,7 +687,7 @@ class VizyField extends Field
             $keywords = $this->_getNestedValues($nodes, 'text');
 
             // Fields are different, and we need to check on their searchability
-            foreach ($value->getNodes() as $key => $block) {
+            foreach ($value->getNodes() as $block) {
                 if ($block instanceof VizyBlock) {
                     if ($fieldLayout = $block->getFieldLayout()) {
                         foreach ($fieldLayout->getCustomFields() as $field) {
@@ -717,7 +715,7 @@ class VizyField extends Field
     // Private Methods
     // =========================================================================
 
-    private function getCacheKey($key)
+    private function getCacheKey($key): string
     {
         return $this->id . '-' . $this->handle . '-' . $key;
     }
@@ -763,12 +761,12 @@ class VizyField extends Field
         return $data;
     }
 
-    private function _getBlockGroupsForInput($value, $placeholderKey, ElementInterface $element = null): array
+    private function _getBlockGroupsForInput($placeholderKey, ElementInterface $element = null): array
     {
         // Get from the cache, if we've already prepped this field's block groups.
         // The blocks HTML/JS is unique to this fields' ID and handle. Even if used multiple
         // times in an element, or nested, we only need to generate this once.
-        return Vizy::$plugin->getCache()->getOrSet($this->getCacheKey('blockGroups'), function() use ($value, $placeholderKey, $element) {
+        return Vizy::$plugin->getCache()->getOrSet($this->getCacheKey('blockGroups'), function() use ($placeholderKey, $element) {
             $view = Craft::$app->getView();
 
             $data = $this->fieldData;
@@ -849,7 +847,7 @@ class VizyField extends Field
         $blocks = [];
 
         if ($value instanceof NodeCollection) {
-            foreach ($value->getNodes() as $i => $block) {
+            foreach ($value->getNodes() as $block) {
                 if ($block instanceof VizyBlock) {
                     $blockId = $block->attrs['id'];
                     $fieldLayout = $block->getFieldLayout();
@@ -1092,8 +1090,6 @@ class VizyField extends Field
         if (!$this->availableVolumes) {
             return [];
         }
-
-        $criteria = ['parentId' => ':empty:'];
 
         $allVolumes = Craft::$app->getVolumes()->getAllVolumes();
         $allowedVolumes = [];

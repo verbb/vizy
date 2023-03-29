@@ -1,7 +1,6 @@
 <?php
 namespace verbb\vizy\services;
 
-use Craft;
 use craft\base\Component;
 
 class Cache extends Component
@@ -9,29 +8,29 @@ class Cache extends Component
     // Properties
     // =========================================================================
 
-    private $_cacheData = [];
+    private array $_cacheData = [];
 
 
     // Public Methods
     // =========================================================================
 
-    public function get($key)
+    public function get(string $key)
     {
         return $this->_cacheData[$key] ?? false;
     }
 
-    public function set($key, $value)
+    public function set(string $key, mixed $value): void
     {
         $this->_cacheData[$key] = $value;
     }
 
-    public function getOrSet($key, $callable)
+    public function getOrSet(string $key, $callable)
     {
         if (($value = $this->get($key)) !== false) {
             return $value;
         }
 
-        $value = call_user_func($callable, $this);
+        $value = $callable($this);
 
         $this->set($key, $value);
 

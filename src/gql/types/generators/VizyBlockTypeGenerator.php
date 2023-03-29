@@ -20,7 +20,7 @@ class VizyBlockTypeGenerator extends Generator implements GeneratorInterface, Si
 
     public static function generateTypes(mixed $context = null): array
     {
-        if ($context && $context instanceof VizyField) {
+        if ($context instanceof VizyField) {
             $vizyBlockTypes = $context->getBlockTypes();
         } else {
             $vizyBlockTypes = Vizy::$plugin->getService()->getAllBlockTypes();

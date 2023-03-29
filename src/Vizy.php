@@ -10,7 +10,6 @@ use verbb\vizy\integrations\feedme\fields\Vizy as FeedMeVizyField;
 use verbb\vizy\models\Settings;
 
 use Craft;
-use craft\base\Model;
 use craft\base\Plugin;
 use craft\events\RegisterComponentTypesEvent;
 use craft\events\RegisterGqlTypesEvent;

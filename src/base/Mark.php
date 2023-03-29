@@ -5,8 +5,10 @@ use verbb\vizy\events\ModifyMarkTagEvent;
 use verbb\vizy\helpers\Nodes;
 
 use craft\base\Component;
+use craft\base\ElementInterface;
+use craft\base\FieldInterface;
 
-class Mark extends Component
+class Mark extends Component implements MarkInterface
 {
     // Constants
     // =========================================================================
@@ -22,8 +24,8 @@ class Mark extends Component
     public mixed $tagName = null;
     public array $attrs = [];
     
-    private mixed $element = null;
-    private mixed $field = null;
+    private ?ElementInterface $element = null;
+    private ?FieldInterface $field = null;
 
 
     // Public Methods
@@ -34,22 +36,22 @@ class Mark extends Component
         return static::$type;
     }
 
-    public function getField()
+    public function getField(): ?FieldInterface
     {
         return $this->field;
     }
 
-    public function setField($value): void
+    public function setField(FieldInterface $value): void
     {
         $this->field = $value;
     }
 
-    public function getElement()
+    public function getElement(): ?ElementInterface
     {
         return $this->element;
     }
 
-    public function setElement($value): void
+    public function setElement(ElementInterface $value): void
     {
         $this->element = $value;
     }

@@ -51,7 +51,7 @@ class VizyBlockInterface extends VizyNodeInterface
                 'name' => 'enabled',
                 'description' => 'Whether this Vizy block is enabled or not.',
                 'type' => Type::boolean(),
-                'resolve' => function($source, $arguments) {
+                'resolve' => function($source) {
                     return $source->getEnabled();
                 },
             ],
@@ -59,7 +59,7 @@ class VizyBlockInterface extends VizyNodeInterface
                 'name' => 'collapsed',
                 'description' => 'Whether this Vizy block is collapsed or not.',
                 'type' => Type::boolean(),
-                'resolve' => function($source, $arguments) {
+                'resolve' => function($source) {
                     return $source->attrs['collapsed'] ?? false;
                 },
             ],
@@ -67,7 +67,7 @@ class VizyBlockInterface extends VizyNodeInterface
                 'name' => 'blockTypeId',
                 'description' => 'The block type ID for this Vizy block.',
                 'type' => Type::string(),
-                'resolve' => function($source, $arguments) {
+                'resolve' => function($source) {
                     return $source->getBlockType()->id;
                 },
             ],
@@ -75,7 +75,7 @@ class VizyBlockInterface extends VizyNodeInterface
                 'name' => 'blockTypeHandle',
                 'description' => 'The block type handle for this Vizy block.',
                 'type' => Type::string(),
-                'resolve' => function($source, $arguments) {
+                'resolve' => function($source) {
                     return $source->getBlockType()->handle;
                 },
             ],

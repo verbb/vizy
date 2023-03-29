@@ -48,7 +48,7 @@ class Fields
         }
 
         // Make sure all tabs and their elements have UUIDs
-        // (We do this here instead of from FieldLayoutComponent::init() because the we don't want field layout forms to
+        // (We do this here instead of from FieldLayoutComponent::init() because we don't want field layout forms to
         // get the impression that tabs/elements have persisting UUIDs if they don't.)
         foreach ($tabs as $tab) {
             if (!isset($tab->uid)) {
