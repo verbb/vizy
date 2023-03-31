@@ -322,7 +322,7 @@ export default {
                 Document,
                 Dropcursor.configure({
                     color: '#3778eb',
-                    width: 2,
+                    width: 3,
                 }),
                 Gapcursor,
                 HardBreak,
