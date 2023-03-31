@@ -552,6 +552,11 @@ export default {
 
                 if (!isEmpty(contentRoot)) {
                     Object.entries(contentRoot).forEach(([fieldHandle, fieldBlocks]) => {
+                        // In some instances (when using a recusive field) we've actually already got the block content here
+                        if (fieldBlocks.blocks === undefined) {
+                            foundContent = { fields: contentRoot };
+                        }
+
                         if (!isEmpty(fieldBlocks.blocks)) {
                             Object.entries(fieldBlocks.blocks).forEach(([blockId, blockFields]) => {
                                 if (blockId === this.node.attrs.id) {

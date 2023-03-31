@@ -41,26 +41,11 @@ class FieldController extends Controller
             $fieldLayout = new FieldLayout();
         }
 
-        // Fetch the available custom fields for the layout - we want to add some exceptions
-        $availableCustomFields = $fieldLayout->getAvailableCustomFields();
-
-        // Remove _this_ field - things could get hairy
-        if ($fieldIds) {
-            foreach ($availableCustomFields as $i => $groupFields) {
-                foreach ($groupFields as $j => $fields) {
-                    if (in_array($fields->getField()->id, $fieldIds)) {
-                        unset($availableCustomFields[$i][$j]);
-                    }
-                }
-            }
-        }
-
         // Render the HTML for the FLD to send back to Vue
         $html = Fields::fieldLayoutDesignerHtml($fieldLayout, [
             // Ensure to namespace the FLD so it's unique. Important when used in Matrix blocks
             // as under normal Vizy field circumstances, you edit one FLD at a time.
             'id' => str_replace('type-', '', $blockTypeId) . 'fld' . mt_rand(),
-            'availableCustomFields' => $availableCustomFields,
         ]);
 
         $headHtml = $view->getHeadHtml();
