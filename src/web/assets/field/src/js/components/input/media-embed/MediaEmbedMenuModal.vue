@@ -111,6 +111,12 @@ export default {
             /* eslint-disable vue/no-mutating-props */
             this.errors = [];
 
+            if (!this.modelValue.url) {
+                this.errors.push('url');
+
+                return;
+            }
+
             this.editor.chain().focus().setEmbed(this.modelValue).run();
 
             this.proxyShow = false;
