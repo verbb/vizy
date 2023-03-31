@@ -409,6 +409,8 @@ export default {
 
         // Destroy event listeners for this block
         this.$events.off('vizy-blocks:updateDOM', this.onUpdateDOM);
+        this.$events.off('vizy-blocks:collapseAll', this.collapseBlock);
+        this.$events.off('vizy-blocks:expandAll', this.expandBlock);
     },
 
     methods: {
