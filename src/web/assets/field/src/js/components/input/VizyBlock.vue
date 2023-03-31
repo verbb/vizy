@@ -1,6 +1,5 @@
 <template>
     <node-view-wrapper
-        v-if="!isEmpty(blockType)"
         class="vizyblock"
         contenteditable="false"
         :data-vizy-block="true"
@@ -9,7 +8,7 @@
         @paste.stop
         @cut.stop
     >
-        <div class="vizyblock-wrap">
+        <div v-if="!isEmpty(blockType)" class="vizyblock-wrap">
             <div class="vizyblock-header">
                 <div class="titlebar">
                     <div class="blocktype"><span v-if="$isDebug">{{ uid }} {{ node.attrs.id }} </span>{{ blockType.name }}</div>
@@ -77,6 +76,14 @@
             <slide-up-down :active="!collapsed" :duration="300">
                 <vizy-block-fields v-if="fieldsHtml" ref="fields" :key="updateFieldsHtml" class="vizyblock-fields" :template="fieldsHtml" @update="onFieldUpdate" />
             </slide-up-down>
+        </div>
+
+        <div v-else class="vizyblock-wrap">
+            <div class="vizyblock-invalid">
+                <p class="error">{{ t('vizy', 'Unable to parse block definition.') }}</p>
+
+                <a class="error" data-icon="remove" role="option" tabindex="-1" @click.prevent="deleteBlock"></a>
+            </div>
         </div>
     </node-view-wrapper>
 </template>
@@ -631,6 +638,17 @@ export default {
 
     .vizy-static & {
         padding-top: 12px;
+    }
+}
+
+.vizyblock-invalid {
+    padding: 10px 0 0;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+
+    p {
+        margin: 0;
     }
 }
 
