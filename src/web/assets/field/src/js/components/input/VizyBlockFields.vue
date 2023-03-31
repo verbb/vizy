@@ -74,10 +74,15 @@ export default {
         },
 
         emitUpdate() {
-            // Give it a second for the DOM to update, as we rely on DOM values to serialize
+            // Give it a second for the DOM to update, as we rely on DOM values to serialize.
             setTimeout(() => {
                 this.$emit('update');
             }, 50);
+
+            // Also, run this again at a longer timeout _just_ in case we've acted too quickly (Redactor).
+            setTimeout(() => {
+                this.$emit('update');
+            }, 200);
         },
     },
 
