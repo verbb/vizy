@@ -2,9 +2,6 @@
     <menu-bar-modal
         v-model="proxyShow"
         class="vui-modal-iframe-edit"
-        attach="body"
-        :esc-to-close="true"
-        :focus-trap="true"
         :confirm-button="$attrs['confirm-button']"
         @confirm="confirmModal"
         @cancel="cancelModal"
@@ -113,7 +110,9 @@ export default {
             /* eslint-disable vue/no-mutating-props */
             this.errors = [];
 
-            this.editor.chain().focus().setIframe(this.modelValue).run();
+            if (this.modelValue) {
+                this.editor.chain().focus().setIframe(this.modelValue).run();
+            }
 
             this.proxyShow = false;
             /* eslint-enable vue/no-mutating-props */

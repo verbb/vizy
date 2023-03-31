@@ -2,9 +2,6 @@
     <menu-bar-modal
         v-model="proxyShow"
         class="vui-modal-media-embed-edit"
-        attach="body"
-        :esc-to-close="true"
-        :focus-trap="true"
         :confirm-button="$attrs['confirm-button']"
         @confirm="confirmModal"
         @cancel="cancelModal"

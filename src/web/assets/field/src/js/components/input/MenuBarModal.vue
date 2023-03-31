@@ -1,12 +1,19 @@
 <template>
     <vue-final-modal
+        v-slot="{ params, close }"
         class="vui-modal-wrap"
         v-bind="$attrs"
         classes="vui-modal-container"
         content-class="vui-modal-content"
         overlay-class="vui-modal-overlay"
+        attach="body"
         :lock-scroll="false"
+        :esc-to-close="true"
+        :click-to-close="true"
+        :focus-trap="true"
         @opened="opened"
+        @click-outside="$emit('cancel')"
+        @cancel="$emit('cancel')"
     >
         <div class="vui-modal-header">
             <slot name="title"></slot>
@@ -14,18 +21,18 @@
         </div>
 
         <div class="vui-modal-body">
-            <slot></slot>
+            <slot :params="params"></slot>
         </div>
 
         <div class="vui-modal-footer footer">
             <div class="spinner hidden"></div>
 
             <div class="buttons right">
-                <div role="button" class="btn" tabindex="0" @click.prevent="$emit('cancel')">
+                <div role="button" class="btn" tabindex="0" @click.prevent="$emit('cancel', close)">
                     {{ t('vizy', cancelButton) }}
                 </div>
 
-                <div role="button" class="btn submit" @click.prevent="$emit('confirm')">
+                <div role="button" class="btn submit" @click.prevent="$emit('confirm', close)">
                     {{ t('vizy', confirmButton) }}
                 </div>
             </div>
@@ -53,6 +60,31 @@ export default {
     },
 
     emits: ['update:modelValue', 'confirm', 'cancel'],
+
+    mounted() {
+
+
+        // Create keyboard shortcuts
+        this._keyListener = function(e) {
+            const currentModal = this.$vfm.openedModals[0];
+
+            if (!currentModal) {
+                return;
+            }
+
+            if (e.key === 'Escape') {
+                e.preventDefault();
+
+                currentModal.emit('cancel');
+            }
+        };
+
+        document.addEventListener('keydown', this._keyListener.bind(this));
+    },
+
+    beforeUnmount() {
+        document.removeEventListener('keydown', this._keyListener);
+    },
 
     methods: {
         opened() {

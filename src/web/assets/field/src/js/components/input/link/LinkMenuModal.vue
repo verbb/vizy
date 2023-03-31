@@ -1,9 +1,6 @@
 <template>
     <menu-bar-modal
         v-model="proxyShow"
-        attach="body"
-        :esc-to-close="true"
-        :focus-trap="true"
         :confirm-button="$attrs['confirm-button']"
         @confirm="confirmModal"
         @cancel="cancelModal"
