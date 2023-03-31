@@ -134,9 +134,12 @@ export default {
                 return;
             }
 
-            const fieldLayoutData = this.$el.querySelector('input[name="fieldLayout"]').value;
+            this.proxyValue = this.$el.querySelector('input[name="fieldLayout"]').value;
 
-            this.proxyValue = fieldLayoutData;
+            // Serialize again one more time, just in case we've acted too quickly
+            setTimeout(() => {
+                this.proxyValue = this.$el.querySelector('input[name="fieldLayout"]').value;
+            }, 400);
         },
     },
 };
