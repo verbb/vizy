@@ -233,8 +233,8 @@ class VizyField extends Field
             return StringHelper::randomString(10);
         });
 
-        // Because we can recursively nest Vizy fields, this can turn into an infinite loop if we're not careful. At some point
-        // there needs to be an upper limit (which is 10). So ensure we keep a count of how many identical fields we're implementing.
+        // Because we can recursively nest Vizy fields, this can turn into an infinite loop if we're not careful. We limit to 10
+        // nested instances, so ensure we keep a count of how many identical fields we're implementing.
         $this->_recursiveFieldCount = Vizy::$plugin->getCache()->get($this->getCacheKey('recursiveFieldCount'));
         $this->_recursiveFieldCount += 1;
         Vizy::$plugin->getCache()->set($this->getCacheKey('recursiveFieldCount'), $this->_recursiveFieldCount);
