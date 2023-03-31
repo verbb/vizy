@@ -3,9 +3,11 @@
         <svg-icon :content="{ icon, svg }" />
 
         <div v-if="hasDropdown()" class="vui-toolbar-dropdown-container" :class="'vui-toolbar-dropdown-' + name" style="display: none;">
-            <button v-for="(option, i) in options" :key="i" class="vui-toolbar-dropdown" :class="'vui-toolbar-dropdown-item-' + option.name" @click.prevent="runAction(option.action)">
-                {{ option.title }}
-            </button>
+            <div class="vui-toolbar-dropdown-wrap">
+                <button v-for="(option, i) in options" :key="i" class="vui-toolbar-dropdown" :class="'vui-toolbar-dropdown-item-' + option.name" @click.prevent="runAction(option.action)">
+                    {{ option.title }}
+                </button>
+            </div>
         </div>
     </button>
 </template>
@@ -178,6 +180,11 @@ export default {
         cursor: pointer;
         background: rgb(243 245 249);
     }
+}
+
+.vui-toolbar-dropdown-wrap {
+    max-height: 300px;
+    overflow: auto;
 }
 
 .tippy-box[data-theme~="toolbar-dropdown"] {
