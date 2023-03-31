@@ -248,46 +248,55 @@ export default {
                             name: 'paragraph',
                             title: Craft.t('vizy', 'Paragraph'),
                             action: () => { return this.editor.chain().focus().setParagraph().run(); },
+                            isActive: () => { return this.editor.isActive('paragraph'); },
                         },
                         {
                             name: 'code-block',
                             title: Craft.t('vizy', 'Code Block'),
                             action: () => { return this.editor.chain().focus().toggleCodeBlock().run(); },
+                            isActive: () => { return this.editor.isActive('codeBlock'); },
                         },
                         {
                             name: 'blockquote',
                             title: Craft.t('vizy', 'Blockquote'),
                             action: () => { return this.editor.chain().focus().toggleBlockquote().run(); },
+                            isActive: () => { return this.editor.isActive('blockquote'); },
                         },
                         {
                             name: 'h1',
                             title: Craft.t('vizy', 'Heading 1'),
                             action: () => { return this.editor.chain().focus().toggleHeading({ level: 1 }).run(); },
+                            isActive: () => { return this.editor.isActive('heading', { level: 1 }); },
                         },
                         {
                             name: 'h2',
                             title: Craft.t('vizy', 'Heading 2'),
                             action: () => { return this.editor.chain().focus().toggleHeading({ level: 2 }).run(); },
+                            isActive: () => { return this.editor.isActive('heading', { level: 2 }); },
                         },
                         {
                             name: 'h3',
                             title: Craft.t('vizy', 'Heading 3'),
                             action: () => { return this.editor.chain().focus().toggleHeading({ level: 3 }).run(); },
+                            isActive: () => { return this.editor.isActive('heading', { level: 3 }); },
                         },
                         {
                             name: 'h4',
                             title: Craft.t('vizy', 'Heading 4'),
                             action: () => { return this.editor.chain().focus().toggleHeading({ level: 4 }).run(); },
+                            isActive: () => { return this.editor.isActive('heading', { level: 4 }); },
                         },
                         {
                             name: 'h5',
                             title: Craft.t('vizy', 'Heading 5'),
                             action: () => { return this.editor.chain().focus().toggleHeading({ level: 5 }).run(); },
+                            isActive: () => { return this.editor.isActive('heading', { level: 5 }); },
                         },
                         {
                             name: 'h6',
                             title: Craft.t('vizy', 'Heading 6'),
                             action: () => { return this.editor.chain().focus().toggleHeading({ level: 6 }).run(); },
+                            isActive: () => { return this.editor.isActive('heading', { level: 6 }); },
                         },
                     ],
                 },
@@ -295,6 +304,7 @@ export default {
                     name: 'table',
                     svg: 'table',
                     title: Craft.t('vizy', 'Table'),
+                    isActive: () => { return this.editor.isActive('table'); },
                     options: [
                         {
                             name: 'insert-table',

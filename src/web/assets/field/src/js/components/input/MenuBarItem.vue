@@ -4,7 +4,7 @@
 
         <div v-if="hasDropdown()" class="vui-toolbar-dropdown-container" :class="'vui-toolbar-dropdown-' + name" style="display: none;">
             <div class="vui-toolbar-dropdown-wrap">
-                <button v-for="(option, i) in options" :key="i" class="vui-toolbar-dropdown" :class="'vui-toolbar-dropdown-item-' + option.name" @click.prevent="runAction(option.action)">
+                <button v-for="(option, i) in options" :key="i" class="vui-toolbar-dropdown" :class="['vui-toolbar-dropdown-item-' + option.name, { 'active': optionActive(option) }]" @click.prevent="runAction(option.action)">
                     {{ option.title }}
                 </button>
             </div>
@@ -116,6 +116,10 @@ export default {
             return (this.options && this.options.length) ? true : false;
         },
 
+        optionActive(option) {
+            return option.isActive && option.isActive();
+        },
+
         runAction(action) {
             if (this.tippy) {
                 this.tippy.hide();
@@ -176,7 +180,8 @@ export default {
     border-bottom: 1px solid rgba(0, 0, 0, 0.05);
     outline: 0;
 
-    &:hover {
+    &:hover,
+    &.active {
         cursor: pointer;
         background: rgb(243 245 249);
     }
