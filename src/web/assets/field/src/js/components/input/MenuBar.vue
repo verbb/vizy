@@ -216,24 +216,28 @@ export default {
                     icon: 'align-left',
                     title: Craft.t('vizy', 'Align Left'),
                     action: () => { return this.editor.chain().focus().setTextAlign('left').run(); },
+                    isActive: () => { return this.editor.isActive({ textAlign: 'left' }); },
                 },
                 {
                     name: 'align-center',
                     icon: 'align-center',
                     title: Craft.t('vizy', 'Align Center'),
                     action: () => { return this.editor.chain().focus().setTextAlign('center').run(); },
+                    isActive: () => { return this.editor.isActive({ textAlign: 'center' }); },
                 },
                 {
                     name: 'align-right',
                     icon: 'align-right',
                     title: Craft.t('vizy', 'Align Right'),
                     action: () => { return this.editor.chain().focus().setTextAlign('right').run(); },
+                    isActive: () => { return this.editor.isActive({ textAlign: 'right' }); },
                 },
                 {
                     name: 'align-justify',
                     icon: 'align-justify',
                     title: Craft.t('vizy', 'Align Justify'),
                     action: () => { return this.editor.chain().focus().setTextAlign('justify').run(); },
+                    isActive: () => { return this.editor.isActive({ textAlign: 'justify' }); },
                 },
                 {
                     name: 'formatting',
