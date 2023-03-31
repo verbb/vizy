@@ -117,6 +117,23 @@ export default {
         });
     },
 
+    mounted() {
+        // Create keyboard shortcuts
+        this._keyListener = function(e) {
+            if (e.key === 'Escape') {
+                e.preventDefault();
+
+                this.closeDropdown();
+            }
+        };
+
+        document.addEventListener('keydown', this._keyListener.bind(this));
+    },
+
+    beforeUnmount() {
+        document.removeEventListener('keydown', this._keyListener);
+    },
+
     methods: {
         _buildAssetUrl: (assetId, assetUrl, transform) => { return `${assetUrl}#asset:${assetId}:${transform ? `transform:${transform}` : 'url'}`; },
 
@@ -228,6 +245,12 @@ export default {
 
         onMouseDown(e) {
             e.preventDefault();
+        },
+
+        closeDropdown() {
+            if (this.tippy) {
+                this.tippy.hide();
+            }
         },
     },
 };

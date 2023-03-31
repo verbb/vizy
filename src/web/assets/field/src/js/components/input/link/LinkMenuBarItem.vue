@@ -138,12 +138,21 @@ export default {
                     zIndex: 1000,
                     hideOnClick: true,
                     offset: [0, 1],
+                    onShown(instance) {
+                        instance.popper.querySelector('button').focus();
+                    },
                 });
             }
         });
 
         // Create keyboard shortcuts
         this._keyListener = function(e) {
+            if (e.key === 'Escape') {
+                e.preventDefault();
+
+                this.closeDropdown();
+            }
+
             // Only watch events for the currently-focused input
             if (!this.editor.vizyField.isFocused()) {
                 return;
@@ -244,13 +253,21 @@ export default {
         },
 
         unlinkAction() {
-            this.tippy.hide();
+            if (this.tippy) {
+                this.tippy.hide();
+            }
 
             this.editor.chain().focus().unsetLink().run();
         },
 
         onMouseDown(e) {
             e.preventDefault();
+        },
+
+        closeDropdown() {
+            if (this.tippy) {
+                this.tippy.hide();
+            }
         },
     },
 };

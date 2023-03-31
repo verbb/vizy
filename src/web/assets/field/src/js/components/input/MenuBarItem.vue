@@ -105,10 +105,28 @@ export default {
                         zIndex: 1000,
                         hideOnClick: true,
                         offset: [0, 1],
+                        onShown(instance) {
+                            instance.popper.querySelector('button').focus();
+                        },
                     });
                 }
             }
         });
+
+        // Create keyboard shortcuts
+        this._keyListener = function(e) {
+            if (e.key === 'Escape') {
+                e.preventDefault();
+
+                this.closeDropdown();
+            }
+        };
+
+        document.addEventListener('keydown', this._keyListener.bind(this));
+    },
+
+    beforeUnmount() {
+        document.removeEventListener('keydown', this._keyListener);
     },
 
     methods: {
@@ -132,6 +150,12 @@ export default {
 
         onMouseDown(e) {
             e.preventDefault();
+        },
+
+        closeDropdown() {
+            if (this.tippy) {
+                this.tippy.hide();
+            }
         },
     },
 };
