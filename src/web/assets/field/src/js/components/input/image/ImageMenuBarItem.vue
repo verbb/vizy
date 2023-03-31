@@ -107,6 +107,10 @@ export default {
         allowAllUploaders() {
             return this.field.settings.allowAllUploaders;
         },
+
+        defaultSource() {
+            return this.field.settings.defaultSource;
+        },
     },
 
     created() {
@@ -168,6 +172,7 @@ export default {
                 storageKey: 'VizyInput.ChooseImage',
                 multiSelect: true,
                 sources: this.volumes,
+                defaultSource: this.defaultSource ?? null,
                 criteria,
                 onSelect: function(assets, transform) {
                     if (assets.length) {

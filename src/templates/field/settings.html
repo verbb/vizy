@@ -149,6 +149,34 @@
 <a class="fieldtoggle" data-target="asset-settings">{{ 'Asset Settings' | t('vizy') }}</a>
 
 <div id="asset-settings" class="hidden">
+    {% macro uploadLocationField(config) %}
+        {% embed '_includes/forms/field.twig' with config %}
+            {% block input %}
+                {% import '_includes/forms.twig' as forms %}
+
+                <div class="flex flex-nowrap">
+                    <div>
+                        {{ forms.select({
+                            name: "#{config.name}Source",
+                            options: config.sourceOptions,
+                            value: config.sourceValue,
+                            describedBy: describedBy,
+                        }) }}
+                    </div>
+                </div>
+            {% endblock %}
+        {% endembed %}
+    {% endmacro %}
+
+    {{ _self.uploadLocationField({
+        label: 'Default Upload Location' | t('app'),
+        instructions: 'Where assets should be stored when they are uploaded directly to the field.' | t('app'),
+        name: 'defaultUploadLocation',
+        sourceOptions: sourceOptions,
+        sourceValue: field.defaultUploadLocationSource,
+        errors: field.getErrors('defaultUploadLocationSubpath'),
+    }) }}
+
     {{ forms.checkboxField({
         label: 'Show unpermitted volumes' | t('app'),
         instructions: 'Whether to show volumes that the user doesn’t have permission to view.' | t('app'),

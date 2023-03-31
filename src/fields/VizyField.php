@@ -83,6 +83,7 @@ class VizyField extends Field
     public bool $showUnpermittedVolumes = false;
     public bool $showUnpermittedFiles = false;
     public string $defaultTransform = '';
+    public ?string $defaultUploadLocationSource = null;
     public bool $trimEmptyParagraphs = true;
     public bool $pasteAsPlainText = false;
     public int $initialRows = 7;
@@ -202,6 +203,7 @@ class VizyField extends Field
             ],
             'vizyConfigOptions' => $this->_getCustomConfigOptions('vizy'),
             'volumeOptions' => $volumeOptions,
+            'sourceOptions' => $this->_getSourceOptions(),
             'transformOptions' => $transformOptions,
             'defaultTransformOptions' => [
                 ...[
@@ -221,12 +223,6 @@ class VizyField extends Field
 
         $site = ($element ? $element->getSite() : Craft::$app->getSites()->getCurrentSite());
 
-        $defaultTransform = '';
-
-        if (!empty($this->defaultTransform) && $transform = Craft::$app->getImageTransforms()->getTransformByUid($this->defaultTransform)) {
-            $defaultTransform = $transform->handle;
-        }
-
         // Cache the placeholder key for the fields' JS. Because we're caching the block type HTML/JS
         // we also need to cache the placeholder key to match that cached data.
         $placeholderKey = Vizy::$plugin->getCache()->getOrSet($this->getCacheKey('placeholderKey'), function() {
@@ -245,7 +241,6 @@ class VizyField extends Field
             'blocks' => $this->_getBlocksForInput($value, $placeholderKey, $element),
             'blockGroups' => $this->_getBlockGroupsForInput($placeholderKey, $element),
             'vizyConfig' => $this->_getVizyConfig(),
-            'defaultTransform' => $defaultTransform,
             'elementSiteId' => $site->id,
             'showAllUploaders' => $this->showUnpermittedFiles,
             'placeholderKey' => $placeholderKey,
@@ -258,6 +253,13 @@ class VizyField extends Field
             'blockTypeBehaviour' => $this->blockTypeBehaviour,
             'editorMode' => $this->editorMode,
         ];
+
+        // Set Asset setting
+        if (!empty($this->defaultTransform) && $transform = Craft::$app->getImageTransforms()->getTransformByUid($this->defaultTransform)) {
+            $settings['defaultTransform'] = $transform->handle;
+        }
+
+        $settings['defaultSource'] = $this->defaultUploadLocationSource;
 
         foreach ($this->getBlockTypes() as $blockType) {
             if ($blockType->minBlocks) {
@@ -1143,5 +1145,21 @@ class VizyField extends Field
         }
 
         return $this->_transforms = $transformList;
+    }
+
+    private function _getSourceOptions(): array
+    {
+        $sourceOptions = [];
+
+        foreach (Asset::sources('settings') as $volume) {
+            if (!isset($volume['heading'])) {
+                $sourceOptions[] = [
+                    'label' => $volume['label'],
+                    'value' => $volume['key'],
+                ];
+            }
+        }
+
+        return $sourceOptions;
     }
 }
