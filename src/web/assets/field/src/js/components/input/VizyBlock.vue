@@ -460,9 +460,34 @@ export default {
             return foundContent;
         },
 
+        fixArrayIndexes(obj) {
+            if (Array.isArray(obj)) {
+                // Check if the array has any missing indexes
+                const indexes = Object.keys(obj).map(Number).sort();
+                const expectedIndexes = Array.from({ length: obj.length }, (_, i) => { return i; });
+                const hasMissingIndexes = !expectedIndexes.every((i) => { return indexes.includes(i); });
+
+                // If the array has missing indexes, re-index it
+                if (hasMissingIndexes) {
+                    obj = obj.filter((item) => { return item !== undefined; });
+                }
+            } else if (typeof obj === 'object' && obj !== null) {
+                // Recursively check any nested objects or arrays
+                for (const key in obj) {
+                    obj[key] = this.fixArrayIndexes(obj[key]);
+                }
+            }
+            return obj;
+        },
+
         serializeFieldContent() {
-            var postData = Garnish.getPostData(this.$refs.fields.$el);
-            var content = Craft.expandPostArray(postData);
+            const postData = Garnish.getPostData(this.$refs.fields.$el);
+            let content = Craft.expandPostArray(postData);
+
+            // Fix Craft's lack of handling for expanding a POST array where arrays contain null items.
+            // This causes issues with Table fields when deleting rows.
+            content = this.fixArrayIndexes(content);
+
             var fieldContent = this.findContentBlocksForBlock(content);
 
             // Generate a POST data object, and save it
