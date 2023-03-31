@@ -321,7 +321,8 @@ export default {
                 // Core Extensions
                 Document,
                 Dropcursor.configure({
-                    class: 'vui-dropcursor',
+                    color: '#3778eb',
+                    width: 2,
                 }),
                 Gapcursor,
                 HardBreak,

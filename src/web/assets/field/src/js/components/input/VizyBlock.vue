@@ -9,73 +9,75 @@
         @paste.stop
         @cut.stop
     >
-        <div class="vizyblock-header">
-            <div class="titlebar">
-                <div class="blocktype"><span v-if="$isDebug">{{ uid }} {{ node.attrs.id }} </span>{{ blockType.name }}</div>
+        <div class="vizyblock-wrap">
+            <div class="vizyblock-header">
+                <div class="titlebar">
+                    <div class="blocktype"><span v-if="$isDebug">{{ uid }} {{ node.attrs.id }} </span>{{ blockType.name }}</div>
 
-                <div v-if="collapsed" class="preview" v-html="preview"></div>
+                    <div v-if="collapsed" class="preview" v-html="preview"></div>
+                </div>
+
+                <div class="actions-tabs">
+                    <div v-if="Object.keys(tabs).length > 1" class="titlebar-tabs">
+                        <a v-for="(tab, index) in tabs" :key="index" class="tab" :class="{ 'active': index === activeTab }" @click.prevent="clickTab(index)">
+                            {{ tab.label }}
+                        </a>
+                    </div>
+
+                    <div class="actions">
+                        <lightswitch-field v-model="enabled" :extra-small="true" />
+
+                        <a
+                            class="settings icon"
+                            :title="t('vizy', 'Actions')"
+                            :aria-title="t('vizy', 'Actions')"
+                            role="button"
+                            tabindex="0"
+                            aria-haspopup="listbox"
+                            aria-expanded="false"
+                        ></a>
+                        <a
+                            class="move icon"
+                            :title="t('vizy', 'Reorder')"
+                            :aria-title="t('vizy', 'Reorder')"
+                            data-drag-handle
+                            role="button"
+                            @mousedown="clickMove"
+                        ></a>
+                    </div>
+
+                    <div id="vizy-block-settings-template" class="vizy-menu" style="display: none;">
+                        <ul class="padded" role="listbox" aria-hidden="true">
+                            <li v-if="collapsed">
+                                <a data-icon="expand" role="option" tabindex="-1" @click.prevent="expandBlock">{{ t('vizy', 'Expand') }}</a>
+                            </li>
+
+                            <li v-else>
+                                <a data-icon="collapse" role="option" tabindex="-1" @click.prevent="collapseBlock">{{ t('vizy', 'Collapse') }}</a>
+                            </li>
+
+                            <li v-if="canCollapseAll">
+                                <a data-icon="collapse" role="option" tabindex="-1" @click.prevent="collapseAll">{{ t('vizy', 'Collapse All') }}</a>
+                            </li>
+
+                            <li v-if="canExpandAll">
+                                <a data-icon="expand" role="option" tabindex="-1" @click.prevent="expandAll">{{ t('vizy', 'Expand All') }}</a>
+                            </li>
+
+                            <hr>
+
+                            <li>
+                                <a class="error" data-icon="remove" role="option" tabindex="-1" @click.prevent="deleteBlock">{{ t('vizy', 'Delete') }}</a>
+                            </li>
+                        </ul>
+                    </div>
+                </div>
             </div>
 
-            <div class="actions-tabs">
-                <div v-if="Object.keys(tabs).length > 1" class="titlebar-tabs">
-                    <a v-for="(tab, index) in tabs" :key="index" class="tab" :class="{ 'active': index === activeTab }" @click.prevent="clickTab(index)">
-                        {{ tab.label }}
-                    </a>
-                </div>
-
-                <div class="actions">
-                    <lightswitch-field v-model="enabled" :extra-small="true" />
-
-                    <a
-                        class="settings icon"
-                        :title="t('vizy', 'Actions')"
-                        :aria-title="t('vizy', 'Actions')"
-                        role="button"
-                        tabindex="0"
-                        aria-haspopup="listbox"
-                        aria-expanded="false"
-                    ></a>
-                    <a
-                        class="move icon"
-                        :title="t('vizy', 'Reorder')"
-                        :aria-title="t('vizy', 'Reorder')"
-                        data-drag-handle
-                        role="button"
-                        @mousedown="clickMove"
-                    ></a>
-                </div>
-
-                <div id="vizy-block-settings-template" class="vizy-menu" style="display: none;">
-                    <ul class="padded" role="listbox" aria-hidden="true">
-                        <li v-if="collapsed">
-                            <a data-icon="expand" role="option" tabindex="-1" @click.prevent="expandBlock">{{ t('vizy', 'Expand') }}</a>
-                        </li>
-
-                        <li v-else>
-                            <a data-icon="collapse" role="option" tabindex="-1" @click.prevent="collapseBlock">{{ t('vizy', 'Collapse') }}</a>
-                        </li>
-
-                        <li v-if="canCollapseAll">
-                            <a data-icon="collapse" role="option" tabindex="-1" @click.prevent="collapseAll">{{ t('vizy', 'Collapse All') }}</a>
-                        </li>
-
-                        <li v-if="canExpandAll">
-                            <a data-icon="expand" role="option" tabindex="-1" @click.prevent="expandAll">{{ t('vizy', 'Expand All') }}</a>
-                        </li>
-
-                        <hr>
-
-                        <li>
-                            <a class="error" data-icon="remove" role="option" tabindex="-1" @click.prevent="deleteBlock">{{ t('vizy', 'Delete') }}</a>
-                        </li>
-                    </ul>
-                </div>
-            </div>
+            <slide-up-down :active="!collapsed" :duration="300">
+                <vizy-block-fields v-if="fieldsHtml" ref="fields" :key="updateFieldsHtml" class="vizyblock-fields" :template="fieldsHtml" @update="onFieldUpdate" />
+            </slide-up-down>
         </div>
-
-        <slide-up-down :active="!collapsed" :duration="300">
-            <vizy-block-fields v-if="fieldsHtml" ref="fields" :key="updateFieldsHtml" class="vizyblock-fields" :template="fieldsHtml" @update="onFieldUpdate" />
-        </slide-up-down>
     </node-view-wrapper>
 </template>
 
@@ -607,8 +609,12 @@ export default {
 <style lang="scss">
 
 .vizyblock {
+    // Splitting the outer wrapper and inner visual styles provides better support for dropcursor
+    padding: 10px 0;
+}
+
+.vizyblock-wrap {
     position: relative;
-    margin: 10px 0;
     padding: 0 12px 12px;
     border-radius: 5px;
     outline: none;
@@ -624,13 +630,6 @@ export default {
     .vizy-static & {
         padding-top: 12px;
     }
-}
-
-// Provide a bigger gap for two Vizy blocks directly after one another
-// and be sure to check if the gapcursor has been inserted, as that's the same behavior
-.vizyblock + .vizyblock,
-.vizyblock + .ProseMirror-gapcursor + .vizyblock {
-    margin-top: 20px;
 }
 
 .vizyblock-header {
@@ -847,11 +846,6 @@ export default {
     ul.padded li a.sel.error:before {
         color: #CF1124;
     }
-}
-
-.vui-dropcursor {
-    outline: #3778eb 1px solid;
-    margin-top: -3px;
 }
 
 .vui-block-ghost {
