@@ -19,6 +19,7 @@ export default {
         options.editor.vizyField.settings.blockGroups.forEach((blockGroup) => {
             blockGroup.blockTypes.forEach((blockType) => {
                 items.push({
+                    name: blockType.handle,
                     svg: blockType.icon.svg,
                     title: blockType.name,
                     command: ({ editor, range }) => {

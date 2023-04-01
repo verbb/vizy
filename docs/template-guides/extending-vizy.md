@@ -199,6 +199,7 @@ The Command Palette in Vizy allows you to quickly pick from common nodes, includ
 ```js
 Craft.Vizy.Config.registerCommands((commands) => {
     return [{
+        name: 'bold',
         svg: '<svg ... />',
         title: Craft.t('vizy', 'Bold'),
         commandInfo: { shortcut: 'Mod-b' },
@@ -211,6 +212,7 @@ Craft.Vizy.Config.registerCommands((commands) => {
 
 Property | Description
 --- | ---
+`name` | The name for the command.
 `svg` | The SVG as a string for the icon.
 `title` | The title for the command.
 `command` | A function that returns the command to run when the command is clicked.

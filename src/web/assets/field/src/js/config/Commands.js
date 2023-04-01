@@ -1,5 +1,6 @@
 export default [
     {
+        name: 'h1',
         svg: 'h1',
         title: Craft.t('vizy', 'Heading 1'),
         commandInfo: { shortcut: 'Mod-Alt-1' },
@@ -8,6 +9,7 @@ export default [
         },
     },
     {
+        name: 'h2',
         svg: 'h2',
         title: Craft.t('vizy', 'Heading 2'),
         commandInfo: { shortcut: 'Mod-Alt-2' },
@@ -16,6 +18,7 @@ export default [
         },
     },
     {
+        name: 'h3',
         svg: 'h3',
         title: Craft.t('vizy', 'Heading 3'),
         commandInfo: { shortcut: 'Mod-Alt-3' },
@@ -24,6 +27,7 @@ export default [
         },
     },
     {
+        name: 'unordered-list',
         svg: 'list-ul',
         title: Craft.t('vizy', 'Bullet List'),
         commandInfo: { shortcut: 'Mod-Shift-8' },
@@ -32,6 +36,7 @@ export default [
         },
     },
     {
+        name: 'ordered-list',
         svg: 'list-ol',
         title: Craft.t('vizy', 'Ordered List'),
         commandInfo: { shortcut: 'Mod-Shift-7' },
@@ -40,6 +45,7 @@ export default [
         },
     },
     {
+        name: 'media-embed',
         svg: 'photo-film',
         title: Craft.t('vizy', 'Media Embed'),
         command: ({ editor, range }) => {
@@ -49,6 +55,7 @@ export default [
         },
     },
     {
+        name: 'link',
         svg: 'link',
         title: Craft.t('vizy', 'Link'),
         command: ({ editor, range }) => {
@@ -58,6 +65,7 @@ export default [
         },
     },
     {
+        name: 'image',
         icon: 'image',
         title: Craft.t('vizy', 'Image'),
         command: ({ editor, range }) => {
@@ -67,6 +75,7 @@ export default [
         },
     },
     {
+        name: 'code-block',
         svg: 'code',
         title: Craft.t('vizy', 'Code Block'),
         commandInfo: { shortcut: 'Mod-Alt-c' },
@@ -75,6 +84,7 @@ export default [
         },
     },
     {
+        name: 'blockquote',
         svg: 'quote-right',
         title: Craft.t('vizy', 'Blockquote'),
         commandInfo: { shortcut: 'Mod-Shift-b' },
@@ -83,6 +93,7 @@ export default [
         },
     },
     {
+        name: 'hr',
         svg: 'horizontal-rule',
         title: Craft.t('vizy', 'Horizontal Rule'),
         command: ({ editor, range }) => {
