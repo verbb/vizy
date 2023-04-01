@@ -38,6 +38,13 @@ class Paragraph extends Node
 
         // Check if we're to exclude empty nodes
         if ($this->getField()->trimEmptyParagraphs) {
+            // Does this have a nested node/mark?
+            $type = $value['content'][0]['type'] ?? null;
+
+            if ($type) {
+                return $value;
+            }
+
             $text = $value['content'][0]['text'] ?? '';
             $text = StringHelper::trim($text);
 
