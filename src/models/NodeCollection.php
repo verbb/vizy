@@ -66,6 +66,7 @@ class NodeCollection extends Markup
 
         // Prepare node/mark classes for the collection
         $this->nodes = $this->_populateNodes($nodes);
+        $this->nodes = self::_normalizeNodes($this->getNodes(), $this->element);
 
         parent::__construct(null, null);
     }
@@ -101,10 +102,14 @@ class NodeCollection extends Markup
 
     public function getRawNodes(): array
     {
-        // Ensure that we give our nodes a chance to normalize values, even if they're "raw".
-        // This is because we don't always want the actual raw content from the database.
-        // For example, storing links via ref, or emoji's via shortcode.
-        return self::_normalizeNodes($this->getNodes(), $this->element);
+        // We want to fetch the raw node data after it's been normalized
+        $nodes = [];
+
+        foreach ($this->getNodes() as $node) {
+            $nodes[] = $node->rawNode;
+        }
+
+        return $nodes;
     }
 
     public function renderHtml($config = []): ?Markup
@@ -202,10 +207,20 @@ class NodeCollection extends Markup
         $values = [];
 
         foreach ($nodes as $nodeKey => $node) {
-            $value = $node->normalizeValue($element);
-            $value['content'] = self::_normalizeNodes($node->getContent(), $element);
+            $node->rawNode = $node->normalizeValue($element);
+            $node->attrs = $node->rawNode['attrs'] ?? [];
+            $content = self::_normalizeNodes($node->getContent(), $element);
 
-            $values[] = $value;
+            if ($content) {
+                $node->content = $content;
+
+                // A tad annoying, we have to go back and update the rawNode data from the converted content
+                foreach ($content as $contentKey => $c) {
+                    $node->rawNode['content'][$contentKey] = $c->rawNode;
+                }
+            }
+
+            $values[] = $node;
         }
 
         return $values;
@@ -217,7 +232,11 @@ class NodeCollection extends Markup
 
         foreach ($nodes as $nodeKey => $node) {
             $value = $node->serializeValue($element);
-            $value['content'] = self::_serializeNodes($node->getContent(), $element);
+            $content = self::_serializeNodes($node->getContent(), $element);
+
+            if ($content) {
+                $value['content'] = $content;
+            }
 
             $values[] = $value;
         }
