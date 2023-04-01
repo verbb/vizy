@@ -109,13 +109,14 @@ class Nodes
             // nodes like VizyBlocks, which could mess things up as fields control their content.
             $text = $block['text'] ?? '';
 
-            // Serialize any emoji's
-            $text = LitEmoji::unicodeToShortcode($text);
-
             // Escape any HTML tags used in the text. Maybe we're writing HTML in text?
             // But don't encode quotes, things like `&quot;` are invalid in JSON
+            // Important to do this before emoji processing, as that'll replace `«`, etc characters
             $text = StringHelper::htmlDecode($text);
             $text = StringHelper::htmlEncode($text, ENT_NOQUOTES);
+
+            // Serialize any emoji's
+            $text = LitEmoji::unicodeToShortcode($text);
 
             $rawNode['content'][$key]['text'] = $text;
 
