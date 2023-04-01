@@ -156,8 +156,10 @@ class NodeCollection extends Markup
     {
         $values = [];
 
-        foreach ($this->getNodes() as $nodeKey => $node) {
-            $rawNode = $node->serializeValue($element);
+        // Ensure that we serialize nodes recursively
+        $rawNodes = self::_serializeNodes($this->getNodes(), $element);
+
+        foreach ($rawNodes as $nodeKey => $rawNode) {
             $rawNodeType = $rawNode['type'] ?? null;
 
             // Extra check if we are in blocks-only mode
@@ -190,6 +192,19 @@ class NodeCollection extends Markup
 
         // Are _all_ the results the same?
         return (bool)array_product($results);
+    }
+    private static function _serializeNodes(array $nodes, ElementInterface $element = null): array
+    {
+        $values = [];
+
+        foreach ($nodes as $nodeKey => $node) {
+            $value = $node->serializeValue($element);
+            $value['content'] = self::_serializeNodes($node->getContent(), $element);
+
+            $values[] = $value;
+        }
+
+        return $values;
     }
 
     private function _populateNodes($nodes): array
