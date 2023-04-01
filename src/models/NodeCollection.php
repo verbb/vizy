@@ -222,6 +222,11 @@ class NodeCollection extends Markup
                 }
             }
 
+            // Escape hatch if some went really wrong with the node
+            if (!isset($node['type'])) {
+                continue;
+            }
+
             if ($class = ($this->_registeredNodesByType[$node['type']] ?? null)) {
                 unset($node['type']);
 
