@@ -80,7 +80,7 @@ export default {
 
     computed: {
         active() {
-            return this.isActive && this.isActive();
+            return this.isActive && this.isActive(this.editor);
         },
     },
 
@@ -135,7 +135,7 @@ export default {
         },
 
         optionActive(option) {
-            return option.isActive && option.isActive();
+            return option.isActive && option.isActive(this.editor);
         },
 
         runAction(action) {
@@ -144,7 +144,7 @@ export default {
             }
 
             if (action) {
-                action();
+                action(this.editor);
             }
         },
 
@@ -203,6 +203,12 @@ export default {
     white-space: nowrap;
     border-bottom: 1px solid rgba(0, 0, 0, 0.05);
     outline: 0;
+
+    --inner-focus-ring: inset 0 0 0 1px hsl(var(--dark-focus-hsl)),inset 0 0 0 1px hsla(var(--dark-focus-hsl),0.7);
+
+    &:focus {
+        box-shadow: var(--inner-focus-ring);
+    }
 
     &:hover,
     &.active {

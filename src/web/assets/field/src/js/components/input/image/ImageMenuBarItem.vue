@@ -85,7 +85,7 @@ export default {
 
     computed: {
         active() {
-            return this.isActive && this.isActive();
+            return this.isActive && this.isActive(this.editor);
         },
 
         volumes() {

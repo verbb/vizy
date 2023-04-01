@@ -336,45 +336,7 @@ export default {
                 // Focus.configure({ className: 'has-focus', mode: 'deepest' }),
             ];
 
-            const richText = [
-                // Optional Marks
-                Bold,
-                Code,
-                Highlight,
-                Italic,
-                Strike,
-                Subscript,
-                Superscript,
-                Underline,
-
-                // Optional Nodes
-                Blockquote,
-                BulletList,
-                CodeBlock,
-                Heading.configure({ levels: [1, 2, 3, 4, 5, 6] }),
-                HorizontalRule,
-                ListItem,
-                OrderedList,
-                Table.configure({
-                    resizable: true,
-                }),
-                TableRow,
-                TableHeader,
-                TableCell,
-
-                // Optional Extensions
-                History,
-                TextAlign.configure({
-                    types: ['heading', 'paragraph'],
-                    defaultAlignment: 'start',
-                }),
-
-                // Optional Custom
-                Link.configure({ openOnClick: false }),
-                Image,
-                Iframe,
-                MediaEmbed,
-            ];
+            const richText = Craft.Vizy.Config.getExtensions();
 
             const blocks = [
                 // Despite block-only, we include Paragraph, as ProseMirror requires _something_

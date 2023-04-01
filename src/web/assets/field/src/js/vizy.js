@@ -16,8 +16,18 @@ if (typeof Craft.Vizy === typeof undefined) {
 
 import { createVueApp } from './config';
 
+import VizyConfig from './VizyConfig.js';
 import VizyInput from './components/VizyInput.vue';
 import VizySettings from './components/VizySettings.vue';
+
+// Register a config object to act as an API layer to register buttons, extensions, etc.
+// Should be done before the Vue app is registered to ensure extensions are available.
+Craft.Vizy.Config = new VizyConfig();
+
+// Fire an event so plugins can reliably hook in
+document.dispatchEvent(new CustomEvent('onVizyConfigReady', {
+    bubbles: true,
+}));
 
 Craft.Vizy.Input = Garnish.Base.extend({
     init(idPrefix) {
@@ -52,6 +62,7 @@ Craft.Vizy.Settings = Garnish.Base.extend({
         app.mount(`.${idPrefix}-vizy-configurator`);
     },
 });
+
 
 // Re-broadcast the custom `vite-script-loaded` event so that we know that this module has loaded
 // Needed because when <script> tags are appended to the DOM, the `onload` handlers

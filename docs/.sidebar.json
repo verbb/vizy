@@ -25,7 +25,8 @@
             "template-guides/modify-nodes",
             "template-guides/querying-nodes",
             "template-guides/modular-templates",
-            "template-guides/block-type-templates"
+            "template-guides/block-type-templates",
+            "template-guides/extending-vizy"
         ]
     },
     {

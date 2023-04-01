@@ -103,8 +103,8 @@ export default {
 
     computed: {
         getSvg() {
-            if (this.content.rawSvg) {
-                return this.content.rawSvg;
+            if (this.content.svg && this.content.svg.startsWith('<svg')) {
+                return this.content.svg;
             }
 
             if (this.content.svg && this.defaultSvgs[this.content.svg]) {

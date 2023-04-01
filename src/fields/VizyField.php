@@ -2,9 +2,11 @@
 namespace verbb\vizy\fields;
 
 use verbb\vizy\Vizy;
+use verbb\vizy\base\PluginInterface;
 use verbb\vizy\elements\Block as BlockElement;
 use verbb\vizy\events\ModifyVizyConfigEvent;
 use verbb\vizy\events\RegisterLinkOptionsEvent;
+use verbb\vizy\events\RegisterPluginEvent;
 use verbb\vizy\gql\types\NodeCollectionType;
 use verbb\vizy\helpers\Plugin;
 use verbb\vizy\models\BlockType;
@@ -32,6 +34,8 @@ use craft\models\Section;
 use craft\validators\ArrayValidator;
 use craft\web\twig\variables\Cp;
 
+use yii\base\Event;
+use yii\base\InvalidConfigException;
 use yii\db\Schema;
 
 use Throwable;
@@ -48,6 +52,7 @@ class VizyField extends Field
     public const EVENT_DEFINE_VIZY_CONFIG = 'defineVizyConfig';
     public const EVENT_MODIFY_PURIFIER_CONFIG = 'modifyPurifierConfig';
     public const EVENT_REGISTER_LINK_OPTIONS = 'registerLinkOptions';
+    public const EVENT_REGISTER_PLUGINS = 'registerPlugins';
 
     public const PICKER_BEHAVIOUR_CLICK = 'click';
     public const PICKER_BEHAVIOUR_HOVER = 'hover';
@@ -68,6 +73,26 @@ class VizyField extends Field
     public static function valueType(): string
     {
         return 'string|null';
+    }
+
+    public static function registerPlugin(string $pluginKey): void
+    {
+        if (isset(self::$_registeredPlugins[$pluginKey])) {
+            return;
+        }
+
+        $event = new RegisterPluginEvent([
+            'plugins' => [],
+        ]);
+        Event::trigger(self::class, self::EVENT_REGISTER_PLUGINS, $event);
+
+        foreach ($event->plugins as $plugin) {
+            if (($plugin instanceof PluginInterface) && $pluginKey === $plugin->handle) {
+                Craft::$app->getView()->registerAssetBundle($plugin->assetBundle);
+
+                self::$_registeredPlugins[$pluginKey] = true;
+            }
+        }
     }
 
 
@@ -92,6 +117,8 @@ class VizyField extends Field
     public string $blockTypeBehaviour = self::PICKER_BEHAVIOUR_CLICK;
     public string $editorMode = self::MODE_COMBINED;
     public string $columnType = Schema::TYPE_TEXT;
+
+    private static array $_registeredPlugins = [];
 
     private ?array $_blockTypesById = [];
     private ?array $_linkOptions = null;
@@ -301,6 +328,10 @@ class VizyField extends Field
             $settings['isRoot'] = false;
         }
 
+        // Register any third-party plugins
+        if (isset($settings['vizyConfig']['plugins'])) {
+            foreach ($settings['vizyConfig']['plugins'] as $pluginKey) {
+                static::registerPlugin($pluginKey);
             }
         }
 
