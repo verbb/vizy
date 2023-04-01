@@ -101,7 +101,10 @@ class NodeCollection extends Markup
 
     public function getRawNodes(): array
     {
-        return $this->rawNodes;
+        // Ensure that we give our nodes a chance to normalize values, even if they're "raw".
+        // This is because we don't always want the actual raw content from the database.
+        // For example, storing links via ref, or emoji's via shortcode.
+        return self::_normalizeNodes($this->getNodes(), $this->element);
     }
 
     public function renderHtml($config = []): ?Markup
@@ -176,10 +179,6 @@ class NodeCollection extends Markup
         return array_values(array_filter($values));
     }
 
-
-    // Private Methods
-    // =========================================================================
-
     public function isEmpty(): bool
     {
         // Don't rely on `renderHtml()` as this is trigger on-load in the CP when editing a field,
@@ -193,6 +192,25 @@ class NodeCollection extends Markup
         // Are _all_ the results the same?
         return (bool)array_product($results);
     }
+    
+
+    // Private Methods
+    // =========================================================================
+
+    private static function _normalizeNodes(array $nodes, ElementInterface $element = null): array
+    {
+        $values = [];
+
+        foreach ($nodes as $nodeKey => $node) {
+            $value = $node->normalizeValue($element);
+            $value['content'] = self::_normalizeNodes($node->getContent(), $element);
+
+            $values[] = $value;
+        }
+
+        return $values;
+    }
+
     private static function _serializeNodes(array $nodes, ElementInterface $element = null): array
     {
         $values = [];

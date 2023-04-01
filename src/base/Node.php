@@ -203,6 +203,11 @@ class Node extends Component implements NodeInterface
         return $this->rawNode;
     }
 
+    public function normalizeValue(?ElementInterface $element = null): ?array
+    {
+        return $this->rawNode;
+    }
+
 
     // Public Methods
     // =========================================================================
