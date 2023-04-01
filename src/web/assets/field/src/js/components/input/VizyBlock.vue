@@ -281,7 +281,9 @@ export default {
         // Listen to an even raised (when moving a block) to serialize the DOM content of this block.
         // This is because Vue will re-render all blocks from scratch, and we'll loose our block content.
         // So save it before we re-render, after which, it'll render the saved HTML on-render.
-        this.$events.on('vizy-blocks:updateDOM', this.onUpdateDOM);
+        this.$nextTick(() => {
+            this.$events.on('vizy-blocks:updateDOM', this.onUpdateDOM);
+        });
 
         // Set the HTML for the block's fields
         this.fieldsHtml = this.vizyField.getCachedFieldHtml(this.node.attrs.id);
@@ -322,6 +324,12 @@ export default {
     },
 
     beforeUnmount() {
+        // If we insert a new node before this Vizy node, it'll cause a re-render. But due to how
+        // Tiptap works, it will wipe out all non-saved content. Because we're not fully data-driven
+        // in our components, we need to cache the HTML now, before the component gets re-rendered as a
+        // new Vue component instance. Test this by adding a Vizy block, then a paragraph directly before
+        this.onUpdateDOM();
+
         // Destroy event listeners for this block
         this.$events.off('vizy-blocks:updateDOM', this.onUpdateDOM);
     },
@@ -332,29 +340,28 @@ export default {
         },
 
         onUpdateDOM() {
-            this.$nextTick(() => {
-                if (this.$refs.fields) {
-                    const $fieldsHtml = $(this.$refs.fields.$el.childNodes).clone();
+            if (this.$refs.fields) {
+                const $fieldsHtml = $(this.$refs.fields.$el.childNodes).clone();
 
-                    // Special-case for Redactor. We need to reset it to its un-initialized form
-                    // because it doesn't have better double-binding checks.
-                    if ($fieldsHtml.find('.redactor-box').length) {
-                        // Rip out the `textarea` which is all we need
-                        const $textarea = $fieldsHtml.find('.redactor-box textarea').htmlize();
-                        $fieldsHtml.find('.redactor-box').replaceWith($textarea);
-                    }
-
-                    const fieldsHtml = $fieldsHtml.htmlize();
-
-                    this.vizyField.setCachedFieldHtml(this.node.attrs.id, fieldsHtml);
+                // Special-case for Redactor. We need to reset it to its un-initialized form
+                // because it doesn't have better double-binding checks.
+                if ($fieldsHtml.find('.redactor-box').length) {
+                    // Rip out the `textarea` which is all we need
+                    const $textarea = $fieldsHtml.find('.redactor-box textarea').htmlize();
+                    $fieldsHtml.find('.redactor-box').replaceWith($textarea);
                 }
-            });
+
+                const fieldsHtml = $fieldsHtml.htmlize();
+
+                this.vizyField.setCachedFieldHtml(this.node.attrs.id, fieldsHtml);
+            }
         },
 
         clickTab(index) {
             this.activeTab = index;
 
-            const $tabs = this.$refs.fields.$el.querySelectorAll('.vizyblock-fields > div');
+            // Only select immediate children of `.vizyblock-fields` to not affect nested Vizy fields
+            const $tabs = this.$refs.fields.$el.querySelectorAll(':scope > div');
 
             $tabs.forEach(($tab) => {
                 if ($tab.getAttribute('id').includes(this.activeTab)) {
@@ -425,8 +432,8 @@ export default {
             let foundContent = {};
 
             if (!isEmpty(content)) {
-                // Special-handling when in the element slideout
-                const slideout = document.querySelector('.slideout[data-element-editor] .so-body');
+                // Special-handling when this field is in the element slideout
+                const slideout = this.$el.closest('.slideout.element-editor .ee-body');
 
                 if (slideout) {
                     // eslint-disable-next-line
@@ -439,7 +446,12 @@ export default {
                             Object.entries(fieldBlocks.blocks).forEach(([blockId, blockFields]) => {
                                 if (blockId === this.node.attrs.id) {
                                     foundContent = blockFields;
-                                } else {
+                                } else if (isEmpty(foundContent)) {
+                                    // Because we recurively iterate down many children to find the _first_
+                                    // instance where our block data exists, we want to check if it's already set.
+                                    // It's more critical for nested Vizy fields which have the serialized content
+                                    // and the POST content from fields (which we don't want). Otherwise, we just
+                                    // end up overwriting the data we want!
                                     foundContent = this.findContentBlocksForBlock(blockFields);
                                 }
                             });
@@ -616,6 +628,8 @@ export default {
     > :not(h2):not(hr):last-child {
         margin-left: 0 !important;
         margin-right: 0 !important;
+        padding-left: 0 !important;
+        padding-right: 0 !important;
         width: 100% !important;
 
         @media only screen and (min-width: 1536px) {

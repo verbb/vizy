@@ -1,5 +1,86 @@
 # Changelog
 
+## 2.0.12 - 2023-02-27
+
+### Fixed
+- Fix an error when querying Vizy blocks with GraphQL.
+
+## 2.0.11 - 2023-02-21
+
+### Added
+- Add support for Preparse plugin.
+- Add content service to handle updating Vizy field content (mostly for [Hyper](https://github.com/verbb/hyper).
+- Add `$_type` and `$_field` to Block. (thanks @leevigraham).
+- Add the ability to set the initial number of rows for a field, to control its initial height.
+
+### Changed
+- Change Vizy field data to be stored in `vizyData` to prevent collisions with inner fields (which are not needed but can override Vizy serialized content).
+- Only admins are now allowed to access plugin settings.
+- `text` for nodes is now automatically run through the `raw` Twig filter to decode HTML special characters.
+
+### Fixed
+- Fix a GraphQL type error for VizyBlocks.
+- Fix node types not appearing in the Explorer or Introspection for GraphQL.
+
+## 2.0.10 - 2022-12-25
+
+### Changed
+- Link marks now automatically parse for reference tags in their `href`.
+
+### Fixed
+- Fix GraphQL queries throwing an error when fields aren’t initialized fully.
+- Fix heading styles in editor.
+- Fix an error importing via Feed Me, in some cases.
+
+## 2.0.9 - 2022-11-09
+
+### Fixed
+- Fix Feed Me importing not supporting all node types (just plain text).
+- Fix an error where field settings for a block’s field layout can be corrupted.
+
+## 2.0.8 - 2022-10-23
+
+### Fixed
+- Fix handling of Vizy fields inside element slideouts, instead of block relationship fields when being edited.
+
+## 2.0.7 - 2022-09-25
+
+### Added
+- Add support for entries conditions for Vizy fields.
+
+### Changed
+- Switch deprecated `ueberdosis/html-to-prosemirror` package to `ueberdosis/tiptap-php`.
+
+### Fixed
+- Fix Vizy blocks not being site-aware.
+- Fix “Open link in new tab” not saving correctly for link nodes.
+- Fix asset fields within Matrix/Super Table fields not moving from the temporary upload directory.
+- Fix an error when propagating element fields’s content for un-translated Vizy/SuperTable/Inner fields.
+- Fix an error when propagating Super Table rows for un-translated Vizy/SuperTable/Inner fields.
+- Fix an error when propagating Matrix blocks for un-translated Vizy/Matrix/Inner fields.
+- Fix importing nodes via Feed Me not working for some node types.
+
+## 2.0.6 - 2022-08-11
+
+### Fixed
+- Fix Vizy node content being reset when inserting other nodes directly before it.
+- Fix a field alignment issue in nested Vizy fields.
+- Fix Vizy fields not initializing when switching entry types.
+- Fix fields not working correctly in element slideouts, in some instances.
+
+## 2.0.5 - 2022-08-09
+
+### Fixed
+- Fix GraphQL queries throwing an error when fields aren’t initialized fully.
+- Fix blocktype picker not appearing in Live Preview.
+- Fix potential error for blocktypes.
+- Update Vizy loading for input to handle proper loading using Vite.
+
+## 2.0.4 - 2022-07-06
+
+### Fixed
+- Fix an error when making GraphQL queries.
+
 ## 2.0.3 - 2022-07-02
 
 ### Added
@@ -54,6 +135,43 @@
 
 ### Removed
 - Remove `cleanDeltas()`, which is no longer needed in Craft 4.
+
+## 1.0.22 - 2022-12-25
+
+### Fixed
+- Fix GraphQL queries throwing an error when fields aren’t initialized fully.
+
+## 1.0.21 - 2022-10-23
+
+### Fixed
+- Fix handling of Vizy fields inside element slideouts, instead of block relationship fields when being edited.
+
+## 1.0.20 - 2022-09-25
+
+### Fixed
+- Fix an issue where nested Vizy fields in Matrix/Super Table/etc fields weren’t having their content serialized correctly.
+
+## 1.0.19 - 2022-09-23
+
+### Fixed
+- Fix display issues with Vizy fields in Live Preview.
+- Fix an overflow issue for small screens for the block picker.
+- Fix a legacy error where in some cases blocks were missing their block type.
+- Fix toggling field tabs not working correctly for nested Vizy fields.
+- Fix legacy handling of `HtmlToProseMirror` package when importing content via Feed Me.
+
+## 1.0.18 - 2022-08-11
+
+### Changed
+- Update all tiptap dependancies to latest beta versions.
+
+### Fixed
+- Fix Vizy node content being reset when inserting other nodes directly before it.
+
+## 1.0.17 - 2022-08-09
+
+### Fixed
+- Fix blocktype picker not appearing in Live Preview.
 
 ## 1.0.16 - 2022-07-02
 

@@ -2,6 +2,7 @@
 namespace verbb\vizy\gql\types\generators;
 
 use verbb\vizy\Vizy;
+use verbb\vizy\gql\interfaces\VizyBlockInterface;
 use verbb\vizy\gql\interfaces\VizyNodeInterface;
 use verbb\vizy\gql\interfaces\VizyImageNodeInterface;
 use verbb\vizy\gql\types\VizyNodeType;
@@ -18,54 +19,39 @@ class VizyNodeGenerator implements GeneratorInterface
     // Public Methods
     // =========================================================================
 
-    public static function generateTypes(mixed $field = null): array
+    public static function generateTypes(mixed $context = null): array
     {
-        $nodeClasses = Vizy::$plugin->getNodes()->getRegisteredNodes();
-
         $gqlTypes = [];
+
+        $nodeClasses = Vizy::$plugin->getNodes()->getRegisteredNodes();
 
         $interfaceClasses = [
             Image::class => VizyImageNodeInterface::getFieldDefinitions(),
         ];
 
-        $generatorClasses = [
-            VizyBlock::class => VizyBlockTypeGenerator::generateTypes(),
-        ];
-
         foreach ($nodeClasses as $nodeClass) {
-            // Special handling for some nodes
-            $generatorClass = $generatorClasses[$nodeClass] ?? null;
-
-            if ($generatorClass) {
-                $gqlTypes = array_merge($gqlTypes, $generatorClass);
+            if ($nodeClass === VizyBlock::class) {
                 continue;
             }
 
-            $interfaceFields = $interfaceClasses[$nodeClass] ?? VizyNodeInterface::getFieldDefinitions();
+            $typeName = $nodeClass::gqlTypeNameByContext($context);
 
-            $node = new $nodeClass;
-            $node->setField($field);
+            if (!GqlEntityRegistry::getEntity($typeName)) {
+                // Determine the interface
+                $interfaceFields = $interfaceClasses[$nodeClass] ?? VizyNodeInterface::getFieldDefinitions();
 
-            $typeName = $node->getGqlTypeName();
-
-            if (!($entity = GqlEntityRegistry::getEntity($typeName))) {
-                $contentType = $node->getContentGqlType($field);
-
-                // Override content field with the nodes content type.
-                // $nodeFields = array_merge($interfaceFields, ['content' => $contentType]);
-
-                $entity = new VizyNodeType([
+                $gqlTypes[$typeName] = GqlEntityRegistry::getEntity($typeName) ?: GqlEntityRegistry::createEntity($typeName, new VizyNodeType([
                     'name' => $typeName,
                     'fields' => function() use ($interfaceFields) {
                         return $interfaceFields;
                     },
-                ]);
-
-                $entity = GqlEntityRegistry::getEntity($typeName) ?: GqlEntityRegistry::createEntity($typeName, $entity);
+                ]));
             }
-
-            $gqlTypes[$entity->name] = $entity;
         }
+
+        // Generate the types for Vizy Blocks
+        $generatorTypes = VizyBlockTypeGenerator::generateTypes($context);
+        $gqlTypes = array_merge($gqlTypes, $generatorTypes);
 
         return $gqlTypes;
     }

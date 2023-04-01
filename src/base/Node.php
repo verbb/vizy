@@ -22,6 +22,18 @@ class Node extends Component
     public const EVENT_MODIFY_TAG = 'modifyTag';
 
 
+    // Static Methods
+    // =========================================================================
+
+    public static function gqlTypeNameByContext(mixed $context): string
+    {
+        $classNameParts = explode('\\', static::class);
+        $end = array_pop($classNameParts);
+
+        return 'VizyNode_' . $end;
+    }
+
+
     // Properties
     // =========================================================================
 
@@ -31,8 +43,9 @@ class Node extends Component
     public array $content = [];
     public array $attrs = [];
     public array $marks = [];
-    public ?string $text = null;
     public array $rawNode = [];
+
+    protected ?string $text = null;
 
     private mixed $element = null;
     private mixed $field = null;
@@ -101,9 +114,14 @@ class Node extends Component
         return $this->attrs;
     }
 
-    public function getText(): ?string
+    public function getText(): ?Markup
     {
-        return $this->text;
+        return Template::raw((string)$this->text);
+    }
+
+    public function setText($value): void
+    {
+        $this->text = $value;
     }
 
     public function getEnabled(): bool
@@ -163,10 +181,7 @@ class Node extends Component
 
     public function getGqlTypeName(): string
     {
-        $classNameParts = explode('\\', static::class);
-        $end = array_pop($classNameParts);
-
-        return 'VizyNode_' . $end;
+        return static::gqlTypeNameByContext($this);
     }
 
     public function getContentGqlType($context): ScalarType

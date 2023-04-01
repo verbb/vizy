@@ -105,7 +105,7 @@ export default {
                 placement: 'right',
                 theme: 'vui-block-picker light-border',
                 maxWidth: '300px',
-                zIndex: 10,
+                zIndex: 100, // Needs a higher z-index for Live Preview
                 appendTo: () => { return document.body; },
                 hideOnClick: true,
             });
@@ -266,6 +266,7 @@ export default {
 [data-theme*="vui-block-picker"].tippy-box {
     width: 335px;
     max-height: 90vh;
+    overflow-y: auto;
 
     .tippy-content {
         padding: 12px 12px 26px;

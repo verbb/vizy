@@ -25,6 +25,9 @@ use craft\helpers\FileHelper;
 use craft\helpers\Html;
 use craft\helpers\Json;
 use craft\helpers\StringHelper;
+use craft\fields\BaseRelationField;
+use craft\fields\conditions\EmptyFieldConditionRule;
+use craft\fields\Matrix;
 use craft\models\FieldLayout;
 use craft\models\Section;
 use craft\web\twig\variables\Cp;
@@ -35,6 +38,7 @@ use Throwable;
 
 use GraphQL\Type\Definition\Type;
 
+use verbb\supertable\fields\SuperTableField as SuperTable;
 
 class VizyField extends Field
 {
@@ -73,6 +77,7 @@ class VizyField extends Field
     public bool $showUnpermittedFiles = false;
     public string $defaultTransform = '';
     public bool $trimEmptyParagraphs = true;
+    public int $initialRows = 7;
     public string $columnType = Schema::TYPE_TEXT;
 
     private ?array $_blockTypesById = [];
@@ -98,6 +103,15 @@ class VizyField extends Field
         }
 
         parent::__construct($config);
+    }
+
+    protected function defineRules(): array
+    {
+        $rules = parent::defineRules();
+
+        $rules[] = [['initialRows'], 'number', 'integerOnly' => true];
+
+        return $rules;
     }
 
     public function getContentColumnType(): array|string
@@ -132,15 +146,18 @@ class VizyField extends Field
 
         Plugin::registerAsset('field/src/js/vizy.js');
 
+        // Create the Vizy Settings Vue component
+        $js = 'new Craft.Vizy.Settings(' .
+            Json::encode($idPrefix, JSON_UNESCAPED_UNICODE) . ', ' .
+            Json::encode($fieldData, JSON_UNESCAPED_UNICODE) . ', ' .
+            Json::encode($settings, JSON_UNESCAPED_UNICODE) .
+        ');';
+
+        // Wait for Vizy JS to be loaded, either through an event listener, or by a flag.
+        // This covers if this script is run before, or after the Vizy JS has loaded
         $view->registerJs('document.addEventListener("vite-script-loaded", function(e) {' .
-            'if (e.detail.path === "field/src/js/vizy.js") {' .
-                'new Craft.Vizy.Settings(' .
-                    Json::encode($idPrefix, JSON_UNESCAPED_UNICODE) . ', ' .
-                    Json::encode($fieldData, JSON_UNESCAPED_UNICODE) . ', ' .
-                    Json::encode($settings, JSON_UNESCAPED_UNICODE) .
-                ');' .
-            '}' .
-        '});');
+            'if (e.detail.path === "field/src/js/vizy.js") {' . $js . '}' .
+        '}); if (Craft.VizyReady) {' . $js . '}');
 
         $volumeOptions = [];
 
@@ -215,6 +232,7 @@ class VizyField extends Field
             'placeholderKey' => $placeholderKey,
             'fieldHandle' => $this->handle,
             'isRoot' => true,
+            'initialRows' => $this->initialRows,
         ];
 
         // Only include some options if we need them - for performance
@@ -243,11 +261,17 @@ class VizyField extends Field
 
         Plugin::registerAsset('field/src/js/vizy.js');
 
-        // Use `setTimeout()` to handle some scenarios like Ajax-loading in field settings and slide-outs
-        $view->registerJs('setTimeout(function() { new Craft.Vizy.Input(' .
+        // Create the Vizy Input Vue component
+        $js = 'new Craft.Vizy.Input(' .
             '"' . $view->namespaceInputId($id) . '", ' .
             '"' . $view->namespaceInputName($this->handle) . '"' .
-        '); }, 200);');
+        ');';
+
+        // Wait for Vizy JS to be loaded, either through an event listener, or by a flag.
+        // This covers if this script is run before, or after the Vizy JS has loaded
+        $view->registerJs('document.addEventListener("vite-script-loaded", function(e) {' .
+            'if (e.detail.path === "field/src/js/vizy.js") {' . $js . '}' .
+        '}); if (Craft.VizyReady) {' . $js . '}');
 
         $rawNodes = $value->getRawNodes();
 
@@ -284,6 +308,19 @@ class VizyField extends Field
             return $value;
         }
 
+        // To avoid collisions with other POST items, we store all serialized Vizy content in `vizyData` 
+        // which is all we care about. Due to how Craft works, we'll get lots of other field content coming
+        // through which we can discard. For example:
+        //
+        // fields[richContent][blocks][vizy-block-X2y6Pysezv][fields][image][]: 6
+        // fields[richContent][blocks][vizy-block-X2y6Pysezv][fields][text]: Some Text
+        // fields[richContent]: [{"type":"vizyBlock","attrs": ...}]
+        //
+        // We're after just the last item, but its order cannot be guaranteed. It's safer to store that as `fields[richContent][vizyData]`.
+        if (is_array($value) && isset($value['vizyData'])) {
+            $value = $value['vizyData'];
+        }
+
         if (is_string($value) && !empty($value)) {
             $value = Json::decodeIfJson($value);
         }
@@ -303,6 +340,14 @@ class VizyField extends Field
         }
 
         return $value;
+    }
+
+    /**
+     * @inheritdoc
+     */
+    public function getElementConditionRuleType(): array|string|null
+    {
+        return EmptyFieldConditionRule::class;
     }
 
     public function getStaticHtml(mixed $value, ElementInterface $element): string
@@ -432,7 +477,28 @@ class VizyField extends Field
                             $blockTypeId = $rawNode['attrs']['values']['type'] ?? '';
                             $fields = $translatableFields[$blockTypeId] ?? [];
 
-                            foreach ($fields as $field) {
+                            foreach ($fields as $fieldHandle) {
+                                // For some fields, they control their own propagation settings. 
+                                // Check those, and only proceed with swapping content if not managing per-site.
+                                $field = Craft::$app->getFields()->getFieldByHandle($fieldHandle);
+
+                                // "Only save blocks to the site they were created in" (none) is selected
+                                if ($field instanceof Matrix && $field->propagationMethod !== Matrix::PROPAGATION_METHOD_NONE) {
+                                    continue;
+                                }
+
+                                // "Only save blocks to the site they were created in" (none) is selected
+                                if (Craft::$app->getPlugins()->isPluginEnabled('super-table')) {
+                                    if ($field instanceof SuperTable && $field->propagationMethod !== SuperTable::PROPAGATION_METHOD_NONE) {
+                                        continue;
+                                    }
+                                }
+
+                                // "Manage relations on a per-site basis" is disabled
+                                if ($field instanceof BaseRelationField && !$field->localizeRelations) {
+                                    continue;
+                                }
+
                                 // Ensure we find the right block to update
                                 foreach ($newNodes as $key => $newNode) {
                                     $newBlockId = $newNode['attrs']['id'] ?? '';
@@ -440,7 +506,7 @@ class VizyField extends Field
                                     if ($newBlockId === $blockId) {
                                         $hasUpdatedContent = true;
 
-                                        $newNodes[$key]['attrs']['values']['content']['fields'][$field] = $rawNode['attrs']['values']['content']['fields'][$field] ?? '';
+                                        $newNodes[$key]['attrs']['values']['content']['fields'][$fieldHandle] = $rawNode['attrs']['values']['content']['fields'][$fieldHandle] ?? '';
                                     }
                                 }
                             }
@@ -655,6 +721,8 @@ class VizyField extends Field
                     $blockElement = new BlockElement();
                     $blockElement->setFieldLayout($fieldLayout);
                     $blockElement->setOwner($element);
+                    $blockElement->setType($blockType);
+                    $blockElement->setField($this);
 
                     $originalNamespace = $view->getNamespace();
                     $namespace = $view->namespaceInputName($this->handle . "[blocks][__VIZY_BLOCK_{$placeholderKey}__]", $originalNamespace);
@@ -705,6 +773,8 @@ class VizyField extends Field
 
                     // Create a fake element with the same fieldtype as our block
                     $blockElement = $block->getBlockElement($element);
+                    $blockElement->setType($block->getBlockType());
+                    $blockElement->setField($this);
 
                     $originalNamespace = $view->getNamespace();
                     $namespace = $view->namespaceInputName($this->handle . "[blocks][__VIZY_BLOCK_{$placeholderKey}__]", $originalNamespace);

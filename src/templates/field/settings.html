@@ -72,6 +72,15 @@
     errors: field.getErrors('trimEmptyParagraphs'),
 }) }}
 
+{{ forms.textField({
+    label: 'Initial Rows' | t('vizy'),
+    instructions: 'Set the initial rows for the field. This indirectly controls the height of the field when no content has been added.' | t('vizy'),
+    name: 'initialRows',
+    value: field.initialRows,
+    size: 10,
+    errors: field.getErrors('initialRows'),
+}) }}
+
 {{ forms.checkboxField({
     label: 'Show unpermitted volumes' | t('app'),
     instructions: 'Whether to show volumes that the user doesn’t have permission to view.' | t('app'),

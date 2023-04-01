@@ -8,7 +8,7 @@ use craft\helpers\Json;
 use craft\feedme\base\Field;
 use craft\feedme\base\FieldInterface;
 
-use HtmlToProseMirror\Renderer;
+use Tiptap\Editor;
 
 class Vizy extends Field implements FieldInterface
 {
@@ -39,11 +39,27 @@ class Vizy extends Field implements FieldInterface
      */
     public function parseField(): string
     {
-        $value = $this->fetchValue();
+        $value = $this->fetchValue() ?? [ 'content' => '' ];
 
-        $renderer = new Renderer();
-        $doc = $renderer->render($value);
+        $editor = new Editor([
+            'content' => $value,
+            'extensions' => [
+                new \Tiptap\Extensions\StarterKit,
+                new \Tiptap\Nodes\Image,
+                new \Tiptap\Marks\Highlight,
+                new \Tiptap\Marks\Link,
+                new \Tiptap\Marks\Subscript,
+                new \Tiptap\Marks\Superscript,
+                new \Tiptap\Marks\Underline,
+            ],
+        ]);
 
-        return Json::encode($doc['content']);
+        $doc = $editor->getDocument();
+
+        if (is_array($doc) && array_key_exists('content', $doc)) {
+            return Json::encode($doc['content']);
+        }
+
+        return '';
     }
 }

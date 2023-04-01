@@ -8,15 +8,32 @@ use verbb\vizy\helpers\Matrix;
 use Craft;
 use craft\base\ElementInterface;
 use craft\errors\InvalidFieldException;
+use craft\events\ElementEvent;
+use craft\fields\BaseRelationField;
+use craft\fields\Matrix as MatrixField;
 use craft\helpers\Html;
 use craft\helpers\Json;
 use craft\helpers\Template;
+use craft\services\Elements;
 use craft\web\View;
 
 use Twig\Markup;
 
+use Throwable;
+
+use verbb\supertable\fields\SuperTableField as SuperTable;
+
 class VizyBlock extends Node
 {
+    // Static Methods
+    // =========================================================================
+
+    public static function gqlTypeNameByContext(mixed $context): string
+    {
+        return $context->getField()->handle . '_' . $context->handle . '_BlockType';
+    }
+
+
     // Properties
     // =========================================================================
 
@@ -191,11 +208,6 @@ class VizyBlock extends Node
         return $this->normalizeFieldValue($fieldHandle);
     }
 
-    public function getGqlTypeName(): string
-    {
-        return $this->getField()->handle . '_' . $this->handle . '_BlockType';
-    }
-
     public function serializeValue(ElementInterface $element = null): ?array
     {
         $value = parent::serializeValue($element);
@@ -217,14 +229,50 @@ class VizyBlock extends Node
         // Create a fake element with the same fieldtype as our block
         $block = $this->getBlockElement($element);
 
-        foreach ($block->getFieldLayout()->getCustomFields() as $field) {
-            // Ensure each field's content is serialized properly
-            $serializedFieldValues = $field->serializeValue($block->getFieldValue($field->handle), $block);
-            $value['attrs']['values']['content']['fields'][$field->handle] = $serializedFieldValues;
+        // Trigger the before-save event (on the element service) to prep the element. Preparse requires this to work.
+        Craft::$app->getElements()->trigger(Elements::EVENT_BEFORE_SAVE_ELEMENT, new ElementEvent([
+            'element' => $block,
+            'isNew' => true,
+        ]));
 
-            // Ensure we call each field's `afterElementSave` method. This would be auto-done
-            // if a VizyBlock node was an element, and we were saving that.
-            $field->afterElementSave($block, true);
+        if ($fieldLayout = $block->getFieldLayout()) {
+            foreach ($fieldLayout->getCustomFields() as $field) {
+                $fieldValue = $block->getFieldValue($field->handle);
+
+                // Ensure each field's content is serialized properly
+                $serializedFieldValues = $field->serializeValue($fieldValue, $block);
+                $value['attrs']['values']['content']['fields'][$field->handle] = $serializedFieldValues;
+
+                // Fix relation fields in their `afterElementSave` function trying to create relations
+                // We still want relation fields to run `afterElementSave` however (see Asset fields)
+                if ($field instanceof BaseRelationField) {
+                    $field->maintainHierarchy = false;
+                    $field->localizeRelations = false;
+                }
+
+                // Ensure we call each field's `afterElementSave` method. This would be auto-done
+                // if a VizyBlock node was an element, and we were saving that.
+                $field->afterElementSave($block, true);
+
+                // Process all Matrix/Super Table fields and their blocks in the same manner.
+                if ($field instanceof MatrixField || $field instanceof SuperTable) {
+                    foreach ($fieldValue->all() as $matrixBlock) {
+                        if ($matrixFieldLayout = $matrixBlock->getFieldLayout()) {
+                            foreach ($matrixFieldLayout->getCustomFields() as $matrixBlockField) {
+                                try {
+                                    $matrixBlockField->afterElementSave($matrixBlock, true);
+                                } catch (Throwable $e) {
+                                    // Assets (and other relational fields) will likely throw an error here, because
+                                    // when saving a Matrix block, it'll try and create an entry in the relations table
+                                    // but without a real element to relate to as the source, this will fail.
+                                    // This is okay for our needs, as all we care about are fields running their `afterElementSave()`
+                                    // anyway, which for assets is moving from the temp folder to their correct directory.
+                                }
+                            }
+                        }
+                    }
+                }
+            }
         }
 
         return $value;

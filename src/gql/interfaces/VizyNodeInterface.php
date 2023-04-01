@@ -21,7 +21,7 @@ class VizyNodeInterface extends BaseInterfaceType
         return VizyNodeGenerator::class;
     }
 
-    public static function getType($fields = null): Type
+    public static function getType($context = null): Type
     {
         if ($type = GqlEntityRegistry::getEntity(self::getName())) {
             return $type;
@@ -36,7 +36,7 @@ class VizyNodeInterface extends BaseInterfaceType
             },
         ]));
 
-        VizyNodeGenerator::generateTypes($fields);
+        VizyNodeGenerator::generateTypes($context);
 
         return $type;
     }

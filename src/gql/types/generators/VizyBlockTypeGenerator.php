@@ -2,8 +2,10 @@
 namespace verbb\vizy\gql\types\generators;
 
 use verbb\vizy\Vizy;
+use verbb\vizy\fields\VizyField;
 use verbb\vizy\gql\interfaces\VizyBlockInterface;
 use verbb\vizy\gql\types\VizyBlockType;
+use verbb\vizy\nodes\VizyBlock;
 
 use Craft;
 use craft\gql\base\Generator;
@@ -18,7 +20,7 @@ class VizyBlockTypeGenerator extends Generator implements GeneratorInterface, Si
 
     public static function generateTypes(mixed $context = null): array
     {
-        if ($context) {
+        if ($context && $context instanceof VizyField) {
             $vizyBlockTypes = $context->getBlockTypes();
         } else {
             $vizyBlockTypes = Vizy::$plugin->getService()->getAllBlockTypes();
@@ -36,7 +38,7 @@ class VizyBlockTypeGenerator extends Generator implements GeneratorInterface, Si
 
     public static function generateType(mixed $context): mixed
     {
-        $typeName = $context->getField()->handle . '_' . $context->handle . '_BlockType';
+        $typeName = VizyBlock::gqlTypeNameByContext($context);
 
         if (!($entity = GqlEntityRegistry::getEntity($typeName))) {
             $contentFieldGqlTypes = $context->getFieldLayout() ? self::getContentFields($context->getFieldLayout()) : [];
