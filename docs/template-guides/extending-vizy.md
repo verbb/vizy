@@ -225,5 +225,81 @@ You can also access the [Tiptap](https://tiptap.dev) API in your code, without h
 const { Mark, Node, mergeAttributes } = Craft.Vizy.Config.tiptap.core;
 ```
 
+### ProseMirror Rendering
+Once you have implemented your extensions to work in the Vizy editor, you can output them on the front-end of your site. However, you'll find that they won't render as-is. That's because the ProseMirror schema (the JSON structure to represent your content) doesn't recognise your new nodes or marks.
+
+To let Vizy know how to handle your new items, you should register your nodes or marks and provide a class to implement its handling.
+
+```php
+use verbb\vizy\events\RegisterMarksEvent;
+use verbb\vizy\events\RegisterNodesEvent;
+use verbb\vizy\services\Nodes;
+use yii\base\Event;
+
+Event::on(Nodes::class, Nodes::EVENT_REGISTER_MARKS, function(RegisterMarksEvent $event) {
+    $event->marks[] = ExampleMark::class;
+});
+
+Event::on(Nodes::class, Nodes::EVENT_REGISTER_NODES, function(RegisterNodesEvent $event) {
+    $event->nodes[] = ExampleNode::class;
+});
+```
+
+```php
+<?php
+namespace modules\vizymodule\marks;
+
+use verbb\vizy\base\Mark;
+
+class ExampleMark extends Mark
+{
+    // Properties
+    // =========================================================================
+
+    public static ?string $type = 'exampleMark';
+    public mixed $tagName = 'span';
+
+
+    // Public Methods
+    // =========================================================================
+
+    public function getTag(): array
+    {
+        $this->attrs['data-value'] = 'some-value';
+
+        return parent::getTag();
+    }
+}
+```
+
+```php
+<?php
+namespace modules\vizymodule\nodes;
+
+use verbb\vizy\base\Node;
+
+class ExampleNode extends Node
+{
+    // Properties
+    // =========================================================================
+
+    public static ?string $type = 'exampleNode';
+    public mixed $tagName = 'span';
+
+
+    // Public Methods
+    // =========================================================================
+
+    public function getTag(): array
+    {
+        $this->attrs['data-value'] = 'some-value';
+
+        return parent::getTag();
+    }
+}
+```
+
+Refer to the [Mark](docs:developers/mark) and [Node](docs:developers/node) documentation for more details.
+
 ## User Guides
 We've also put together several user guides with full-featured examples. Read through the [User Guides](/craft-plugins/vizy/docs/user-guides) for more.
