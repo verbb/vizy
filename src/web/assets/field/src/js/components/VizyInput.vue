@@ -50,6 +50,7 @@ import Focus from '@tiptap/extension-focus';
 import Gapcursor from '@tiptap/extension-gapcursor';
 import History from '@tiptap/extension-history';
 import TextAlign from '@tiptap/extension-text-align';
+import TextStyle from '@tiptap/extension-text-style';
 
 // TipTap - Custom
 import VizyBlock from './input/VizyBlock';
@@ -328,6 +329,7 @@ export default {
                 Gapcursor,
                 HardBreak,
                 Text,
+                TextStyle,
                 Paragraph,
 
                 // Custom Extensions

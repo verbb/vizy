@@ -85,6 +85,7 @@ class Nodes extends Component
             marks\Strike::class,
             marks\Subscript::class,
             marks\Superscript::class,
+            marks\TextStyle::class,
             marks\Underline::class,
         ];
 
