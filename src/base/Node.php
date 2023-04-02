@@ -200,6 +200,25 @@ class Node extends Component implements NodeInterface
 
     public function serializeValue(?ElementInterface $element = null): ?array
     {
+        // Filter attributes before saving to the database
+        $attrs = $this->rawNode['attrs'] ?? [];
+
+        if ($attrs) {
+            $this->rawNode['attrs'] = array_filter($attrs, function($value, $attr) {
+                // Remove `textAlign = start` - the default, it's just annoying
+                if ($attr === 'textAlign' && $value === 'start') {
+                    return false;
+                }
+
+                // No need to store null values
+                if ($value === null) {
+                    return false;
+                }
+
+                return true;
+            }, ARRAY_FILTER_USE_BOTH);
+        }
+
         return $this->rawNode;
     }
 
