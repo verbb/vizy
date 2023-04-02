@@ -29,7 +29,13 @@ class Nodes
 
                 if (isset($item['attrs'])) {
                     foreach ($item['attrs'] as $attribute => $value) {
-                        $attrs .= " {$attribute}=\"{$value}\"";
+                        if (is_array($value)) {
+                            $v = implode(' ', $value);
+
+                            $attrs .= " {$attribute}=\"{$v}\"";
+                        } else {
+                            $attrs .= " {$attribute}=\"{$value}\"";
+                        }
                     }
                 }
 

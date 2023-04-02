@@ -9,6 +9,7 @@ use verbb\vizy\nodes\VizyBlock;
 use Craft;
 use craft\base\ElementInterface;
 use craft\helpers\ArrayHelper;
+use craft\helpers\Html;
 use craft\helpers\Template;
 
 use yii2mod\query\ArrayQuery;
@@ -319,6 +320,13 @@ class NodeCollection extends Markup
                                 // Check if we want to merge attributes, instead of replace. Useful for attrs.
                                 $merge = ArrayHelper::remove($markConfig, 'merge');
 
+                                // Ensure that attributes are merged correctly
+                                if ($merge) {
+                                    $attributes1 = Html::normalizeTagAttributes($mark->attrs);
+                                    $attributes2 = Html::normalizeTagAttributes(($markConfig['attrs'] ?? []));
+                                    $markConfig['attrs'] = ArrayHelper::merge($attributes1, $attributes2);
+                                }
+
                                 self::configure($mark, $markConfig, $merge);
                             }
                         }
@@ -326,6 +334,13 @@ class NodeCollection extends Markup
 
                     // Check if we want to merge attributes, instead of replace. Useful for attrs.
                     $merge = ArrayHelper::remove($nodeConfig, 'merge');
+
+                    // Ensure that attributes are merged correctly
+                    if ($merge) {
+                        $attributes1 = Html::normalizeTagAttributes($node->attrs);
+                        $attributes2 = Html::normalizeTagAttributes(($nodeConfig['attrs'] ?? []));
+                        $nodeConfig['attrs'] = ArrayHelper::merge($attributes1, $attributes2);
+                    }
 
                     self::configure($node, $nodeConfig, $merge);
                 }
