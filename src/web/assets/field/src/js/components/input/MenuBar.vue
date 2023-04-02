@@ -12,6 +12,8 @@
 </template>
 
 <script>
+import { isObject } from 'lodash-es';
+
 import MenuBarItem from './MenuBarItem.vue';
 import LinkMenuBarItem from './link/LinkMenuBarItem.vue';
 import ImageMenuBarItem from './image/ImageMenuBarItem.vue';
@@ -55,6 +57,10 @@ export default {
             const buttons = [];
 
             this.buttons.forEach((buttonName) => {
+                if (isObject(buttonName)) {
+                    buttons.push(this.dynamicButton(buttonName));
+                }
+
                 const button = this.allButtons.find((x) => { return x.name === buttonName; });
 
                 if (button) {
@@ -80,6 +86,10 @@ export default {
             const options = [];
 
             collection.forEach((optionName) => {
+                if (isObject(optionName)) {
+                    options.push(this.dynamicButton(optionName));
+                }
+
                 const option = button.options.find((x) => { return x.name === optionName; });
 
                 if (option) {
@@ -88,6 +98,26 @@ export default {
             });
 
             return options;
+        },
+
+        dynamicButton(config) {
+            return {
+                name: config.type,
+                svg: config.svg,
+                title: config.title,
+                action: (editor) => {
+                    // Determine if this is a node or mark, no easy shortcut for this.
+                    const isNode = editor.state.schema.nodes[config.type];
+                    const isMark = editor.state.schema.marks[config.type];
+
+                    if (isNode) {
+                        return editor.chain().focus().toggleNode(config.type, 'paragraph', config.attrs).run();
+                    } if (isMark) {
+                        return editor.chain().focus().toggleMark(config.type, config.attrs).run();
+                    }
+                },
+                isActive: (editor) => { return editor.isActive(config.type, config.attrs); },
+            };
         },
     },
 };

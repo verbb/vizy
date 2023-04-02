@@ -59,6 +59,7 @@ import Iframe from './input/iframe/Iframe';
 import MediaEmbed from './input/media-embed/MediaEmbed';
 import Commands from './input/commands/Commands';
 import Suggestion from './input/commands/Suggestion';
+import GlobalAttributes from './input/GlobalAttributes';
 
 import MenuBar from './input/MenuBar.vue';
 import BlockPicker from './input/BlockPicker.vue';
@@ -328,6 +329,8 @@ export default {
                 HardBreak,
                 Text,
                 Paragraph,
+
+                // Custom Extensions
                 Commands.configure({
                     suggestion: Suggestion,
                 }),
@@ -351,6 +354,9 @@ export default {
             if (this.blocksEnabled) {
                 extensions = extensions.concat(blocks);
             }
+
+            // Add any config-defined buttons when need to often add global attributes to nodes
+            extensions = extensions.concat(GlobalAttributes(this, extensions));
 
             return extensions;
         },
