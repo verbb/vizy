@@ -105,6 +105,16 @@ Property | Value
 `tagName` | `sup`
 
 
+### TextStyle
+
+#### Properties
+
+Property | Value
+--- | ---
+`type` | `textStyle`
+`tagName` | `span`
+
+
 ### Underline
 
 #### Properties

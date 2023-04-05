@@ -159,3 +159,39 @@ The below is a "kitchen sink" example that contains everything.
     "toolbarFixed": true
 }
 ```
+
+### Custom Buttons
+In addition to including or excluding available button, you can also define your own custom buttons that extend an existing [Node](docs:developers/node) or [Mark](docs:developers/mark). For example, you might want to create your own custom Paragraph node with specific attributes.
+
+```json
+{
+    "buttons": [
+        "bold",
+        "italic",
+        {
+            "svg": "h1", 
+            "title": "Featured Heading 1", 
+            "type": "heading", 
+            "attrs": {"level": "1", "class": "feature-heading"}
+        }
+    ],
+    "formatting": [
+        {
+            "svg": "<svg ... />", 
+            "title": "Lead", 
+            "type": "paragraph", 
+            "attrs": {"class": "lead-text", "data-name": "lead-text"}
+        },
+        "paragraph"
+    ]
+}
+```
+
+Option | Description
+--- | ---
+`svg` | A named SVG that Vizy already uses, or a raw `<svg>` icon.
+`title` | What the button or dropdown item should be labelled as.
+`type` | Pick an existing [Node](docs:developers/node) or [Mark](docs:developers/mark) to extend from, (e.g. `paragraph`, `bold`, `heading`, etc).
+`attrs` | Any attributes to be stored against the node/mark. These will be rendered as HTML attributes.
+
+These definitions can be included at the top-level, or within the `formatting` dropdown.

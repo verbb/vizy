@@ -131,6 +131,7 @@ Available mark type fragments are:
 - `VizyMark_Strike`
 - `VizyMark_Subscript`
 - `VizyMark_Superscript`
+- `VizyMark_TextStyle`
 - `VizyMark_Underline`
 
 ## The `VizyLinkMarkInterface` interface
