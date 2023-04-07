@@ -1,13 +1,12 @@
 <?php
 namespace verbb\vizy\helpers;
 
+use verbb\vizy\helpers\StringHelper;
+
 use Craft;
 use craft\helpers\Html;
 use craft\helpers\HtmlPurifier;
-use craft\helpers\StringHelper;
 use craft\validators\HandleValidator;
-
-use LitEmoji\LitEmoji;
 
 use HTMLPurifier_Config;
 
@@ -116,7 +115,7 @@ class Nodes
             $text = StringHelper::htmlEncode($text, ENT_NOQUOTES);
 
             // Serialize any emoji's
-            $text = LitEmoji::unicodeToShortcode($text);
+            $text = StringHelper::emojiToShortcodes($text);
 
             $rawNode['content'][$key]['text'] = $text;
 
@@ -139,7 +138,7 @@ class Nodes
             $text = $block['text'] ?? '';
 
             // Un-serialize any emoji's
-            $text = LitEmoji::shortcodeToUnicode($text);
+            $text = StringHelper::shortcodesToEmoji($text);
 
             $rawNode['content'][$key]['text'] = $text;
         }
