@@ -152,6 +152,7 @@ This is the interface implemented by all Vizy Block nodes.
 | `attrs`| `array` | The attributes of the node.
 | `marks`| `array` | The marks of the node.
 | `content`| `string` | The content of the node.
+| `values`| `string` | The field values of the node.
 | `enabled`| `boolean` | Whether the block is enabled.
 | `collapsed`| `boolean` | Whether the block is collapsed.
 | `blockTypeId`| `string` | The ID of the block type.

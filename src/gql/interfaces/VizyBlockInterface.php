@@ -2,6 +2,7 @@
 namespace verbb\vizy\gql\interfaces;
 
 use verbb\vizy\gql\types\generators\VizyBlockTypeGenerator;
+use verbb\vizy\gql\types\ArrayType;
 
 use Craft;
 use craft\gql\GqlEntityRegistry;
@@ -77,6 +78,14 @@ class VizyBlockInterface extends VizyNodeInterface
                 'type' => Type::string(),
                 'resolve' => function($source) {
                     return $source->getBlockType()->handle;
+                },
+            ],
+            'values' => [
+                'name' => 'values',
+                'description' => 'The field values for this Vizy block.',
+                'type' => ArrayType::getType(),
+                'resolve' => function($source) {
+                    return $source->attrs['values']['content'] ?? [];
                 },
             ],
         ]), self::getName());
