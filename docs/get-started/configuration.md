@@ -172,7 +172,8 @@ In addition to including or excluding available button, you can also define your
             "svg": "h1", 
             "title": "Featured Heading 1", 
             "type": "heading", 
-            "attrs": {"level": "1", "class": "feature-heading"}
+            "attrs": {"level": "1", "class": "feature-heading"},
+            "editorStyle": ".feature-heading { color: red; }"
         }
     ],
     "formatting": [
@@ -193,5 +194,6 @@ Option | Description
 `title` | What the button or dropdown item should be labelled as.
 `type` | Pick an existing [Node](docs:developers/node) or [Mark](docs:developers/mark) to extend from, (e.g. `paragraph`, `bold`, `heading`, etc).
 `attrs` | Any attributes to be stored against the node/mark. These will be rendered as HTML attributes.
+`editorStyle` | Any CSS that will be applied to the node while in the control panel. This will not be applied on the front-end.
 
 These definitions can be included at the top-level, or within the `formatting` dropdown.

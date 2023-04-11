@@ -1,7 +1,8 @@
 import { Extension } from '@tiptap/core';
-import { isObject } from 'lodash-es';
+import { isObject, kebabCase } from 'lodash-es';
 
 export default (vizyField) => {
+    const editorStyles = [];
     const customAttributes = {};
     const extensions = [];
 
@@ -19,11 +20,29 @@ export default (vizyField) => {
                             customAttributes[buttonName.type].push(item);
                         }
                     });
+
+                    if (buttonName.editorStyle) {
+                        editorStyles.push(buttonName);
+                    }
                 }
             });
         }
     });
 
+    // Apply any custom styles for nodes just for the editor in the CP
+    editorStyles.forEach((config) => {
+        // Create a key to only insert the CSS once, as this is at the body level.
+        const key = kebabCase(`${config.type} ${config.title}`);
+
+        if (!document.querySelector(`style#${key}`)) {
+            const style = document.createElement('style');
+            style.id = key;
+            style.innerHTML = `.vui-editor ${config.editorStyle}`;
+            document.head.appendChild(style);
+        }
+    });
+
+    // For every custom attribute supplied in config files, ensure the node's schema accepts them
     Object.entries(customAttributes).forEach(([type, attrs]) => {
         const attributes = {};
 
