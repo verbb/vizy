@@ -9,7 +9,7 @@
         @cut.stop
     >
         <div v-if="!isEmpty(blockType)" class="vizyblock-wrap">
-            <div class="vizyblock-header">
+            <div class="vizyblock-header" @dblclick.prevent="toggleTitle">
                 <div class="titlebar">
                     <div class="blocktype"><span v-if="$isDebug">{{ uid }} {{ node.attrs.id }} </span>{{ blockType.name }}</div>
 
@@ -458,6 +458,20 @@ export default {
             });
         },
 
+        toggleTitle(e) {
+            const $actions = this.$el.querySelector('.actions-tabs');
+
+            if ($actions.contains(e.target)) {
+                return;
+            }
+
+            if (this.collapsed) {
+                this.expandBlock();
+            } else {
+                this.collapseBlock();
+            }
+        },
+
         setFirstActiveTab() {
             if (this.tabs) {
                 [this.activeTab] = Object.keys(this.tabs);
@@ -681,6 +695,7 @@ export default {
     display: flex;
     align-items: center;
     overflow: hidden;
+    user-select: none;
 }
 
 .vizyblock-header .blocktype {
