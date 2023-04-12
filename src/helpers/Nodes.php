@@ -6,7 +6,6 @@ use verbb\vizy\helpers\StringHelper;
 use Craft;
 use craft\helpers\Html;
 use craft\helpers\HtmlPurifier;
-use craft\helpers\StringHelper;
 use craft\validators\HandleValidator;
 
 use LitEmoji\LitEmoji;
