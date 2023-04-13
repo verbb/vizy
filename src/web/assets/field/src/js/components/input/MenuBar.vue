@@ -46,12 +46,6 @@ export default {
         },
     },
 
-    data() {
-        return {
-            allButtons: Craft.Vizy.Config.getButtons(),
-        };
-    },
-
     computed: {
         availableButtons() {
             const buttons = [];
@@ -66,11 +60,11 @@ export default {
                 if (button) {
                     // Handle special-cases and sub-options. Maybe move to other components?
                     if (button.name === 'formatting') {
-                        button.options = this.getEnabledOptions(this.field.getFormattingOptions());
+                        button.options = this.filterEnabledOptions(button.options, this.getFormattingOptions());
                     }
 
                     if (button.name === 'table') {
-                        button.options = this.getEnabledOptions(this.field.getTableOptions());
+                        button.options = this.getEnabledOptions(button.options, this.field.getTableOptions());
                     }
 
                     buttons.push(button);
@@ -81,8 +75,47 @@ export default {
         },
     },
 
+    created() {
+        // Ensure this isn't reactive for nested Vizy fields (doesn't need to be anyway)
+        this.allButtons = Craft.Vizy.Config.getButtons();
+    },
+
     methods: {
-        getEnabledOptions(collection) {
+        getFormattingOptions() {
+            let options = ['paragraph', 'code-block', 'blockquote', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6'];
+
+            if (this.field.settings.vizyConfig.formatting && this.field.settings.vizyConfig.formatting.length) {
+                options = this.field.settings.vizyConfig.formatting;
+            }
+
+            return options;
+        },
+
+        getTableOptions() {
+            let options = [
+                'insert-table',
+                'delete-table',
+                'add-col-before',
+                'add-col-after',
+                'delete-col',
+                'add-row-before',
+                'add-row-after',
+                'delete-row',
+                'merge-cells',
+                'split-cells',
+                'toggle-header-column',
+                'toggle-header-row',
+                'toggle-header-cell',
+            ];
+
+            if (this.field.settings.vizyConfig.table && this.field.settings.vizyConfig.table.length) {
+                options = this.field.settings.vizyConfig.table;
+            }
+
+            return options;
+        },
+
+        filterEnabledOptions(buttonOptions, collection) {
             const options = [];
 
             collection.forEach((optionName) => {
@@ -90,7 +123,7 @@ export default {
                     options.push(this.dynamicButton(optionName));
                 }
 
-                const option = this.allButtons.find((x) => { return x.name === optionName; });
+                const option = buttonOptions.find((x) => { return x.name === optionName; });
 
                 if (option) {
                     options.push(option);

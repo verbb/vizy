@@ -284,40 +284,6 @@ export default {
     },
 
     methods: {
-        getFormattingOptions() {
-            let options = ['paragraph', 'code-block', 'blockquote', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6'];
-
-            if (this.settings.vizyConfig.formatting && this.settings.vizyConfig.formatting.length) {
-                options = this.settings.vizyConfig.formatting;
-            }
-
-            return options;
-        },
-
-        getTableOptions() {
-            let options = [
-                'insert-table',
-                'delete-table',
-                'add-col-before',
-                'add-col-after',
-                'delete-col',
-                'add-row-before',
-                'add-row-after',
-                'delete-row',
-                'merge-cells',
-                'split-cells',
-                'toggle-header-column',
-                'toggle-header-row',
-                'toggle-header-cell',
-            ];
-
-            if (this.settings.vizyConfig.table && this.settings.vizyConfig.table.length) {
-                options = this.settings.vizyConfig.table;
-            }
-
-            return options;
-        },
-
         getExtensions() {
             let extensions = [
                 // Core Extensions
