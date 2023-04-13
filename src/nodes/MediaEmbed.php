@@ -2,6 +2,10 @@
 namespace verbb\vizy\nodes;
 
 use verbb\vizy\base\Node;
+use verbb\vizy\helpers\StringHelper;
+
+use craft\base\ElementInterface;
+use craft\helpers\Json;
 
 class MediaEmbed extends Node
 {
@@ -17,5 +21,15 @@ class MediaEmbed extends Node
     public function renderNode(array $config = []): ?string
     {
         return $this->attrs['data']['html'] ?? null;
+    }
+
+    public function serializeValue(ElementInterface $element = null): ?array
+    {
+        $value = parent::serializeValue($element);
+
+        // In case the payload contains emoji's, the field will throw an error
+        $value = Json::decode(StringHelper::emojiToShortcodes(Json::encode($value)));
+
+        return $value;
     }
 }
