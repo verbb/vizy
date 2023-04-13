@@ -550,7 +550,7 @@ export default {
 
             if (!isEmpty(content)) {
                 // Special-handling when this field is in the element slideout
-                const slideout = this.$el.closest('.slideout.element-editor .ee-body');
+                const slideout = this.$el.closest('.slideout[data-element-editor] .so-body');
 
                 if (slideout) {
                     // eslint-disable-next-line
