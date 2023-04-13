@@ -5,6 +5,11 @@ Vizy is powered by [Tiptap](https://tiptap.dev), which in turn is powered by [Pr
 If you're looking for some deep-dive examples, we've got that covered in our [User Guides](/craft-plugins/vizy/docs/user-guides).
 :::
 
+## Editor Config
+If you're looking to just add a few custom buttons to extend existing nodes, such as creating paragraph's or span with certain attributes, then [Editor Config](docs:get-started/configuration#editor-configuration) might be enough to get you started.
+
+If you're looking for more advanced extendability behaviour, keep reading!
+
 ## Getting Started
 Before diving in to extending Vizy, you'll need to be comfortable using [Tiptap](https://tiptap.dev) to create custom extensions. Bonus points for knowing a little about [ProseMirror](https://prosemirror.net/docs/guide/), which will help with more advanced extensions. You'll also need some basic knowledge of PHP and JavaScript.
 
