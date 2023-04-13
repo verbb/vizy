@@ -70,7 +70,7 @@ export default {
                     }
 
                     if (button.name === 'table') {
-                        button.options = this.getEnabledOptions(button, this.field.getTableOptions());
+                        button.options = this.getEnabledOptions(this.field.getTableOptions());
                     }
 
                     buttons.push(button);
