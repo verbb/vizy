@@ -66,7 +66,7 @@ export default {
                 if (button) {
                     // Handle special-cases and sub-options. Maybe move to other components?
                     if (button.name === 'formatting') {
-                        button.options = this.getEnabledOptions(button, this.field.getFormattingOptions());
+                        button.options = this.getEnabledOptions(this.field.getFormattingOptions());
                     }
 
                     if (button.name === 'table') {
@@ -82,7 +82,7 @@ export default {
     },
 
     methods: {
-        getEnabledOptions(button, collection) {
+        getEnabledOptions(collection) {
             const options = [];
 
             collection.forEach((optionName) => {
@@ -90,7 +90,7 @@ export default {
                     options.push(this.dynamicButton(optionName));
                 }
 
-                const option = button.options.find((x) => { return x.name === optionName; });
+                const option = this.allButtons.find((x) => { return x.name === optionName; });
 
                 if (option) {
                     options.push(option);
