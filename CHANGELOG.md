@@ -1,5 +1,86 @@
 # Changelog
 
+## 2.1.0 - 2023-04-13
+
+### Added
+- Add the ability to provide your own buttons, commands and extensions.
+- Add support for Editor Config custom buttons.
+- Vizy fields can now be included recursively (up to 10 levels of the same field).
+- Add Media Embed node.
+- Add Table node.
+- Add iFrame node.
+- Add `TextStyle` mark for creating span elements related to text styles.
+- Add “Editor Mode” field setting to control whether block-only, rich-text-only or combined.
+- Add “Commands Palette” to make creating content super-speedy. Just start typing “/“ anywhere.
+- Add “Block Type Picker Behaviour” field setting to control whether having the block-picker shown on click or hover.
+- Add “Expand All” and “Collapse All” option to Vizy blocks.
+- Add `data-block` and `data-type` attributes to Vizy blocks.
+- Add `Ctrl/Cmd` + `K` as a keyboard shortcut to add new links.
+- Add “Plain Text Paste” field setting.
+- Add “Classes” setting to Link nodes.
+- Add “Min Blocks” and “Max Blocks” settings to field.
+- Add “Min Blocks” and “Max Blocks” settings to each Vizy block type.
+- Add `LinkMarkInterface` for Link Marks for GraphQL queries.
+- Add proper support for Marks in GraphQL queries.
+- Add `Link::getLinkElement()`.
+- Add the ability to set a default source for images uploaded to the field.
+- Add keyboard accessibility to menu button dropdowns.
+- Add the ability to set render variables on the node with `node.renderHtml(config)` or `node.renderNode(config)`.
+- Add keyboard support to block type picker.
+- Add better ghost image when dragging Vizy blocks.
+- Add support for disabling max picked blocks from the block-picker.
+- Double-clicking a Vizy block now toggles its collapsed state.
+- Add `Node::normalizeNode` to allow nodes to be normalized from the database.
+- Add `values` to `VizyBlockInterface` for GraphQL.
+
+### Changed
+- Now requires Craft 4.4+.
+- Update all JS dependancies.
+- Update Tiptap to 2.0.
+- Remove Vizy block focus state (for now).
+- Refactor nested Vizy fields to correctly render with Vue 3 compilation, fixing lots of pesky issues.
+- Formatting buttons (headings, blockquote, etc) can now be included outside of the formatting dropdown.
+- Ordered/Unordered Lists nodes now longer wrap content with Paragraph nodes.
+- Refine heading styles in the editor.
+- Update `NodeInterface::text` to return a textual representation (plain text) of any content for GraphQL.
+- Modifying other Craft fields included in Vizy fields now correctly updates content when fields’ handles are changed.
+- Improve visibility of dropcursor when dragging Vizy blocks.
+- Speed up tippy overlays for snappier feedback.
+- Change top-level Paragraph node button icon.
+- Move asset-related field settings to hidden “advanced” area for brevity.
+- Update text align buttons to show `isActive` state.
+- Provide better handling of invalid Vizy blocks if they occur.
+
+### Fixed
+- Fix modified field status badge for Vizy block fields.
+- Fix field triggering a changed value behaviour (saving a new draft) when no content has changed.
+- Fix edit image modal alignment and overflow scrolling issues.
+- Fix settings cog color for Vizy blocks.
+- Fix tab overflow issue for Vizy blocks.
+- Fix missing translations for block settings.
+- Fix toolbar button alignment issue for icons.
+- Fix Paragraph node button not working correctly.
+- Fix node selection when hovering.
+- Fix empty blocktype picker UI when no block types are available.
+- Fix being able to copy/paste Vizy blocks into other fields (in a nested setup) that don’t support the same block types.
+- Fix a JS error when trying to drag blocks between nested Vizy fields.
+- Fix copying field handles when editing field content not working.
+- Fix an issue where field layout fields may not be saved when adding quickly.
+- Fix some HTML characters being stripped incorrectly due to LitEmoji processing.
+- Fix node attributes like classes not always merging correctly with template-defined and config-defined.
+- Fix nodes saving attributes with `null` values.
+- Fix Paragraph empty checks when containing nested nodes/marks.
+- Fix node serialization not working for nested nodes.
+- Fix an error when invalid nodes were used (crashes editor).
+- Fix some special HTML characters being stripped out of content.
+- Fix accessibility for button modals.
+- Fix menu bar items in dropdowns not showing their active state.
+- Fix dropcursor glitches between Vizy blocks, and improve style.
+- Fix an issue where saving Vizy fields inside Vizy Block field type settings weren’t always saved.
+- Fix Redactor changes in Vizy blocks not having their content serialized correctly.
+- Fix Table fields used in Vizy Blocks not saving correctly when rows in the table are deleted.
+- Fix height of menu button options and scrollable container.
+
 ## 2.0.12 - 2023-02-27
 
 ### Fixed
