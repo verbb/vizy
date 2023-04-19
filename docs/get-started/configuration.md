@@ -44,6 +44,8 @@ Option | Description
 `buttons` | An array of available buttons. Refer to below.
 `formatting` | An array of available formatting options. Refer to below.
 `toolbarFixed` | A boolean `true/false` to denote if the button toolbar should stick to the viewport when scrolling.
+`table` | An array of available table options. Refer to below.
+`commands` | An array of available commands for the Command Palette. These will be the same as `buttons`.
 
 ### Buttons
 
@@ -145,6 +147,16 @@ Option | Description
 {
     "buttons": ["table", "bold", "italic"],
     "table": ["insert-table", "delete-table", "add-col-before", "delete-col", "add-row-before", "delete-col"]
+}
+```
+
+### Commands
+You can use the any of the `buttons` values in the `commands` options to enable them in the Command Palette.
+
+```json
+{
+    "buttons": ["table", "bold", "italic"],
+    "commands": ["table", "bold", "italic"]
 }
 ```
 
