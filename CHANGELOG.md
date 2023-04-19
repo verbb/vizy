@@ -1,5 +1,17 @@
 # Changelog
 
+## 2.1.1 - 2023-04-19
+
+### Added
+- Add Table support for Feed Me.
+- Command Palette commands can now be part of the Editor Config.
+
+### Changed
+- Command Palette commands now filter out any extensions that are included, but don't have a button enabled.
+
+### Fixed
+- Fix ul/ol items being invalid in the editor and saved incorrectly. May require any items added after `2.1.0` to be re-input.
+
 ## 2.1.0 - 2023-04-13
 
 ### Added
