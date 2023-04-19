@@ -11,6 +11,7 @@
 
 ### Fixed
 - Fix ul/ol items being invalid in the editor and saved incorrectly. May require any items added after `2.1.0` to be re-input.
+- Fix some users not being able to link to assets.
 
 ## 2.1.0 - 2023-04-13
 
