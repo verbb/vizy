@@ -10,15 +10,64 @@ import CommandsList from './CommandsList.vue';
 
 export default {
     items: (options) => {
-        let items = Craft.Vizy.Config.getCommands();
+        const { vizyField } = options.editor;
+        const vizySettings = vizyField.settings;
+        const allCommands = Craft.Vizy.Config.getCommands();
+        let commands = [];
 
-        if (!options.editor.vizyField.richTextEnabled) {
-            items = [];
+        let includedCommands = [
+            'h1',
+            'h2',
+            'h3',
+            'unordered-list',
+            'ordered-list',
+            'media-embed',
+            'link',
+            'image',
+            'code-block',
+            'blockquote',
+            'hr',
+        ];
+
+        // Allow commands to be set in the config
+        if (vizySettings.vizyConfig.commands) {
+            includedCommands = vizySettings.vizyConfig.commands;
         }
 
-        options.editor.vizyField.settings.blockGroups.forEach((blockGroup) => {
+        // Only include the commands that are allowed
+        includedCommands.forEach((commandName) => {
+            const command = allCommands.find((x) => { return x.name === commandName; });
+
+            if (command) {
+                commands.push(command);
+            }
+        });
+
+        // Also filter out any commands that don't have a button, even if included in the config. This is because the extension
+        // isn't initialised unless it's a button.
+        let availableButtons = ['paragraph', 'code-block', 'blockquote', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6'];
+
+        if (vizySettings.vizyConfig.formatting && vizySettings.vizyConfig.formatting.length) {
+            availableButtons = vizySettings.vizyConfig.formatting;
+        }
+
+        availableButtons = [...availableButtons, ...vizyField.buttons];
+
+        commands.forEach((command, index) => {
+            if (!availableButtons.includes(command.name)) {
+                commands.splice(index, 1);
+            }
+        });
+
+        // Disable all commands until now if no rich text editor
+        if (!vizyField.richTextEnabled) {
+            commands = [];
+        }
+
+        // Include any Vizy blocks as commands
+        vizySettings.blockGroups.forEach((blockGroup) => {
             blockGroup.blockTypes.forEach((blockType) => {
-                items.push({
+                commands.push({
                     name: blockType.handle,
                     svg: blockType.icon.svg,
                     title: blockType.name,
@@ -41,8 +90,9 @@ export default {
             });
         });
 
-        return items.filter((item) => {
-            return item.title.toLowerCase().startsWith(options.query.toLowerCase());
+        // Filter based on typing
+        return commands.filter((command) => {
+            return command.title.toLowerCase().startsWith(options.query.toLowerCase());
         });
     },
 
