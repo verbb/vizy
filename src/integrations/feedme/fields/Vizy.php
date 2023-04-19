@@ -9,12 +9,8 @@ use craft\feedme\base\Field;
 use craft\feedme\base\FieldInterface;
 
 use Tiptap\Editor;
-use Tiptap\Marks\Underline;
-use Tiptap\Marks\Superscript;
-use Tiptap\Marks\Subscript;
-use Tiptap\Marks\Link;
-use Tiptap\Marks\Highlight;
-use Tiptap\Nodes\Image;
+use Tiptap\Marks;
+use Tiptap\Nodes;
 use Tiptap\Extensions\StarterKit;
 
 class Vizy extends Field implements FieldInterface
@@ -52,12 +48,16 @@ class Vizy extends Field implements FieldInterface
             'content' => $value,
             'extensions' => [
                 new StarterKit,
-                new Image,
-                new Highlight,
-                new Link,
-                new Subscript,
-                new Superscript,
-                new Underline,
+                new Nodes\Image,
+                new Marks\Highlight,
+                new Marks\Link,
+                new Marks\Subscript,
+                new Marks\Superscript,
+                new Marks\Table,
+                new Marks\TableCell,
+                new Marks\TableHeader,
+                new Marks\TableRow,
+                new Marks\Underline,
             ],
         ]);
 
