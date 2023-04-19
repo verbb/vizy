@@ -184,7 +184,7 @@ export default {
                             const isTransform = this._isTransformUrl(asset.url);
 
                             // If transform was selected or we don't have a default, no _real_ processing.
-                            if (isTransform || this.defaultTransform.length == 0) {
+                            if (isTransform || !this.defaultTransform) {
                                 data[`asset${asset.id}`] = {
                                     id: asset.id,
                                     src: this._buildAssetUrl(asset.id, asset.url, isTransform ? transform : this.defaultTransform),
