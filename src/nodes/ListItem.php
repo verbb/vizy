@@ -23,11 +23,21 @@ class ListItem extends Node
         // Fix ProseMirror wrapping node items with inner paragraph. Only do this for front-end requests though.
         // But only do this for a non-editor render (front-end, or GQL) as this is still needed by the editor to work.
         if (!Craft::$app->getRequest()->getIsCpRequest()) {
-            $firstChild = $this->content[0] ?? null;
+            $newContent = [];
 
-            if ($firstChild instanceof Paragraph) {
-                $this->content = $firstChild['content'] ?? [];
+            foreach ($this->content as $contentNode) {
+                if ($contentNode instanceof Paragraph) {
+                    $content = $contentNode['content'] ?? [];
+
+                    foreach ($content as $innerNode) {
+                        $newContent[] = $innerNode;
+                    }
+                } else {
+                    $newContent[] = $contentNode;
+                }
             }
+
+            $this->content = $newContent;
         }
 
         return $this->content;
