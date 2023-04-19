@@ -1,5 +1,10 @@
 # Changelog
 
+## 2.1.2 - 2023-04-20
+
+### Fixed
+- Fix being unable to select an image when no default transform was set for the field.
+
 ## 2.1.1 - 2023-04-19
 
 ### Added
