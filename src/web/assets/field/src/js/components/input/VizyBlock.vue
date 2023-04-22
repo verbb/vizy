@@ -437,6 +437,31 @@ export default {
                     $fieldsHtml.find('.redactor-box').replaceWith($textarea);
                 }
 
+                // Special-case for Selectize. We need to reset it to its un-initialized form
+                // because it doesn't have better double-binding checks.
+                if ($fieldsHtml.find('.selectize').length) {
+                    $fieldsHtml.find('.selectize').each((index, element) => {
+                        // This is absolutely ridiculous. Selectize strips out `<option>` elements, so we can't
+                        // fetch the original data from the DOM. Instead, find it in the original block type template.
+
+                        // Get the original field HTML from it's `data-layout-element` which contains the UID
+                        const fieldUid = $(element).parents('[data-type]').data('layout-element');
+
+                        if (fieldUid) {
+                            // Get the original HTML
+                            const $newHtml = $(this.blockType.fieldsHtml).find(`[data-layout-element="${fieldUid}"] .selectize`);
+
+                            if ($newHtml.length) {
+                                // Restore any selected elements
+                                $newHtml.find('select').val($(element).find('select').val());
+
+                                // Replace the HTML with the altered original template
+                                element.innerHTML = $newHtml.htmlize();
+                            }
+                        }
+                    });
+                }
+
                 const fieldsHtml = $fieldsHtml.htmlize();
 
                 this.vizyField.setCachedFieldHtml(this.node.attrs.id, fieldsHtml);
