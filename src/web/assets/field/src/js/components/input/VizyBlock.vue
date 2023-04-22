@@ -73,9 +73,11 @@
                 </div>
             </div>
 
-            <slide-up-down :active="!collapsed" :duration="300">
-                <vizy-block-fields v-if="fieldsHtml" ref="fields" :key="updateFieldsHtml" class="vizyblock-fields" :template="fieldsHtml" @update="onFieldUpdate" />
-            </slide-up-down>
+            <collapse-transition>
+                <div v-show="!collapsed">
+                    <vizy-block-fields v-if="fieldsHtml" ref="fields" :key="updateFieldsHtml" class="vizyblock-fields" :template="fieldsHtml" @update="onFieldUpdate" />
+                </div>
+            </collapse-transition>
         </div>
 
         <div v-else class="vizyblock-wrap">
@@ -98,10 +100,10 @@ import 'tippy.js/dist/tippy.css';
 import 'tippy.js/themes/light-border.css';
 
 import { NodeViewWrapper } from '@tiptap/vue-3';
+import CollapseTransition from '@ivanv/vue-collapse-transition/src/CollapseTransition.vue';
 
 import LightswitchField from '../settings/LightswitchField.vue';
 import VizyBlockFields from './VizyBlockFields.vue';
-import SlideUpDown from './SlideUpDown.vue';
 
 import htmlize from '@utils/htmlize';
 import { getClosest } from '@utils/dom';
@@ -113,7 +115,7 @@ export default {
         NodeViewWrapper,
         LightswitchField,
         VizyBlockFields,
-        SlideUpDown,
+        CollapseTransition,
     },
 
     props: {
