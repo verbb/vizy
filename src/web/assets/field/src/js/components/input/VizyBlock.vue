@@ -458,9 +458,16 @@ export default {
                 // Special-case for Redactor. We need to reset it to its un-initialized form
                 // because it doesn't have better double-binding checks.
                 if ($fieldsHtml.find('.redactor-box').length) {
-                    // Rip out the `textarea` which is all we need
-                    const $textarea = $fieldsHtml.find('.redactor-box textarea').htmlize();
-                    $fieldsHtml.find('.redactor-box').replaceWith($textarea);
+                    $fieldsHtml.find('.redactor-box').each((index, element) => {
+                        // Skip any Redactor fields in nested Vizy fields within the block. They handle themselves.
+                        if ($(element).parents('.vui-editor').length) {
+                            return;
+                        }
+
+                        // Rip out the `textarea` which is all we need
+                        const $textarea = $(element).find('textarea').htmlize();
+                        $(element).replaceWith($textarea);
+                    });
                 }
 
                 // Special-case for Selectize. We need to reset it to its un-initialized form
