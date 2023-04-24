@@ -1,5 +1,19 @@
 # Changelog
 
+## 2.1.3 - 2023-04-24
+
+### Changed
+- Lower the font size of preview text for Vizy Blocks.
+- Update all JS dependencies.
+
+### Fixed
+- Fix Vizy block preview text not using correct values for some field types.
+- Fix an error when re-ordering certain Vizy blocks, containing nested Vizy fields.
+- Fix collapse transition with nested Vizy fields and the editor toolbar.
+- Fix dropdown fields used in Vizy blocks rendering incorrectly when moving.
+- Fix incorrect Table handling for Feed Me.
+- Fix Redactor fields in nested Vizy fields getting reset (removed) when they shouldn’t.
+
 ## 2.1.2 - 2023-04-20
 
 ### Fixed
