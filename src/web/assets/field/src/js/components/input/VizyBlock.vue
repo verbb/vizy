@@ -207,11 +207,9 @@ export default {
                 return this.node.attrs.enabled && this.blockType.enabled;
             },
             set(enabled) {
+                // We can't use `updateAttributes()` here due to it not working correctly when re-ordering blocks.
                 // eslint-disable-next-line vue/no-mutating-props
                 this.node.attrs.enabled = enabled;
-
-                // Some obscure issue using this for some resaon in Vue 3...
-                // return this.updateAttributes({ enabled });
             },
         },
 
@@ -220,7 +218,9 @@ export default {
                 return this.node.attrs.collapsed;
             },
             set(collapsed) {
-                return this.updateAttributes({ collapsed });
+                // We can't use `updateAttributes()` here due to it not working correctly when re-ordering blocks.
+                // eslint-disable-next-line vue/no-mutating-props
+                this.node.attrs.collapsed = collapsed;
             },
         },
 
@@ -654,7 +654,12 @@ export default {
 
             values.content = fieldContent;
 
-            this.updateAttributes({ values });
+            // We can't use `updateAttributes()` here, because that will only operate on the selected node. This function
+            // will often be called for all nodes in a collection, such as when re-ordering blocks which affect more
+            // than just the block being moved due to Tiptap/Vue rendering. As such, it's not best-practice, but we update
+            // the node attributes directly. See https://share.cleanshot.com/8dkt1vQY for this in action with `updateAttributes()`
+            // eslint-disable-next-line vue/no-mutating-props
+            this.node.attrs.values = values;
         },
     },
 };
