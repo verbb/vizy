@@ -742,6 +742,7 @@ export default {
     max-width: 50%;
     text-overflow: ellipsis;
     overflow: hidden;
+    font-size: 12px;
 }
 
 .vizyblock-header .actions-tabs {
