@@ -7,6 +7,7 @@
         @copy.stop
         @paste.stop
         @cut.stop
+        @click.prevent="clickBlock"
     >
         <div v-if="!isEmpty(blockType)" class="vizyblock-wrap">
             <div class="vizyblock-header" @dblclick.prevent="toggleTitle">
@@ -94,6 +95,8 @@
 import {
     get, find, debounce, isEmpty,
 } from 'lodash-es';
+import { GapCursor } from 'prosemirror-gapcursor';
+import { TextSelection, NodeSelection } from 'prosemirror-state';
 
 import tippy from 'tippy.js';
 import 'tippy.js/dist/tippy.css';
@@ -501,6 +504,25 @@ export default {
             }
         },
 
+        clickBlock(e) {
+            // Manually trigger the gapcursor when clicking on the padding around a block. We need to use padding to get the
+            // dropcursor to not flicker back and forth between blocks, but that doesn't work with gapcursor. So, we're going manual!
+
+            // Detect if we're clicking on the outer block, which includes the padding (which is what we want)
+            if (!e.target.hasAttribute('data-node-view-wrapper')) {
+                return;
+            }
+
+            const clickPos = this.editor.view.posAtCoords({ left: e.clientX, top: e.clientY });
+
+            if (clickPos && clickPos.inside > -1 && !NodeSelection.isSelectable(this.editor.view.state.doc.nodeAt(clickPos.inside))) {
+                return false;
+            }
+
+            const $pos = this.editor.view.state.doc.resolve(clickPos.pos);
+            this.editor.view.dispatch(this.editor.view.state.tr.setSelection(new GapCursor($pos)));
+        },
+
         clickTab(index) {
             this.activeTab = index;
 
@@ -702,6 +724,7 @@ export default {
 .vizyblock {
     // Splitting the outer wrapper and inner visual styles provides better support for dropcursor
     padding: 10px 0;
+    cursor: text;
 }
 
 .vizyblock-wrap {
@@ -709,7 +732,7 @@ export default {
     padding: 0 12px 12px;
     border-radius: 5px;
     outline: none;
-
+    cursor: auto;
     white-space: normal;
     background-color: #fff;
     border: 1px solid #cdd9e4;
@@ -847,10 +870,15 @@ export default {
 
 // Fix overflow issues from Craft's field layout, causing cursor issues in the editor
 // Selectors also need to be very specific to override Craft.
-#content .vizyblock-fields :not(.meta) > .flex-fields {
+#content .vui-editor :not(.meta) > .flex-fields {
     margin-left: 0 !important;
     margin-right: 0 !important;
+    margin-bottom: 0 !important;
     width: 100% !important;
+
+    > :not(h2):not(hr):last-child {
+        margin-bottom: 0 !important;
+    }
 
     > :not(h2):not(hr),
     > :not(h2):not(hr):last-child {
