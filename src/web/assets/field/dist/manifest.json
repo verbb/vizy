@@ -1,13 +1,13 @@
 {
   "field/src/js/vizy.css": {
-    "file": "assets/vizy-fa792ece.css",
+    "file": "assets/vizy-0cf0dc4f.css",
     "src": "field/src/js/vizy.css"
   },
   "field/src/js/vizy.js": {
     "css": [
-      "assets/vizy-fa792ece.css"
+      "assets/vizy-0cf0dc4f.css"
     ],
-    "file": "assets/vizy-321c898c.js",
+    "file": "assets/vizy-4257219d.js",
     "isEntry": true,
     "src": "field/src/js/vizy.js"
   }
