@@ -1,10 +1,10 @@
 # Vizy Plugin for Craft CMS
 
-<img width="500" src="https://verbb.io/uploads/plugins/vizy/vizy-social-card.png?v=1">
+<img width="500" src="https://verbb.imgix.net/plugins/vizy/vizy-social-card.png?v=1">
 
 Vizy is a visual field editor for Craft CMS, combining everything you already know about [WYSIWYG](https://plugins.craftcms.com/redactor), the power of Matrix blocks and a sprinkle of [Neo](https://plugins.craftcms.com/neo) into an all-new editor experience.
 
-<img width="800" src="https://verbb.io/uploads/plugins/vizy/vizy-demo.png" style="box-shadow: 0 4px 16px rgba(0,0,0,0.08); border-radius: 4px; border: 1px solid rgba(0,0,0,0.12);">
+<img width="800" src="https://verbb.imgix.net/plugins/vizy/vizy-demo.png" style="box-shadow: 0 4px 16px rgba(0,0,0,0.08); border-radius: 4px; border: 1px solid rgba(0,0,0,0.12);">
 
 ## Features
 - A fully-featured WYSIWYG field.
