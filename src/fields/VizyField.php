@@ -21,6 +21,7 @@ use craft\base\Field;
 use craft\elements\Asset;
 use craft\elements\Category;
 use craft\elements\Entry;
+use craft\elements\MatrixBlock;
 use craft\helpers\ArrayHelper;
 use craft\helpers\FileHelper;
 use craft\helpers\Html;
@@ -42,7 +43,10 @@ use Throwable;
 
 use GraphQL\Type\Definition\Type;
 
+use verbb\supertable\elements\SuperTableBlockElement;
 use verbb\supertable\fields\SuperTableField as SuperTable;
+
+use benf\neo\elements\Block as NeoBlock;
 
 class VizyField extends Field
 {
@@ -309,7 +313,7 @@ class VizyField extends Field
 
         // No need to output JS for any nested fields, all settings are rendered in the template
         // as Vue takes over and processes the props.
-        if (!$element instanceof BlockElement) {
+        if (!$this->_checkIfNested($element)) {
             // Register the Vizy JS for Vite
             Plugin::registerAsset('field/src/js/vizy.js');
 
@@ -682,7 +686,7 @@ class VizyField extends Field
             $blockType = $blockTypesById[$blockTypeId];
 
             if ($blockType->minBlocks > 0 && $blockTypeCount < $blockType->minBlocks) {
-                $element->addError($this->handle, Craft::t('neo', '{attribute} should contain at least {minBlockTypeBlocks, number} {minBlockTypeBlocks, plural, one{block} other{blocks}} of type {blockType}.', [
+                $element->addError($this->handle, Craft::t('vizy', '{attribute} should contain at least {minBlockTypeBlocks, number} {minBlockTypeBlocks, plural, one{block} other{blocks}} of type {blockType}.', [
                         'attribute' => Craft::t('site', $this->name),
                         'minBlockTypeBlocks' => $blockType->minBlocks,
                         'blockType' => $blockType->name,
@@ -743,6 +747,31 @@ class VizyField extends Field
     private function getCacheKey($key): string
     {
         return $this->id . '-' . $this->handle . '-' . $key;
+    }
+
+    private function _checkIfNested(?ElementInterface $element = null): bool
+    {
+        if ($element instanceof BlockElement) {
+            return true;
+        }
+
+        if ($element instanceof MatrixBlock) {
+            return $this->_checkIfNested($element->getOwner());
+        }
+
+        if (Plugin::isPluginInstalledAndEnabled('super-table')) {
+            if ($element instanceof SuperTableBlockElement) {
+                return $this->_checkIfNested($element->getOwner());
+            }
+        }
+
+        if (Plugin::isPluginInstalledAndEnabled('neo')) {
+            if ($element instanceof NeoBlock) {
+                return $this->_checkIfNested($element->getOwner());
+            }
+        }
+
+        return false;
     }
 
     private function _getNestedValues($value, $key, &$items = []): array
