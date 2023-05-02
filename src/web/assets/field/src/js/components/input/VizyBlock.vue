@@ -635,6 +635,11 @@ export default {
                 if (slideout) {
                     // eslint-disable-next-line
                     content = Object.values(content)[0];
+
+                    // Extra handling for nested Vizy fields
+                    if (isEmpty(content.fields)) {
+                        content = { fields: content };
+                    }
                 }
 
                 // We change the root `fields` to `vizyBlockFields` but not for nested items.
