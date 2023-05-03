@@ -1,5 +1,15 @@
 # Changelog
 
+## 2.1.4 - 2023-05-03
+
+### Changed
+- Improve gap cursor between Vizy blocks.
+
+### Fixed
+- Fix an error when editing nested Vizy fields in element slide-outs.
+- Fix an issue where nested Vizy fields (Vizy > Matrix > Vizy) weren’t working correctly.
+- Fix iframe nodes not rendering correctly.
+
 ## 2.1.3 - 2023-04-24
 
 ### Changed
