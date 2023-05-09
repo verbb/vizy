@@ -885,22 +885,6 @@ class VizyField extends Field
                     $blockElement->setField($this);
 
                     $originalNamespace = $view->getNamespace();
-
-                    // $fieldLayout = $blockElement->getFieldLayout();
-                    // $fieldLayoutTab = $fieldLayout->getTabs()[0] ?? new FieldLayoutTab();
-
-                    // if ($fieldLayout = $blockElement->getFieldLayout()) {
-                    //     foreach ($fieldLayout->getCustomFields() as $field) {
-                            // $blockElement->setIsFresh(false);
-                    //     }
-                    // }
-
-                    // if ($fieldLayout = $blockElement->getFieldLayout()) {
-                    //     foreach ($fieldLayout->getCustomFields() as $field) {
-                    //         // Craft::dd($field);
-                    //         $field->setIsFresh(false);
-                    //     }
-                    // }
                     
                     // Because Vizy Vue components serialize the input into JSON (including nested fields), we
                     // actually don't want the rendered block fields to use the same `fields` namespace as other
@@ -916,13 +900,6 @@ class VizyField extends Field
                     $blockTypeArray['fieldsHtml'] = $view->namespaceInputs($form->render());
 
                     $footHtml = $view->clearJsBuffer(false);
-
-                    // Reset $_isFresh's
-                    // foreach ($fieldLayoutTab->getElements() as $layoutElement) {
-                    //     if ($layoutElement instanceof CustomField) {
-                    //         $layoutElement->getField()->setIsFresh(null);
-                    //     }
-                    // }
 
                     $view->setNamespace($originalNamespace);
 
@@ -966,36 +943,12 @@ class VizyField extends Field
                     $blockElement->setType($block->getBlockType());
                     $blockElement->setField($this);
                     $blockElement->setIsFresh(false);
-                    // $blockElement->test = true;
 
                     $originalNamespace = $view->getNamespace();
 
-            // Craft::dd($blockElement);
-
-                    // if ($fieldLayout = $blockElement->getFieldLayout()) {
-                    //     foreach ($fieldLayout->getTabs() as $tab) {
-                    //         foreach ($tab->getElements() as $layoutElement) {
-                    //             if ($layoutElement instanceof \craft\fieldlayoutelements\CustomField) {
-                    //                 $layoutElement->getField()->setIsFresh(false);
-                    //             }
-                    //         }
-                    //     }
-                    // }
-
                     if ($fieldLayout = $blockElement->getFieldLayout()) {
                         foreach ($fieldLayout->getCustomFields() as $field) {
-                            // foreach ($tab->getElements() as $layoutElement) {
-                            //     if ($layoutElement instanceof \craft\fieldlayoutelements\CustomField) {
-                            
                             $field->setIsFresh(false);
-
-                            // $fieldValue = $blockElement->getFieldValue($field->handle);
-
-                            // Craft::dd($fieldValue);
-                            
-
-                            //     }
-                            // }
                         }
                     }
 
