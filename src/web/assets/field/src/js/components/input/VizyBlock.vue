@@ -7,7 +7,7 @@
         @copy.stop
         @paste.stop
         @cut.stop
-        @click.prevent="clickBlock"
+        @click="clickBlock"
     >
         <div v-if="!isEmpty(blockType)" class="vizyblock-wrap">
             <div class="vizyblock-header" @dblclick.prevent="toggleTitle">
