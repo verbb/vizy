@@ -515,23 +515,24 @@ export default {
         refreshUnloadData() {
             // Give it a second for everything to be ready
             setTimeout(() => {
-                const $forms = $('form[data-confirm-unload]');
+                // Check if this is a new block, if so, skip, because that would reset current un-saved content
+                if (this.editor.storage.vizyBlock.isNew) {
+                    return;
+                }
 
                 // Re-serialize the form data, to prevent unload warnings for nested Vizy fields
-                for (let i = 0; i < $forms.length; i++) {
-                    const $form = $($forms[i]);
-                    const data = $form.data('initialSerializedValue');
+                const $mainForm = $('form#main-form');
 
-                    if (data) {
-                        let serialized = data;
+                if ($mainForm.length) {
+                    const elementEditor = $mainForm.data('elementEditor');
 
-                        if (typeof $form.data('serializer') === 'function') {
-                            serialized = $form.data('serializer')();
-                        } else {
-                            serialized = $form.serialize();
-                        }
+                    if (elementEditor) {
+                        // Serialize the form again, now Vue is ready
+                        const formData = elementEditor.serializeForm(true);
 
-                        $form.data('initialSerializedValue', serialized);
+                        // Update the local cache, and the DOM cache
+                        elementEditor.lastSerializedValue = formData;
+                        $mainForm.data('initialSerializedValue', formData);
                     }
                 }
             }, 500);

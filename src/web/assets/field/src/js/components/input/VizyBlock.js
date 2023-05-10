@@ -27,6 +27,12 @@ export default Node.create({
         };
     },
 
+    addStorage() {
+        return {
+            isNew: false,
+        };
+    },
+
     parseHTML() {
         return [
             {
@@ -53,6 +59,8 @@ export default Node.create({
                         tr.insert(selection.from, state.schema.nodes.paragraph.create());
                         tr.replaceRangeWith(selection.from, selection.to, node);
                     }
+
+                    this.storage.isNew = true;
 
                     return true;
                 };
