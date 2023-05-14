@@ -96,17 +96,23 @@ export default {
 
             // Add a sequential count to each block type, so we can handle a `selectedIndex``
             blockGroups.forEach((blockGroup) => {
-                blockGroup.blockTypes.forEach((blockType) => {
-                    blockType.countIndex = count;
+                if (Array.isArray(blockGroup.blockTypes)) {
+                    blockGroup.blockTypes.forEach((blockType) => {
+                        blockType.countIndex = count;
 
-                    count++;
-                });
+                        count++;
+                    });
+                }
             });
 
             return blockGroups.reduce((acc, blockGroup) => {
-                const blockTypes = blockGroup.blockTypes.filter((blockType) => {
-                    return blockType.name.toLowerCase().includes(this.search.toLowerCase());
-                });
+                let blockTypes = [];
+
+                if (Array.isArray(blockGroup.blockTypes)) {
+                    blockTypes = blockGroup.blockTypes.filter((blockType) => {
+                        return blockType.name.toLowerCase().includes(this.search.toLowerCase());
+                    });
+                }
 
                 return !blockTypes.length ? acc : acc.concat({ ...blockGroup, blockTypes });
             }, []);
@@ -116,7 +122,9 @@ export default {
             let count = 0;
 
             this.blockGroups.forEach((blockGroup) => {
-                count += blockGroup.blockTypes.length;
+                if (Array.isArray(blockGroup.blockTypes)) {
+                    count += blockGroup.blockTypes.length;
+                }
             });
 
             return count;
