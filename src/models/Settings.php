@@ -11,6 +11,7 @@ class Settings extends Model
     // =========================================================================
 
     public string $iconsPath = '@webroot/icons/';
+    public int $recursiveFieldCount = 10;
 
 
     // Public Methods

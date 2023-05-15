@@ -9,12 +9,14 @@ The below shows the defaults already used by Vizy, so you don't need to add thes
 return [
     '*' => [
         'iconsPath' => '@webroot/icons/',
-    ]
+        'recursiveFieldCount' => 10,
+    ],
 ];
 ```
 
 ## Configuration options
 - `iconsPath` - Provide a file system path for a collection of SVG icons. These are available when creating your Block Types for a Vizy field. This also accepts environment variables or aliases.
+- `recursiveFieldCount` - For recursive Vizy fields, set the limit for how many times a Vizy fields can be nested.
 
 ## Control Panel
 You can also manage configuration settings through the Control Panel by visiting Settings → Vizy.

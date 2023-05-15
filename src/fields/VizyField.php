@@ -838,16 +838,19 @@ class VizyField extends Field
 
     private function _getBlockGroupsForInput($placeholderKey, ElementInterface $element = null): array
     {
+        /** @var Settings $settings */
+        $settings = Vizy::$plugin->getSettings();
+
         // Get from the cache, if we've already prepped this field's block groups.
         // The blocks HTML/JS is unique to this fields' ID and handle. Even if used multiple
         // times in an element, or nested, we only need to generate this once.
-        return Vizy::$plugin->getCache()->getOrSet($this->getCacheKey('blockGroups'), function() use ($placeholderKey, $element) {
+        return Vizy::$plugin->getCache()->getOrSet($this->getCacheKey('blockGroups'), function() use ($placeholderKey, $element, $settings) {
             $view = Craft::$app->getView();
 
             $data = $this->fieldData;
 
             // As we can nested the same field recursively, we'll hit infinite loop errors at some point, so stop loading blocks at 10 levels.
-            if ($this->_recursiveFieldCount > 10) {
+            if ($this->_recursiveFieldCount > $settings->recursiveFieldCount) {
                 return [];
             }
 
