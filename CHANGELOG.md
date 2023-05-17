@@ -1,5 +1,16 @@
 # Changelog
 
+## 2.1.5 - 2023-05-17
+
+### Added
+- Add `recursiveFieldCount` plugin setting.
+
+### Fixed
+- Fix an error when no blocktypes are defined for a blocktype group.
+- Fix an issue when new nested Vizy fields would wipe out other fields’ unsaved draft content.
+- Fix incorrectly hijacking click events inside Vizy blocks.
+- Fix an error for Media Embed nodes when containing special characters in embed data HTML.
+
 ## 2.1.4 - 2023-05-03
 
 ### Changed
