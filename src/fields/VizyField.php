@@ -888,6 +888,13 @@ class VizyField extends Field
                     $blockElement->setField($this);
 
                     $originalNamespace = $view->getNamespace();
+
+                    // Ensure that all fields in the block are marked as fresh for new blocks
+                    if ($fieldLayout = $blockElement->getFieldLayout()) {
+                        foreach ($fieldLayout->getCustomFields() as $field) {
+                            $field->setIsFresh(true);
+                        }
+                    }
                     
                     // Because Vizy Vue components serialize the input into JSON (including nested fields), we
                     // actually don't want the rendered block fields to use the same `fields` namespace as other
@@ -908,6 +915,13 @@ class VizyField extends Field
 
                     if ($footHtml) {
                         $footHtml = '<script id="script-__VIZY_BLOCK_' . $placeholderKey . '__">' . $footHtml . '</script>';
+                    }
+
+                    // Reset $_isFresh's
+                    if ($fieldLayout = $blockElement->getFieldLayout()) {
+                        foreach ($fieldLayout->getCustomFields() as $field) {
+                            $field->setIsFresh(null);
+                        }
                     }
 
                     $blockTypeArray['footHtml'] = $footHtml;
