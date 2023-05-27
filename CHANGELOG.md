@@ -1,5 +1,10 @@
 # Changelog
 
+## 2.1.5 - 2023-05-27
+
+### Fixed
+- Fix new Vizy blocks not having their `isFresh` set for new fields.
+
 ## 2.1.5 - 2023-05-17
 
 ### Added
