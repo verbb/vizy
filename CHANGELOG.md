@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.0.23 - 2023-05-27
+
+### Fixed
+- Fix Table fields used in Vizy Blocks not saving correctly when rows in the table are deleted
+
 ## 1.0.22 - 2022-12-25
 
 ### Fixed
