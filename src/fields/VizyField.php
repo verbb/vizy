@@ -981,6 +981,15 @@ class VizyField extends Field
                     $fieldsHtml = $view->namespaceInputs($fieldLayout->createForm($blockElement)->render());
                     $footHtml = $view->clearJsBuffer(false);
 
+                    // Just in case some JS slips through (see dismissable UI element tips)
+                    preg_match_all('#<script>(.*?)<\/script>#is', $fieldsHtml, $extraJs);
+
+                    if (isset($extraJs[1])) {
+                        $footHtml = $footHtml . implode('', $extraJs[1]);
+                    }
+
+                    $fieldsHtml = preg_replace('#<script>(.*?)<\/script>#is', '', $fieldsHtml);
+
                     $view->setNamespace($originalNamespace);
 
                     if ($footHtml) {
