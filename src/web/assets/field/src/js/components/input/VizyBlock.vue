@@ -19,7 +19,7 @@
 
                 <div class="actions-tabs">
                     <div v-if="Object.keys(tabs).length > 1" class="titlebar-tabs">
-                        <a v-for="(tab, index) in tabs" :key="index" class="tab" :class="{ 'active': index === activeTab }" @click.prevent="clickTab(index)">
+                        <a v-for="(tab, index) in tabs" :key="index" class="tab" :class="{ 'active': index === activeTab, 'error': tabError(tab) }" @click.prevent="clickTab(index)">
                             {{ tab.label }}
                         </a>
                     </div>
@@ -428,6 +428,12 @@ export default {
     methods: {
         isEmpty(value) {
             return isEmpty(value);
+        },
+
+        tabError(tab) {
+            const tabErrors = this.vizyField.getBlockSettings(this.node.attrs.id).tabErrors || [];
+
+            return tabErrors.includes(tab.tabId);
         },
 
         _inputPreviewText($input) {

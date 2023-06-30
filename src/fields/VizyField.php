@@ -22,6 +22,7 @@ use craft\elements\Asset;
 use craft\elements\Category;
 use craft\elements\Entry;
 use craft\elements\MatrixBlock;
+use craft\fieldlayoutelements\CustomField;
 use craft\helpers\ArrayHelper;
 use craft\helpers\FileHelper;
 use craft\helpers\Html;
@@ -946,6 +947,7 @@ class VizyField extends Field
         if ($value instanceof NodeCollection) {
             foreach ($value->getNodes() as $block) {
                 if ($block instanceof VizyBlock) {
+                    $tabErrors = [];
                     $blockId = $block->attrs['id'];
                     $fieldLayout = $block->getFieldLayout();
 
@@ -964,8 +966,17 @@ class VizyField extends Field
                     $originalNamespace = $view->getNamespace();
 
                     if ($fieldLayout = $blockElement->getFieldLayout()) {
-                        foreach ($fieldLayout->getCustomFields() as $field) {
-                            $field->setIsFresh(false);
+                        foreach ($fieldLayout->getTabs() as $tab) {
+                            foreach ($tab->getElements() as $layoutElement) {
+                                if ($layoutElement instanceof CustomField) {
+                                    $layoutElement->getField()->setIsFresh(false);
+
+                                    // Record any tabs with field errors so we can reflect it via the UI
+                                    if (isset($blockElement->getErrors()[$layoutElement->getField()->handle])) {
+                                        $tabErrors[] = 'tab-' . $tab->getHtmlId();
+                                    }
+                                }
+                            }
                         }
                     }
 
@@ -1000,6 +1011,7 @@ class VizyField extends Field
                         'id' => $blockId,
                         'fieldsHtml' => $fieldsHtml,
                         'footHtml' => $footHtml,
+                        'tabErrors' => $tabErrors,
                     ];
                 }
             }

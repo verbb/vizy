@@ -439,6 +439,10 @@ export default {
             this.cachedFieldJs[blockId] = value;
         },
 
+        getBlockSettings(blockId) {
+            return find(this.settings.blocks, { id: blockId }) || {};
+        },
+
         // updateCachedFieldHtml() {
         //     var blockFields = this.editor.view.dom.querySelectorAll('.vizyblock-fields');
 
