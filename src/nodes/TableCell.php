@@ -60,4 +60,19 @@ class TableCell extends Node
         return $value;
     }
 
+    public function normalizeValue(?ElementInterface $element = null): ?array
+    {
+        $value = parent::normalizeValue($element);
+
+        $value['content'] = array_filter(($value['content'] ?? []));
+
+        // Table headers/cells seem to struggle if any empty paragraph is stripped out, which will happen by default
+        // so always ensure at least a paragraph node exists.
+        if (!$value['content']) {
+            $value['content'] = [['type' => 'paragraph']];
+        }
+
+        return $value;
+    }
+
 }
