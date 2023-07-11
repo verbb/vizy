@@ -1,5 +1,15 @@
 # Changelog
 
+## 2.1.7 - 2023-07-11
+
+### Added
+- Add error class to Vizy Block tabs, when one of their fields has an error.
+
+### Fixed
+- Fix an error parsing empty table field nodes.
+- Fix an error when Vizy Blocks contain a dismissable UI element tip.
+- Fix Matrix-nested fields and spacing.
+
 ## 2.1.6 - 2023-05-27
 
 ### Fixed
