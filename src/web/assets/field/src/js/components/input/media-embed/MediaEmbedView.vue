@@ -92,6 +92,13 @@ export default {
         },
     },
 
+    created() {
+        // Will need to be reloaded when toggling the code editor
+        this.editor.on('vui:code-editor-toggle', () => {
+            this.initEmbed();
+        });
+    },
+
     mounted() {
         this.$nextTick(() => {
             if (!this.html) {
