@@ -43,4 +43,32 @@ class ListItem extends Node
         return $this->content;
     }
 
+    public function serializeValue(ElementInterface $element = null): ?array
+    {
+        $value = parent::serializeValue($element);
+
+        $value['content'] = array_filter(($value['content'] ?? []));
+
+        // Protect against empty content, which can happen in some cases.
+        if (!$value['content']) {
+            $value['content'] = [['type' => 'paragraph']];
+        }
+
+        return $value;
+    }
+
+    public function normalizeValue(?ElementInterface $element = null): ?array
+    {
+        $value = parent::normalizeValue($element);
+
+        $value['content'] = array_filter(($value['content'] ?? []));
+
+        // Protect against empty content, which can happen in some cases.
+        if (!$value['content']) {
+            $value['content'] = [['type' => 'paragraph']];
+        }
+
+        return $value;
+    }
+
 }
