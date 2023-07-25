@@ -963,6 +963,9 @@ class VizyField extends Field
                     $blockElement->setField($this);
                     $blockElement->setIsFresh(false);
 
+                    // Bit of a hack here to trick `Element::getIsFresh()` that this _isn't_ a fresh block. Using `setIsFresh()` won't work.
+                    $blockElement->contentId = 99999;
+
                     $originalNamespace = $view->getNamespace();
 
                     if ($fieldLayout = $blockElement->getFieldLayout()) {
