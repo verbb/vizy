@@ -242,6 +242,7 @@ export default {
 .lightswitch.extra-small {
     border-radius: 7px;
     width: 24px;
+    min-width: 24px;
     height: 14px;
 }
 
