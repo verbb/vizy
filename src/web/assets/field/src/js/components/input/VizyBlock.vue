@@ -93,7 +93,7 @@
 
 <script>
 import {
-    get, find, debounce, isEmpty,
+    get, find, debounce, isEmpty, isObject, isArray, merge,
 } from 'lodash-es';
 import { GapCursor } from 'prosemirror-gapcursor';
 import { TextSelection, NodeSelection } from 'prosemirror-state';
@@ -683,6 +683,45 @@ export default {
             return foundContent;
         },
 
+        fixSuperTableMatrixContent(obj) {
+            const patternRegex = /^__BLOCK_[a-zA-Z0-9]+__$/;
+
+            if (isArray(obj)) {
+                obj.forEach((item) => {
+                    this.fixSuperTableMatrixContent(item);
+                });
+            } else if (isObject(obj)) {
+                const keys = Object.keys(obj);
+
+                keys.forEach((key) => {
+                    if (isObject(obj[key])) {
+                        this.fixSuperTableMatrixContent(obj[key]);
+                    }
+                });
+
+                // Check for a `blocks` key
+                if (keys.includes('blocks')) {
+                    const blockKeys = Object.keys(obj.blocks);
+
+                    // Check if this contains an object with keys `__BLOCK_*`
+                    if (blockKeys.some((key) => { return patternRegex.test(key); })) {
+                        // Ensure there's a `new*` key on the same object. We want to merge into that.
+                        const newKey = blockKeys.find((key) => { return /^new\d+$/.test(key); });
+
+                        if (newKey && blockKeys.length === 2) {
+                            const newBlockData = merge(obj.blocks[blockKeys[0]], obj.blocks[blockKeys[1]]);
+
+                            // Reset the content, we want to merge into `new*`
+                            obj.blocks = {};
+                            obj.blocks[newKey] = newBlockData;
+                        }
+                    }
+                }
+            }
+
+            return obj;
+        },
+
         fixArrayIndexes(obj) {
             if (Array.isArray(obj)) {
                 // Check if the array has any missing indexes
@@ -711,7 +750,13 @@ export default {
             // This causes issues with Table fields when deleting rows.
             content = this.fixArrayIndexes(content);
 
-            const fieldContent = this.findContentBlocksForBlock(content);
+            let fieldContent = this.findContentBlocksForBlock(content);
+
+            // For ST/Matrix/Vizy deeply-nested combinations, there's a caveat to how new block namespaces
+            // work that we need to handle. If we have Vizy > ST > Vizy > Vizy, the inner fields will have an issue
+            // where values will be using the `__BLOCK_*` placeholder, which is incorrect. We can't feasibly
+            // parse this with JS like ST does using jQuery, so we combine any of those values into their correct `new*` key.
+            fieldContent = this.fixSuperTableMatrixContent(fieldContent);
 
             // Generate a POST data object, and save it
             const values = { ...this.values };
