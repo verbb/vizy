@@ -520,7 +520,7 @@ export default {
             // Give it a second for everything to be ready
             setTimeout(() => {
                 // Check if this is a new block, if so, skip, because that would reset current un-saved content
-                if (this.editor.storage.vizyBlock.isNew) {
+                if (get(this.editor, 'storage.vizyBlock.isNew')) {
                     return;
                 }
 
