@@ -351,6 +351,12 @@ export default {
 
         this.$events.on('vizy-blocks:collapseAll', this.collapseBlock);
         this.$events.on('vizy-blocks:expandAll', this.expandBlock);
+
+        // Trigger a field update immediately on creation, in case the generated fields update their serialized data
+        // which is common due to `vizyData` being added on nested fields.
+        this.$nextTick(() => {
+            this.onFieldUpdate();
+        });
     },
 
     mounted() {
