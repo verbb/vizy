@@ -18,36 +18,40 @@ class VizyNodeGenerator implements GeneratorInterface
 
     public static function generateTypes(mixed $context = null): array
     {
-        $gqlTypes = [];
-
         $nodeClasses = Vizy::$plugin->getNodes()->getRegisteredNodes();
-
-        $interfaceClasses = [
-            Image::class => VizyImageNodeInterface::getFieldDefinitions(),
-        ];
+        $gqlTypes = [];
 
         foreach ($nodeClasses as $nodeClass) {
             if ($nodeClass === VizyBlock::class) {
                 continue;
             }
 
-            $typeName = $nodeClass::gqlTypeNameByContext($context);
+            $type = static::generateType($nodeClass);
 
-            if (!GqlEntityRegistry::getEntity($typeName)) {
-                // Determine the interface
-                $interfaceFields = $interfaceClasses[$nodeClass] ?? VizyNodeInterface::getFieldDefinitions();
-
-                $gqlTypes[$typeName] = GqlEntityRegistry::getEntity($typeName) ?: GqlEntityRegistry::createEntity($typeName, new VizyNodeType([
-                    'name' => $typeName,
-                    'fields' => function() use ($interfaceFields) {
-                        return $interfaceFields;
-                    },
-                ]));
-            }
+            $gqlTypes[$type->name] = $type;
         }
 
         // Generate the types for Vizy Blocks
         $generatorTypes = VizyBlockTypeGenerator::generateTypes($context);
+
         return array_merge($gqlTypes, $generatorTypes);
+    }
+
+    public static function generateType(mixed $context): mixed
+    {
+        $typeName = $context::gqlTypeNameByContext(null);
+
+        $interfaceClasses = [
+            Image::class => VizyImageNodeInterface::getFieldDefinitions(),
+        ];
+
+        $interfaceFields = $interfaceClasses[$context] ?? VizyNodeInterface::getFieldDefinitions();
+
+        return GqlEntityRegistry::getEntity($typeName) ?: GqlEntityRegistry::createEntity($typeName, new VizyNodeType([
+            'name' => $typeName,
+            'fields' => function() use ($interfaceFields, $typeName) {
+                return \Craft::$app->getGql()->prepareFieldDefinitions($interfaceFields, $typeName);
+            },
+        ]));
     }
 }
