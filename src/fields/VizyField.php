@@ -758,38 +758,59 @@ class VizyField extends Field
 
         if ($element instanceof MatrixBlock) {
             // There's a specific scenario we _want_ to render JS. This is when generating HTML/JS for blocktypes
-            // when adding new ones. But we don't want to run this for existing, saved blocks. It's a odd way of doing it
-            // but to differentiate the two, we check if not rendered via Twig, to return false (to render JS).
-            if (!Craft::$app->getView()->getIsRenderingTemplate()) {
-                return false;
+            // when adding new ones. But we don't want to run this for existing, saved blocks. 
+            // The slightly hacky way to do this is to see if there's any Super Table JS loaded in the view buffers
+            // (called via `startJsBuffer()`) which is present for already-saved blocks.
+            $view = Craft::$app->getView();
+
+            foreach ($view->js as $scripts) {
+                foreach ($scripts as $script) {
+                    if (is_string($script) && str_contains($script, 'Craft.MatrixInput')) {
+                        return true;
+                    }
+                }
             }
 
-            return $this->_checkIfNested($element->getOwner());
+            return false;
         }
 
         if (Plugin::isPluginInstalledAndEnabled('super-table')) {
             if ($element instanceof SuperTableBlockElement) {
                 // There's a specific scenario we _want_ to render JS. This is when generating HTML/JS for blocktypes
-                // when adding new ones. But we don't want to run this for existing, saved blocks. It's a odd way of doing it
-                // but to differentiate the two, we check if not rendered via Twig, to return false (to render JS).
-                if (!Craft::$app->getView()->getIsRenderingTemplate()) {
-                    return false;
+                // when adding new ones. But we don't want to run this for existing, saved blocks. 
+                // The slightly hacky way to do this is to see if there's any Super Table JS loaded in the view buffers
+                // (called via `startJsBuffer()`) which is present for already-saved blocks.
+                $view = Craft::$app->getView();
+
+                foreach ($view->js as $scripts) {
+                    foreach ($scripts as $script) {
+                        if (is_string($script) && str_contains($script, 'Craft.SuperTable.Input')) {
+                            return true;
+                        }
+                    }
                 }
 
-                return $this->_checkIfNested($element->getOwner());
+                return false;
             }
         }
 
         if (Plugin::isPluginInstalledAndEnabled('neo')) {
             if ($element instanceof NeoBlock) {
                 // There's a specific scenario we _want_ to render JS. This is when generating HTML/JS for blocktypes
-                // when adding new ones. But we don't want to run this for existing, saved blocks. It's a odd way of doing it
-                // but to differentiate the two, we check if not rendered via Twig, to return false (to render JS).
-                if (!Craft::$app->getView()->getIsRenderingTemplate()) {
-                    return false;
+                // when adding new ones. But we don't want to run this for existing, saved blocks. 
+                // The slightly hacky way to do this is to see if there's any Super Table JS loaded in the view buffers
+                // (called via `startJsBuffer()`) which is present for already-saved blocks.
+                $view = Craft::$app->getView();
+
+                foreach ($view->js as $scripts) {
+                    foreach ($scripts as $script) {
+                        if (is_string($script) && str_contains($script, 'Neo.createInput')) {
+                            return true;
+                        }
+                    }
                 }
-                
-                return $this->_checkIfNested($element->getOwner());
+
+                return false;
             }
         }
 
