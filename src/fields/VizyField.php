@@ -190,16 +190,18 @@ class VizyField extends Field
 
         $idPrefix = StringHelper::randomString(10);
 
-        // Register the Vizy JS for Vite
         Plugin::registerAsset('field/src/js/vizy.js');
 
         // Create the Vizy Settings Vue component
-        // Use an event listener to ensure that `vizy.js` has been loaded. An issue when used in element slideouts.
-        $view->registerJs('document.addEventListener("vizy-loaded", function(e) { new Craft.Vizy.Settings(' .
+        $js = 'new Craft.Vizy.Settings(' .
             Json::encode($idPrefix, JSON_UNESCAPED_UNICODE) . ', ' .
             Json::encode($fieldData, JSON_UNESCAPED_UNICODE) . ', ' .
             Json::encode($settings, JSON_UNESCAPED_UNICODE) .
-        '); });');
+        ');';
+
+        // Wait for Vizy JS to be loaded, either through an event listener, or by a flag.
+        // This covers if this script is run before, or after the Vizy JS has loaded
+        $view->registerJs('document.addEventListener("vizy-loaded", function(e) {' . $js . '}); if (Craft.VizyReady) {' . $js . '}');
 
         $volumeOptions = [];
 
@@ -311,8 +313,8 @@ class VizyField extends Field
         // Register the Vizy JS for Vite
         Plugin::registerAsset('field/src/js/vizy.js');
 
-        // Create the Vizy Input Vue component
-        // Use an event listener to ensure that `vizy.js` has been loaded. An issue when used in element slideouts.
+        // JS logic will handle whether to run this on nested fields or not. For the most part, Vue will
+        // automatically render any nested fields when run from the root component.
         $js = 'new Craft.Vizy.Input(' .
             '"' . $view->namespaceInputId($id) . '", ' .
             '"' . $view->namespaceInputName($this->handle) . '"' .
@@ -320,16 +322,10 @@ class VizyField extends Field
 
         // Wait for Vizy JS to be loaded, either through an event listener, or by a flag.
         // This covers if this script is run before, or after the Vizy JS has loaded
-        // Also check if _directly_ nested within another Vizy field. We don't want to include this for Vizy > Vizy
-        // but we do for intermidiary fields like Vizy > Matrix > Vizy for example.
-        if (!$this->_checkIfNested($element, false)) {
-            $view->registerJs('document.addEventListener("vizy-loaded", function(e) {' . $js . '}); if (Craft.VizyReady) {' . $js . '}');
-        }
+        $view->registerJs('document.addEventListener("vizy-loaded", function(e) {' . $js . '}); if (Craft.VizyReady) {' . $js . '}');
 
-        if ($this->_checkIfNested($element)) {
-            // Let the field know if this is the root field for nested fields
-            $settings['isRoot'] = false;
-        }
+        // Let the field know if this is the root field for nested fields
+        $settings['isRoot'] = $this->_isRootField($element);
 
         // Register any third-party plugins
         if (isset($settings['vizyConfig']['plugins'])) {
@@ -748,33 +744,31 @@ class VizyField extends Field
         return $this->id . '-' . $this->handle . '-' . $key;
     }
 
-    private function _checkIfNested(?ElementInterface $element = null, bool $checkNonVizy = false): bool
+    private function _isRootField(?ElementInterface $element = null): bool
     {
         if ($element instanceof BlockElement) {
-            return true;
+            return false;
         }
 
-        if ($checkNonVizy) {
-            if ($element instanceof MatrixBlock) {
-                return $this->_checkIfNested($element->getOwner(), $checkNonVizy);
-            }
+        if ($element instanceof MatrixBlock) {
+            return $this->_isRootField($element->getOwner());
+        }
 
-            if (Plugin::isPluginInstalledAndEnabled('super-table')) {
-                if ($element instanceof SuperTableBlockElement) {
-                    return $this->_checkIfNested($element->getOwner(), $checkNonVizy);
-                }
-            }
-
-            if (Plugin::isPluginInstalledAndEnabled('neo')) {
-                if ($element instanceof NeoBlock) {
-                    return $this->_checkIfNested($element->getOwner(), $checkNonVizy);
-                }
+        if (Plugin::isPluginInstalledAndEnabled('super-table')) {
+            if ($element instanceof SuperTableBlockElement) {
+                return $this->_isRootField($element->getOwner());
             }
         }
 
-        return false;
+        if (Plugin::isPluginInstalledAndEnabled('neo')) {
+            if ($element instanceof NeoBlock) {
+                return $this->_isRootField($element->getOwner());
+            }
+        }
+
+        return true;
     }
-
+    
     private function _getNestedValues($value, $key, &$items = []): array
     {
         foreach ($value as $k => $v) {

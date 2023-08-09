@@ -33,12 +33,6 @@ Craft.Vizy.Input = Garnish.Base.extend({
     init(idPrefix) {
         const selector = `#${idPrefix}-field .input`;
 
-        console.log(selector);
-
-        // // Use `IntersectionObserver` to wait for the selector to mount Vizy to be ready.
-        // // This handles when Vizy fields are created with Matrix/ST (which uses jQuery to create the DOM elements)
-        // // Also good for performance to only initializing fields as they become visible.
-        // watchAwaitSelector(selector, (elements) => {
         const app = createVueApp({
             components: {
                 VizyInput,
@@ -48,17 +42,17 @@ Craft.Vizy.Input = Garnish.Base.extend({
         // Import globally, as these are included in nested field content to be compiled
         app.component('VizyInput', VizyInput);
 
+        // Don't initialize a Vizy field that already has been. Likely by a parent Vizy field.
+        if (document.querySelector(selector).__vueInit) {
+            return;
+        }
+
         app.mount(selector);
     },
 });
 
 Craft.Vizy.Settings = Garnish.Base.extend({
     init(idPrefix, fieldData, settings) {
-        const selector = `.${idPrefix}-vizy-configurator`;
-
-        // Use `IntersectionObserver` to wait for the selector to mount Vizy to be ready.
-        // This handles when Vizy fields are created with Matrix/ST (which uses jQuery to create the DOM elements)
-        // Also good for performance to only initializing fields as they become visible.
         const app = createVueApp({
             components: {
                 VizySettings,
@@ -72,12 +66,15 @@ Craft.Vizy.Settings = Garnish.Base.extend({
             },
         });
 
-        app.mount(selector);
+        app.mount(`.${idPrefix}-vizy-configurator`);
     },
 });
 
-// Trigger a custom event to let scripts know that `vizy.js` is ready. This can be an issue when
-// the `Craft.Vizy.*` scripts are called before this script has loaded (element slideouts)
+
+// Re-broadcast the custom `vite-script-loaded` event so that we know that this module has loaded
+// Needed because when <script> tags are appended to the DOM, the `onload` handlers
+// are not executed, which happens in the field Settings page, and in slideouts
+// Do this after the document is ready to ensure proper execution order
 $(document).ready(() => {
     // Create a global-loaded flag when switching entry types. This won't be fired multiple times.
     Craft.VizyReady = true;

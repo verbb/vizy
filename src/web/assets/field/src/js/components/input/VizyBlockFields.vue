@@ -23,6 +23,11 @@ export default {
             // Ensure any Craft fields are prepped.
             Craft.initUiElements(this.$el);
 
+            // For any nested Vizy fields, mark them as Vue-rendered. This prevents us double-binding.
+            this.$el.querySelectorAll('.vizy-input-component').forEach((item) => {
+                item.parentElement.__vueInit = true;
+            });
+
             this.$nextTick(() => {
                 // Watch all field content for changes to serialize them to our text inputs that are stored in JSON blocks.
                 this.watchFieldChanges();
