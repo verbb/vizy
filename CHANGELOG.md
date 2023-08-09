@@ -1,5 +1,20 @@
 # Changelog
 
+## 2.1.8 - 2023-08-10
+
+### Fixed
+- Fix rendering nested JS for Vizy fields.
+- Revamp Vue component initialization for input and settings. Improves performance and edge-cases with Vizy fields nested in Matrix/Neo/Super Table and nested Vizy fields.
+- Fix an issue where nested Vizy fields trigger an unload warning.
+- Fix GQL schema for Nodes to generating correctly.
+- Fix Super Table/Matrix/Neo nested combinations not rendering Vizy fields correctly.
+- Fix an issue for neste Vizy fields, and `isNew` checks.
+- Fix an issue where deeply-nested Vizy fields within Matrix or Super Table fields weren’t having their content set correctly.
+- Fix lightswitch UI for Vizy blocks on Craft 4.4.16+.
+- Fix “fresh” check for blocks, affecting some defaults for some fields (Button Box) saving over content.
+- Fix the media embed node not displaying correctly when toggling the code editor.
+- Fix `ListItem` nodes throwing an error when their content was `null`.
+
 ## 2.1.7 - 2023-07-11
 
 ### Added
