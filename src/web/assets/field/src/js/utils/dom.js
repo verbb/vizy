@@ -4,3 +4,16 @@ export const getClosest = function(elem, selector) {
     }
     return null;
 };
+
+export const onReady = function($root, callback) {
+    const observer = new IntersectionObserver((entries) => {
+        if (entries[0].intersectionRatio !== 0) {
+            callback();
+
+            // Stop observing, now we've deemed it "ready"
+            observer.disconnect();
+        }
+    });
+
+    observer.observe($root);
+};

@@ -190,20 +190,16 @@ class VizyField extends Field
 
         $idPrefix = StringHelper::randomString(10);
 
+        // Register the Vizy JS for Vite
         Plugin::registerAsset('field/src/js/vizy.js');
 
         // Create the Vizy Settings Vue component
-        $js = 'new Craft.Vizy.Settings(' .
+        // Use an event listener to ensure that `vizy.js` has been loaded. An issue when used in element slideouts.
+        $view->registerJs('document.addEventListener("vizy-loaded", function(e) { new Craft.Vizy.Settings(' .
             Json::encode($idPrefix, JSON_UNESCAPED_UNICODE) . ', ' .
             Json::encode($fieldData, JSON_UNESCAPED_UNICODE) . ', ' .
             Json::encode($settings, JSON_UNESCAPED_UNICODE) .
-        ');';
-
-        // Wait for Vizy JS to be loaded, either through an event listener, or by a flag.
-        // This covers if this script is run before, or after the Vizy JS has loaded
-        $view->registerJs('document.addEventListener("vite-script-loaded", function(e) {' .
-            'if (e.detail.path === "field/src/js/vizy.js") {' . $js . '}' .
-        '}); if (Craft.VizyReady) {' . $js . '}');
+        '); });');
 
         $volumeOptions = [];
 
@@ -312,23 +308,17 @@ class VizyField extends Field
             $settings['transforms'] = $this->_getTransforms();
         }
 
-        // No need to output JS for any nested fields, all settings are rendered in the template
-        // as Vue takes over and processes the props.
-        if (!$this->_checkIfNested($element)) {
-            // Register the Vizy JS for Vite
-            Plugin::registerAsset('field/src/js/vizy.js');
+        // Register the Vizy JS for Vite
+        Plugin::registerAsset('field/src/js/vizy.js');
 
-            $js = 'new Craft.Vizy.Input(' .
-                '"' . $view->namespaceInputId($id) . '", ' .
-                '"' . $view->namespaceInputName($this->handle) . '"' .
-            ');';
+        // Create the Vizy Input Vue component
+        // Use an event listener to ensure that `vizy.js` has been loaded. An issue when used in element slideouts.
+        $view->registerJs('document.addEventListener("vizy-loaded", function(e) { new Craft.Vizy.Input(' .
+            '"' . $view->namespaceInputId($id) . '", ' .
+            '"' . $view->namespaceInputName($this->handle) . '"' .
+        '); });');
 
-            // Wait for Vizy JS to be loaded, either through an event listener, or by a flag.
-            // This covers if this script is run before, or after the Vizy JS has loaded
-            $view->registerJs('document.addEventListener("vite-script-loaded", function(e) {' .
-                'if (e.detail.path === "field/src/js/vizy.js") {' . $js . '}' .
-            '}); if (Craft.VizyReady) {' . $js . '}');
-        } else {
+        if ($this->_checkIfNested($element)) {
             // Let the field know if this is the root field for nested fields
             $settings['isRoot'] = false;
         }
@@ -757,60 +747,18 @@ class VizyField extends Field
         }
 
         if ($element instanceof MatrixBlock) {
-            // There's a specific scenario we _want_ to render JS. This is when generating HTML/JS for blocktypes
-            // when adding new ones. But we don't want to run this for existing, saved blocks. 
-            // The slightly hacky way to do this is to see if there's any Super Table JS loaded in the view buffers
-            // (called via `startJsBuffer()`) which is present for already-saved blocks.
-            $view = Craft::$app->getView();
-
-            foreach ($view->js as $scripts) {
-                foreach ($scripts as $script) {
-                    if (is_string($script) && str_contains($script, 'Craft.MatrixInput')) {
-                        return true;
-                    }
-                }
-            }
-
-            return false;
+            return $this->_checkIfNested($element->getOwner());
         }
 
         if (Plugin::isPluginInstalledAndEnabled('super-table')) {
             if ($element instanceof SuperTableBlockElement) {
-                // There's a specific scenario we _want_ to render JS. This is when generating HTML/JS for blocktypes
-                // when adding new ones. But we don't want to run this for existing, saved blocks. 
-                // The slightly hacky way to do this is to see if there's any Super Table JS loaded in the view buffers
-                // (called via `startJsBuffer()`) which is present for already-saved blocks.
-                $view = Craft::$app->getView();
-
-                foreach ($view->js as $scripts) {
-                    foreach ($scripts as $script) {
-                        if (is_string($script) && str_contains($script, 'Craft.SuperTable.Input')) {
-                            return true;
-                        }
-                    }
-                }
-
-                return false;
+                return $this->_checkIfNested($element->getOwner());
             }
         }
 
         if (Plugin::isPluginInstalledAndEnabled('neo')) {
             if ($element instanceof NeoBlock) {
-                // There's a specific scenario we _want_ to render JS. This is when generating HTML/JS for blocktypes
-                // when adding new ones. But we don't want to run this for existing, saved blocks. 
-                // The slightly hacky way to do this is to see if there's any Super Table JS loaded in the view buffers
-                // (called via `startJsBuffer()`) which is present for already-saved blocks.
-                $view = Craft::$app->getView();
-
-                foreach ($view->js as $scripts) {
-                    foreach ($scripts as $script) {
-                        if (is_string($script) && str_contains($script, 'Neo.createInput')) {
-                            return true;
-                        }
-                    }
-                }
-
-                return false;
+                return $this->_checkIfNested($element->getOwner());
             }
         }
 
