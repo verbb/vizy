@@ -25,6 +25,8 @@ class Link extends Mark
     {
         parent::init();
 
+        $this->attrs['rel'] = null;
+
         // On-load, parse the link URL for ref tags
         $href = $this->attrs['href'] ?? '';
 
@@ -40,9 +42,6 @@ class Link extends Mark
 
     public function getTag(): array
     {
-        // Reset
-        $this->attrs['rel'] = null;
-
         if (isset($this->attrs['target']) && $this->attrs['target'] === '_blank') {
             $this->attrs['rel'] = 'noopener noreferrer';
         }
