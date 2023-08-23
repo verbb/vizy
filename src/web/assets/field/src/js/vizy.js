@@ -52,7 +52,10 @@ Craft.Vizy.Input = Garnish.Base.extend({
 });
 
 Craft.Vizy.Settings = Garnish.Base.extend({
-    init(idPrefix, fieldData, settings) {
+    init(inputNamePrefix, fieldData, settings) {
+        this.inputNamePrefix = inputNamePrefix;
+        this.inputIdPrefix = Craft.formatInputId(this.inputNamePrefix);
+
         const app = createVueApp({
             components: {
                 VizySettings,
@@ -66,7 +69,7 @@ Craft.Vizy.Settings = Garnish.Base.extend({
             },
         });
 
-        app.mount(`.${idPrefix}-vizy-configurator`);
+        app.mount(`.${this.inputIdPrefix}-vizy-configurator`);
     },
 });
 
