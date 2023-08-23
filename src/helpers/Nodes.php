@@ -1,6 +1,8 @@
 <?php
 namespace verbb\vizy\helpers;
 
+use verbb\vizy\base\MarkInterface;
+use verbb\vizy\base\NodeInterface;
 use verbb\vizy\helpers\StringHelper;
 
 use Craft;
@@ -9,59 +11,159 @@ use craft\helpers\HtmlPurifier;
 use craft\validators\HandleValidator;
 
 use LitEmoji\LitEmoji;
-use HTMLPurifier_Config;
 
 class Nodes
 {
     // Static Methods
     // =========================================================================
 
-    public static function renderOpeningTag($tags): ?string
+    public static function renderNode(NodeInterface $node, ?NodeInterface $previousNode = null, ?NodeInterface $nextNode = null, array &$markStack = []): string
     {
-        $tags = (array)$tags;
+        $html = [];
+        $markTagsToClose = [];
 
+        if (isset($node->marks)) {
+            foreach ($node->marks as $mark) {
+                if (!self::markShouldOpen($mark, $previousNode)) {
+                    continue;
+                }
+
+                $html[] = $mark->renderOpeningTag();
+
+                $markStack[] = $mark;
+            }
+        }
+
+        $html[] = $node->renderOpeningTag();
+
+        if ($node->content) {
+            $nestedNodeMarkStack = [];
+
+            foreach ($node->content as $index => $nestedNode) {
+                $prevNestedNode = $node->content[$index - 1] ?? null;
+                $nextNestedNode = $node->content[$index + 1] ?? null;
+            
+                $html[] = self::renderNode($nestedNode, $prevNestedNode, $nextNestedNode, $nestedNodeMarkStack);
+            }
+        } else if ($text = $node->getText()) {
+            $html[] = $text;
+        }
+
+        $html[] = $node->renderClosingTag();
+
+        if (isset($node->marks)) {
+            foreach (array_reverse($node->marks) as $mark) {
+                if (!self::markShouldClose($mark, $nextNode)) {
+                    continue;
+                }
+
+                $markTagsToClose[] = $mark;
+            }
+
+            $html = array_merge($html, self::closeAndReopenTags($markTagsToClose, $markStack));
+        }
+
+        return join($html);
+    }
+
+    public static function closeAndReopenTags(array $markTagsToClose, array &$markStack): array
+    {
+        $markTagsToReopen = [];
+
+        $closingTags = self::closeMarkTags($markTagsToClose, $markStack, $markTagsToReopen);
+        $reopeningTags = self::reopenMarkTags($markTagsToReopen, $markStack);
+
+        return array_merge($closingTags, $reopeningTags);
+    }
+
+    public static function closeMarkTags($markTagsToClose, &$markStack, &$markTagsToReopen): array
+    {
+        $html = [];
+
+        while (!empty($markTagsToClose)) {
+            $mark = array_pop($markStack);
+            $html[] = $mark->renderClosingTag();
+
+            if (count(array_filter($markTagsToClose, function ($markToClose) use ($mark) {
+                return $mark == $markToClose;
+            })) == 0) {
+                $markTagsToReopen[] = $mark;
+            } else {
+                $markTagsToClose = array_udiff($markTagsToClose, [$mark], function ($a1, $a2) {
+                    return strcmp($a1->type, $a2->type);
+                });
+            }
+        }
+
+        return $html;
+    }
+
+    public static function reopenMarkTags(array $markTagsToReopen, array &$markStack): array
+    {
+        $html = [];
+
+        foreach (array_reverse($markTagsToReopen) as $mark) {
+            $html[] = $mark->renderOpeningTag();
+            $markStack[] = $mark;
+        }
+
+        return $html;
+    }
+
+    public static function markShouldOpen(?MarkInterface $mark, ?NodeInterface $previousNode): bool
+    {
+        return self::nodeHasMark($previousNode, $mark);
+    }
+
+    public static function markShouldClose(?MarkInterface $mark, ?NodeInterface $nextNode): bool
+    {
+        return self::nodeHasMark($nextNode, $mark);
+    }
+
+    public static function nodeHasMark(?NodeInterface $node, ?MarkInterface $mark): bool
+    {
+        if (!$node) {
+            return true;
+        }
+
+        if (!property_exists($node, 'marks')) {
+            return true;
+        }
+
+        // The other node has same mark
+        foreach ($node->marks as $otherMark) {
+            if ($mark == $otherMark) {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    public static function renderOpeningTag(array $tags): ?string
+    {
         if (!$tags || !count($tags)) {
             return null;
         }
 
-        return implode('', array_map(function($item) {
-            $tags = (array)$item['tag'];
+        return implode('', array_map(function($tag) {
+            $tagName = $tag['tag'] ?? null;
+            $attrs = $tag['attrs'] ?? [];
 
-            return implode('', array_map(function($tag) use ($item) {
-                $attrs = '';
-
-                if (isset($item['attrs'])) {
-                    foreach ($item['attrs'] as $attribute => $value) {
-                        if (is_array($value)) {
-                            $v = implode(' ', $value);
-
-                            $attrs .= " {$attribute}=\"{$v}\"";
-                        } else {
-                            $attrs .= " {$attribute}=\"{$value}\"";
-                        }
-                    }
-                }
-
-                return "<{$tag}{$attrs}>";
-            }, $tags));
+            return Html::beginTag($tagName, $attrs);
         }, $tags));
     }
 
-    public static function renderClosingTag($tags): ?string
+    public static function renderClosingTag(array $tags): ?string
     {
-        $tags = (array)$tags;
-        $tags = array_reverse($tags);
-
         if (!$tags || !count($tags)) {
             return null;
         }
 
-        return implode('', array_map(function($item) {
-            $tags = (array)$item['tag'];
+        return implode('', array_map(function($tag) {
+            $tagName = $tag['tag'] ?? null;
 
-            return implode('', array_map(function($tag) {
-                return "</{$tag}>";
-            }, $tags));
+            return Html::endTag($tagName);
         }, $tags));
     }
 

@@ -5,6 +5,7 @@ use verbb\vizy\base\MarkInterface;
 use verbb\vizy\base\NodeInterface;
 use verbb\vizy\events\RegisterNodesEvent;
 use verbb\vizy\events\RegisterMarksEvent;
+use verbb\vizy\helpers\Nodes as NodesHelper;
 use verbb\vizy\nodes as allnodes;
 use verbb\vizy\marks;
 
@@ -111,78 +112,9 @@ class Nodes extends Component
         return $this->_registeredMarksByType;
     }
 
-    public function renderNode(NodeInterface $node, ?NodeInterface $prevNode = null, ?NodeInterface $nextNode = null): string
+    public function renderNode(NodeInterface $node): string
     {
-        $html = [];
-
-        if ($node->marks) {
-            foreach ($node->marks as $mark) {
-                if ($this->markShouldOpen($mark, $prevNode)) {
-                    $html[] = $mark->renderOpeningTag();
-                }
-            }
-        }
-
-        $html[] = $node->renderOpeningTag();
-
-        if ($node->content) {
-            foreach ($node->content as $index => $nestedNode) {
-                $prevNestedNode = $node->content[$index - 1] ?? null;
-                $nextNestedNode = $node->content[$index + 1] ?? null;
-
-                $html[] = $this->renderNode($nestedNode, $prevNestedNode, $nextNestedNode);
-            }
-        } else if ($text = $node->getText()) {
-            $html[] = $text;
-        }
-
-        if (!$node->selfClosing()) {
-            $html[] = $node->renderClosingTag();
-
-            if ($node->marks) {
-                foreach (array_reverse($node->marks) as $mark) {
-                    if ($this->markShouldClose($mark, $nextNode)) {
-                        $html[] = $mark->renderClosingTag();
-                    }
-                }
-            }
-        }
-
-        return implode($html);
-    }
-
-
-    // Private Methods
-    // =========================================================================
-
-    private function markShouldOpen(?MarkInterface $mark, ?NodeInterface $prevNode): bool
-    {
-        return $this->nodeHasMark($prevNode, $mark);
-    }
-
-    private function markShouldClose(?MarkInterface $mark, ?NodeInterface $nextNode): bool
-    {
-        return $this->nodeHasMark($nextNode, $mark);
-    }
-
-    private function nodeHasMark(?NodeInterface $node, ?MarkInterface $mark): bool
-    {
-        if (!$node) {
-            return true;
-        }
-
-        if (!property_exists($node, 'marks')) {
-            return true;
-        }
-
-        // Other node has same mark
-        foreach ($node->marks as $otherMark) {
-            if ($mark == $otherMark) {
-                return false;
-            }
-        }
-
-        return true;
+        return NodesHelper::renderNode($node);
     }
 
 }
