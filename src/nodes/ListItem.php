@@ -54,6 +54,13 @@ class ListItem extends Node
             $value['content'] = [['type' => 'paragraph']];
         }
 
+        // Fix an issue where we messed up list items schema. Can be removed at some point
+        $firstNode = $value['content'][0]['type'] ?? null;
+
+        if ($firstNode !== 'paragraph') {
+            $value['content'] = [['type' => 'paragraph', 'attrs' => [], 'content' => $value['content']]];
+        }
+
         return $value;
     }
 
@@ -66,6 +73,13 @@ class ListItem extends Node
         // Protect against empty content, which can happen in some cases.
         if (!$value['content']) {
             $value['content'] = [['type' => 'paragraph']];
+        }
+
+        // Fix an issue where we messed up list items schema. Can be removed at some point
+        $firstNode = $value['content'][0]['type'] ?? null;
+
+        if ($firstNode !== 'paragraph') {
+            $value['content'] = [['type' => 'paragraph', 'attrs' => [], 'content' => $value['content']]];
         }
 
         return $value;
