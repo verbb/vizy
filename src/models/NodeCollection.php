@@ -37,14 +37,14 @@ class NodeCollection extends Markup
     // Properties
     // =========================================================================
 
-    private mixed $element = null;
-    private mixed $field = null;
+    private static mixed $element = null;
+    private static mixed $field = null;
     private array $nodes = [];
     private array $rawNodes = [];
     
     private mixed $_content = null;
-    private array $_registeredNodesByType = [];
-    private array $_registeredMarksByType = [];
+    private static array $_registeredNodesByType = [];
+    private static array $_registeredMarksByType = [];
 
 
     // Public Methods
@@ -57,17 +57,17 @@ class NodeCollection extends Markup
             $nodes[$key] = Nodes::normalizeContent($node);
         }
 
-        $this->element = $element;
-        $this->field = $field;
+        self::$element = $element;
+        self::$field = $field;
         $this->rawNodes = $nodes;
 
         // Save here as we're recursively populating nodes/marks
-        $this->_registeredNodesByType = Vizy::$plugin->getNodes()->getRegisteredNodesByType();
-        $this->_registeredMarksByType = Vizy::$plugin->getNodes()->getRegisteredMarksByType();
+        self::$_registeredNodesByType = Vizy::$plugin->getNodes()->getRegisteredNodesByType();
+        self::$_registeredMarksByType = Vizy::$plugin->getNodes()->getRegisteredMarksByType();
 
         // Prepare node/mark classes for the collection
-        $this->nodes = $this->_populateNodes($nodes);
-        $this->nodes = self::_normalizeNodes($this->getNodes(), $this->element);
+        $this->nodes = self::_populateNodes($nodes);
+        $this->nodes = self::_normalizeNodes($this->getNodes(), self::$element);
 
         parent::__construct(null, null);
     }
@@ -98,7 +98,7 @@ class NodeCollection extends Markup
 
     public function getField()
     {
-        return $this->field;
+        return self::$field;
     }
 
     public function getRawNodes(): array
@@ -208,8 +208,16 @@ class NodeCollection extends Markup
         $values = [];
 
         foreach ($nodes as $nodeKey => $node) {
+            $rawNode = $node->rawNode;
             $node->rawNode = $node->normalizeValue($element);
             $node->attrs = $node->rawNode['attrs'] ?? [];
+
+            // If the node's `rawNode` has changed through normalization, we need to re-populate the
+            // `content` nodes with this potentially updated schema to match `rawNode`.
+            if ($rawNode !== $node->rawNode) {
+                $node->content = self::_populateNodes([$node->rawNode['content']]);
+            }
+
             $content = self::_normalizeNodes($node->getContent(), $element);
 
             if ($content) {
@@ -245,7 +253,7 @@ class NodeCollection extends Markup
         return $values;
     }
 
-    private function _populateNodes($nodes): array
+    private static function _populateNodes($nodes): array
     {
         $result = [];
 
@@ -254,19 +262,19 @@ class NodeCollection extends Markup
 
             // Drill into any nested nodes first
             if (isset($node['content'])) {
-                $node['content'] = $this->_populateNodes($node['content']);
+                $node['content'] = self::_populateNodes($node['content']);
             }
 
             // Handle initializing nested marks
             if (isset($node['marks'])) {
                 foreach ($node['marks'] as $markKey => $mark) {
-                    if ($class = ($this->_registeredMarksByType[$mark['type']] ?? null)) {
+                    if ($class = (self::$_registeredMarksByType[$mark['type']] ?? null)) {
                         unset($mark['type']);
 
                         $node['marks'][$markKey] = Craft::createObject(array_merge($mark, [
                             'class' => $class,
-                            'field' => $this->field,
-                            'element' => $this->element,
+                            'field' => self::$field,
+                            'element' => self::$element,
                         ]));
                     } else {
                         // If an un-registered mark, drop it
@@ -280,13 +288,14 @@ class NodeCollection extends Markup
                 continue;
             }
 
-            if ($class = ($this->_registeredNodesByType[$node['type']] ?? null)) {
+            if ($class = (self::$_registeredNodesByType[$node['type']] ?? null)) {
                 unset($node['type']);
+                // Craft::dd($node);
 
                 $nodeClass = Craft::createObject(array_merge($node, [
                     'class' => $class,
-                    'field' => $this->field,
-                    'element' => $this->element,
+                    'field' => self::$field,
+                    'element' => self::$element,
                     'rawNode' => $rawNode,
                 ]));
 
