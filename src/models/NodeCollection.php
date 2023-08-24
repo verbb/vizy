@@ -172,7 +172,7 @@ class NodeCollection extends Markup
             $rawNodeType = $rawNode['type'] ?? null;
 
             // Extra check if we are in blocks-only mode
-            if ($this->field->editorMode === VizyField::MODE_BLOCKS) {
+            if (self::$field->editorMode === VizyField::MODE_BLOCKS) {
                 if ($rawNodeType !== VizyBlock::$type) {
                     continue;
                 }
