@@ -146,11 +146,17 @@ class Nodes
             return null;
         }
 
-        return implode('', array_map(function($tag) {
-            $tagName = $tag['tag'] ?? null;
+        return implode(array_map(function($tag) {
+            $tagNames = $tag['tag'] ?? [];
             $attrs = $tag['attrs'] ?? [];
 
-            return Html::beginTag($tagName, $attrs);
+            if (!is_array($tagNames)) {
+                $tagNames = [$tagNames];
+            }
+
+            return implode(array_map(function($tagName) use ($attrs) {
+                return Html::beginTag($tagName, $attrs);
+            }, $tagNames));
         }, $tags));
     }
 
@@ -160,10 +166,16 @@ class Nodes
             return null;
         }
 
-        return implode('', array_map(function($tag) {
-            $tagName = $tag['tag'] ?? null;
+        return implode(array_map(function($tag) {
+            $tagNames = $tag['tag'] ?? [];
 
-            return Html::endTag($tagName);
+            if (!is_array($tagNames)) {
+                $tagNames = [$tagNames];
+            }
+
+            return implode(array_map(function($tagName) {
+                return Html::endTag($tagName);
+            }, array_reverse($tagNames)));
         }, $tags));
     }
 
