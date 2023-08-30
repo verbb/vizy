@@ -11,6 +11,7 @@ use craft\helpers\HtmlPurifier;
 use craft\validators\HandleValidator;
 
 use LitEmoji\LitEmoji;
+use voku\helper\AntiXSS;
 
 class Nodes
 {
@@ -222,6 +223,8 @@ class Nodes
     {
         $content = $rawNode['content'] ?? [];
 
+        $antiXss = new AntiXSS();
+
         foreach ($content as $key => $block) {
             $type = $block['type'] ?? '';
 
@@ -232,8 +235,7 @@ class Nodes
             // Escape any HTML tags used in the text. Maybe we're writing HTML in text?
             // But don't encode quotes, things like `&quot;` are invalid in JSON
             // Important to do this before emoji processing, as that'll replace `«`, etc characters
-            $text = StringHelper::htmlDecode($text);
-            $text = StringHelper::htmlEncode($text, ENT_NOQUOTES);
+            $text = $antiXss->xss_clean((string)$text);
 
             // Serialize any emoji's
             $text = StringHelper::emojiToShortcodes($text);

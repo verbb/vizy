@@ -29,9 +29,10 @@
     "require": {
         "php": "^8.0.2",
         "craftcms/cms": "^4.4.0",
-        "verbb/base": "^2.0.0",
         "nystudio107/craft-plugin-vite": "^4.0.0-beta.4",
         "ueberdosis/tiptap-php": "^1.0",
+        "verbb/base": "^2.0.0",
+        "voku/anti-xss": "^4.1",
         "yii2mod/yii2-array-query": "^1.4"
     },
     "autoload": {
