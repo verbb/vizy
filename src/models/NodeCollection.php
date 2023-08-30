@@ -215,7 +215,7 @@ class NodeCollection extends Markup
             // If the node's `rawNode` has changed through normalization, we need to re-populate the
             // `content` nodes with this potentially updated schema to match `rawNode`.
             if ($rawNode !== $node->rawNode) {
-                $node->content = self::_populateNodes([$node->rawNode['content']]);
+                $node->content = self::_populateNodes([($node->rawNode['content'] ?? [])]);
             }
 
             $content = self::_normalizeNodes($node->getContent(), $element);
