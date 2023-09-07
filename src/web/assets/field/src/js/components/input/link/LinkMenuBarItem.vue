@@ -179,6 +179,7 @@ export default {
                 text: null,
                 target: null,
                 class: null,
+                title: null,
             };
         },
 
@@ -207,6 +208,7 @@ export default {
             this.model.url = attrs.href;
             this.model.target = attrs.target;
             this.model.class = attrs.class;
+            this.model.title = attrs.title;
 
             this.showEditModal = true;
         },

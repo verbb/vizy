@@ -3,6 +3,19 @@ import { mergeAttributes } from '@tiptap/core';
 import Link from '@tiptap/extension-link';
 
 export default Link.extend({
+    addAttributes() {
+        return {
+            ...this.parent?.(),
+
+            class: {
+                default: null,
+            },
+            title: {
+                default: null,
+            },
+        };
+    },
+
     addOptions() {
         return {
             ...this.parent?.(),
@@ -12,6 +25,7 @@ export default Link.extend({
                 target: null,
                 rel: null,
                 class: null,
+                title: null,
             },
         };
     },

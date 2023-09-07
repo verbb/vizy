@@ -64,6 +64,23 @@
         <a :class="['fieldtoggle', { 'expanded': advancedPane }]" data-target="advanced" @click.prevent="toggleAdvanced">{{ t('app', 'Advanced') }}</a>
 
         <div :class="{ 'hidden': !advancedPane }">
+            <div id="title-field" class="field">
+                <div class="heading">
+                    <label id="title-label" for="title">{{ t('vizy', 'Title') }}</label>
+                </div>
+
+                <div class="input ltr">
+                    <input
+                        id="title"
+                        v-model="modelValue.title"
+                        type="text"
+                        class="text fullwidth"
+                        autofocus=""
+                        autocomplete="off"
+                    >
+                </div>
+            </div>
+
             <div id="classes-field" class="field">
                 <div class="heading">
                     <label id="classes-label" for="classes">{{ t('vizy', 'Classes') }}</label>
@@ -134,6 +151,7 @@ export default {
                 text: null,
                 target: null,
                 class: null,
+                title: null,
             },
             errors: [],
             advancedPane: false,
@@ -194,6 +212,7 @@ export default {
                 href: this.modelValue.url,
                 target: this.modelValue.target ? '_blank' : '',
                 class: this.modelValue.class,
+                title: this.modelValue.title,
             };
 
             // Save the cursor position so we can restore it afterwards
