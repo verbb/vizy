@@ -883,7 +883,10 @@ class VizyField extends Field
 
                     $form = $fieldLayout->createForm($blockElement);
                     $blockTypeArray['tabs'] = $form->getTabMenu();
-                    $blockTypeArray['fieldsHtml'] = $view->namespaceInputs($form->render());
+                    
+                    $fieldsHtml = $view->namespaceInputs($form->render());
+                    $fieldsHtml = $this->_parseFieldHtml($fieldsHtml);
+                    $blockTypeArray['fieldsHtml'] = $fieldsHtml;
 
                     $footHtml = $view->clearJsBuffer(false);
 
@@ -968,6 +971,7 @@ class VizyField extends Field
                     $view->setNamespace($namespace);
 
                     $fieldsHtml = $view->namespaceInputs($fieldLayout->createForm($blockElement)->render());
+                    $fieldsHtml = $this->_parseFieldHtml($fieldsHtml);
                     $footHtml = $view->clearJsBuffer(false);
 
                     // Just in case some JS slips through (see dismissable UI element tips)
@@ -1250,5 +1254,14 @@ class VizyField extends Field
         }
 
         return $sourceOptions;
+    }
+
+    private function _parseFieldHtml(string $html): string
+    {
+        // Parse some known Vue-based fields in Vizy blocks which need to be marked as pre-rendered, otherwise
+        // Vizy will thing they exist in _this_ Vue app and try to compile them.
+        $html = str_replace(['<hyper-input', '<icon-picker-input'], ['<hyper-input v-pre', '<icon-picker-input v-pre'], $html);
+
+        return $html;
     }
 }
