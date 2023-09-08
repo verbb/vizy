@@ -1,5 +1,23 @@
 # Changelog
 
+## 2.1.9 - 2023-09-08
+
+### Added
+- Add normalization fix for incorrect `ListItem` schema format.
+- Add `title` setting to Link nodes.
+
+### Fixed
+- Fix an issue with project config and other new fields.
+- Fix using Hyper and Icon Picker fields in Vizy blocks.
+- Fix `ListItem` normalization.
+- Fix an error with node normalization.
+- Switch `htmlEncode` for `AntiXSS` for better special character handling.
+- Fix Table nodes’ rendering.
+- Fix node normalization not completing correctly for nested nodes.
+- Fix field not initializing correctly in Super Table or Matrix field settings.
+- Fix `rel` output for links.
+- Fix overlapping marks not producing the correct HTML output.
+
 ## 2.1.8 - 2023-08-10
 
 ### Fixed
