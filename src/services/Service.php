@@ -81,6 +81,9 @@ class Service extends Component
     {
         $fieldsService = Craft::$app->getFields();
 
+        // Make sure the fields have been synced
+        ProjectConfigHelper::ensureAllFieldsProcessed();
+
         // Ensure we update all field layouts, for each blocktype
         foreach ($fieldData as $group) {
             $blockTypes = $group['blockTypes'] ?? [];
