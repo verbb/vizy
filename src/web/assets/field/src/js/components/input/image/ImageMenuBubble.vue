@@ -171,12 +171,12 @@ export default {
                             ...attributes,
                         }));
                     } else {
-                        const params = {
+                        const data = {
                             assetId: matches[2],
                             handle: matches[4],
                         };
 
-                        Craft.sendActionRequest('POST', 'assets/generate-transform', { params })
+                        Craft.sendActionRequest('POST', 'assets/generate-transform', { data })
                             .then((response) => {
                                 const attributes = {
                                     src: `${response.data.url}?${new Date().getTime()}#asset:${matches[2]}:transform:${matches[4]}`,
