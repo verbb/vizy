@@ -599,7 +599,9 @@ export default {
     }
 
     .ProseMirror > ul,
-    .ProseMirror > ol {
+    .ProseMirror > ol,
+    .ProseMirror > .tableWrapper ul,
+    .ProseMirror > .tableWrapper ol {
         padding-left: 0 !important;
         margin-left: 24px;
 
@@ -613,7 +615,8 @@ export default {
         }
     }
 
-    .ProseMirror > ul {
+    .ProseMirror > ul,
+    .ProseMirror > .tableWrapper ul {
         list-style-type: disc;
 
         ul {
@@ -621,7 +624,8 @@ export default {
         }
     }
 
-    .ProseMirror > blockquote {
+    .ProseMirror > blockquote,
+    .ProseMirror > .tableWrapper blockquote {
         border-left: 5px solid #edf2fc;
         border-radius: 2px;
         color: #606266;
@@ -629,7 +633,8 @@ export default {
         padding-left: 1em;
     }
 
-    .ProseMirror > pre {
+    .ProseMirror > pre,
+    .ProseMirror > .tableWrapper pre {
         background: #0d0d0d;
         color: #fff;
         font-family: JetBrainsMono,monospace;
@@ -637,7 +642,8 @@ export default {
         border-radius: .5rem;
     }
 
-    .ProseMirror > p > a {
+    .ProseMirror > p > a,
+    .ProseMirror > .tableWrapper p > a {
         color: #3397ff;
         text-decoration: underline;
     }
