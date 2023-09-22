@@ -20,22 +20,25 @@ export default {
 
     mounted() {
         this.$nextTick(() => {
-            // Ensure any Craft fields are prepped.
-            Craft.initUiElements(this.$el);
+            // If there was a fatal Vue error when rendering fields, there will be no `$el`.
+            if (this.$el) {
+                // Ensure any Craft fields are prepped.
+                Craft.initUiElements(this.$el);
 
-            // For any nested Vizy fields, mark them as Vue-rendered. This prevents us double-binding.
-            this.$el.querySelectorAll('.vizy-input-component').forEach((item) => {
-                item.parentElement.__vueInit = true;
-            });
+                // For any nested Vizy fields, mark them as Vue-rendered. This prevents us double-binding.
+                this.$el.querySelectorAll('.vizy-input-component').forEach((item) => {
+                    item.parentElement.__vueInit = true;
+                });
 
-            this.$nextTick(() => {
-                // Watch all field content for changes to serialize them to our text inputs that are stored in JSON blocks.
-                this.watchFieldChanges();
+                this.$nextTick(() => {
+                    // Watch all field content for changes to serialize them to our text inputs that are stored in JSON blocks.
+                    this.watchFieldChanges();
 
-                // Special fix for Redactor. For some reason, when clicking on formatting buttons, we lose
-                // focus on ProseMirror. One day, we'll figure out what's really going on here
-                this.applyRedactorFix();
-            });
+                    // Special fix for Redactor. For some reason, when clicking on formatting buttons, we lose
+                    // focus on ProseMirror. One day, we'll figure out what's really going on here
+                    this.applyRedactorFix();
+                });
+            }
         });
     },
 
@@ -92,8 +95,16 @@ export default {
     },
 
     render() {
-        // Apply our dynamically provided template, rendered via Craft.
-        return h(compile(`<div>${this.template}</div>`));
+        try {
+            // Apply our dynamically provided template, rendered via Craft.
+            return h(compile(`<div>${this.template}</div>`));
+        } catch (e) {
+            // Fallback whenever there are fatal issues rendering
+            const message = this.t('vizy', 'Unable to parse block definition.');
+
+            return h(compile(`<div class="vizyblock-invalid"><p class="error">${message}</p></div>`));
+        }
+
     },
 };
 
