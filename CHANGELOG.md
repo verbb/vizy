@@ -1,5 +1,14 @@
 # Changelog
 
+## 2.1.10 - 2023-09-25
+
+### Added
+- Add better handling for fatal errors when rendering Vizy blocks.
+
+### Fixed
+- Fix Table node inner node styles (links, lists, etc).
+- Fix when using the Image Editor on an Image node, transforms not being generated.
+
 ## 2.1.9 - 2023-09-08
 
 ### Added
