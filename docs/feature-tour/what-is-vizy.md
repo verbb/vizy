@@ -1,5 +1,5 @@
 # What is Vizy?
-Vizy is an intuitive and flexible visual editor field for Craft CMS. It aims to combine WYSIWYG features (like [Redactor](https://plugins.craftcms.com/redactor)) and Matrix blocks, to create an integrated field type for content editors. It also aims to be developer-friendly, providing full control over outputting of content in an un-opinionated fashion.
+Vizy is an intuitive and flexible content editor field for Craft CMS. It aims to combine WYSIWYG features (like [Redactor](https://plugins.craftcms.com/redactor)) and Matrix blocks, to create an integrated field type for content editors. It also aims to be developer-friendly, providing full control over outputting of content in an un-opinionated fashion.
 
 ## Block-Based Editor
 Part of what makes Vizy special is how content is stored. Unlike many WYSIWYG fields, which store the raw HTML in the database, Vizy instead stores your content as JSON. This provides amazing flexibility and control when it comes to outputting the content of a Vizy field in your templates. Instead of trying to parse HTML to add classes, remove attributes, or modify the structure, you'll have full control over how you want to output the content.
