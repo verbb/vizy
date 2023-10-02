@@ -1,5 +1,11 @@
 # Changelog
 
+## 2.1.11 - 2023-10-03
+
+### Fixed
+- Fix `HardBreak` (`<br>`) nodes being rendered twice.
+- Fix an issue where some fields (Hyper) in Vizy blocks weren’t being serialized properly.
+
 ## 2.1.10 - 2023-09-25
 
 ### Added
