@@ -50,7 +50,9 @@ class Nodes
             $html[] = $text;
         }
 
-        $html[] = $node->renderClosingTag();
+        if (!$node->selfClosing()) {
+            $html[] = $node->renderClosingTag();
+        }
 
         if (isset($node->marks)) {
             foreach (array_reverse($node->marks) as $mark) {
