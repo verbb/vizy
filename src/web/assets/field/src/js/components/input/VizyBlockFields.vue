@@ -99,6 +99,8 @@ export default {
             // Apply our dynamically provided template, rendered via Craft.
             return h(compile(`<div>${this.template}</div>`));
         } catch (e) {
+            console.error(e);
+
             // Fallback whenever there are fatal issues rendering
             const message = this.t('vizy', 'Unable to parse block definition.');
 
