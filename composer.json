@@ -37,7 +37,7 @@
     },
     "autoload": {
         "psr-4": {
-          "verbb\\vizy\\": "src/"
+            "verbb\\vizy\\": "src/"
         }
     },
     "extra": {
