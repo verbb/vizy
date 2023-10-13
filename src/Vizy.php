@@ -30,7 +30,6 @@ class Vizy extends Plugin
     // Properties
     // =========================================================================
 
-    public bool $hasCpSection = false;
     public bool $hasCpSettings = true;
     public string $schemaVersion = '0.9.0';
 
@@ -51,13 +50,10 @@ class Vizy extends Plugin
 
         self::$plugin = $this;
 
-        $this->_registerComponents();
-        $this->_registerLogTarget();
         $this->_registerFieldTypes();
-        $this->_registerProjectConfigEventListeners();
+        $this->_registerProjectConfigEventHandlers();
         $this->_registerGraphQl();
-        $this->_registerThirdPartyEventListeners();
-        $this->_registerCraftEventListeners();
+        $this->_registerEventHandlers();
 
         if (Craft::$app->getRequest()->getIsCpRequest()) {
             $this->_registerCpRoutes();
@@ -88,21 +84,21 @@ class Vizy extends Plugin
         });
     }
 
-    private function _registerProjectConfigEventListeners(): void
+    private function _registerProjectConfigEventHandlers(): void
     {
-        Craft::$app->projectConfig
+        Craft::$app->getProjectConfig()
             ->onAdd(ProjectConfig::PATH_FIELDS . '.{uid}', [$this->getService(), 'handleChangedField'])
             ->onUpdate(ProjectConfig::PATH_FIELDS . '.{uid}', [$this->getService(), 'handleChangedField'])
             ->onRemove(ProjectConfig::PATH_FIELDS . '.{uid}', [$this->getService(), 'handleDeletedField']);
 
         // Special case for some fields like Matrix, that don't emit the change event for nested fields.
-        Craft::$app->projectConfig
-            ->onAdd(ProjectConfig::PATH_MATRIX_BLOCK_TYPES . '.{uid}', [$this->getService(), 'handleChangedBlockType'])
-            ->onUpdate(ProjectConfig::PATH_MATRIX_BLOCK_TYPES . '.{uid}', [$this->getService(), 'handleChangedBlockType'])
-            ->onRemove(ProjectConfig::PATH_MATRIX_BLOCK_TYPES . '.{uid}', [$this->getService(), 'handleDeletedBlockType']);
+        // Craft::$app->getProjectConfig()
+        //     ->onAdd(ProjectConfig::PATH_MATRIX_BLOCK_TYPES . '.{uid}', [$this->getService(), 'handleChangedBlockType'])
+        //     ->onUpdate(ProjectConfig::PATH_MATRIX_BLOCK_TYPES . '.{uid}', [$this->getService(), 'handleChangedBlockType'])
+        //     ->onRemove(ProjectConfig::PATH_MATRIX_BLOCK_TYPES . '.{uid}', [$this->getService(), 'handleDeletedBlockType']);
 
         if (class_exists(SuperTableService::class)) {
-            Craft::$app->projectConfig
+            Craft::$app->getProjectConfig()
                 ->onAdd(SuperTableService::CONFIG_BLOCKTYPE_KEY . '.{uid}', [$this->getService(), 'handleChangedBlockType'])
                 ->onUpdate(SuperTableService::CONFIG_BLOCKTYPE_KEY . '.{uid}', [$this->getService(), 'handleChangedBlockType'])
                 ->onRemove(SuperTableService::CONFIG_BLOCKTYPE_KEY . '.{uid}', [$this->getService(), 'handleDeletedBlockType']);
@@ -117,18 +113,15 @@ class Vizy extends Plugin
         });
     }
 
-    private function _registerThirdPartyEventListeners(): void
+    private function _registerEventHandlers(): void
     {
+        Event::on(Fields::class, Fields::EVENT_AFTER_SAVE_FIELD, [$this->getContent(), 'onSaveField']);
+        Event::on(Fields::class, Fields::EVENT_AFTER_DELETE_FIELD, [$this->getContent(), 'onDeleteField']);
+
         if (class_exists(FeedMeFields::class)) {
             Event::on(FeedMeFields::class, FeedMeFields::EVENT_REGISTER_FEED_ME_FIELDS, function(RegisterFeedMeFieldsEvent $event) {
                 $event->fields[] = FeedMeVizyField::class;
             });
         }
-    }
-
-    private function _registerCraftEventListeners(): void
-    {
-        Event::on(Fields::class, Fields::EVENT_AFTER_SAVE_FIELD, [$this->getContent(), 'onSaveField']);
-        Event::on(Fields::class, Fields::EVENT_AFTER_DELETE_FIELD, [$this->getContent(), 'onDeleteField']);
     }
 }

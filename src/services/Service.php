@@ -15,33 +15,8 @@ use craft\models\FieldLayout;
 
 class Service extends Component
 {
-    // Properties
-    // =========================================================================
-
-    private array $_layoutsByUid = [];
-
-
     // Public Methods
     // =========================================================================
-
-    public function getFieldLayoutByUid($layoutUid): ?FieldLayout
-    {
-        if ($this->_layoutsByUid !== null && array_key_exists($layoutUid, $this->_layoutsByUid)) {
-            return $this->_layoutsByUid[$layoutUid];
-        }
-
-        $result = (new Query)
-            ->select([
-                'id',
-                'type',
-                'uid',
-            ])
-            ->from([Table::FIELDLAYOUTS])
-            ->where(['dateDeleted' => null, 'uid' => $layoutUid])
-            ->one();
-
-        return $this->_layoutsByUid[$layoutUid] = $result ? new FieldLayout($result) : null;
-    }
 
     public function getAllBlockTypes(): array
     {
@@ -146,7 +121,7 @@ class Service extends Component
         foreach ($layoutsToDelete as $fieldLayoutUid) {
             // Add an extra check in here to ensure the layout exists, before deleting it. Deleting via ID may throw an error
             // if the field layout doesn't exist.
-            if ($layout = $this->getFieldLayoutByUid($fieldLayoutUid)) {
+            if ($layout = $fieldsService->getLayoutByUid($fieldLayoutUid)) {
                 $fieldsService->deleteLayout($layout);
             }
         }
@@ -179,7 +154,7 @@ class Service extends Component
 
                 // Add an extra check in here to ensure the layout exists, before deleting it. Deleting via ID may throw an error
                 // if the field layout doesn't exist.
-                if ($layout = $this->getFieldLayoutByUid($layoutUid)) {
+                if ($layout = $fieldsService->getLayoutByUid($layoutUid)) {
                     $fieldsService->deleteLayout($layout);
                 }
             }

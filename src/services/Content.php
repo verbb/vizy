@@ -2,13 +2,13 @@
 namespace verbb\vizy\services;
 
 use verbb\vizy\fields\VizyField;
+use verbb\vizy\helpers\ArrayHelper;
 
 use Craft;
 use craft\base\Component;
 use craft\db\Query;
 use craft\events\FieldEvent;
 use craft\fields\Matrix;
-use craft\helpers\ArrayHelper;
 use craft\helpers\Db;
 use craft\helpers\ElementHelper;
 use craft\helpers\Json;
@@ -48,7 +48,7 @@ class Content extends Component
         }
 
         $this->modifyFieldContent($field->uid, $field->oldHandle, function($handle, $data) use ($field) {
-            $flatData = self::flatten($data);
+            $flatData = ArrayHelper::flatten($data);
 
             // We need to flatten the data to deal with deeply-nested content like when in Matrix/Super Table.
             foreach ($flatData as $flatKey => $flatContent) {
@@ -63,7 +63,7 @@ class Content extends Component
                 }
             }
 
-            return self::expand($flatData);
+            return ArrayHelper::expand($flatData);
         });
     }
 
@@ -215,7 +215,7 @@ class Content extends Component
 
                         // Find the field and block that matches our content for the field. We use flatten to handle
                         // nested Vizy content with ease with dot-notation get/set.
-                        foreach (self::flatten($content) as $flatKey => $flatContent) {
+                        foreach (ArrayHelper::flatten($content) as $flatKey => $flatContent) {
                             $searchKey = 'fields.' . $fieldHandle;
 
                             if (str_ends_with($flatKey, $searchKey)) {
@@ -249,69 +249,6 @@ class Content extends Component
                 }
             }
         }
-    }
-
-    public static function flatten(array $data, string $separator = '.'): array
-    {
-        $result = [];
-        $stack = [];
-        $path = '';
-
-        reset($data);
-        while (!empty($data)) {
-            $key = key($data);
-            $element = $data[$key];
-            unset($data[$key]);
-
-            if (is_array($element) && !empty($element)) {
-                if (!empty($data)) {
-                    $stack[] = [$data, $path];
-                }
-                $data = $element;
-                reset($data);
-                $path .= $key . $separator;
-            } else {
-                $result[$path . $key] = $element;
-            }
-
-            if (empty($data) && !empty($stack)) {
-                [$data, $path] = array_pop($stack);
-                reset($data);
-            }
-        }
-
-        return $result;
-    }
-
-    public static function expand(array $data, string $separator = '.'): array
-    {
-        $hash = [];
-
-        foreach ($data as $path => $value) {
-            $keys = explode($separator, (string)$path);
-
-            if (count($keys) === 1) {
-                $hash[$path] = $value;
-                continue;
-            }
-
-            $valueKey = end($keys);
-            $keys = array_slice($keys, 0, -1);
-
-            $keyHash = &$hash;
-
-            foreach ($keys as $key) {
-                if (!array_key_exists($key, $keyHash)) {
-                    $keyHash[$key] = [];
-                }
-
-                $keyHash = &$keyHash[$key];
-            }
-
-            $keyHash[$valueKey] = $value;
-        }
-
-        return $hash;
     }
 
 }

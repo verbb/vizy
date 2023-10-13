@@ -29,7 +29,7 @@ class FieldController extends Controller
         $fieldLayout = new FieldLayout();
 
         if ($fieldLayoutUid) {
-            $fieldLayout = Vizy::$plugin->getService()->getFieldLayoutByUid($fieldLayoutUid);
+            $fieldLayout = Craft::$app->getFields()->getLayoutByUid($fieldLayoutUid);
         }
 
         // Prep the field layout from post - we could be editing an unsaved field layout

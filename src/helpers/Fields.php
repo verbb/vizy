@@ -26,7 +26,7 @@ class Fields
             'customizableUi' => true,
         ];
 
-        $tabs = array_filter($fieldLayout->getTabs(), fn(FieldLayoutTab $tab) => !empty($tab->getElements()));
+        $tabs = array_values($fieldLayout->getTabs());
 
         if (!$config['customizableTabs']) {
             $tab = array_shift($tabs) ?? new FieldLayoutTab([
@@ -127,30 +127,24 @@ JS;
                 : '') .
             Html::endTag('div') . // .fld-workspace
             Html::beginTag('div', ['class' => 'fld-sidebar']) .
-            ($config['customizableTabs']
-                ? Html::beginTag('div', [
-                    'role' => 'listbox',
-                    'class' => ['btngroup', 'small', 'fullwidth'],
+            ($config['customizableUi']
+                ? Html::beginTag('section', [
+                    'class' => ['btngroup', 'btngroup--exclusive', 'small', 'fullwidth'],
                     'aria' => ['label' => Craft::t('app', 'Layout element types')],
-                    'tabindex' => '0',
                 ]) .
                 Html::button(Craft::t('app', 'Fields'), [
-                    'role' => 'option',
                     'type' => 'button',
                     'class' => ['btn', 'small', 'active'],
-                    'aria' => ['selected' => 'true'],
+                    'aria' => ['pressed' => 'true'],
                     'data' => ['library' => 'field'],
-                    'tabindex' => '-1',
                 ]) .
                 Html::button(Craft::t('app', 'UI Elements'), [
-                    'role' => 'option',
                     'type' => 'button',
                     'class' => ['btn', 'small'],
-                    'aria' => ['selected' => 'false'],
+                    'aria' => ['pressed' => 'false'],
                     'data' => ['library' => 'ui'],
-                    'tabindex' => '-1',
                 ]) .
-                Html::endTag('div') // .btngroup
+                Html::endTag('section') // .btngroup
                 : '') .
             Html::beginTag('div', ['class' => 'fld-field-library']) .
             Html::beginTag('div', ['class' => ['texticon', 'search', 'icon', 'clearable']]) .
@@ -194,7 +188,16 @@ JS;
                     $customizable ? 'draggable' : null,
                 ]),
             ]) .
-            Html::tag('span', $tab->name) .
+            Html::beginTag('span') .
+            Html::encode($tab->name) .
+            ($tab->hasConditions() ? Html::tag('div', '', [
+                'class' => ['fld-indicator'],
+                'title' => Craft::t('app', 'This tab is conditional'),
+                'aria' => ['label' => Craft::t('app', 'This tab is conditional')],
+                'data' => ['icon' => 'condition'],
+                'role' => 'img',
+            ]) : '') .
+            Html::endTag('span') .
             ($customizable
                 ? Html::a('', null, [
                     'role' => 'button',
@@ -213,7 +216,10 @@ JS;
 
     private static function _fldFieldSelectorsHtml(string $groupName, array $groupFields, FieldLayout $fieldLayout): string
     {
-        $showGroup = ArrayHelper::contains($groupFields, fn(BaseField $field) => !$fieldLayout->isFieldIncluded($field->attribute()));
+        $showGroup = ArrayHelper::contains(
+            $groupFields,
+            fn(BaseField $field) => self::_showFldFieldSelector($fieldLayout, $field),
+        );
 
         return
             Html::beginTag('div', [
@@ -223,10 +229,10 @@ JS;
                 ]),
                 'data' => ['name' => mb_strtolower($groupName)],
             ]) .
-            Html::tag('h6', $groupName) .
+            Html::tag('h6', Html::encode($groupName)) .
             implode('', array_map(fn(BaseField $field) => self::_fldElementSelectorHtml($field, true, [
                 'class' => array_filter([
-                    $fieldLayout->isFieldIncluded($field->attribute()) ? 'hidden' : null,
+                    !self::_showFldFieldSelector($fieldLayout, $field) ? 'hidden' : null,
                 ]),
             ]), $groupFields)) .
             Html::endTag('div'); // .fld-field-group
@@ -236,30 +242,39 @@ JS;
     {
         if ($element instanceof BaseField) {
             $attr = ArrayHelper::merge($attr, [
-                'class' => !$forLibrary && $element->required ? ['fld-required'] : [],
                 'data' => [
                     'keywords' => $forLibrary ? implode(' ', array_map('mb_strtolower', $element->keywords())) : false,
                 ],
             ]);
         }
 
-        $settingsNamespace = 'element-' . ($forLibrary ? 'ELEMENT_UID' : $element->uid);
+        if ($element instanceof CustomField) {
+            $originalField = Craft::$app->getFields()->getFieldByUid($element->getFieldUid());
+            if ($originalField) {
+                $attr['data']['default-handle'] = $originalField->handle;
+            }
+        }
+
         $view = Craft::$app->getView();
+        $oldNamespace = $view->getNamespace();
+        $namespace = $view->namespaceInputName('element-' . ($forLibrary ? 'ELEMENT_UID' : $element->uid));
+        $view->setNamespace($namespace);
         $view->startJsBuffer();
-        $settingsHtml = $view->namespaceInputs(fn() => $element->getSettingsHtml(), $settingsNamespace);
+        $settingsHtml = $view->namespaceInputs($element->getSettingsHtml());
         $settingsJs = $view->clearJsBuffer(false);
+        $view->setNamespace($oldNamespace);
 
         $attr = ArrayHelper::merge($attr, [
             'class' => array_filter([
                 'fld-element',
                 $forLibrary ? 'unused' : null,
-                !$forLibrary && $element->hasConditions() ? 'has-conditions' : null,
             ]),
             'data' => [
                 'uid' => !$forLibrary ? $element->uid : false,
                 'config' => $forLibrary ? ['type' => get_class($element)] + $element->toArray() : false,
+                'is-multi-instance' => $element->isMultiInstance(),
                 'has-custom-width' => $element->hasCustomWidth(),
-                'settings-namespace' => $settingsNamespace,
+                'settings-namespace' => $namespace,
                 'settings-html' => $settingsHtml ?: false,
                 'settings-js' => $settingsJs ?: false,
             ],
@@ -270,11 +285,14 @@ JS;
 
     private static function _fldTabSettingsData(FieldLayoutTab $tab): array
     {
-        $namespace = "tab-$tab->uid";
         $view = Craft::$app->getView();
+        $oldNamespace = $view->getNamespace();
+        $namespace = $view->namespaceInputName("tab-$tab->uid");
+        $view->setNamespace($namespace);
         $view->startJsBuffer();
-        $settingsHtml = $view->namespaceInputs(fn() => $tab->getSettingsHtml(), $namespace);
+        $settingsHtml = $view->namespaceInputs($tab->getSettingsHtml());
         $settingsJs = $view->clearJsBuffer(false);
+        $view->setNamespace($oldNamespace);
 
         return [
             'settings-namespace' => $namespace,
@@ -288,6 +306,14 @@ JS;
         foreach ($elements as $element) {
             $element->setLayout($fieldLayout);
         }
+    }
+
+    private static function _showFldFieldSelector(FieldLayout $fieldLayout, BaseField $field): bool
+    {
+        return (
+            $field->isMultiInstance() ||
+            !$fieldLayout->isFieldIncluded($field->attribute())
+        );
     }
 
 }

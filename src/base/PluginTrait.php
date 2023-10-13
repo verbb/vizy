@@ -8,11 +8,9 @@ use verbb\vizy\services\Icons;
 use verbb\vizy\services\Nodes;
 use verbb\vizy\services\Service;
 use verbb\vizy\web\assets\field\VizyAsset;
-use verbb\base\BaseHelper;
 
-use Craft;
-
-use yii\log\Logger;
+use verbb\base\LogTrait;
+use verbb\base\helpers\Plugin;
 
 use nystudio107\pluginvite\services\VitePluginService;
 
@@ -21,24 +19,42 @@ trait PluginTrait
     // Properties
     // =========================================================================
 
-    public static Vizy $plugin;
+    public static ?Vizy $plugin = null;
 
+
+    // Traits
+    // =========================================================================
+
+    use LogTrait;
+    
 
     // Static Methods
     // =========================================================================
 
-    public static function log(string $message, array $params = []): void
+    public static function config(): array
     {
-        $message = Craft::t('vizy', $message, $params);
+        Plugin::bootstrapPlugin('vizy');
 
-        Craft::getLogger()->log($message, Logger::LEVEL_INFO, 'vizy');
-    }
-
-    public static function error(string $message, array $params = []): void
-    {
-        $message = Craft::t('vizy', $message, $params);
-
-        Craft::getLogger()->log($message, Logger::LEVEL_ERROR, 'vizy');
+        return [
+            'components' => [
+                'cache' => Cache::class,
+                'content' => Content::class,
+                'icons' => Icons::class,
+                'nodes' => Nodes::class,
+                'service' => Service::class,
+                'vite' => [
+                    'class' => VitePluginService::class,
+                    'assetClass' => VizyAsset::class,
+                    'useDevServer' => true,
+                    'devServerPublic' => 'http://localhost:4001/',
+                    'errorEntry' => 'js/main.js',
+                    'cacheKeySuffix' => '',
+                    'devServerInternal' => 'http://localhost:4001/',
+                    'checkDevServer' => true,
+                    'includeReactRefreshShim' => false,
+                ],
+            ],
+        ];
     }
 
 
@@ -73,38 +89,5 @@ trait PluginTrait
     public function getVite(): VitePluginService
     {
         return $this->get('vite');
-    }
-
-
-    // Private Methods
-    // =========================================================================
-
-    private function _registerComponents(): void
-    {
-        $this->setComponents([
-            'cache' => Cache::class,
-            'content' => Content::class,
-            'icons' => Icons::class,
-            'nodes' => Nodes::class,
-            'service' => Service::class,
-            'vite' => [
-                'class' => VitePluginService::class,
-                'assetClass' => VizyAsset::class,
-                'useDevServer' => true,
-                'devServerPublic' => 'http://localhost:4001/',
-                'errorEntry' => 'js/main.js',
-                'cacheKeySuffix' => '',
-                'devServerInternal' => 'http://localhost:4001/',
-                'checkDevServer' => true,
-                'includeReactRefreshShim' => false,
-            ],
-        ]);
-
-        BaseHelper::registerModule();
-    }
-
-    private function _registerLogTarget(): void
-    {
-        BaseHelper::setFileLogging('vizy');
     }
 }

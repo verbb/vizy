@@ -199,7 +199,7 @@ class VizyBlock extends Node
 
     public function getFieldContext(): string
     {
-        return Craft::$app->getContent()->fieldContext;
+        return Craft::$app->getFields()->fieldContext;
     }
 
     public function getFieldValue(string $fieldHandle)
@@ -330,12 +330,12 @@ class VizyBlock extends Node
             return $this->_fieldsByHandle[$handle];
         }
 
-        $contentService = Craft::$app->getContent();
-        $originalFieldContext = $contentService->fieldContext;
-        $contentService->fieldContext = $this->getFieldContext();
+        $fieldsService = Craft::$app->getFields();
+        $originalFieldContext = $fieldsService->fieldContext;
+        $fieldsService->fieldContext = $this->getFieldContext();
         $fieldLayout = $this->getFieldLayout();
         $this->_fieldsByHandle[$handle] = $fieldLayout ? $fieldLayout->getFieldByHandle($handle) : null;
-        $contentService->fieldContext = $originalFieldContext;
+        $fieldsService->fieldContext = $originalFieldContext;
 
         return $this->_fieldsByHandle[$handle];
     }

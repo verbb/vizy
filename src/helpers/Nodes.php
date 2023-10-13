@@ -10,7 +10,6 @@ use craft\helpers\Html;
 use craft\helpers\HtmlPurifier;
 use craft\validators\HandleValidator;
 
-use LitEmoji\LitEmoji;
 use voku\helper\AntiXSS;
 
 class Nodes

@@ -13,11 +13,6 @@ class Block extends Element
     // Static Methods
     // =========================================================================
 
-    public static function hasContent(): bool
-    {
-        return true;
-    }
-
     public static function isLocalized(): bool
     {
         return true;

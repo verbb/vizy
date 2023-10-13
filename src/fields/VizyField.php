@@ -22,6 +22,7 @@ use craft\elements\Asset;
 use craft\elements\Category;
 use craft\elements\Entry;
 use craft\elements\MatrixBlock;
+use craft\enums\PropagationMethod;
 use craft\fieldlayoutelements\CustomField;
 use craft\helpers\ArrayHelper;
 use craft\helpers\FileHelper;
@@ -75,7 +76,7 @@ class VizyField extends Field
         return Craft::t('vizy', 'Vizy');
     }
 
-    public static function valueType(): string
+    public static function phpType(): string
     {
         return 'string|null';
     }
@@ -121,7 +122,6 @@ class VizyField extends Field
     public ?int $maxBlocks = null;
     public string $blockTypeBehaviour = self::PICKER_BEHAVIOUR_CLICK;
     public string $editorMode = self::MODE_COMBINED;
-    public string $columnType = Schema::TYPE_TEXT;
 
     private static array $_registeredPlugins = [];
 
@@ -148,21 +148,10 @@ class VizyField extends Field
             }
         }
 
+        // Remove unused settings
+        unset($config['columnType']);
+
         parent::__construct($config);
-    }
-
-    protected function defineRules(): array
-    {
-        $rules = parent::defineRules();
-
-        $rules[] = [['initialRows', 'minBlocks', 'maxBlocks'], 'integer', 'min' => 0];
-
-        return $rules;
-    }
-
-    public function getContentColumnType(): array|string
-    {
-        return $this->columnType;
     }
 
     public function isValueEmpty(mixed $value, ElementInterface $element): bool
@@ -248,7 +237,7 @@ class VizyField extends Field
         ]);
     }
 
-    public function getInputHtml(mixed $value, ?ElementInterface $element = null): string
+    protected function inputHtml(mixed $value, ?ElementInterface $element, bool $inline): string
     {
         $view = Craft::$app->getView();
         $id = Html::id($this->handle);
@@ -347,7 +336,7 @@ class VizyField extends Field
         ]);
     }
 
-    public function normalizeValue(mixed $value, ?ElementInterface $element = null): NodeCollection
+    public function normalizeValue(mixed $value, ElementInterface $element = null): mixed
     {
         if ($value instanceof NodeCollection) {
             return $value;
@@ -378,7 +367,7 @@ class VizyField extends Field
         return new NodeCollection($this, $value, $element);
     }
 
-    public function serializeValue(mixed $value, ?ElementInterface $element = null): mixed
+    public function serializeValue(mixed $value, ElementInterface $element = null): mixed
     {
         if ($value instanceof NodeCollection) {
             return $value->serializeValues($element);
@@ -387,9 +376,6 @@ class VizyField extends Field
         return $value;
     }
 
-    /**
-     * @inheritdoc
-     */
     public function getElementConditionRuleType(): array|string|null
     {
         return EmptyFieldConditionRule::class;
@@ -527,13 +513,13 @@ class VizyField extends Field
                                 $field = Craft::$app->getFields()->getFieldByHandle($fieldHandle);
 
                                 // "Only save blocks to the site they were created in" (none) is selected
-                                if ($field instanceof Matrix && $field->propagationMethod !== Matrix::PROPAGATION_METHOD_NONE) {
+                                if ($field instanceof Matrix && $field->propagationMethod !== PropagationMethod::None) {
                                     continue;
                                 }
 
                                 // "Only save blocks to the site they were created in" (none) is selected
                                 if (Craft::$app->getPlugins()->isPluginEnabled('super-table')) {
-                                    if ($field instanceof SuperTable && $field->propagationMethod !== SuperTable::PROPAGATION_METHOD_NONE) {
+                                    if ($field instanceof SuperTable && $field->propagationMethod !== PropagationMethod::None) {
                                         continue;
                                     }
                                 }
@@ -700,6 +686,19 @@ class VizyField extends Field
                 );
             }
         }
+    }
+
+
+    // Protected Methods
+    // =========================================================================
+
+    protected function defineRules(): array
+    {
+        $rules = parent::defineRules();
+
+        $rules[] = [['initialRows', 'minBlocks', 'maxBlocks'], 'integer', 'min' => 0];
+
+        return $rules;
     }
 
     protected function searchKeywords(mixed $value, ElementInterface $element): string
@@ -941,9 +940,6 @@ class VizyField extends Field
                     $blockElement->setField($this);
                     $blockElement->setIsFresh(false);
 
-                    // Bit of a hack here to trick `Element::getIsFresh()` that this _isn't_ a fresh block. Using `setIsFresh()` won't work.
-                    $blockElement->contentId = 99999;
-
                     $originalNamespace = $view->getNamespace();
 
                     if ($fieldLayout = $blockElement->getFieldLayout()) {
@@ -1129,7 +1125,7 @@ class VizyField extends Field
         }
 
         $sources = [];
-        $sections = Craft::$app->getSections()->getAllSections();
+        $sections = Craft::$app->getEntries()->getAllSections();
         $showSingles = false;
 
         // Get all sites

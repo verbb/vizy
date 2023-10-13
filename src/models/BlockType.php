@@ -72,7 +72,7 @@ class BlockType extends Model
         }
 
         if ($this->layoutUid) {
-            $this->_fieldLayout = Vizy::$plugin->getService()->getFieldLayoutByUid($this->layoutUid);
+            $this->_fieldLayout = Craft::$app->getFields()->getLayoutByUid($this->layoutUid);
         }
 
         return $this->_fieldLayout;

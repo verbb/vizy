@@ -222,25 +222,3 @@
         value: field.defaultTransform,
     }) }}
 </div>
-
-<hr>
-
-{% if craft.app.db.isMysql %}
-    <a class="fieldtoggle" data-target="advanced">{{ 'Advanced' | t('vizy') }}</a>
-
-    <div id="advanced" class="hidden">
-        {{ forms.selectField({
-            label: 'Column Type' | t('vizy'),
-            instructions: 'The type of column this field should get in the database.' | t('vizy'),
-            id: 'column-type',
-            name: 'columnType',
-            options: [
-                { value: 'text', label: 'text (~64KB)' },
-                { value: 'mediumtext', label: 'mediumtext (~16MB)' },
-                { value: 'longtext', label: 'longtext (~4GB)' },
-            ],
-            value: field.columnType,
-            warning: (field.id ? "Changing this may result in data loss." | t('vizy')),
-        }) }}
-    </div>
-{% endif %}
