@@ -19,7 +19,8 @@ class Iframe extends Node
 
     public function getTag(): array
     {
-        $this->attrs['src'] = ArrayHelper::remove($this->attrs, 'url');
+        // In case this node is rendered multiple times, this attribute may have already been removed.
+        $this->attrs['src'] = ArrayHelper::remove($this->attrs, 'url') ?? $this->attrs['src'];
 
         return parent::getTag();
     }
