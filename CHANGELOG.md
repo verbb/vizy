@@ -1,5 +1,13 @@
 # Changelog
 
+## 2.1.12 - 2023-10-25
+
+### Added
+- Add exception message to console when failing to render a Vizy block.
+
+### Fixed
+- Fix an error when outputting iframe content, in some cases.
+
 ## 2.1.11 - 2023-10-03
 
 ### Fixed
