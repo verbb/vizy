@@ -223,6 +223,7 @@ class Nodes
 
     public static function serializeContent($rawNode)
     {
+        $nodeType = $rawNode['type'] ?? '';
         $content = $rawNode['content'] ?? [];
 
         $antiXss = new AntiXSS();
@@ -237,7 +238,14 @@ class Nodes
             // Escape any HTML tags used in the text. Maybe we're writing HTML in text?
             // But don't encode quotes, things like `&quot;` are invalid in JSON
             // Important to do this before emoji processing, as that'll replace `«`, etc characters
-            $text = $antiXss->xss_clean((string)$text);
+            if ($nodeType === 'codeBlock') {
+                // Escape `<` and `>` for script HTML tags in code blocks. While AntiXSS will filter out any
+                // `<script>` tags (correctly), they're valid in code blocks so long as they're escaped.
+                // Using `htmlspecialchars` is too troublesome with ampersands, etc.
+                $text = str_replace(['<', '>'], ['&lt;', '&gt;'], $text);
+            } else {
+                $text = $antiXss->xss_clean((string)$text);
+            }
 
             // Serialize any emoji's
             $text = StringHelper::emojiToShortcodes($text);
