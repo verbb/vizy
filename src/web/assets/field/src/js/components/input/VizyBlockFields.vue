@@ -37,6 +37,10 @@ export default {
                     // Special fix for Redactor. For some reason, when clicking on formatting buttons, we lose
                     // focus on ProseMirror. One day, we'll figure out what's really going on here
                     this.applyRedactorFix();
+
+                    // Special fix for the removal of `tabindex` on fields causing an issue only after blocks have moved
+                    // https://github.com/verbb/vizy/issues/267
+                    this.applyTabIndexFix();
                 });
             }
         });
@@ -79,6 +83,12 @@ export default {
                     });
                 });
             }
+        },
+
+        applyTabIndexFix() {
+            this.$el.querySelectorAll('.field').forEach(($field) => {
+                $field.setAttribute('tabindex', -1);
+            });
         },
 
         emitUpdate() {
