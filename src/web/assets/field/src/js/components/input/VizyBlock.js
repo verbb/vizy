@@ -69,7 +69,39 @@ export default Node.create({
     },
 
     addNodeView() {
-        return VueNodeViewRenderer(VizyBlockView);
+        return VueNodeViewRenderer(VizyBlockView, {
+            // Roll our own drag check to better deal with a few issues with Tiptap. There's a whole lot of advanced
+            // stuff they do, when it really (for our needs) just needs a check for if the drag handle is clicked
+            // as that's the only thing that can drag a block.
+            //
+            // See https://github.com/verbb/vizy/issues/267 and https://github.com/ueberdosis/tiptap/issues/1133
+            // Refer to https://github.com/ueberdosis/tiptap/blob/42039c05f0894a2730a7b8f1b943ddb22d52a824/packages/core/src/NodeView.ts#L100
+            stopEvent: ({ event }) => {
+                if (event.target.hasAttribute('data-drag-handle')) {
+                    this.isDragging = true;
+
+                    document.addEventListener('dragend', () => {
+                        this.isDragging = false;
+                    }, { once: true });
+
+                    document.addEventListener('drop', () => {
+                        this.isDragging = false;
+                    }, { once: true });
+
+                    document.addEventListener('mouseup', () => {
+                        this.isDragging = false;
+                    }, { once: true });
+
+                    return false;
+                }
+
+                if (this.isDragging) {
+                    return false;
+                }
+
+                return true;
+            },
+        });
     },
 
     addProseMirrorPlugins() {
