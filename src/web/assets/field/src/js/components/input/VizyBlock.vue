@@ -571,6 +571,11 @@ export default {
         },
 
         appendJs() {
+            // Check if there's any fatal errors for this block
+            if (isEmpty(this.blockType)) {
+                return;
+            }
+
             // Add any JS required by fields
             const footHtml = this.vizyField.getCachedFieldJs(this.node.attrs.id);
             const $script = document.querySelector(`#script-${this.node.attrs.id}`);
@@ -749,6 +754,11 @@ export default {
         },
 
         serializeFieldContent() {
+            // Check if there's any fatal errors for this block
+            if (isEmpty(this.blockType)) {
+                return;
+            }
+
             const postData = Garnish.getPostData(this.$refs.fields.$el);
             let content = Craft.expandPostArray(postData);
 
