@@ -110,6 +110,7 @@ export default {
             return h(compile(`<div>${this.template}</div>`));
         } catch (e) {
             console.error(e);
+            console.log('Vue template compile error: %o', { template: this.template });
 
             // Fallback whenever there are fatal issues rendering
             const message = this.t('vizy', 'Unable to parse block definition.');
