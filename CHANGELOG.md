@@ -1,5 +1,17 @@
 # Changelog
 
+## 2.1.13 - 2023-11-25
+
+### Added
+- Add console log for fatal Vizy block renders to assist with debugging.
+
+### Fixed
+- Fix fatal Vue errors when inline `<style>` tags were included in Vizy block field rendering.
+- Fix error state for invalid Vizy blocks.
+- Fix and improve click and mouse events inside a Vizy block, due to drag-handling from Tiptap.
+- Fix an issue where fields in a Vizy block couldn’t be focused, due to a Craft 4.5.7 change.
+- Fix an error with code block nodes escaping code content.
+
 ## 2.1.12 - 2023-10-25
 
 ### Added
