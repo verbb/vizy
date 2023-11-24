@@ -983,6 +983,9 @@ class VizyField extends Field
 
                     $fieldsHtml = preg_replace('#<script>(.*?)<\/script>#is', '', $fieldsHtml);
 
+                    // Similar situation for CSS
+                    $fieldsHtml = preg_replace('#<style(.*?)<\/style>#is', '', $fieldsHtml);
+
                     $view->setNamespace($originalNamespace);
 
                     if ($footHtml) {
