@@ -760,7 +760,17 @@ export default {
             }
 
             const postData = Garnish.getPostData(this.$refs.fields.$el);
-            let content = Craft.expandPostArray(postData);
+
+            // In some specific circumstances, the order of inputs may be incorrect, and will affect how some fields
+            // are serialized. So we order the post data object by their keys. For example:
+            // vizyBlockFields[vizy][blocks][vizy-block-HxFsB55qVX][fields][assets][0] = '114'
+            // vizyBlockFields[vizy][blocks][vizy-block-HxFsB55qVX][fields][assets] = ''
+            // will produce invalid content, overwriting the former. See https://github.com/verbb/hyper/issues/104
+            const sortedPostData = Object.keys(postData).sort().reduce((acc, key) => {
+                return (acc[key] = postData[key], acc);
+            }, {});
+
+            let content = Craft.expandPostArray(sortedPostData);
 
             // Fix Craft's lack of handling for expanding a POST array where arrays contain null items.
             // This causes issues with Table fields when deleting rows.
