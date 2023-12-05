@@ -75,6 +75,14 @@ class VizyNodeInterface extends BaseInterfaceType
                     return $source->rawNode['content'] ?? [];
                 },
             ],
+            'contentNodes' => [
+                'name' => 'contentNodes',
+                'description' => 'The content nodes and marks for this node.',
+                'type' => Type::listOf(VizyNodeInterface::getType()),
+                'resolve' => function($source) {
+                    return $source->content ?? [];
+                },
+            ],
             'attrs' => [
                 'name' => 'attrs',
                 'description' => 'The attributes for this node.',
