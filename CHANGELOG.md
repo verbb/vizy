@@ -1,5 +1,15 @@
 # Changelog
 
+## 2.1.14 - 2023-12-08
+
+### Added
+- Add `NodeInterface::contentNodes` for GraphQL node queries for getting nested content nodes/marks.
+
+### Fixed
+- Fix Vizy fields not saving with they contained a Neo field.
+- Fix `NodeInterface::marks` to actually return the marks of a node.
+- Fix an error for Hyper fields with element custom fields, not saving correctly.
+
 ## 2.1.13 - 2023-11-25
 
 ### Added

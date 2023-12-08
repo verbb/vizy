@@ -2,7 +2,7 @@
     "name": "verbb/vizy",
     "description": "A flexible visual editor field for Craft.",
     "type": "craft-plugin",
-    "version": "2.1.13",
+    "version": "2.1.14",
     "keywords": [
         "craft",
         "cms",
