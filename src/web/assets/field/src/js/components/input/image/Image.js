@@ -61,9 +61,11 @@ export default Image.extend({
                 key: new PluginKey('handleClick'),
                 props: {
                     handleClick: (view, pos, event) => {
+                        const attrs = this.editor.getAttributes('image');
+
                         // Raise a custom event so we can action this elsewhere. Notably, opening
                         // up a menu bubble in a Vue component, for max convenience
-                        if (event.target.classList.contains('vui-editor-img-wrap')) {
+                        if (attrs.src) {
                             // Wait for a moment to ensure the node is selected before hitting the callback
                             setTimeout(() => {
                                 this.editor.emit('vui:image-clicked', event);
