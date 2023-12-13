@@ -57,8 +57,6 @@ export default Link.extend({
                             setTimeout(() => {
                                 this.editor.emit('vui:link-clicked');
                             }, 50);
-
-                            return true;
                         }
                     },
                 },
