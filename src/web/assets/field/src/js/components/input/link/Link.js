@@ -51,14 +51,12 @@ export default Link.extend({
 
                         // Raise a custom event so we can action this elsewhere. Notably, opening
                         // up a menu bubble in a Vue component, for max convenience
-                        if (attrs.href && event.target instanceof HTMLAnchorElement) {
+                        if (attrs.href) {
                             // Give it a second to resolve the cursor before raising the event.
                             // Otherwise tippy can freak out with positioning.
                             setTimeout(() => {
                                 this.editor.emit('vui:link-clicked');
                             }, 50);
-
-                            return true;
                         }
                     },
                 },

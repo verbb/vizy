@@ -885,9 +885,22 @@ class VizyField extends Field
                     
                     $fieldsHtml = $view->namespaceInputs($form->render());
                     $fieldsHtml = $this->_parseFieldHtml($fieldsHtml);
-                    $blockTypeArray['fieldsHtml'] = $fieldsHtml;
 
                     $footHtml = $view->clearJsBuffer(false);
+
+                    // Just in case some JS slips through (see dismissable UI element tips)
+                    preg_match_all('#<script>(.*?)<\/script>#is', $fieldsHtml, $extraJs);
+
+                    if (isset($extraJs[1])) {
+                        $footHtml = $footHtml . implode('', $extraJs[1]);
+                    }
+
+                    $fieldsHtml = preg_replace('#<script>(.*?)<\/script>#is', '', $fieldsHtml);
+
+                    // Similar situation for CSS
+                    $fieldsHtml = preg_replace('#<style(.*?)<\/style>#is', '', $fieldsHtml);
+
+                    $blockTypeArray['fieldsHtml'] = $fieldsHtml;
 
                     $view->setNamespace($originalNamespace);
 
@@ -978,6 +991,9 @@ class VizyField extends Field
                     }
 
                     $fieldsHtml = preg_replace('#<script>(.*?)<\/script>#is', '', $fieldsHtml);
+
+                    // Similar situation for CSS
+                    $fieldsHtml = preg_replace('#<style(.*?)<\/style>#is', '', $fieldsHtml);
 
                     $view->setNamespace($originalNamespace);
 

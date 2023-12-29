@@ -1,5 +1,35 @@
 # Changelog
 
+## 2.1.14 - 2023-12-08
+
+### Added
+- Add `NodeInterface::contentNodes` for GraphQL node queries for getting nested content nodes/marks.
+
+### Fixed
+- Fix Vizy fields not saving when they contained a Neo field.
+- Fix `NodeInterface::marks` to actually return the marks of a node.
+- Fix an error for Hyper fields with element custom fields, not saving correctly.
+
+## 2.1.13 - 2023-11-25
+
+### Added
+- Add console log for fatal Vizy block renders to assist with debugging.
+
+### Fixed
+- Fix fatal Vue errors when inline `<style>` tags were included in Vizy block field rendering.
+- Fix error state for invalid Vizy blocks.
+- Fix and improve click and mouse events inside a Vizy block, due to drag-handling from Tiptap.
+- Fix an issue where fields in a Vizy block couldn’t be focused, due to a Craft 4.5.7 change.
+- Fix an error with code block nodes escaping code content.
+
+## 2.1.12 - 2023-10-25
+
+### Added
+- Add exception message to console when failing to render a Vizy block.
+
+### Fixed
+- Fix an error when outputting iframe content, in some cases.
+
 ## 2.1.11 - 2023-10-03
 
 ### Fixed

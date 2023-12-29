@@ -37,12 +37,22 @@ export default {
                     // Special fix for Redactor. For some reason, when clicking on formatting buttons, we lose
                     // focus on ProseMirror. One day, we'll figure out what's really going on here
                     this.applyRedactorFix();
+
+                    // Special fix for the removal of `tabindex` on fields causing an issue only after blocks have moved
+                    // https://github.com/verbb/vizy/issues/267
+                    this.applyTabIndexFix();
+
+                    this.applyNeoFix();
                 });
             }
         });
     },
 
     methods: {
+        vizyBlock() {
+            return this.$parent.$parent.$parent.$parent;
+        },
+
         watchFieldChanges() {
             const updateFunction = debounce(this.emitUpdate, 50);
 
@@ -81,6 +91,43 @@ export default {
             }
         },
 
+        applyNeoFix() {
+            if (!this.$el.querySelector('[data-type="benf\\\\neo\\\\Field"]')) {
+                return;
+            }
+
+            // When Neo fields are initialized, they trigger `initialSerializedValue` on the main form. This is fine normally, but when moving blocks
+            // and the field is re-rendered and its JS re-initialized, the form is re-serialized with content now. This resets any Vizy changes
+            // which have just happened due to a move. It's a bit icky, but remove the Vizy field (top-level) serialized data, so that it's actually saved
+            // See https://github.com/verbb/vizy/issues/272
+            const $mainForm = $('form#main-form');
+            const actionName = encodeURIComponent(this.vizyBlock().vizyField.name);
+
+            let data = $mainForm.data('initialSerializedValue');
+            data = data.replace(new RegExp(`${Craft.escapeRegex(actionName)}[^&]*&?`), '');
+            $mainForm.data('initialSerializedValue', data);
+
+            // There's also a duplicated buttons rows on re-initialization
+            this.$el.querySelectorAll('[data-type="benf\\\\neo\\\\Field"]').forEach(($neoField) => {
+                const $buttons = $neoField.querySelectorAll('.ni_buttons');
+
+                if ($buttons.length > 1) {
+                    // Keep only the last occurrence
+                    $buttons.forEach(($button, index) => {
+                        if (index != ($buttons.length - 1)) {
+                            $button.remove();
+                        }
+                    });
+                }
+            });
+        },
+
+        applyTabIndexFix() {
+            this.$el.querySelectorAll('.field').forEach(($field) => {
+                $field.setAttribute('tabindex', -1);
+            });
+        },
+
         emitUpdate() {
             // Give it a second for the DOM to update, as we rely on DOM values to serialize.
             setTimeout(() => {
@@ -100,6 +147,7 @@ export default {
             return h(compile(`<div>${this.template}</div>`));
         } catch (e) {
             console.error(e);
+            console.log('Vue template compile error: %o', { template: this.template });
 
             // Fallback whenever there are fatal issues rendering
             const message = this.t('vizy', 'Unable to parse block definition.');
