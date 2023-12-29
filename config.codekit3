@@ -7,15 +7,15 @@
       "uuidString" : "436BDBBC-82C7-4719-A7DF-0E101800EAA6"
     }
   ],
-  "creatorBuild" : "34365",
+  "creatorBuild" : "34518",
   "files" : {
     "\/.eslintrc.js" : {
       "bF" : 0,
       "ft" : 64,
-      "ma" : 0,
+      "ma" : 1,
       "mi" : 1,
       "oA" : 1,
-      "oAP" : "\/.eslintrc-min.js",
+      "oAP" : "\/dist\/js\/.eslintrc.js",
       "oF" : 0,
       "sC" : 0,
       "tS" : 0
@@ -1192,10 +1192,10 @@
     "\/src\/web\/assets\/field\/dist\/assets\/vizy-3d5d28cb.js" : {
       "bF" : 0,
       "ft" : 64,
-      "ma" : 0,
+      "ma" : 1,
       "mi" : 1,
       "oA" : 0,
-      "oAP" : "\/src\/web\/assets\/field\/dist\/assets\/vizy-3d5d28cb-min.js",
+      "oAP" : "\/src\/web\/assets\/field\/dist\/js\/vizy-3d5d28cb.js",
       "oF" : 0,
       "sC" : 0,
       "tS" : 0
@@ -1271,10 +1271,10 @@
     "\/src\/web\/assets\/field\/src\/js\/components\/input\/commands\/Commands.js" : {
       "bF" : 0,
       "ft" : 64,
-      "ma" : 0,
+      "ma" : 1,
       "mi" : 1,
       "oA" : 0,
-      "oAP" : "\/src\/web\/assets\/field\/src\/js\/components\/input\/commands\/Commands-min.js",
+      "oAP" : "\/src\/web\/assets\/field\/src\/js\/components\/dist\/js\/Commands.js",
       "oF" : 0,
       "sC" : 0,
       "tS" : 0
@@ -1290,10 +1290,10 @@
     "\/src\/web\/assets\/field\/src\/js\/components\/input\/commands\/Suggestion.js" : {
       "bF" : 0,
       "ft" : 64,
-      "ma" : 0,
+      "ma" : 1,
       "mi" : 1,
       "oA" : 0,
-      "oAP" : "\/src\/web\/assets\/field\/src\/js\/components\/input\/commands\/Suggestion-min.js",
+      "oAP" : "\/src\/web\/assets\/field\/src\/js\/components\/dist\/js\/Suggestion.js",
       "oF" : 0,
       "sC" : 0,
       "tS" : 0
@@ -1301,10 +1301,10 @@
     "\/src\/web\/assets\/field\/src\/js\/components\/input\/FloatingMenu.js" : {
       "bF" : 0,
       "ft" : 64,
-      "ma" : 0,
+      "ma" : 1,
       "mi" : 1,
       "oA" : 0,
-      "oAP" : "\/src\/web\/assets\/field\/src\/js\/components\/input\/FloatingMenu-min.js",
+      "oAP" : "\/src\/web\/assets\/field\/src\/js\/dist\/js\/FloatingMenu.js",
       "oF" : 0,
       "sC" : 0,
       "tS" : 0
@@ -1320,10 +1320,10 @@
     "\/src\/web\/assets\/field\/src\/js\/components\/input\/GlobalAttributes.js" : {
       "bF" : 0,
       "ft" : 64,
-      "ma" : 0,
+      "ma" : 1,
       "mi" : 1,
       "oA" : 0,
-      "oAP" : "\/src\/web\/assets\/field\/src\/js\/components\/input\/GlobalAttributes-min.js",
+      "oAP" : "\/src\/web\/assets\/field\/src\/js\/dist\/js\/GlobalAttributes.js",
       "oF" : 0,
       "sC" : 0,
       "tS" : 0
@@ -1331,10 +1331,10 @@
     "\/src\/web\/assets\/field\/src\/js\/components\/input\/iframe\/Iframe.js" : {
       "bF" : 0,
       "ft" : 64,
-      "ma" : 0,
+      "ma" : 1,
       "mi" : 1,
       "oA" : 1,
-      "oAP" : "\/src\/web\/assets\/field\/src\/js\/components\/input\/iframe\/Iframe-min.js",
+      "oAP" : "\/src\/web\/assets\/field\/src\/js\/components\/dist\/js\/Iframe.js",
       "oF" : 0,
       "sC" : 0,
       "tS" : 0
@@ -1374,10 +1374,10 @@
     "\/src\/web\/assets\/field\/src\/js\/components\/input\/image\/Image.js" : {
       "bF" : 0,
       "ft" : 64,
-      "ma" : 0,
+      "ma" : 1,
       "mi" : 1,
       "oA" : 1,
-      "oAP" : "\/src\/web\/assets\/field\/src\/js\/components\/input\/image\/Image-min.js",
+      "oAP" : "\/src\/web\/assets\/field\/src\/js\/components\/dist\/js\/Image.js",
       "oF" : 0,
       "sC" : 0,
       "tS" : 0
@@ -1409,10 +1409,10 @@
     "\/src\/web\/assets\/field\/src\/js\/components\/input\/link\/Link.js" : {
       "bF" : 0,
       "ft" : 64,
-      "ma" : 0,
+      "ma" : 1,
       "mi" : 1,
       "oA" : 1,
-      "oAP" : "\/src\/web\/assets\/field\/src\/js\/components\/input\/link\/Link-min.js",
+      "oAP" : "\/src\/web\/assets\/field\/src\/js\/components\/dist\/js\/Link.js",
       "oF" : 0,
       "sC" : 0,
       "tS" : 0
@@ -1444,10 +1444,10 @@
     "\/src\/web\/assets\/field\/src\/js\/components\/input\/media-embed\/MediaEmbed.js" : {
       "bF" : 0,
       "ft" : 64,
-      "ma" : 0,
+      "ma" : 1,
       "mi" : 1,
       "oA" : 1,
-      "oAP" : "\/src\/web\/assets\/field\/src\/js\/components\/input\/media-embed\/MediaEmbed-min.js",
+      "oAP" : "\/src\/web\/assets\/field\/src\/js\/components\/dist\/js\/MediaEmbed.js",
       "oF" : 0,
       "sC" : 0,
       "tS" : 0
@@ -1519,10 +1519,10 @@
     "\/src\/web\/assets\/field\/src\/js\/components\/input\/VizyBlock.js" : {
       "bF" : 0,
       "ft" : 64,
-      "ma" : 0,
+      "ma" : 1,
       "mi" : 1,
       "oA" : 0,
-      "oAP" : "\/src\/web\/assets\/field\/src\/js\/components\/input\/VizyBlock-min.js",
+      "oAP" : "\/src\/web\/assets\/field\/src\/js\/dist\/js\/VizyBlock.js",
       "oF" : 0,
       "sC" : 0,
       "tS" : 0
@@ -1602,10 +1602,10 @@
     "\/src\/web\/assets\/field\/src\/js\/config.js" : {
       "bF" : 0,
       "ft" : 64,
-      "ma" : 0,
+      "ma" : 1,
       "mi" : 1,
       "oA" : 1,
-      "oAP" : "\/src\/web\/assets\/field\/src\/js\/config-min.js",
+      "oAP" : "\/src\/web\/assets\/field\/dist\/js\/config.js",
       "oF" : 0,
       "sC" : 0,
       "tS" : 0
@@ -1613,10 +1613,10 @@
     "\/src\/web\/assets\/field\/src\/js\/config\/Buttons.js" : {
       "bF" : 0,
       "ft" : 64,
-      "ma" : 0,
+      "ma" : 1,
       "mi" : 1,
       "oA" : 1,
-      "oAP" : "\/src\/web\/assets\/field\/src\/js\/config\/Buttons-min.js",
+      "oAP" : "\/src\/web\/assets\/field\/src\/dist\/js\/Buttons.js",
       "oF" : 0,
       "sC" : 0,
       "tS" : 0
@@ -1624,10 +1624,10 @@
     "\/src\/web\/assets\/field\/src\/js\/config\/Commands.js" : {
       "bF" : 0,
       "ft" : 64,
-      "ma" : 0,
+      "ma" : 1,
       "mi" : 1,
       "oA" : 1,
-      "oAP" : "\/src\/web\/assets\/field\/src\/js\/config\/Commands-min.js",
+      "oAP" : "\/src\/web\/assets\/field\/src\/dist\/js\/Commands.js",
       "oF" : 0,
       "sC" : 0,
       "tS" : 0
@@ -1635,10 +1635,10 @@
     "\/src\/web\/assets\/field\/src\/js\/config\/Extensions.js" : {
       "bF" : 0,
       "ft" : 64,
-      "ma" : 0,
+      "ma" : 1,
       "mi" : 1,
       "oA" : 1,
-      "oAP" : "\/src\/web\/assets\/field\/src\/js\/config\/Extensions-min.js",
+      "oAP" : "\/src\/web\/assets\/field\/src\/dist\/js\/Extensions.js",
       "oF" : 0,
       "sC" : 0,
       "tS" : 0
@@ -1646,10 +1646,10 @@
     "\/src\/web\/assets\/field\/src\/js\/utils\/bool.js" : {
       "bF" : 0,
       "ft" : 64,
-      "ma" : 0,
+      "ma" : 1,
       "mi" : 1,
       "oA" : 0,
-      "oAP" : "\/src\/web\/assets\/field\/src\/js\/utils\/bool-min.js",
+      "oAP" : "\/src\/web\/assets\/field\/src\/dist\/js\/bool.js",
       "oF" : 0,
       "sC" : 0,
       "tS" : 0
@@ -1657,10 +1657,10 @@
     "\/src\/web\/assets\/field\/src\/js\/utils\/browser.js" : {
       "bF" : 0,
       "ft" : 64,
-      "ma" : 0,
+      "ma" : 1,
       "mi" : 1,
       "oA" : 0,
-      "oAP" : "\/src\/web\/assets\/field\/src\/js\/utils\/browser-min.js",
+      "oAP" : "\/src\/web\/assets\/field\/src\/dist\/js\/browser.js",
       "oF" : 0,
       "sC" : 0,
       "tS" : 0
@@ -1668,10 +1668,10 @@
     "\/src\/web\/assets\/field\/src\/js\/utils\/dom.js" : {
       "bF" : 0,
       "ft" : 64,
-      "ma" : 0,
+      "ma" : 1,
       "mi" : 1,
       "oA" : 0,
-      "oAP" : "\/src\/web\/assets\/field\/src\/js\/utils\/dom-min.js",
+      "oAP" : "\/src\/web\/assets\/field\/src\/dist\/js\/dom.js",
       "oF" : 0,
       "sC" : 0,
       "tS" : 0
@@ -1679,10 +1679,10 @@
     "\/src\/web\/assets\/field\/src\/js\/utils\/forms.js" : {
       "bF" : 0,
       "ft" : 64,
-      "ma" : 0,
+      "ma" : 1,
       "mi" : 1,
       "oA" : 0,
-      "oAP" : "\/src\/web\/assets\/field\/src\/js\/utils\/forms-min.js",
+      "oAP" : "\/src\/web\/assets\/field\/src\/dist\/js\/forms.js",
       "oF" : 0,
       "sC" : 0,
       "tS" : 0
@@ -1690,10 +1690,10 @@
     "\/src\/web\/assets\/field\/src\/js\/utils\/htmlize.js" : {
       "bF" : 0,
       "ft" : 64,
-      "ma" : 0,
+      "ma" : 1,
       "mi" : 1,
       "oA" : 0,
-      "oAP" : "\/src\/web\/assets\/field\/src\/js\/utils\/htmlize-min.js",
+      "oAP" : "\/src\/web\/assets\/field\/src\/dist\/js\/htmlize.js",
       "oF" : 0,
       "sC" : 0,
       "tS" : 0
@@ -1701,10 +1701,10 @@
     "\/src\/web\/assets\/field\/src\/js\/utils\/object.js" : {
       "bF" : 0,
       "ft" : 64,
-      "ma" : 0,
+      "ma" : 1,
       "mi" : 1,
       "oA" : 0,
-      "oAP" : "\/src\/web\/assets\/field\/src\/js\/utils\/object-min.js",
+      "oAP" : "\/src\/web\/assets\/field\/src\/dist\/js\/object.js",
       "oF" : 0,
       "sC" : 0,
       "tS" : 0
@@ -1712,10 +1712,10 @@
     "\/src\/web\/assets\/field\/src\/js\/utils\/populate.js" : {
       "bF" : 0,
       "ft" : 64,
-      "ma" : 0,
+      "ma" : 1,
       "mi" : 1,
       "oA" : 0,
-      "oAP" : "\/src\/web\/assets\/field\/src\/js\/utils\/populate-min.js",
+      "oAP" : "\/src\/web\/assets\/field\/src\/dist\/js\/populate.js",
       "oF" : 0,
       "sC" : 0,
       "tS" : 0
@@ -1723,10 +1723,10 @@
     "\/src\/web\/assets\/field\/src\/js\/utils\/promise.js" : {
       "bF" : 0,
       "ft" : 64,
-      "ma" : 0,
+      "ma" : 1,
       "mi" : 1,
       "oA" : 0,
-      "oAP" : "\/src\/web\/assets\/field\/src\/js\/utils\/promise-min.js",
+      "oAP" : "\/src\/web\/assets\/field\/src\/dist\/js\/promise.js",
       "oF" : 0,
       "sC" : 0,
       "tS" : 0
@@ -1734,10 +1734,10 @@
     "\/src\/web\/assets\/field\/src\/js\/utils\/string.js" : {
       "bF" : 0,
       "ft" : 64,
-      "ma" : 0,
+      "ma" : 1,
       "mi" : 1,
       "oA" : 0,
-      "oAP" : "\/src\/web\/assets\/field\/src\/js\/utils\/string-min.js",
+      "oAP" : "\/src\/web\/assets\/field\/src\/dist\/js\/string.js",
       "oF" : 0,
       "sC" : 0,
       "tS" : 0
@@ -1745,10 +1745,10 @@
     "\/src\/web\/assets\/field\/src\/js\/utils\/tippy\/followCursor.js" : {
       "bF" : 0,
       "ft" : 64,
-      "ma" : 0,
+      "ma" : 1,
       "mi" : 1,
       "oA" : 0,
-      "oAP" : "\/src\/web\/assets\/field\/src\/js\/utils\/tippy\/followCursor-min.js",
+      "oAP" : "\/src\/web\/assets\/field\/src\/js\/dist\/js\/followCursor.js",
       "oF" : 0,
       "sC" : 0,
       "tS" : 0
@@ -1756,10 +1756,10 @@
     "\/src\/web\/assets\/field\/src\/js\/utils\/tiptap\/helpers.js" : {
       "bF" : 0,
       "ft" : 64,
-      "ma" : 0,
+      "ma" : 1,
       "mi" : 1,
       "oA" : 1,
-      "oAP" : "\/src\/web\/assets\/field\/src\/js\/utils\/tiptap\/helpers-min.js",
+      "oAP" : "\/src\/web\/assets\/field\/src\/js\/dist\/js\/helpers.js",
       "oF" : 0,
       "sC" : 0,
       "tS" : 0
@@ -1767,10 +1767,10 @@
     "\/src\/web\/assets\/field\/src\/js\/utils\/tiptap\/marks.js" : {
       "bF" : 0,
       "ft" : 64,
-      "ma" : 0,
+      "ma" : 1,
       "mi" : 1,
       "oA" : 0,
-      "oAP" : "\/src\/web\/assets\/field\/src\/js\/utils\/tiptap\/marks-min.js",
+      "oAP" : "\/src\/web\/assets\/field\/src\/js\/dist\/js\/marks.js",
       "oF" : 0,
       "sC" : 0,
       "tS" : 0
@@ -1778,10 +1778,10 @@
     "\/src\/web\/assets\/field\/src\/js\/utils\/tiptap\/nodes.js" : {
       "bF" : 0,
       "ft" : 64,
-      "ma" : 0,
+      "ma" : 1,
       "mi" : 1,
       "oA" : 0,
-      "oAP" : "\/src\/web\/assets\/field\/src\/js\/utils\/tiptap\/nodes-min.js",
+      "oAP" : "\/src\/web\/assets\/field\/src\/js\/dist\/js\/nodes.js",
       "oF" : 0,
       "sC" : 0,
       "tS" : 0
@@ -1789,10 +1789,10 @@
     "\/src\/web\/assets\/field\/src\/js\/utils\/tiptap\/selection.js" : {
       "bF" : 0,
       "ft" : 64,
-      "ma" : 0,
+      "ma" : 1,
       "mi" : 1,
       "oA" : 1,
-      "oAP" : "\/src\/web\/assets\/field\/src\/js\/utils\/tiptap\/selection-min.js",
+      "oAP" : "\/src\/web\/assets\/field\/src\/js\/dist\/js\/selection.js",
       "oF" : 0,
       "sC" : 0,
       "tS" : 0
@@ -1800,10 +1800,10 @@
     "\/src\/web\/assets\/field\/src\/js\/utils\/tiptap\/transforms.js" : {
       "bF" : 0,
       "ft" : 64,
-      "ma" : 0,
+      "ma" : 1,
       "mi" : 1,
       "oA" : 1,
-      "oAP" : "\/src\/web\/assets\/field\/src\/js\/utils\/tiptap\/transforms-min.js",
+      "oAP" : "\/src\/web\/assets\/field\/src\/js\/dist\/js\/transforms.js",
       "oF" : 0,
       "sC" : 0,
       "tS" : 0
@@ -1811,10 +1811,10 @@
     "\/src\/web\/assets\/field\/src\/js\/utils\/translations.js" : {
       "bF" : 0,
       "ft" : 64,
-      "ma" : 0,
+      "ma" : 1,
       "mi" : 1,
       "oA" : 0,
-      "oAP" : "\/src\/web\/assets\/field\/src\/js\/utils\/translations-min.js",
+      "oAP" : "\/src\/web\/assets\/field\/src\/dist\/js\/translations.js",
       "oF" : 0,
       "sC" : 0,
       "tS" : 0
@@ -1830,10 +1830,10 @@
     "\/src\/web\/assets\/field\/src\/js\/vendor\/vue-autosuggest\/index.js" : {
       "bF" : 0,
       "ft" : 64,
-      "ma" : 0,
+      "ma" : 1,
       "mi" : 1,
       "oA" : 0,
-      "oAP" : "\/src\/web\/assets\/field\/src\/js\/vendor\/vue-autosuggest\/index-min.js",
+      "oAP" : "\/src\/web\/assets\/field\/src\/js\/dist\/js\/index.js",
       "oF" : 0,
       "sC" : 0,
       "tS" : 0
@@ -1841,10 +1841,10 @@
     "\/src\/web\/assets\/field\/src\/js\/vendor\/vue-autosuggest\/parts\/DefaultSection.js" : {
       "bF" : 0,
       "ft" : 64,
-      "ma" : 0,
+      "ma" : 1,
       "mi" : 1,
       "oA" : 0,
-      "oAP" : "\/src\/web\/assets\/field\/src\/js\/vendor\/vue-autosuggest\/parts\/DefaultSection-min.js",
+      "oAP" : "\/src\/web\/assets\/field\/src\/js\/vendor\/dist\/js\/DefaultSection.js",
       "oF" : 0,
       "sC" : 0,
       "tS" : 0
@@ -1852,10 +1852,10 @@
     "\/src\/web\/assets\/field\/src\/js\/vendor\/vue-autosuggest\/stories\/index.js" : {
       "bF" : 0,
       "ft" : 64,
-      "ma" : 0,
+      "ma" : 1,
       "mi" : 1,
       "oA" : 0,
-      "oAP" : "\/src\/web\/assets\/field\/src\/js\/vendor\/vue-autosuggest\/stories\/index-min.js",
+      "oAP" : "\/src\/web\/assets\/field\/src\/js\/vendor\/dist\/js\/index.js",
       "oF" : 0,
       "sC" : 0,
       "tS" : 0
@@ -1863,10 +1863,10 @@
     "\/src\/web\/assets\/field\/src\/js\/vendor\/vue-autosuggest\/utils.js" : {
       "bF" : 0,
       "ft" : 64,
-      "ma" : 0,
+      "ma" : 1,
       "mi" : 1,
       "oA" : 0,
-      "oAP" : "\/src\/web\/assets\/field\/src\/js\/vendor\/vue-autosuggest\/utils-min.js",
+      "oAP" : "\/src\/web\/assets\/field\/src\/js\/dist\/js\/utils.js",
       "oF" : 0,
       "sC" : 0,
       "tS" : 0
@@ -1874,10 +1874,10 @@
     "\/src\/web\/assets\/field\/src\/js\/vendor\/vue-drag-drop\/constants.js" : {
       "bF" : 0,
       "ft" : 64,
-      "ma" : 0,
+      "ma" : 1,
       "mi" : 1,
       "oA" : 0,
-      "oAP" : "\/src\/web\/assets\/field\/src\/js\/vendor\/vue-drag-drop\/constants-min.js",
+      "oAP" : "\/src\/web\/assets\/field\/src\/js\/dist\/js\/constants.js",
       "oF" : 0,
       "sC" : 0,
       "tS" : 0
@@ -1901,10 +1901,10 @@
     "\/src\/web\/assets\/field\/src\/js\/vendor\/vue-drag-drop\/index.js" : {
       "bF" : 0,
       "ft" : 64,
-      "ma" : 0,
+      "ma" : 1,
       "mi" : 1,
       "oA" : 0,
-      "oAP" : "\/src\/web\/assets\/field\/src\/js\/vendor\/vue-drag-drop\/index-min.js",
+      "oAP" : "\/src\/web\/assets\/field\/src\/js\/dist\/js\/index.js",
       "oF" : 0,
       "sC" : 0,
       "tS" : 0
@@ -1912,10 +1912,10 @@
     "\/src\/web\/assets\/field\/src\/js\/vendor\/vue-drag-drop\/transferDataStore.js" : {
       "bF" : 0,
       "ft" : 64,
-      "ma" : 0,
+      "ma" : 1,
       "mi" : 1,
       "oA" : 0,
-      "oAP" : "\/src\/web\/assets\/field\/src\/js\/vendor\/vue-drag-drop\/transferDataStore-min.js",
+      "oAP" : "\/src\/web\/assets\/field\/src\/js\/dist\/js\/transferDataStore.js",
       "oF" : 0,
       "sC" : 0,
       "tS" : 0
@@ -1923,10 +1923,10 @@
     "\/src\/web\/assets\/field\/src\/js\/vendor\/vue-unique-id\/index.js" : {
       "bF" : 0,
       "ft" : 64,
-      "ma" : 0,
+      "ma" : 1,
       "mi" : 1,
       "oA" : 0,
-      "oAP" : "\/src\/web\/assets\/field\/src\/js\/vendor\/vue-unique-id\/index-min.js",
+      "oAP" : "\/src\/web\/assets\/field\/src\/js\/dist\/js\/index.js",
       "oF" : 0,
       "sC" : 0,
       "tS" : 0
@@ -1934,10 +1934,10 @@
     "\/src\/web\/assets\/field\/src\/js\/vizy.js" : {
       "bF" : 0,
       "ft" : 64,
-      "ma" : 0,
+      "ma" : 1,
       "mi" : 1,
       "oA" : 0,
-      "oAP" : "\/src\/web\/assets\/field\/src\/js\/vizy-min.js",
+      "oAP" : "\/src\/web\/assets\/field\/dist\/js\/vizy.js",
       "oF" : 0,
       "sC" : 0,
       "tS" : 0
@@ -1945,10 +1945,10 @@
     "\/src\/web\/assets\/field\/src\/js\/VizyConfig.js" : {
       "bF" : 0,
       "ft" : 64,
-      "ma" : 0,
+      "ma" : 1,
       "mi" : 1,
       "oA" : 1,
-      "oAP" : "\/src\/web\/assets\/field\/src\/js\/VizyConfig-min.js",
+      "oAP" : "\/src\/web\/assets\/field\/dist\/js\/VizyConfig.js",
       "oF" : 0,
       "sC" : 0,
       "tS" : 0
@@ -1958,13 +1958,13 @@
       "bl" : 0,
       "co" : 0,
       "dP" : 10,
-      "ec" : 0,
+      "ec" : 1,
       "ft" : 4,
       "ma" : 0,
       "oA" : 1,
-      "oAP" : "\/src\/web\/assets\/field\/src\/scss\/_vui-tooltips.css",
+      "oAP" : "\/src\/web\/assets\/field\/dist\/css\/_vui-tooltips.css",
       "oF" : 0,
-      "oS" : 0,
+      "oS" : 3,
       "pg" : 0,
       "sct" : 0
     },
@@ -1973,13 +1973,13 @@
       "bl" : 0,
       "co" : 0,
       "dP" : 10,
-      "ec" : 0,
+      "ec" : 1,
       "ft" : 4,
       "ma" : 0,
       "oA" : 0,
-      "oAP" : "\/src\/web\/assets\/field\/src\/scss\/style.css",
+      "oAP" : "\/src\/web\/assets\/field\/dist\/css\/style.css",
       "oF" : 0,
-      "oS" : 0,
+      "oS" : 3,
       "pg" : 0,
       "sct" : 0
     },
@@ -1994,10 +1994,10 @@
     "\/vite.config.js" : {
       "bF" : 0,
       "ft" : 64,
-      "ma" : 0,
+      "ma" : 1,
       "mi" : 1,
       "oA" : 0,
-      "oAP" : "\/vite.config-min.js",
+      "oAP" : "\/dist\/js\/vite.config.js",
       "oF" : 0,
       "sC" : 0,
       "tS" : 0
@@ -2530,6 +2530,10 @@
         "active" : 0,
         "optionString" : "'always', {exceptAfterSingleLine: false}"
       },
+      "logical-assignment-operators" : {
+        "active" : 0,
+        "optionString" : "'always',  {'enforceForIfStatements': false}"
+      },
       "max-classes-per-file" : {
         "active" : 0,
         "optionString" : "{'ignoreExpressions': false, 'max': 1}"
@@ -2690,6 +2694,9 @@
       "no-empty-pattern" : {
         "active" : 1
       },
+      "no-empty-static-block" : {
+        "active" : 0
+      },
       "no-eq-null" : {
         "active" : 0
       },
@@ -2721,7 +2728,8 @@
         "active" : 1
       },
       "no-fallthrough" : {
-        "active" : 1
+        "active" : 1,
+        "optionString" : "{'allowEmptyCase': false}"
       },
       "no-floating-decimal" : {
         "active" : 0
@@ -2829,6 +2837,9 @@
       "no-new-func" : {
         "active" : 0
       },
+      "no-new-native-nonconstructor" : {
+        "active" : 0
+      },
       "no-new-object" : {
         "active" : 0
       },
@@ -2883,7 +2894,8 @@
         "optionString" : "'event', 'fdescribe'"
       },
       "no-restricted-imports" : {
-        "active" : 0
+        "active" : 0,
+        "optionString" : ""
       },
       "no-restricted-properties" : {
         "active" : 0,
@@ -2896,9 +2908,6 @@
       "no-return-assign" : {
         "active" : 0,
         "optionString" : "'except-parens'"
-      },
-      "no-return-await" : {
-        "active" : 0
       },
       "no-script-url" : {
         "active" : 0
@@ -3337,14 +3346,14 @@
     },
     "languageDefaultsJS" : {
       "autoOutputAction" : 0,
-      "autoOutputPathFilenamePattern" : "*-min.js",
-      "autoOutputPathRelativePath" : "\/min",
+      "autoOutputPathFilenamePattern" : "*.js",
+      "autoOutputPathRelativePath" : "..\/..\/dist\/js",
       "autoOutputPathReplace1" : "",
       "autoOutputPathReplace2" : "",
-      "autoOutputPathStyle" : 0,
+      "autoOutputPathStyle" : 2,
       "bundleFormat" : 0,
       "minifierStyle" : 1,
-      "sourceMapStyle" : 0,
+      "sourceMapStyle" : 1,
       "syntaxCheckerStyle" : 0,
       "transpilerStyle" : 0
     },
@@ -3446,15 +3455,15 @@
     "languageDefaultsSASS" : {
       "autoOutputAction" : 0,
       "autoOutputPathFilenamePattern" : "*.css",
-      "autoOutputPathRelativePath" : "..\/css",
+      "autoOutputPathRelativePath" : "..\/..\/dist\/css",
       "autoOutputPathReplace1" : "sass",
       "autoOutputPathReplace2" : "css",
-      "autoOutputPathStyle" : 0,
+      "autoOutputPathStyle" : 2,
       "compilerType" : 0,
       "cssoStyle" : 0,
       "decimalPrecision" : 10,
-      "emitCharset" : 0,
-      "outputStyle" : 0,
+      "emitCharset" : 1,
+      "outputStyle" : 3,
       "purgeCSSStyle" : 0,
       "shouldRunAutoprefixer" : 1,
       "shouldRunBless" : 0,
@@ -3511,11 +3520,12 @@
       "createDeclarationFile" : 0,
       "jsxMode" : 0,
       "minifierStyle" : 0,
+      "moduleDetectionType" : 0,
       "moduleResolutionType" : 0,
       "moduleType" : 2,
       "removeComments" : 0,
       "sourceMapStyle" : 0,
-      "targetECMAVersion" : 0
+      "targetECMAVersion" : 2018
     },
     "languageDefaultsUserDefined" : [
 
@@ -3567,10 +3577,14 @@
       "ENVIRONMENT:::$NODE_ENV"
     ],
     "rollupTreeshakingEnabled" : 1,
+    "rollupTreeshakingModuleSideEffects" : 1,
     "skippedFoldersString" : "log, _logs, logs, _cache, cache, .idea, \/storage\/framework\/sessions, node_modules",
     "sourceFolderName" : "source",
     "susyVersion" : 3,
+    "tsAllowArbitraryExtensions" : 0,
+    "tsAllowImportingTSExtensions" : 0,
     "tsAllowSyntheticDefaultImports" : 0,
+    "tsAllowUMDGlobalAccess" : 0,
     "tsAllowUnreachableCode" : 0,
     "tsAllowUnusedLabels" : 0,
     "tsAlwaysStrict" : 0,
@@ -3579,36 +3593,36 @@
     "tsEmitDecoratorMetadata" : 0,
     "tsESModuleInterop" : 0,
     "tsExactOptionalPropertyTypes" : 0,
+    "tsExperimentalDecorators" : 0,
     "tsForceConsistentCasingInFileNames" : 0,
     "tsImportHelpers" : 0,
     "tsIsolatedModules" : 0,
     "tsJSXFactory" : "React.createElement",
-    "tsKeyofStringsOnly" : 0,
     "tsNoEmitHelpers" : 0,
     "tsNoFallthroughCasesInSwitch" : 0,
     "tsNoImplicitAny" : 0,
     "tsNoImplicitOverride" : 0,
     "tsNoImplicitReturns" : 0,
     "tsNoImplicitThis" : 0,
-    "tsNoImplicitUseStrict" : 0,
     "tsNoLib" : 0,
     "tsNoPropertyAccessFromIndexSignature" : 0,
     "tsNoResolve" : 0,
-    "tsNoStrictGenericChecks" : 0,
     "tsNoUncheckedIndexAccess" : 0,
     "tsNoUnusedLocals" : 0,
     "tsNoUnusedParameters" : 0,
     "tsPreserveConstEnums" : 0,
     "tsPreserveSymlinks" : 0,
     "tsResolveJsonModule" : 0,
+    "tsSkipDefaultLibCheck" : 0,
     "tsSkipLibCheck" : 0,
+    "tsStrictBindCallApply" : 0,
     "tsStrictFunctionTypes" : 0,
     "tsStrictNullChecks" : 0,
     "tsStrictPropertyInitialization" : 0,
     "tsStripInternal" : 0,
-    "tsSuppressExcessPropertyErrors" : 0,
-    "tsSuppressImplicitAnyIndexErrors" : 0,
+    "tsUseDefineForClassFields" : 0,
     "tsUseUnknownInCatchVariables" : 0,
+    "tsVerbatimModuleSyntax" : 0,
     "uglifyDefinesString" : "",
     "uglifyFlags2" : {
       "arguments" : {
@@ -3641,7 +3655,7 @@
       },
       "comments" : {
         "active" : 0,
-        "flagValue" : -1
+        "flagValue" : 1
       },
       "comparisons" : {
         "active" : 1,
