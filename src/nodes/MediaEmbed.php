@@ -38,7 +38,7 @@ class MediaEmbed extends Node
         $value = parent::serializeValue($element);
 
         // In case the payload contains emoji's, the field will throw an error
-        $value = Json::decode(StringHelper::emojiToShortcodes(Json::encode($value)));
+        $value = Json::decode(Json::encode($value));
 
         return $value;
     }

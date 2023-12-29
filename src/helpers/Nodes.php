@@ -238,9 +238,6 @@ class Nodes
             // Important to do this before emoji processing, as that'll replace `«`, etc characters
             $text = $antiXss->xss_clean((string)$text);
 
-            // Serialize any emoji's
-            $text = StringHelper::emojiToShortcodes($text);
-
             $rawNode['content'][$key]['text'] = $text;
 
             // If this is now an empty text node, remove it. Tiptap won't like it.
@@ -260,9 +257,6 @@ class Nodes
             // We only want to modify simple nodes and their text content, not complicated
             // nodes like VizyBlocks, which could mess things up as fields control their content.
             $text = $block['text'] ?? '';
-
-            // Un-serialize any emoji's
-            $text = StringHelper::shortcodesToEmoji($text);
 
             $rawNode['content'][$key]['text'] = $text;
         }
