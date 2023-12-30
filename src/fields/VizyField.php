@@ -237,105 +237,6 @@ class VizyField extends Field
         ]);
     }
 
-    protected function inputHtml(mixed $value, ?ElementInterface $element, bool $inline): string
-    {
-        $view = Craft::$app->getView();
-        $id = Html::id($this->handle);
-
-        $site = ($element ? $element->getSite() : Craft::$app->getSites()->getCurrentSite());
-
-        // Cache the placeholder key for the fields' JS. Because we're caching the block type HTML/JS
-        // we also need to cache the placeholder key to match that cached data.
-        $placeholderKey = Vizy::$plugin->getCache()->getOrSet($this->getCacheKey('placeholderKey'), function() {
-            return StringHelper::randomString(10);
-        });
-
-        // Because we can recursively nest Vizy fields, this can turn into an infinite loop if we're not careful. We limit to 10
-        // nested instances, so ensure we keep a count of how many identical fields we're implementing.
-        $this->_recursiveFieldCount = Vizy::$plugin->getCache()->get($this->getCacheKey('recursiveFieldCount'));
-        $this->_recursiveFieldCount += 1;
-        Vizy::$plugin->getCache()->set($this->getCacheKey('recursiveFieldCount'), $this->_recursiveFieldCount);
-
-        $settings = [
-            // The order of `blocks` and `blockGroups` is important here, to ensure that the blocks
-            // are rendered with content, where `blockGroups` is just the template for new blocks.
-            'blocks' => $this->_getBlocksForInput($value, $placeholderKey, $element),
-            'blockGroups' => $this->_getBlockGroupsForInput($placeholderKey, $element),
-            'vizyConfig' => $this->_getVizyConfig(),
-            'elementSiteId' => $site->id,
-            'showAllUploaders' => $this->showUnpermittedFiles,
-            'placeholderKey' => $placeholderKey,
-            'fieldHandle' => $this->handle,
-            'isRoot' => true,
-            'initialRows' => $this->initialRows,
-            'minBlocks' => $this->minBlocks,
-            'maxBlocks' => $this->maxBlocks,
-            'pasteAsPlainText' => $this->pasteAsPlainText,
-            'blockTypeBehaviour' => $this->blockTypeBehaviour,
-            'editorMode' => $this->editorMode,
-        ];
-
-        // Set Asset setting
-        if (!empty($this->defaultTransform) && $transform = Craft::$app->getImageTransforms()->getTransformByUid($this->defaultTransform)) {
-            $settings['defaultTransform'] = $transform->handle;
-        }
-
-        $settings['defaultSource'] = $this->defaultUploadLocationSource;
-
-        foreach ($this->getBlockTypes() as $blockType) {
-            if ($blockType->minBlocks) {
-                $settings['minBlockTypeBlocks'][$blockType->id] = $blockType->minBlocks;
-            }
-
-            if ($blockType->maxBlocks) {
-                $settings['maxBlockTypeBlocks'][$blockType->id] = $blockType->maxBlocks;
-            }
-        }
-
-        // Only include some options if we need them - for performance
-        $buttons = $settings['vizyConfig']['buttons'] ?? [];
-
-        if (in_array('link', $buttons) || in_array('image', $buttons)) {
-            $settings['linkOptions'] = $this->_getLinkOptions($element);
-            $settings['volumes'] = $this->_getVolumeKeys();
-            $settings['transforms'] = $this->_getTransforms();
-        }
-
-        // Register the Vizy JS for Vite
-        Plugin::registerAsset('field/src/js/vizy.js');
-
-        // JS logic will handle whether to run this on nested fields or not. For the most part, Vue will
-        // automatically render any nested fields when run from the root component.
-        $js = 'new Craft.Vizy.Input(' .
-            '"' . $view->namespaceInputId($id) . '", ' .
-            '"' . $view->namespaceInputName($this->handle) . '"' .
-        ');';
-
-        // Wait for Vizy JS to be loaded, either through an event listener, or by a flag.
-        // This covers if this script is run before, or after the Vizy JS has loaded
-        $view->registerJs('document.addEventListener("vizy-loaded", function(e) {' . $js . '}); if (Craft.VizyReady) {' . $js . '}');
-
-        // Let the field know if this is the root field for nested fields
-        $settings['isRoot'] = $this->_isRootField($element);
-
-        // Register any third-party plugins
-        if (isset($settings['vizyConfig']['plugins'])) {
-            foreach ($settings['vizyConfig']['plugins'] as $pluginKey) {
-                static::registerPlugin($pluginKey);
-            }
-        }
-
-        $rawNodes = $value->getRawNodes();
-
-        return $view->renderTemplate('vizy/field/input', [
-            'id' => $id,
-            'name' => $this->handle,
-            'field' => $this,
-            'value' => Json::encode($rawNodes, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_QUOT),
-            'settings' => Json::encode($settings, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_QUOT),
-        ]);
-    }
-
     public function normalizeValue(mixed $value, ElementInterface $element = null): mixed
     {
         if ($value instanceof NodeCollection) {
@@ -699,6 +600,105 @@ class VizyField extends Field
         $rules[] = [['initialRows', 'minBlocks', 'maxBlocks'], 'integer', 'min' => 0];
 
         return $rules;
+    }
+
+    protected function inputHtml(mixed $value, ?ElementInterface $element, bool $inline): string
+    {
+        $view = Craft::$app->getView();
+        $id = Html::id($this->handle);
+
+        $site = ($element ? $element->getSite() : Craft::$app->getSites()->getCurrentSite());
+
+        // Cache the placeholder key for the fields' JS. Because we're caching the block type HTML/JS
+        // we also need to cache the placeholder key to match that cached data.
+        $placeholderKey = Vizy::$plugin->getCache()->getOrSet($this->getCacheKey('placeholderKey'), function() {
+            return StringHelper::randomString(10);
+        });
+
+        // Because we can recursively nest Vizy fields, this can turn into an infinite loop if we're not careful. We limit to 10
+        // nested instances, so ensure we keep a count of how many identical fields we're implementing.
+        $this->_recursiveFieldCount = Vizy::$plugin->getCache()->get($this->getCacheKey('recursiveFieldCount'));
+        $this->_recursiveFieldCount += 1;
+        Vizy::$plugin->getCache()->set($this->getCacheKey('recursiveFieldCount'), $this->_recursiveFieldCount);
+
+        $settings = [
+            // The order of `blocks` and `blockGroups` is important here, to ensure that the blocks
+            // are rendered with content, where `blockGroups` is just the template for new blocks.
+            'blocks' => $this->_getBlocksForInput($value, $placeholderKey, $element),
+            'blockGroups' => $this->_getBlockGroupsForInput($placeholderKey, $element),
+            'vizyConfig' => $this->_getVizyConfig(),
+            'elementSiteId' => $site->id,
+            'showAllUploaders' => $this->showUnpermittedFiles,
+            'placeholderKey' => $placeholderKey,
+            'fieldHandle' => $this->handle,
+            'isRoot' => true,
+            'initialRows' => $this->initialRows,
+            'minBlocks' => $this->minBlocks,
+            'maxBlocks' => $this->maxBlocks,
+            'pasteAsPlainText' => $this->pasteAsPlainText,
+            'blockTypeBehaviour' => $this->blockTypeBehaviour,
+            'editorMode' => $this->editorMode,
+        ];
+
+        // Set Asset setting
+        if (!empty($this->defaultTransform) && $transform = Craft::$app->getImageTransforms()->getTransformByUid($this->defaultTransform)) {
+            $settings['defaultTransform'] = $transform->handle;
+        }
+
+        $settings['defaultSource'] = $this->defaultUploadLocationSource;
+
+        foreach ($this->getBlockTypes() as $blockType) {
+            if ($blockType->minBlocks) {
+                $settings['minBlockTypeBlocks'][$blockType->id] = $blockType->minBlocks;
+            }
+
+            if ($blockType->maxBlocks) {
+                $settings['maxBlockTypeBlocks'][$blockType->id] = $blockType->maxBlocks;
+            }
+        }
+
+        // Only include some options if we need them - for performance
+        $buttons = $settings['vizyConfig']['buttons'] ?? [];
+
+        if (in_array('link', $buttons) || in_array('image', $buttons)) {
+            $settings['linkOptions'] = $this->_getLinkOptions($element);
+            $settings['volumes'] = $this->_getVolumeKeys();
+            $settings['transforms'] = $this->_getTransforms();
+        }
+
+        // Register the Vizy JS for Vite
+        Plugin::registerAsset('field/src/js/vizy.js');
+
+        // JS logic will handle whether to run this on nested fields or not. For the most part, Vue will
+        // automatically render any nested fields when run from the root component.
+        $js = 'new Craft.Vizy.Input(' .
+            '"' . $view->namespaceInputId($id) . '", ' .
+            '"' . $view->namespaceInputName($this->handle) . '"' .
+        ');';
+
+        // Wait for Vizy JS to be loaded, either through an event listener, or by a flag.
+        // This covers if this script is run before, or after the Vizy JS has loaded
+        $view->registerJs('document.addEventListener("vizy-loaded", function(e) {' . $js . '}); if (Craft.VizyReady) {' . $js . '}');
+
+        // Let the field know if this is the root field for nested fields
+        $settings['isRoot'] = $this->_isRootField($element);
+
+        // Register any third-party plugins
+        if (isset($settings['vizyConfig']['plugins'])) {
+            foreach ($settings['vizyConfig']['plugins'] as $pluginKey) {
+                static::registerPlugin($pluginKey);
+            }
+        }
+
+        $rawNodes = $value->getRawNodes();
+
+        return $view->renderTemplate('vizy/field/input', [
+            'id' => $id,
+            'name' => $this->handle,
+            'field' => $this,
+            'value' => Json::encode($rawNodes, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_QUOT),
+            'settings' => Json::encode($settings, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_QUOT),
+        ]);
     }
 
     protected function searchKeywords(mixed $value, ElementInterface $element): string
