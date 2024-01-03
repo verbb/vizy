@@ -139,15 +139,6 @@ class VizyField extends Field
 
     public function __construct($config = [])
     {
-        // Temporarily fix a config issue during beta
-        if (array_key_exists('vizyConfig', $config)) {
-            if (is_array($config['vizyConfig'])) {
-                $config['vizyConfig'] = $config['vizyConfig'][0];
-
-                Craft::$app->getDeprecator()->log("vizy:${config['handle']}", "Your Vizy field ${config['handle']} contains out of date settings. Please re-save the field.");
-            }
-        }
-
         // Remove unused settings
         unset($config['columnType']);
 
