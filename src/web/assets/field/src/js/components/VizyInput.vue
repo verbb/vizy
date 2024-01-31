@@ -573,7 +573,6 @@ export default {
     // Override tiptap
     .ProseMirror {
         outline: none;
-        word-wrap: normal;
         padding: 16px;
         min-height: calc(2rem + (var(--rows) * 1rem));
         background-color: #fbfcfe;
