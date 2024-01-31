@@ -953,10 +953,10 @@ export default {
 // Fix overflow issues from Craft's field layout, causing cursor issues in the editor
 // Selectors also need to be very specific to override Craft.
 #content .vui-editor :not(.meta) > .vizyblock-fields > .flex-fields {
-    margin-left: 0 !important;
-    margin-right: 0 !important;
+    margin-left: -0.5rem !important;
+    margin-right: -0.5rem !important;
     margin-bottom: 0 !important;
-    width: 100% !important;
+    width: calc(100% + 1rem) !important;
 
     > :not(h2):not(hr):last-child {
         margin-bottom: 0 !important;
@@ -966,8 +966,8 @@ export default {
     > :not(h2):not(hr):last-child {
         margin-left: 0 !important;
         margin-right: 0 !important;
-        padding-left: 0 !important;
-        padding-right: 0 !important;
+        padding-left: 0.5rem !important;
+        padding-right: 0.5rem !important;
         width: 100% !important;
 
         @media only screen and (min-width: 1536px) {
