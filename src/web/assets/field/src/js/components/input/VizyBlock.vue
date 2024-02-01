@@ -500,11 +500,16 @@ export default {
                             const $newHtml = $(this.blockType.fieldsHtml).find(`[data-layout-element="${fieldUid}"] .selectize`);
 
                             if ($newHtml.length) {
+                                // IDs and names will include placholders for Vizy, but if in a Matrix/Super Table field, will contain those
+                                // which can't be easily replaced like Vizy placeholders can. So be sure to swap them back to what they were
+                                $newHtml.find('select').attr('id', $(element).find('select').attr('id'));
+                                $newHtml.find('select').attr('name', $(element).find('select').attr('name'));
+
                                 // Restore any selected elements
                                 $newHtml.find('select').val($(element).find('select').val());
 
                                 // Replace the HTML with the altered original template
-                                element.innerHTML = $newHtml.htmlize();
+                                element.outerHTML = $newHtml.htmlize();
                             }
                         }
                     });

@@ -387,8 +387,8 @@ export default {
             if (typeof html === 'string') {
                 return html.replace(new RegExp(`__VIZY_BLOCK_${this.settings.placeholderKey}__`, 'g'), id);
             }
-            return '';
 
+            return '';
         },
 
         getCachedFieldHtml(blockId) {
