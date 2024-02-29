@@ -1,5 +1,19 @@
 # Changelog
 
+## 2.1.16 - 2024-02-29
+
+### Changed
+- Update Vue.js version for some compatibility fixes.
+- Update all Tiptap dependencies for the latest and greatest features/fixes.
+
+### Fixed
+- Fix CKEditor issue when moving Vizy Blocks.
+- Fix an error when importing Vizy content with Feed Me, when field content is empty.
+- Fix YouTube live URLs for media embed function.
+- Fix Selectize fields not working properly when re-ordering Vizy blocks when contained in a Matrix/Super Table field.
+- Fix spacing of non-full-width fields in Vizy blocks.
+- Fix text overflowing issue in editor when no newlines were present.
+
 ## 2.1.15 - 2024-01-30
 
 ### Fixed
