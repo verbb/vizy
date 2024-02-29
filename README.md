@@ -8,7 +8,7 @@ Vizy is a Craft CMS plugin with a content editor field, combining everything you
 - All content is stored as JSON blocks. No HTML-wrangling required.
 - 100% control over the output from a Vizy field.
 - Create blocks inline with content. Think Matrix blocks in between your formatted text.
-- Infintely nest Vizy fields for some _crazy_ business.
+- Infinitely nest Vizy fields for some _crazy_ business.
 - Use existing fields for Vizy blocks. Even use UI elements in blocks.
 - Tabs support for blocks, to keep your UI lean.
 - Modularise block templates, by linking a Twig partial to blocks.
