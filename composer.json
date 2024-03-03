@@ -28,7 +28,7 @@
     ],
     "require": {
         "php": "^8.2",
-        "craftcms/cms": "^5.0.0-alpha.1",
+        "craftcms/cms": "^5.0.0-beta.1",
         "nystudio107/craft-plugin-vite": "dev-develop-v5 as 5.0.0-beta.1",
         "ueberdosis/tiptap-php": "^1.0",
         "verbb/base": "^3.0.0-beta.1",
