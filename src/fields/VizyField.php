@@ -76,6 +76,11 @@ class VizyField extends Field
         return Craft::t('vizy', 'Vizy');
     }
 
+    public static function icon(): string
+    {
+        return '@verbb/vizy/icon-mask.svg';
+    }
+
     public static function phpType(): string
     {
         return 'string|null';
