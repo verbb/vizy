@@ -485,6 +485,21 @@ export default {
                     });
                 }
 
+                // Special-case for CKEditor. We need to reset it to its un-initialized form
+                // because it doesn't have better double-binding checks.
+                if ($fieldsHtml.find('.ck-editor').length) {
+                    $fieldsHtml.find('.ck-editor').each((index, element) => {
+                        // Skip any CKEditor fields in nested Vizy fields within the block. They handle themselves.
+                        if ($(element).parents('.vui-editor').length) {
+                            return;
+                        }
+
+                        // Rip out the `textarea` which is all we need
+                        const $textarea = $(element).find('textarea').htmlize();
+                        $(element).replaceWith($textarea);
+                    });
+                }
+
                 // Special-case for Selectize. We need to reset it to its un-initialized form
                 // because it doesn't have better double-binding checks.
                 if ($fieldsHtml.find('.selectize').length) {
@@ -500,11 +515,16 @@ export default {
                             const $newHtml = $(this.blockType.fieldsHtml).find(`[data-layout-element="${fieldUid}"] .selectize`);
 
                             if ($newHtml.length) {
+                                // IDs and names will include placholders for Vizy, but if in a Matrix/Super Table field, will contain those
+                                // which can't be easily replaced like Vizy placeholders can. So be sure to swap them back to what they were
+                                $newHtml.find('select').attr('id', $(element).find('select').attr('id'));
+                                $newHtml.find('select').attr('name', $(element).find('select').attr('name'));
+
                                 // Restore any selected elements
                                 $newHtml.find('select').val($(element).find('select').val());
 
                                 // Replace the HTML with the altered original template
-                                element.innerHTML = $newHtml.htmlize();
+                                element.outerHTML = $newHtml.htmlize();
                             }
                         }
                     });
@@ -953,10 +973,10 @@ export default {
 // Fix overflow issues from Craft's field layout, causing cursor issues in the editor
 // Selectors also need to be very specific to override Craft.
 #content .vui-editor :not(.meta) > .vizyblock-fields > .flex-fields {
-    margin-left: 0 !important;
-    margin-right: 0 !important;
+    margin-left: -0.5rem !important;
+    margin-right: -0.5rem !important;
     margin-bottom: 0 !important;
-    width: 100% !important;
+    width: calc(100% + 1rem) !important;
 
     > :not(h2):not(hr):last-child {
         margin-bottom: 0 !important;
@@ -966,8 +986,8 @@ export default {
     > :not(h2):not(hr):last-child {
         margin-left: 0 !important;
         margin-right: 0 !important;
-        padding-left: 0 !important;
-        padding-right: 0 !important;
+        padding-left: 0.5rem !important;
+        padding-right: 0.5rem !important;
         width: 100% !important;
 
         @media only screen and (min-width: 1536px) {

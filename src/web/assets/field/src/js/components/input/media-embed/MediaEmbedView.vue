@@ -114,7 +114,17 @@ export default {
 
             if (this.node.attrs.url) {
                 try {
-                    const result = await extract(this.node.attrs.url);
+                    let { url } = this.node.attrs;
+
+                    // YouTube live video's weirdly aren't supported. Probably put a PR to https://github.com/extractus/oembed-extractor
+                    // Change `https://www.youtube.com/live/xxxxxxxxx?si=ccccccccc` to `https://www.youtube.com/watch?v=xxxxxxxxx``
+                    const match = url.match(/youtube\.com\/live\/(\w+)/);
+
+                    if (match) {
+                        url = `https://www.youtube.com/watch?v=${match[1]}`;
+                    }
+
+                    const result = await extract(url);
 
                     this.data = result;
                 } catch (error) {

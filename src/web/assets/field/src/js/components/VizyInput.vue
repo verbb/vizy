@@ -387,8 +387,8 @@ export default {
             if (typeof html === 'string') {
                 return html.replace(new RegExp(`__VIZY_BLOCK_${this.settings.placeholderKey}__`, 'g'), id);
             }
-            return '';
 
+            return '';
         },
 
         getCachedFieldHtml(blockId) {
@@ -573,7 +573,6 @@ export default {
     // Override tiptap
     .ProseMirror {
         outline: none;
-        word-wrap: normal;
         padding: 16px;
         min-height: calc(2rem + (var(--rows) * 1rem));
         background-color: #fbfcfe;

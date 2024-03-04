@@ -893,6 +893,9 @@ class VizyField extends Field
 
                     $fieldsHtml = preg_replace('#<script>(.*?)<\/script>#is', '', $fieldsHtml);
 
+                    // Handle non-inline script tags - just remove for now
+                    $fieldsHtml = preg_replace('#(<script.*?<\/script>)#is', '', $fieldsHtml);
+
                     // Similar situation for CSS
                     $fieldsHtml = preg_replace('#<style(.*?)<\/style>#is', '', $fieldsHtml);
 
@@ -987,6 +990,9 @@ class VizyField extends Field
                     }
 
                     $fieldsHtml = preg_replace('#<script>(.*?)<\/script>#is', '', $fieldsHtml);
+
+                    // Handle non-inline script tags - just remove for now
+                    $fieldsHtml = preg_replace('#(<script.*?<\/script>)#is', '', $fieldsHtml);
 
                     // Similar situation for CSS
                     $fieldsHtml = preg_replace('#<style(.*?)<\/style>#is', '', $fieldsHtml);
