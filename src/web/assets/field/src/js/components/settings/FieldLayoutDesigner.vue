@@ -17,7 +17,6 @@
 </template>
 
 <script>
-import { debounce } from 'lodash-es';
 
 export default {
     name: 'FieldLayoutDesigner',
@@ -29,12 +28,12 @@ export default {
         },
 
         fieldId: {
-            type: String,
+            type: [String, Number],
             default: null,
         },
 
         blockTypeId: {
-            type: String,
+            type: [String, Number],
             default: null,
         },
 
@@ -112,34 +111,19 @@ export default {
 
     methods: {
         watchForChanges() {
-            const updateFunction = debounce(this.serializeLayout, 150);
+            // Watch the hidden input for value changes, we should update on our end too
+            const target = this.$el.querySelector('input[name="fieldLayout"]');
 
-            // Use MutationObserver to detect _any_ change in the field layout designer, and be sure to debounce
-            // calls as there are a lot of changes. Far more easier than overriding the FLD
-            const observer = new MutationObserver((mutations) => {
-                updateFunction();
+            const observer = new MutationObserver((mutationsList, observer) => {
+                for (const mutation of mutationsList) {
+                    // Check if the value of the input has changed
+                    if (mutation.type === 'attributes' && mutation.attributeName === 'value') {
+                        this.proxyValue = mutation.target.value;
+                    }
+                }
             });
 
-            observer.observe(this.$el, {
-                childList: true,
-                attributes: true,
-                subtree: true,
-                characterData: true,
-            });
-        },
-
-        serializeLayout() {
-            // Prevent firing immediately on first render
-            if (!this.mounted) {
-                return;
-            }
-
-            this.proxyValue = this.$el.querySelector('input[name="fieldLayout"]').value;
-
-            // Serialize again one more time, just in case we've acted too quickly
-            setTimeout(() => {
-                this.proxyValue = this.$el.querySelector('input[name="fieldLayout"]').value;
-            }, 400);
+            observer.observe(target, { attributes: true, attributeFilter: ['value'] });
         },
     },
 };
