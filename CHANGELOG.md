@@ -1,5 +1,10 @@
 # Changelog
 
+## 3.0.0-beta.3 - 2024-03-18
+
+### Fixed
+- Fix field layout designer in settings not serializing changes correctly.
+
 ## 3.0.0-beta.2 - 2024-03-05
 
 ### Fixed
