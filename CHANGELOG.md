@@ -1,5 +1,10 @@
 # Changelog
 
+## 2.1.17 - 2024-03-18
+
+### Fixed
+- Fix an error with content not saving when two Vizy fields with Block-only and Rich Text configs are present.
+
 ## 2.1.16 - 2024-02-29
 
 ### Changed
