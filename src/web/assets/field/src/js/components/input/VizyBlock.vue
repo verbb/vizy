@@ -28,7 +28,7 @@
                         <lightswitch-field v-model="enabled" :extra-small="true" />
 
                         <a
-                            class="settings icon"
+                            class="ellipsis icon"
                             :title="t('vizy', 'Actions')"
                             :aria-title="t('vizy', 'Actions')"
                             role="button"
@@ -47,27 +47,44 @@
                     </div>
 
                     <div id="vizy-block-settings-template" class="vizy-menu" style="display: none;">
-                        <ul class="padded" role="listbox" aria-hidden="true">
+                        <ul>
                             <li v-if="collapsed">
-                                <a data-icon="expand" role="option" tabindex="-1" @click.prevent="expandBlock">{{ t('vizy', 'Expand') }}</a>
+                                <a class="menu-item" role="option" tabindex="-1" @click.prevent="expandBlock">
+                                    <span class="icon"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><path d="M344 0H488c13.3 0 24 10.7 24 24V168c0 9.7-5.8 18.5-14.8 22.2s-19.3 1.7-26.2-5.2l-39-39-87 87c-9.4 9.4-24.6 9.4-33.9 0l-32-32c-9.4-9.4-9.4-24.6 0-33.9l87-87L327 41c-6.9-6.9-8.9-17.2-5.2-26.2S334.3 0 344 0zM168 512H24c-13.3 0-24-10.7-24-24V344c0-9.7 5.8-18.5 14.8-22.2s19.3-1.7 26.2 5.2l39 39 87-87c9.4-9.4 24.6-9.4 33.9 0l32 32c9.4 9.4 9.4 24.6 0 33.9l-87 87 39 39c6.9 6.9 8.9 17.2 5.2 26.2s-12.5 14.8-22.2 14.8z" /></svg></span>
+                                    <span class="menu-item-label">{{ t('vizy', 'Expand') }}</span>
+                                </a>
                             </li>
 
                             <li v-else>
-                                <a data-icon="collapse" role="option" tabindex="-1" @click.prevent="collapseBlock">{{ t('vizy', 'Collapse') }}</a>
+                                <a class="menu-item" role="option" tabindex="-1" @click.prevent="collapseBlock">
+                                    <span class="icon"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><path d="M439 7c9.4-9.4 24.6-9.4 33.9 0l32 32c9.4 9.4 9.4 24.6 0 33.9l-87 87 39 39c6.9 6.9 8.9 17.2 5.2 26.2s-12.5 14.8-22.2 14.8H296c-13.3 0-24-10.7-24-24V72c0-9.7 5.8-18.5 14.8-22.2s19.3-1.7 26.2 5.2l39 39L439 7zM72 272H216c13.3 0 24 10.7 24 24V440c0 9.7-5.8 18.5-14.8 22.2s-19.3 1.7-26.2-5.2l-39-39L73 505c-9.4 9.4-24.6 9.4-33.9 0L7 473c-9.4-9.4-9.4-24.6 0-33.9l87-87L55 313c-6.9-6.9-8.9-17.2-5.2-26.2s12.5-14.8 22.2-14.8z" /></svg></span>
+                                    <span class="menu-item-label">{{ t('vizy', 'Collapse') }}</span>
+                                </a>
                             </li>
 
                             <li v-if="canCollapseAll">
-                                <a data-icon="collapse" role="option" tabindex="-1" @click.prevent="collapseAll">{{ t('vizy', 'Collapse All') }}</a>
+                                <a class="menu-item" role="option" tabindex="-1" @click.prevent="collapseAll">
+                                    <span class="icon"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><path d="M439 7c9.4-9.4 24.6-9.4 33.9 0l32 32c9.4 9.4 9.4 24.6 0 33.9l-87 87 39 39c6.9 6.9 8.9 17.2 5.2 26.2s-12.5 14.8-22.2 14.8H296c-13.3 0-24-10.7-24-24V72c0-9.7 5.8-18.5 14.8-22.2s19.3-1.7 26.2 5.2l39 39L439 7zM72 272H216c13.3 0 24 10.7 24 24V440c0 9.7-5.8 18.5-14.8 22.2s-19.3 1.7-26.2-5.2l-39-39L73 505c-9.4 9.4-24.6 9.4-33.9 0L7 473c-9.4-9.4-9.4-24.6 0-33.9l87-87L55 313c-6.9-6.9-8.9-17.2-5.2-26.2s12.5-14.8 22.2-14.8z" /></svg></span>
+                                    <span class="menu-item-label">{{ t('vizy', 'Collapse All') }}</span>
+                                </a>
                             </li>
 
                             <li v-if="canExpandAll">
-                                <a data-icon="expand" role="option" tabindex="-1" @click.prevent="expandAll">{{ t('vizy', 'Expand All') }}</a>
+                                <a class="menu-item" role="option" tabindex="-1" @click.prevent="expandAll">
+                                    <span class="icon"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><path d="M344 0H488c13.3 0 24 10.7 24 24V168c0 9.7-5.8 18.5-14.8 22.2s-19.3 1.7-26.2-5.2l-39-39-87 87c-9.4 9.4-24.6 9.4-33.9 0l-32-32c-9.4-9.4-9.4-24.6 0-33.9l87-87L327 41c-6.9-6.9-8.9-17.2-5.2-26.2S334.3 0 344 0zM168 512H24c-13.3 0-24-10.7-24-24V344c0-9.7 5.8-18.5 14.8-22.2s19.3-1.7 26.2 5.2l39 39 87-87c9.4-9.4 24.6-9.4 33.9 0l32 32c9.4 9.4 9.4 24.6 0 33.9l-87 87 39 39c6.9 6.9 8.9 17.2 5.2 26.2s-12.5 14.8-22.2 14.8z" /></svg></span>
+                                    <span class="menu-item-label">{{ t('vizy', 'Expand All') }}</span>
+                                </a>
                             </li>
+                        </ul>
 
-                            <hr>
+                        <hr class="padded">
 
+                        <ul>
                             <li>
-                                <a class="error" data-icon="remove" role="option" tabindex="-1" @click.prevent="deleteBlock">{{ t('vizy', 'Delete') }}</a>
+                                <a class="menu-item error" role="option" tabindex="-1" @click.prevent="deleteBlock">
+                                    <span class="icon"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 384 512"><path d="M342.6 150.6c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0L192 210.7 86.6 105.4c-12.5-12.5-32.8-12.5-45.3 0s-12.5 32.8 0 45.3L146.7 256 41.4 361.4c-12.5 12.5-12.5 32.8 0 45.3s32.8 12.5 45.3 0L192 301.3 297.4 406.6c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3L237.3 256 342.6 150.6z" /></svg></span>
+                                    <span class="menu-item-label">{{ t('vizy', 'Delete') }}</span>
+                                </a>
                             </li>
                         </ul>
                     </div>
@@ -372,7 +389,7 @@ export default {
             if ($template) {
                 $template.style.display = 'block';
 
-                this.tippy = tippy(this.$el.querySelector('.vizyblock-header .settings'), {
+                this.tippy = tippy(this.$el.querySelector('.vizyblock-header .ellipsis'), {
                     content: $template,
                     trigger: 'click',
                     allowHTML: true,
@@ -916,24 +933,26 @@ export default {
     }
 }
 
-.vizyblock-header .actions .lightswitch {
-    margin-right: 10px;
-}
-
-.vizyblock-header .actions .settings {
-    margin-right: 10px;
-    font-size: 16px;
-    display: flex;
+.vizyblock-header .actions .ellipsis,
+.vizyblock-header .actions .move {
+    display: inline-flex;
+    font-size: 17px;
+    margin-left: 0.75rem;
     color: #78838e;
-    outline: 0;
+    cursor: pointer;
 
-    &:hover {
-        color: #0B69A3;
+    svg {
+        width: 100%;
+        height: 100%;
     }
 }
 
+.vizyblock-header .actions .ellipsis::before {
+    content: "ellipsis";
+}
+
 .vizyblock-header .actions .move {
-    display: flex;
+    cursor: move;
 }
 
 .vizyblock-header .titlebar-tabs {
@@ -1026,59 +1045,41 @@ export default {
 }
 
 .vizy-menu {
-    ul li a {
-        padding: 10px 14px;
-        color: #3f4d5a;
-        text-decoration: none;
-        white-space: nowrap;
+    ul li .menu-item {
         font-size: 14px;
-        outline: 0;
-    }
-
-    a:hover {
+        padding: 10px 12px;
+        white-space: nowrap;
         color: #3f4d5a;
-        background-color: #f3f7fc;
-    }
+        cursor: default;
+        text-decoration: none;
+        display: flex;
+        align-items: center;
 
-    ul.padded li a {
-        padding-left: 24px;
-    }
-
-    ul li a:not(.flex) {
-        display: block !important;
-    }
-
-    hr.padded {
-        margin-left: 10px;
+        &:hover {
+            background-color: #f3f7fc;
+            color: #3f4d5a;
+        }
     }
 
     hr {
-        margin: 5px -14px;
+        margin: 4px 0;
     }
 
-    ul.padded li a[data-icon]:before,
-    ul.padded li a.icon:before,
-    ul.padded li a.sel:before {
-        margin: 3px 0 0 -17px;
-    }
+    li > a span.icon {
+        display: block;
+        height: 0.875rem;
+        width: 0.875rem;
+        margin-right: 7px;
 
-    ul.padded li a[data-icon]:before,
-    ul.padded li a.icon:before,
-    ul.padded li a.sel:before {
-        float: left;
-    }
+        svg {
+            width: 100%;
+            height: 100%;
+            display: block;
+        }
 
-    ul.padded li a[data-icon]:before,
-    ul.padded li a.icon:before,
-    ul.padded li a.sel:before {
-        font-size: 14px;
-        color: #606d7b;
-    }
-
-    ul.padded li a[data-icon].error:before,
-    ul.padded li a.icon.error:before,
-    ul.padded li a.sel.error:before {
-        color: #CF1124;
+        svg * {
+            fill: currentColor;
+        }
     }
 }
 
