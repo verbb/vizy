@@ -1047,10 +1047,10 @@ export default {
 .vizy-menu {
     ul li .menu-item {
         font-size: 14px;
-        padding: 10px 12px;
+        padding: 10px 10px;
         white-space: nowrap;
         color: #3f4d5a;
-        cursor: default;
+        cursor: pointer;
         text-decoration: none;
         display: flex;
         align-items: center;
@@ -1061,14 +1061,26 @@ export default {
         }
     }
 
+    ul li:first-child a {
+        border-radius: 4px 4px 0 0;
+    }
+
+    ul li:last-child a {
+        border-radius: 0 0 4px 4px;
+    }
+
     hr {
-        margin: 4px 0;
+        margin: 0;
+
+        &.padded {
+            margin: 4px 0;
+        }
     }
 
     li > a span.icon {
         display: block;
-        height: 0.875rem;
-        width: 0.875rem;
+        height: 13px;
+        width: 13px;
         margin-right: 7px;
 
         svg {
