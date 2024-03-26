@@ -100,9 +100,6 @@ class Vizy extends Plugin
 
     private function _registerEventHandlers(): void
     {
-        Event::on(Fields::class, Fields::EVENT_AFTER_SAVE_FIELD, [$this->getContent(), 'onSaveField']);
-        Event::on(Fields::class, Fields::EVENT_AFTER_DELETE_FIELD, [$this->getContent(), 'onDeleteField']);
-
         if (class_exists(FeedMeFields::class)) {
             Event::on(FeedMeFields::class, FeedMeFields::EVENT_REGISTER_FEED_ME_FIELDS, function(RegisterFeedMeFieldsEvent $event) {
                 $event->fields[] = FeedMeVizyField::class;

@@ -239,9 +239,12 @@ class VizyBlock extends Node
             foreach ($fieldLayout->getCustomFields() as $field) {
                 $fieldValue = $block->getFieldValue($field->handle);
 
-                // Ensure each field's content is serialized properly
+                // Ensure each field's content is serialized properly. Use the `layoutElementUid`
                 $serializedFieldValues = $field->serializeValue($fieldValue, $block);
-                $value['attrs']['values']['content']['fields'][$field->handle] = $serializedFieldValues;
+                $value['attrs']['values']['content']['fields'][$field->layoutElement->uid] = $serializedFieldValues;
+
+                // Remove deprecated content that uses the handle. Can be removed at the next breakpoint
+                unset($value['attrs']['values']['content']['fields'][$field->handle]);
 
                 // Fix relation fields in their `afterElementSave` function trying to create relations
                 // We still want relation fields to run `afterElementSave` however (see Asset fields)
@@ -273,6 +276,34 @@ class VizyBlock extends Node
                     }
                 }
             }
+        }
+
+        return $value;
+    }
+
+    public function normalizeValue(?ElementInterface $element = null): ?array
+    {
+        $value = parent::normalizeValue($element);
+
+        // Convert any custom field values from their `layoutElementUid` to their handle.
+        if ($fieldLayout = $this->getFieldLayout()) {
+            $fieldContent = [];
+            $fieldLayout = $this->getFieldLayout();
+            $fields = $value['attrs']['values']['content']['fields'] ?? [];
+
+            foreach ($fields as $handle => $fieldValue) {
+                if (str_contains($handle, '-')) {
+                    foreach ($fieldLayout->getCustomFields() as $field) {
+                        if ($field->layoutElement && $field->layoutElement->uid === $handle) {
+                            $fieldContent[$field->handle] = $fieldValue;
+                        }
+                    }
+                } else {
+                    $fieldContent[$handle] = $fieldValue;
+                }
+            }
+
+            $value['attrs']['values']['content']['fields'] = $fieldContent;
         }
 
         return $value;
