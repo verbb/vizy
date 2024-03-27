@@ -1,5 +1,14 @@
 # Changelog
 
+## 3.0.0-beta.4 - 2024-03-27
+
+### Changed
+- Update Vizy block header actions to use an ellipsis icon instead of a settings cog.
+- Vizy block inner custom fields now save custom field content via the field’s `layoutElementUid` instead of their handle.
+
+### Fixed
+- Fixed menu dropdown style issues.
+
 ## 3.0.0-beta.3 - 2024-03-18
 
 ### Fixed
