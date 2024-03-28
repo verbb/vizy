@@ -8,13 +8,19 @@ class Matrix
 
     public static function sanitizeMatrixContent($field, $content)
     {
-        $blockTypes = array_map(function($block) {
+        $entryTypes = array_map(function($block) {
             return $block->handle;
-        }, $field->blockTypes);
+        }, $field->entryTypes);
+
+        $entryTypeFields = [];
+
+        foreach ($field->entryTypes as $entryType) {
+            $entryTypeFields[] = $entryType->getCustomFields();
+        }
 
         $blockFields = array_map(function($block) {
             return $block->handle;
-        }, $field->blockTypeFields);
+        }, array_merge(...$entryTypeFields));
 
         if (!is_array($content)) {
             $content = [];
@@ -22,9 +28,9 @@ class Matrix
 
         // Handle new blocks, which are structured differently
         if (isset($content['blocks'])) {
-            $content['blocks'] = self::filterContent($content['blocks'], $blockTypes, $blockFields);
+            $content['blocks'] = self::filterContent($content['blocks'], $entryTypes, $blockFields);
         } else {
-            $content = self::filterContent($content, $blockTypes, $blockFields);
+            $content = self::filterContent($content, $entryTypes, $blockFields);
         }
 
         return $content;
@@ -35,14 +41,14 @@ class Matrix
         return $field instanceof \craft\fields\Matrix;
     }
 
-    private static function filterContent($content, $blockTypes, $blockFields)
+    private static function filterContent($content, $entryTypes, $blockFields)
     {
         foreach ($content as $blockKey => $block) {
             $type = $block['type'] ?? '';
             $fields = $block['fields'] ?? [];
 
             // Filter block types against those available
-            if ($type && !in_array($type, $blockTypes)) {
+            if ($type && !in_array($type, $entryTypes)) {
                 unset($content[$blockKey]);
             }
 
