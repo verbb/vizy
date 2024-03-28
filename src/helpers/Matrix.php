@@ -47,6 +47,9 @@ class Matrix
             $type = $block['type'] ?? '';
             $fields = $block['fields'] ?? [];
 
+            // We save the UID of the "entry" as the key, so use that as the identifier
+            $content[$blockKey]['uid'] = $blockKey;
+
             // Filter block types against those available
             if ($type && !in_array($type, $entryTypes)) {
                 unset($content[$blockKey]);

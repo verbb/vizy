@@ -3,6 +3,7 @@ namespace verbb\vizy;
 
 use verbb\vizy\base\PluginTrait;
 use verbb\vizy\base\Routes;
+use verbb\vizy\elements\Block as BlockElement;
 use verbb\vizy\fields\VizyField;
 use verbb\vizy\gql\interfaces\VizyNodeInterface;
 use verbb\vizy\gql\interfaces\VizyBlockInterface;
@@ -17,7 +18,9 @@ use craft\helpers\UrlHelper;
 use craft\services\Fields;
 use craft\services\Gql;
 use craft\services\ProjectConfig;
+use craft\web\Controller;
 
+use yii\base\ActionEvent;
 use yii\base\Event;
 
 use craft\feedme\events\RegisterFeedMeFieldsEvent;
@@ -100,6 +103,18 @@ class Vizy extends Plugin
 
     private function _registerEventHandlers(): void
     {
+        // Hijack requests to `actions/matrix/create-entry` to handle non-saved-element owners.
+        Event::on(Controller::class, Controller::EVENT_BEFORE_ACTION, function(ActionEvent $event) {
+            if ($event->action->id == 'create-entry' && $event->sender->id == 'matrix') {
+                $ownerElementType = $event->sender->request->getParam('ownerElementType');
+
+                // Only override things if this is coming from a Vizy field
+                if ($ownerElementType === BlockElement::class) {
+                    Craft::$app->runAction('vizy/field/create-matrix-entry')->send();
+                }
+            }
+        });
+
         if (class_exists(FeedMeFields::class)) {
             Event::on(FeedMeFields::class, FeedMeFields::EVENT_REGISTER_FEED_ME_FIELDS, function(RegisterFeedMeFieldsEvent $event) {
                 $event->fields[] = FeedMeVizyField::class;

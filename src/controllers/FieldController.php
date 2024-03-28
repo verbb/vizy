@@ -5,7 +5,11 @@ use verbb\vizy\Vizy;
 use verbb\vizy\helpers\Fields;
 
 use Craft;
+use craft\base\Element;
+use craft\elements\Entry;
+use craft\helpers\ElementHelper;
 use craft\helpers\Json;
+use craft\helpers\StringHelper;
 use craft\models\FieldLayout;
 use craft\web\Controller;
 
@@ -54,6 +58,46 @@ class FieldController extends Controller
             'html' => $html,
             'headHtml' => $headHtml,
             'footHtml' => $footHtml,
+        ]);
+    }
+
+    public function actionCreateMatrixEntry()
+    {
+        // Override `MatrixController::actionCreateEntry` to handle non-saved-element owners.
+        $fieldId = $this->request->getRequiredBodyParam('fieldId');
+        $entryTypeId = $this->request->getRequiredBodyParam('entryTypeId');
+        $siteId = $this->request->getRequiredBodyParam('siteId');
+        $namespace = $this->request->getRequiredBodyParam('namespace');
+
+        $field = Craft::$app->getFields()->getFieldById($fieldId);
+        $entryType = Craft::$app->getEntries()->getEntryTypeById($entryTypeId);
+        $site = Craft::$app->getSites()->getSiteById($siteId, true);
+
+        $entry = Craft::createObject([
+            'class' => Entry::class,
+            'siteId' => $siteId,
+            'uid' => StringHelper::UUID(),
+            'typeId' => $entryType->id,
+            'fieldId' => $fieldId,
+            'slug' => ElementHelper::tempSlug(),
+        ]);
+
+        $entry->setScenario(Element::SCENARIO_ESSENTIALS);
+
+        $view = $this->getView();
+        $entries = [];
+
+        $html = $view->namespaceInputs(fn() => $view->renderTemplate('_components/fieldtypes/Matrix/block.twig', [
+            'name' => $field->handle,
+            'entryTypes' => $field->getEntryTypesForField($entries, null),
+            'entry' => $entry,
+            'isFresh' => true,
+        ]), $namespace);
+
+        return $this->asJson([
+            'blockHtml' => $html,
+            'headHtml' => $view->getHeadHtml(),
+            'bodyHtml' => $view->getBodyHtml(),
         ]);
     }
 }

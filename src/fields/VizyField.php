@@ -853,6 +853,7 @@ class VizyField extends Field
 
                     // Create a fake element with the same fieldtype as our block
                     $blockElement = new BlockElement();
+                    $blockElement->id = rand();
                     $blockElement->setFieldLayout($fieldLayout);
                     $blockElement->setOwner($element);
                     $blockElement->setType($blockType);

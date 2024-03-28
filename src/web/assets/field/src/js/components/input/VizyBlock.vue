@@ -706,12 +706,16 @@ export default {
                 if (!isEmpty(contentRoot)) {
                     Object.entries(contentRoot).forEach(([fieldHandle, fieldBlocks]) => {
                         // In some instances (when using a recusive field) we've actually already got the block content here
-                        if (fieldBlocks.blocks === undefined) {
+                        if (fieldBlocks.blocks === undefined && fieldBlocks.entries === undefined) {
                             foundContent = { fields: contentRoot };
                         }
 
-                        if (!isEmpty(fieldBlocks.blocks)) {
-                            Object.entries(fieldBlocks.blocks).forEach(([blockId, blockFields]) => {
+                        // For the below handle `entries` for Matrix fields, which used to be `blocks`, but they operate under the same principle.
+                        // `blocks` will still be used by nested Vizy fields.
+                        const blocks = fieldBlocks.blocks ?? fieldBlocks.entries ?? [];
+
+                        if (!isEmpty(blocks)) {
+                            Object.entries(blocks).forEach(([blockId, blockFields]) => {
                                 if (blockId === this.node.attrs.id) {
                                     foundContent = blockFields;
                                 } else if (isEmpty(foundContent)) {

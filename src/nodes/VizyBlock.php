@@ -316,9 +316,10 @@ class VizyBlock extends Node
         }
 
         $block = new BlockElement();
+        $block->id = rand();
+        $block->setOwner($element);
 
         if ($fieldLayout = $this->getFieldLayout()) {
-            $block->setOwner($element);
             $block->setFieldLayout($fieldLayout);
 
             // Set the field values based on stored content
