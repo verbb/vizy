@@ -52,11 +52,17 @@ class Image extends Node
     public function getTag(): array
     {
         // Don't include certain attributes in rendering
-        $this->_elementId = ArrayHelper::remove($this->attrs, 'id');
         ArrayHelper::remove($this->attrs, 'url');
         ArrayHelper::remove($this->attrs, 'target');
         ArrayHelper::remove($this->attrs, 'transform');
         ArrayHelper::remove($this->attrs, 'linkClass');
+
+        // Check if the ID attribute should be used for the element ID (check if string vs number)
+        $id = ArrayHelper::remove($this->attrs, 'id');
+
+        if (is_int($id)) {
+            $this->_elementId = $id;
+        }
 
         // Parse the image src for ref tags
         $src = $this->attrs['src'] ?? '';
