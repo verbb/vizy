@@ -229,6 +229,10 @@ class VizyBlock extends Node
         // Create a fake element with the same fieldtype as our block
         $block = $this->getBlockElement($element);
 
+        // We require an ID on the block to have Matrix and other fields work, but that's going to cause issues when saving
+        // So, we reset it back to null here before saving the block data.
+        $block->id = null;
+
         // Trigger the before-save event (on the element service) to prep the element. Preparse requires this to work.
         Craft::$app->getElements()->trigger(Elements::EVENT_BEFORE_SAVE_ELEMENT, new ElementEvent([
             'element' => $block,
