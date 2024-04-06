@@ -6,9 +6,14 @@ import Commands from './config/Commands.js';
 export default class VizyConfig {
     constructor(instance) {
         this.instance = instance;
+        this.registeredTemplates = [];
         this.registeredExtensions = [];
         this.registeredButtons = [];
         this.registeredCommands = [];
+    }
+
+    registerTemplates(callback) {
+        this.registeredTemplates.push(callback);
     }
 
     registerExtensions(callback) {
@@ -21,6 +26,10 @@ export default class VizyConfig {
 
     registerCommands(callback) {
         this.registeredCommands.push(callback);
+    }
+
+    getTemplates() {
+        return this._getComponents(this.registeredTemplates, []);
     }
 
     getExtensions() {

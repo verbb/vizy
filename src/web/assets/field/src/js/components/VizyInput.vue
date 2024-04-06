@@ -1,10 +1,13 @@
 <template>
     <div>
         <div v-if="editor" class="vui-rich-text" :class="{ 'has-focus': isFocused() }" :style="{ '--rows': settings.initialRows }">
+            <vizy-user-template v-if="getUserTemplates('beforeMenuBar')" :template="getUserTemplates('beforeMenuBar')" :vizy-field="this" />
             <menu-bar v-if="buttons.length && richTextEnabled" ref="toolbar" :buttons="buttons" :editor="editor" :field="this" />
+            <vizy-user-template v-if="getUserTemplates('beforeEditor')" :template="getUserTemplates('beforeEditor')" :vizy-field="this" />
             <code-editor v-if="richTextEnabled" v-model="codeEditorHtml" :visible="showCodeEditor" :editor="editor" :field="this" />
             <editor-content :class="{ 'code-view': showCodeEditor }" class="vui-editor" :editor="editor" />
             <block-picker v-if="blocksEnabled" :editor="editor" :field="this" :block-groups="settings.blockGroups" />
+            <vizy-user-template v-if="getUserTemplates('afterEditor')" :template="getUserTemplates('afterEditor')" :vizy-field="this" />
         </div>
 
         <div v-if="$isDebug" class="input text" style="margin-top: 20px;">{{ jsonContent }}</div>
@@ -65,6 +68,7 @@ import GlobalAttributes from './input/GlobalAttributes';
 import MenuBar from './input/MenuBar.vue';
 import BlockPicker from './input/BlockPicker.vue';
 import CodeEditor from './input/CodeEditor.vue';
+import VizyUserTemplate from './input/VizyUserTemplate.vue';
 
 export default {
     name: 'VizyInput',
@@ -74,6 +78,7 @@ export default {
         MenuBar,
         BlockPicker,
         CodeEditor,
+        VizyUserTemplate,
     },
 
     props: {
@@ -370,6 +375,18 @@ export default {
             txt.innerHTML = html;
 
             return JSON.parse(txt.value);
+        },
+
+        getUserTemplates(position) {
+            const templates = Craft.Vizy.Config.getTemplates();
+
+            if (Array.isArray(templates)) {
+                return templates.map((template) => {
+                    return template.position === position ? template.template : '';
+                }).join('');
+            }
+
+            return false;
         },
 
         contentToValue(content) {
