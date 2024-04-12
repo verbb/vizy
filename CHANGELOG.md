@@ -1,5 +1,17 @@
 # Changelog
 
+## 3.0.0-beta.5 - 2024-04-12
+
+### Added
+- Add the `Craft.Vizy.Config.registerTemplates()` JS function for custom extensions to render their own template in a Vizy field.
+
+### Fixed
+- Fix an error for Image nodes, where the `id` attribute didn’t reflect an Asset Element ID.
+- Fix an error when saving Vizy blocks in some scenarios, where blocks incorrectly had an invalid ID.
+- Fix content changes being detected for nested fields when there are none. In addition, Vizy fields only listen for changes to their content when interacted with.
+- Fix incompatibility issues with Matrix fields.
+- Fix an error when sanitizing Matrix content.
+
 ## 3.0.0-beta.4 - 2024-03-27
 
 ### Changed
