@@ -25,6 +25,19 @@
 - Now requires PHP `8.2.0+`.
 - Now requires Craft `5.0.0-beta.1+`.
 
+## 2.1.18 - 2024-04-10
+
+### Added
+- Add the `Craft.Vizy.Config.registerTemplates()` JS function for custom extensions to render their own template in a Vizy field.
+
+### Fixed
+- Fix an error for Image nodes, where the `id` attribute didn’t reflect an Asset Element ID.
+
+## 2.1.17 - 2024-03-18
+
+### Fixed
+- Fix an error with content not saving when two Vizy fields with Block-only and Rich Text configs are present.
+
 ## 2.1.16 - 2024-02-29
 
 ### Changed

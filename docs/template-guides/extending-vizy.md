@@ -93,7 +93,7 @@ The following examples don't require a bundler like [Vite](https://vitejs.dev/) 
 :::
 
 ### Extensions
-An Extension in the context of a Vizy plugin refers to being able to add a Tiptap [Node](https://tiptap.dev/api/nodes), [Mark](https://tiptap.dev/api/marks) or [Extension](https://tiptap.dev/api/extensions) - you can add any of them the exact same way. An extension refers to adding the actual functionality to the editor, such as _how_ to make text bold when you press th "Bold" button in the toolbar. Be sure to check out some of the examples on the Tiptap site.
+An Extension in the context of a Vizy plugin refers to being able to add a Tiptap [Node](https://tiptap.dev/api/nodes), [Mark](https://tiptap.dev/api/marks) or [Extension](https://tiptap.dev/api/extensions) - you can add any of them the exact same way. An extension refers to adding the actual functionality to the editor, such as _how_ to make text bold when you press the "Bold" button in the toolbar. Be sure to check out some of the examples on the Tiptap site.
 
 
 ```js

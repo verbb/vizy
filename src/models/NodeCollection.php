@@ -37,14 +37,14 @@ class NodeCollection extends Markup
     // Properties
     // =========================================================================
 
-    private static mixed $element = null;
-    private static mixed $field = null;
+    private mixed $element = null;
+    private mixed $field = null;
     private array $nodes = [];
     private array $rawNodes = [];
     
     private mixed $_content = null;
-    private static array $_registeredNodesByType = [];
-    private static array $_registeredMarksByType = [];
+    private array $_registeredNodesByType = [];
+    private array $_registeredMarksByType = [];
 
 
     // Public Methods
@@ -57,17 +57,17 @@ class NodeCollection extends Markup
             $nodes[$key] = Nodes::normalizeContent($node);
         }
 
-        self::$element = $element;
-        self::$field = $field;
+        $this->element = $element;
+        $this->field = $field;
         $this->rawNodes = $nodes;
 
         // Save here as we're recursively populating nodes/marks
-        self::$_registeredNodesByType = Vizy::$plugin->getNodes()->getRegisteredNodesByType();
-        self::$_registeredMarksByType = Vizy::$plugin->getNodes()->getRegisteredMarksByType();
+        $this->_registeredNodesByType = Vizy::$plugin->getNodes()->getRegisteredNodesByType();
+        $this->_registeredMarksByType = Vizy::$plugin->getNodes()->getRegisteredMarksByType();
 
         // Prepare node/mark classes for the collection
-        $this->nodes = self::_populateNodes($nodes);
-        $this->nodes = self::_normalizeNodes($this->getNodes(), self::$element);
+        $this->nodes = $this->_populateNodes($nodes);
+        $this->nodes = $this->_normalizeNodes($this->getNodes(), $this->element);
 
         parent::__construct(null, null);
     }
@@ -98,7 +98,7 @@ class NodeCollection extends Markup
 
     public function getField()
     {
-        return self::$field;
+        return $this->field;
     }
 
     public function getRawNodes(): array
@@ -166,13 +166,13 @@ class NodeCollection extends Markup
         $values = [];
 
         // Ensure that we serialize nodes recursively
-        $rawNodes = self::_serializeNodes($this->getNodes(), $element);
+        $rawNodes = $this->_serializeNodes($this->getNodes(), $element);
 
         foreach ($rawNodes as $nodeKey => $rawNode) {
             $rawNodeType = $rawNode['type'] ?? null;
 
             // Extra check if we are in blocks-only mode
-            if (self::$field->editorMode === VizyField::MODE_BLOCKS) {
+            if ($this->field->editorMode === VizyField::MODE_BLOCKS) {
                 if ($rawNodeType !== VizyBlock::$type) {
                     continue;
                 }
@@ -203,7 +203,7 @@ class NodeCollection extends Markup
     // Private Methods
     // =========================================================================
 
-    private static function _normalizeNodes(array $nodes, ElementInterface $element = null): array
+    private function _normalizeNodes(array $nodes, ElementInterface $element = null): array
     {
         $values = [];
 
@@ -223,10 +223,10 @@ class NodeCollection extends Markup
                     $changedContent = [$changedContent];
                 }
 
-                $node->content = self::_populateNodes($changedContent);
+                $node->content = $this->_populateNodes($changedContent);
             }
 
-            $content = self::_normalizeNodes($node->getContent(), $element);
+            $content = $this->_normalizeNodes($node->getContent(), $element);
 
             if ($content) {
                 $node->content = $content;
@@ -243,13 +243,13 @@ class NodeCollection extends Markup
         return $values;
     }
 
-    private static function _serializeNodes(array $nodes, ElementInterface $element = null): array
+    private function _serializeNodes(array $nodes, ElementInterface $element = null): array
     {
         $values = [];
 
         foreach ($nodes as $nodeKey => $node) {
             $value = $node->serializeValue($element);
-            $content = self::_serializeNodes($node->getContent(), $element);
+            $content = $this->_serializeNodes($node->getContent(), $element);
 
             if ($content) {
                 $value['content'] = $content;
@@ -261,7 +261,7 @@ class NodeCollection extends Markup
         return $values;
     }
 
-    private static function _populateNodes($nodes): array
+    private function _populateNodes($nodes): array
     {
         $result = [];
 
@@ -270,19 +270,19 @@ class NodeCollection extends Markup
 
             // Drill into any nested nodes first
             if (isset($node['content'])) {
-                $node['content'] = self::_populateNodes($node['content']);
+                $node['content'] = $this->_populateNodes($node['content']);
             }
 
             // Handle initializing nested marks
             if (isset($node['marks'])) {
                 foreach ($node['marks'] as $markKey => $mark) {
-                    if ($class = (self::$_registeredMarksByType[$mark['type']] ?? null)) {
+                    if ($class = ($this->_registeredMarksByType[$mark['type']] ?? null)) {
                         unset($mark['type']);
 
                         $node['marks'][$markKey] = Craft::createObject(array_merge($mark, [
                             'class' => $class,
-                            'field' => self::$field,
-                            'element' => self::$element,
+                            'field' => $this->field,
+                            'element' => $this->element,
                         ]));
                     } else {
                         // If an un-registered mark, drop it
@@ -296,14 +296,13 @@ class NodeCollection extends Markup
                 continue;
             }
 
-            if ($class = (self::$_registeredNodesByType[$node['type']] ?? null)) {
+            if ($class = ($this->_registeredNodesByType[$node['type']] ?? null)) {
                 unset($node['type']);
-                // Craft::dd($node);
 
                 $nodeClass = Craft::createObject(array_merge($node, [
                     'class' => $class,
-                    'field' => self::$field,
-                    'element' => self::$element,
+                    'field' => $this->field,
+                    'element' => $this->element,
                     'rawNode' => $rawNode,
                 ]));
 

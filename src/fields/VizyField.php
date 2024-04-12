@@ -747,18 +747,18 @@ class VizyField extends Field
             return false;
         }
 
-        if ($element instanceof MatrixBlock) {
+        if ($element instanceof MatrixBlock && $element->ownerId) {
             return $this->_isRootField($element->getOwner());
         }
 
         if (Plugin::isPluginInstalledAndEnabled('super-table')) {
-            if ($element instanceof SuperTableBlockElement) {
+            if ($element instanceof SuperTableBlockElement && $element->ownerId) {
                 return $this->_isRootField($element->getOwner());
             }
         }
 
         if (Plugin::isPluginInstalledAndEnabled('neo')) {
-            if ($element instanceof NeoBlock) {
+            if ($element instanceof NeoBlock && $element->ownerId) {
                 return $this->_isRootField($element->getOwner());
             }
         }
