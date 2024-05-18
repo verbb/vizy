@@ -547,6 +547,16 @@ export default {
                     });
                 }
 
+                const $assetFields = $fieldsHtml.find('[data-type="craft\\\\fields\\\\Assets"]');
+
+                // Prevent multiple "Upload files" buttons when re-rendering Assets fields
+                if ($assetFields.length) {
+                    $assetFields.each((index, element) => {
+                        // Asset field's JS will create the button if required
+                        $(element).find('[data-icon="upload"').remove();
+                    });
+                }
+
                 const fieldsHtml = $fieldsHtml.htmlize();
 
                 this.vizyField.setCachedFieldHtml(this.node.attrs.id, fieldsHtml);

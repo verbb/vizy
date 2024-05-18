@@ -17,6 +17,16 @@
 - Fix content changes being detected for nested fields when there are none. In addition, Vizy fields only listen for changes to their content when interacted with.
 - Fix field layout designer in settings not serializing changes correctly.
 
+## 2.1.19 - 2024-04-29
+
+### Changed
+- Update Tiptap dependancies.
+
+### Fixed
+- Fix element owner checks.
+- Fix content changes being detected for nested fields when there are none. In addition, Vizy fields only listen for changes to their content when interacted with.
+- Fix an error when re-ordering Vizy blocks with Asset fields.
+
 ## 2.1.18 - 2024-04-10
 
 ### Added
