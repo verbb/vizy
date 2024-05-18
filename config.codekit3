@@ -1181,6 +1181,14 @@
       "oAP" : "\/src\/templates\/settings\/index.html",
       "oF" : 0
     },
+    "\/src\/translations\/en\/vizy.php" : {
+      "cB" : 0,
+      "ft" : 8192,
+      "hM" : 0,
+      "oA" : 0,
+      "oAP" : "\/src\/translations\/en\/vizy.php",
+      "oF" : 0
+    },
     "\/src\/Vizy.php" : {
       "cB" : 0,
       "ft" : 8192,

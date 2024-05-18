@@ -1,41 +1,21 @@
 # Changelog
 
-## 3.0.0-beta.5 - 2024-04-12
+## 3.0.0 - 2024-05-18
 
 ### Added
 - Add the `Craft.Vizy.Config.registerTemplates()` JS function for custom extensions to render their own template in a Vizy field.
+
+### Changed
+- Now requires PHP `8.2.0+`.
+- Now requires Craft `5.0.0+`.
+- Update Vizy block header actions to use an ellipsis icon instead of a settings cog.
+- Vizy block inner custom fields now save custom field content via the field’s `layoutElementUid` instead of their handle.
 
 ### Fixed
 - Fix an error for Image nodes, where the `id` attribute didn’t reflect an Asset Element ID.
 - Fix an error when saving Vizy blocks in some scenarios, where blocks incorrectly had an invalid ID.
 - Fix content changes being detected for nested fields when there are none. In addition, Vizy fields only listen for changes to their content when interacted with.
-- Fix incompatibility issues with Matrix fields.
-- Fix an error when sanitizing Matrix content.
-
-## 3.0.0-beta.4 - 2024-03-27
-
-### Changed
-- Update Vizy block header actions to use an ellipsis icon instead of a settings cog.
-- Vizy block inner custom fields now save custom field content via the field’s `layoutElementUid` instead of their handle.
-
-### Fixed
-- Fixed menu dropdown style issues.
-
-## 3.0.0-beta.3 - 2024-03-18
-
-### Fixed
 - Fix field layout designer in settings not serializing changes correctly.
-
-## 3.0.0-beta.2 - 2024-03-05
-
-### Fixed
-- Fix an install error related to `nystudio107/craft-plugin-vite`.
-
-## 3.0.0-beta.1 - 2024-03-04
-
-### Changed
-- Now requires PHP `8.2.0+`.
-- Now requires Craft `5.0.0-beta.1+`.
 
 ## 2.1.18 - 2024-04-10
 
