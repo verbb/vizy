@@ -310,6 +310,12 @@ class VizyField extends Field
             $settings['linkOptions'] = $this->_getLinkOptions($element);
             $settings['volumes'] = $this->_getVolumeKeys();
             $settings['transforms'] = $this->_getTransforms();
+
+            $settings['allSiteOptions'][] = ['label' => Craft::t('vizy', 'Link to the current site'), 'value' => ''];
+            
+            foreach (Craft::$app->getSites()->getAllSites(false) as $site) {
+                $settings['allSiteOptions'][] = ['label' => $site->name, 'value' => $site->id];
+            }
         }
 
         // Register the Vizy JS for Vite

@@ -180,6 +180,7 @@ export default {
                 target: null,
                 class: null,
                 title: null,
+                site: '',
             };
         },
 
@@ -209,6 +210,7 @@ export default {
             this.model.target = attrs.target;
             this.model.class = attrs.class;
             this.model.title = attrs.title;
+            this.model.site = attrs.site;
 
             this.showEditModal = true;
         },
