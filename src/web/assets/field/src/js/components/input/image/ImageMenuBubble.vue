@@ -57,7 +57,7 @@ export default {
                 title: null,
                 url: null,
                 target: null,
-                transform: null,
+                transform: '',
             },
         };
     },
