@@ -225,7 +225,7 @@ export default {
                     this.editor.chain().focus().setImage(this.modelValue).run();
                 });
             } else {
-                this.modelValue.src = url;
+                this.modelValue.src = this._buildAssetUrl(this.modelValue.id, url, '');
 
                 this.editor.chain().focus().setImage(this.modelValue).run();
             }
