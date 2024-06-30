@@ -236,7 +236,11 @@ export default {
                 ref += `@${selectedSiteId}`;
             }
 
-            this.proxyValue.url = this.modelValue.url.replace(match[0], ref);
+            // Construct a new model and emit that
+            const newModel = this.clone(this.modelValue);
+            newModel.url = this.modelValue.url.replace(match[0], ref);
+
+            this.$emit('update:modelValue', newModel);
         },
     },
 

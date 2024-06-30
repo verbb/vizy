@@ -236,6 +236,11 @@ export default {
                         this.model.url = `${element.url}#${selectedElement.refHandle}:${element.id}@${element.siteId}`,
                         this.model.text = this.getSelectedText() || element.label;
 
+
+                        if (element.siteId) {
+                            this.model.site = element.siteId;
+                        }
+
                         this.tippy.hide();
 
                         this.showEditModal = true;
