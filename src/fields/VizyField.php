@@ -737,7 +737,7 @@ class VizyField extends Field
         }
 
         if (is_array($keywords)) {
-            $keywords = trim(self::_recursiveImplode($keywords, ' '))
+            $keywords = trim(self::_recursiveImplode($keywords, ' '));
         }
 
         return $keywords;
