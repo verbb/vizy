@@ -1,5 +1,20 @@
 # Changelog
 
+## 3.0.1 - 2024-07-21
+
+### Added
+- Add the ability to set links to current site, or specific site for element-based links.
+
+### Changed
+- Change change-detection mechanism incorrectly flagging changed JSON due to discrepancies with PHP vs JS JSON encoding.
+
+### Fixed
+- Fix an error when creating search indexes.
+- Fix default site for Link nodes.
+- Fix Image node URLs not being dynamics when non-transforms are selected.
+- Fix default transform value for Image nodes.
+- Fix change detection mechanism for Vizy Blocks.
+
 ## 3.0.0 - 2024-05-18
 
 ### Added
