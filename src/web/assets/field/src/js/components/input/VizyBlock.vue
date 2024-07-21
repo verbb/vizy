@@ -801,7 +801,40 @@ export default {
                     obj[key] = this.fixArrayIndexes(obj[key]);
                 }
             }
+
             return obj;
+        },
+
+        normalizeIntegersInArrays(obj) {
+            // Helper function to check if a value is an integer string
+            function isIntegerString(value) {
+                return typeof value === 'string' && /^\d+$/.test(value);
+            }
+
+            // Recursive function to traverse and normalize the object
+            function traverseAndNormalize(current) {
+                if (Array.isArray(current)) {
+                    // Check if all elements in the array are integer strings
+                    if (current.every(isIntegerString)) {
+                        // Convert all elements to integers
+                        return current.map(Number);
+                    }
+
+                    return current;
+                }
+
+                if (typeof current === 'object' && current !== null) {
+                    for (const key in current) {
+                        if (Object.prototype.hasOwnProperty.call(current, key)) {
+                            current[key] = traverseAndNormalize(current[key]);
+                        }
+                    }
+                }
+
+                return current;
+            }
+
+            return traverseAndNormalize(obj);
         },
 
         serializeFieldContent() {
@@ -832,6 +865,10 @@ export default {
             // Fix Craft's lack of handling for expanding a POST array where arrays contain null items.
             // This causes issues with Table fields when deleting rows.
             content = this.fixArrayIndexes(content);
+
+            // Craft's `expandPostArray` also casts integer arrays (for element fields) as strings. This causes incorrect changes in data to be flagged as
+            // PHP will send JSON for field content as `"assets": [123, 146]` as integers, but this will report `"assets": ["123", "146"]`.
+            content = this.normalizeIntegersInArrays(content);
 
             let fieldContent = this.findContentBlocksForBlock(content);
 

@@ -101,7 +101,7 @@ export default {
         },
 
         defaultTransform() {
-            return this.field.settings.defaultTransform;
+            return this.field.settings.defaultTransform || '';
         },
 
         allowAllUploaders() {

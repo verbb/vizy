@@ -660,6 +660,12 @@ class VizyField extends Field
             $settings['linkOptions'] = $this->_getLinkOptions($element);
             $settings['volumes'] = $this->_getVolumeKeys();
             $settings['transforms'] = $this->_getTransforms();
+
+            $settings['allSiteOptions'][] = ['label' => Craft::t('vizy', 'Link to the current site'), 'value' => ''];
+            
+            foreach (Craft::$app->getSites()->getAllSites(false) as $site) {
+                $settings['allSiteOptions'][] = ['label' => $site->name, 'value' => $site->id];
+            }
         }
 
         // Register the Vizy JS for Vite
@@ -726,7 +732,7 @@ class VizyField extends Field
         }
 
         if (is_array($keywords)) {
-            $keywords = trim(implode(' ', array_unique($keywords)));
+            $keywords = trim(self::_recursiveImplode($keywords, ' '));
         }
 
         return $keywords;
@@ -735,6 +741,25 @@ class VizyField extends Field
 
     // Private Methods
     // =========================================================================
+
+    private static function _recursiveImplode(array $array, string $glue = ',', bool $include_keys = false, bool $trim_all = false): string
+    {
+        $glued_string = '';
+
+        // Recursively iterates array and adds key/value to glued string
+        array_walk_recursive($array, function($value, $key) use ($glue, $include_keys, &$glued_string) {
+            $include_keys && $glued_string .= $key . $glue;
+            $glued_string .= $value . $glue;
+        });
+
+        // Removes last $glue from string
+        $glue !== '' && $glued_string = substr($glued_string, 0, -strlen($glue));
+
+        // Trim ALL whitespace
+        $trim_all && $glued_string = preg_replace("/(\s)/ixsm", '', $glued_string);
+
+        return (string)$glued_string;
+    }
 
     private function getCacheKey($key): string
     {

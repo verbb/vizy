@@ -13,6 +13,9 @@ export default Link.extend({
             title: {
                 default: null,
             },
+            site: {
+                default: '',
+            },
         };
     },
 
@@ -26,6 +29,7 @@ export default Link.extend({
                 rel: null,
                 class: null,
                 title: null,
+                site: '',
             },
         };
     },

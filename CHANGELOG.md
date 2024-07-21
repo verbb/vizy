@@ -17,6 +17,21 @@
 - Fix content changes being detected for nested fields when there are none. In addition, Vizy fields only listen for changes to their content when interacted with.
 - Fix field layout designer in settings not serializing changes correctly.
 
+## 2.1.20 - 2024-07-21
+
+### Added
+- Add the ability to set links to current site, or specific site for element-based links.
+
+### Changed
+- Change change-detection mechanism incorrectly flagging changed JSON due to discrepancies with PHP vs JS JSON encoding.
+
+### Fixed
+- Fix an error when creating search indexes.
+- Fix default site for Link nodes.
+- Fix Image node URLs not being dynamics when non-transforms are selected.
+- Fix default transform value for Image nodes.
+- Fix change detection mechanism for Vizy Blocks.
+
 ## 2.1.19 - 2024-04-29
 
 ### Changed

@@ -26,7 +26,7 @@ export default Image.extend({
                 default: null,
             },
             transform: {
-                default: null,
+                default: '',
             },
         };
     },

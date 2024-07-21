@@ -180,6 +180,7 @@ export default {
                 target: null,
                 class: null,
                 title: null,
+                site: '',
             };
         },
 
@@ -209,6 +210,7 @@ export default {
             this.model.target = attrs.target;
             this.model.class = attrs.class;
             this.model.title = attrs.title;
+            this.model.site = attrs.site;
 
             this.showEditModal = true;
         },
@@ -233,6 +235,11 @@ export default {
 
                         this.model.url = `${element.url}#${selectedElement.refHandle}:${element.id}@${element.siteId}`,
                         this.model.text = this.getSelectedText() || element.label;
+
+
+                        if (element.siteId) {
+                            this.model.site = element.siteId;
+                        }
 
                         this.tippy.hide();
 

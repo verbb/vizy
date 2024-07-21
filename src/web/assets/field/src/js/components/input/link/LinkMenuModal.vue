@@ -61,6 +61,23 @@
             </div>
         </div>
 
+        <div v-if="hasSiteSelect" id="site-field" class="field">
+            <div class="heading">
+                <label id="site-label" for="site">{{ t('vizy', 'Site') }}</label>
+            </div>
+
+            <div class="input ltr">
+                <div class="select">
+                    <select
+                        id="site"
+                        v-model="modelValue.site"
+                    >
+                        <option v-for="(option, index) in allSiteOptions" :key="index" :value="option.value">{{ option.label }}</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+
         <a :class="['fieldtoggle', { 'expanded': advancedPane }]" data-target="advanced" @click.prevent="toggleAdvanced">{{ t('app', 'Advanced') }}</a>
 
         <div :class="{ 'hidden': !advancedPane }">
@@ -152,6 +169,7 @@ export default {
                 target: null,
                 class: null,
                 title: null,
+                site: '',
             },
             errors: [],
             advancedPane: false,
@@ -163,6 +181,10 @@ export default {
             return this.field.settings.elementSiteId;
         },
 
+        allSiteOptions() {
+            return this.field.settings.allSiteOptions;
+        },
+
         newWindow: {
             get() {
                 return (this.modelValue.target === '_blank');
@@ -171,6 +193,17 @@ export default {
                 // eslint-disable-next-line vue/no-mutating-props
                 this.modelValue.target = (value ? '_blank' : '');
             },
+        },
+
+        hasSiteSelect() {
+            // Only add site selector if it looks like an element reference link
+            if (this.modelValue && this.modelValue.url) {
+                const refHandlesRegex = Craft.Vizy.localizedRefHandles.join('|');
+
+                return this.modelValue.url.match(new RegExp(`(#(?:${refHandlesRegex}):\\d+)(?:@(\\d+))?`));
+            }
+
+            return false;
         },
     },
 
@@ -185,9 +218,34 @@ export default {
             }
         },
 
-        proxyValue(newValue) {
-            this.$emit('update:modelValue', newValue);
+        proxyValue: {
+            handler(newValue, oldValue) {
+                this.$emit('update:modelValue', newValue);
+            },
+            deep: true,
         },
+
+        'modelValue.site': function(newValue) {
+            const refHandlesRegex = Craft.Vizy.localizedRefHandles.join('|');
+            const match = this.modelValue.url.match(new RegExp(`(#(?:${refHandlesRegex}):\\d+)(?:@(\\d+))?`));
+
+            const selectedSiteId = parseInt(this.modelValue.site, 10);
+            let ref = match[1];
+
+            if (selectedSiteId) {
+                ref += `@${selectedSiteId}`;
+            }
+
+            // Construct a new model and emit that
+            const newModel = this.clone(this.modelValue);
+            newModel.url = this.modelValue.url.replace(match[0], ref);
+
+            this.$emit('update:modelValue', newModel);
+        },
+    },
+
+    created() {
+        this.proxyValue = this.modelValue;
     },
 
     methods: {
@@ -213,6 +271,7 @@ export default {
                 target: this.modelValue.target ? '_blank' : '',
                 class: this.modelValue.class,
                 title: this.modelValue.title,
+                site: this.modelValue.site,
             };
 
             // Save the cursor position so we can restore it afterwards
