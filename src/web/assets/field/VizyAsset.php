@@ -47,9 +47,9 @@ class VizyAsset extends AssetBundle
         $refHandlesJson = Json::encode($refHandles);
 
         $js = <<<JS
-window.Craft.Vizy = {
-  localizedRefHandles: $refHandlesJson,
-};
+if (typeof Craft.Vizy !== typeof undefined) {
+    window.Craft.Vizy.localizedRefHandles = $refHandlesJson;
+}
 JS;
         $view->registerJs($js, View::POS_HEAD);
     }
