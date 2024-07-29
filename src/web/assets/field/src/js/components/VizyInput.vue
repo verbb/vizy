@@ -545,7 +545,8 @@ export default {
                 // Re-serialize the form data, to prevent unload warnings for nested Vizy fields
                 const $mainForm = $('form#main-form');
 
-                if ($mainForm.length) {
+                // We only ever want to do this once, after Vue has loaded, as they'll be determined to be changed data, when it's not (on-load)
+                if ($mainForm.length && !$mainForm.data('vue-serialized-element-content')) {
                     const elementEditor = $mainForm.data('elementEditor');
 
                     if (elementEditor) {
@@ -555,6 +556,9 @@ export default {
                         // Update the local cache, and the DOM cache
                         elementEditor.lastSerializedValue = formData;
                         $mainForm.data('initialSerializedValue', formData);
+
+                        // Mark the form as "vue-loaded" so that we don't re-serialize content when new components are created
+                        $mainForm.data('vue-serialized-element-content', true);
                     }
                 }
             }, 500);
