@@ -693,10 +693,11 @@ export default {
             let foundContent = {};
 
             if (!isEmpty(content)) {
-                // Special-handling when this field is in the element slideout
+                // Special-handling when this field is in the element slideout or live preview
                 const slideout = this.$el.closest('.slideout[data-element-editor] .so-body');
+                const livePreview = document.querySelector('.lp-editor-container .lp-content');
 
-                if (slideout) {
+                if (slideout || livePreview) {
                     // eslint-disable-next-line
                     content = Object.values(content)[0];
 
