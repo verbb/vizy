@@ -479,7 +479,7 @@ export default {
             this.isLivePreview = true;
 
             // Handle the Live Preview scroll
-            const $livePreview = document.querySelector('.lp-editor-container .lp-editor');
+            const $livePreview = document.querySelector('.lp-editor-container .lp-content');
 
             if ($livePreview) {
                 $livePreview.addEventListener('scroll', this.updateFixedToolbar);
