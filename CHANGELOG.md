@@ -1,5 +1,14 @@
 # Changelog
 
+## 3.0.2 - 2024-08-11
+
+### Fixed
+- Fix some click events in Vizy Block fields not triggering change event listener.
+- Fix an error when initializing Vizy fields multiple times.
+- Fix incorrect field serialization when in live preview.
+- Fix Live Preview detection.
+- Fix compatibility with Hyper.
+
 ## 3.0.1 - 2024-07-21
 
 ### Added
