@@ -1,5 +1,11 @@
 # Changelog
 
+## 2.1.21 - 2024-08-11
+
+### Fixed
+- Fix some click events in Vizy Block fields not triggering change event listener.
+- Fix an error when initializing Vizy fields multiple times.
+
 ## 2.1.20 - 2024-07-21
 
 ### Added
