@@ -41,6 +41,12 @@
 - Fix content changes being detected for nested fields when there are none. In addition, Vizy fields only listen for changes to their content when interacted with.
 - Fix field layout designer in settings not serializing changes correctly.
 
+## 2.1.22 - 2024-08-14
+
+### Fixed
+- Fix an issue with multiple Vizy editors with different formatting or table configs.
+- Fix buttons styles not working correctly.
+
 ## 2.1.21 - 2024-08-11
 
 ### Fixed

@@ -7,7 +7,11 @@
     "css": [
       "assets/vizy-e02a0e63.css"
     ],
+<<<<<<< HEAD
     "file": "assets/vizy-74cc0c71.js",
+=======
+    "file": "assets/vizy-dae25c0e.js",
+>>>>>>> 86b2235187ddd32a9bd1b583b463d7d8d7325ccf
     "isEntry": true,
     "src": "field/src/js/vizy.js"
   }
