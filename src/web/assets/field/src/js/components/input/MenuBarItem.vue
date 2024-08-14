@@ -4,7 +4,7 @@
 
         <div v-if="hasDropdown()" class="vui-toolbar-dropdown-container" :class="'vui-toolbar-dropdown-' + name" style="display: none;">
             <div class="vui-toolbar-dropdown-wrap">
-                <button v-for="(option, i) in options" :key="i" class="vui-toolbar-dropdown" :class="['vui-toolbar-dropdown-item-' + option.name, { 'active': optionActive(option) }]" @click.prevent="runAction(option.action)">
+                <button v-for="(option, i) in enabledOptions" :key="i" class="vui-toolbar-dropdown" :class="['vui-toolbar-dropdown-item-' + option.name, { 'active': optionActive(option) }]" @click.prevent="runAction(option.action)">
                     {{ option.title }}
                 </button>
             </div>
@@ -67,6 +67,11 @@ export default {
         },
 
         options: {
+            type: Array,
+            default: () => { return []; },
+        },
+
+        enabledOptions: {
             type: Array,
             default: () => { return []; },
         },
