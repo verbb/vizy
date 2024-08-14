@@ -2,6 +2,7 @@
 
 ## 2.1.22 - 2024-08-14
 
+### Fixed
 - Fix an issue with multiple Vizy editors with different formatting or table configs.
 - Fix buttons styles not working correctly.
 
