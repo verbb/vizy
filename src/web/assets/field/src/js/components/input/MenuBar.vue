@@ -55,12 +55,9 @@ export default {
                     buttons.push(this.dynamicButton(buttonName));
                 }
 
-                let button = this.allButtons.find((x) => { return x.name === buttonName; });
+                const button = this.allButtons.find((x) => { return x.name === buttonName; });
 
                 if (button) {
-                    // Ensure we don't modify the original button, but a clone of it for this instance
-                    button = this.clone(button);
-
                     // Handle special-cases and sub-options. Maybe move to other components?
                     if (button.name === 'formatting') {
                         button.options = this.getEnabledOptions(button.options, this.getFormattingOptions());
