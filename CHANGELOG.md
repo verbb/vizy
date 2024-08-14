@@ -1,5 +1,10 @@
 # Changelog
 
+## 2.1.22 - 2024-08-14
+
+- Fix an issue with multiple Vizy editors with different formatting or table configs.
+- Fix buttons styles not working correctly.
+
 ## 2.1.21 - 2024-08-11
 
 ### Fixed
