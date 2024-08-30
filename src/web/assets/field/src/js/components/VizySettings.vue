@@ -10,7 +10,7 @@
                     <hr v-if="groupIndex > 0">
 
                     <div class="vui-block-items-header">
-                        <span class="vui-block-items-header-text" contenteditable="true" @blur="group.name = $event.target.innerText" v-html="group.name"></span>
+                        <span class="vui-block-items-header-text" contenteditable="true" @blur="group.name = $event.target.textContent" v-html="group.name"></span>
 
                         <div class="vui-block-items-header-actions">
                             <button v-if="groupIndex > 0" class="vui-block-items-header-move" @click.prevent="moveGroupUp(group)">
