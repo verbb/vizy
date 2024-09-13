@@ -634,6 +634,7 @@ class VizyField extends Field
             'pasteAsPlainText' => $this->pasteAsPlainText,
             'blockTypeBehaviour' => $this->blockTypeBehaviour,
             'editorMode' => $this->editorMode,
+            'plugins' => self::$_registeredPlugins,
         ];
 
         // Set Asset setting

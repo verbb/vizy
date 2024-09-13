@@ -40,40 +40,122 @@ import MediaEmbed from '../components/input/media-embed/MediaEmbed';
 
 export default [
     // Optional Marks
-    Bold,
-    Code,
-    Highlight,
-    Italic,
-    Strike,
-    Subscript,
-    Superscript,
-    Underline,
+    {
+        core: true,
+        extension: Bold,
+    },
+    {
+        core: true,
+        extension: Bold,
+    },
+    {
+        core: true,
+        extension: Code,
+    },
+    {
+        core: true,
+        extension: Highlight,
+    },
+    {
+        core: true,
+        extension: Italic,
+    },
+    {
+        core: true,
+        extension: Strike,
+    },
+    {
+        core: true,
+        extension: Subscript,
+    },
+    {
+        core: true,
+        extension: Superscript,
+    },
+    {
+        core: true,
+        extension: Underline,
+    },
+
 
     // Optional Nodes
-    Blockquote,
-    BulletList,
-    CodeBlock,
-    Heading.configure({ levels: [1, 2, 3, 4, 5, 6] }),
-    HorizontalRule,
-    ListItem,
-    OrderedList,
-    Table.configure({
-        resizable: true,
-    }),
-    TableRow,
-    TableHeader,
-    TableCell,
+    {
+        core: true,
+        extension: Blockquote,
+    },
+    {
+        core: true,
+        extension: BulletList,
+    },
+    {
+        core: true,
+        extension: CodeBlock,
+    },
+    {
+        core: true,
+        extension: Heading.configure({ levels: [1, 2, 3, 4, 5, 6] }),
+    },
+    {
+        core: true,
+        extension: HorizontalRule,
+    },
+    {
+        core: true,
+        extension: ListItem,
+    },
+    {
+        core: true,
+        extension: OrderedList,
+    },
+    {
+        core: true,
+        extension: Table.configure({
+            resizable: true,
+        }),
+    },
+    {
+        core: true,
+        extension: TableRow,
+    },
+    {
+        core: true,
+        extension: TableHeader,
+    },
+    {
+        core: true,
+        extension: TableCell,
+    },
+
 
     // Optional Extensions
-    History,
-    TextAlign.configure({
-        types: ['heading', 'paragraph'],
-        defaultAlignment: 'start',
-    }),
+    {
+        core: true,
+        extension: History,
+    },
+    {
+        core: true,
+        extension: TextAlign.configure({
+            types: ['heading', 'paragraph'],
+            defaultAlignment: 'start',
+        }),
+    },
+
 
     // Optional Custom
-    Link.configure({ openOnClick: false }),
-    Image,
-    Iframe,
-    MediaEmbed,
+    {
+        core: true,
+        extension: Link.configure({ openOnClick: false }),
+    },
+    {
+        core: true,
+        extension: Image,
+    },
+    {
+        core: true,
+        extension: Iframe,
+    },
+    {
+        core: true,
+        extension: MediaEmbed,
+    },
 ];

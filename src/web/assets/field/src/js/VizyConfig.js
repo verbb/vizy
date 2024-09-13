@@ -53,6 +53,16 @@ export default class VizyConfig {
             }
 
             components = components.concat(Array.isArray(addedComponents) ? addedComponents : [addedComponents]);
+
+            // Provide back-compatibility for older method of registering custom extensions
+            // e.g. `[MyExtension]` to `[{ plugin: 'my-plugin-handle', extension: MyExtension }]`
+            if (type === 'extensions') {
+                components.forEach((component, i) => {
+                    if (!component.extension) {
+                        components[i] = { plugin: '_global', extension: component };
+                    }
+                });
+            }
         });
 
         // Ensure we cleanup in case plugin have removed components
