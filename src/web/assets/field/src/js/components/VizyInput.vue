@@ -313,7 +313,22 @@ export default {
                 // Focus.configure({ className: 'has-focus', mode: 'deepest' }),
             ];
 
-            const richText = Craft.Vizy.Config.getExtensions(this);
+            const enabledExtensions = this.settings.vizyConfig.plugins || [];
+            const registeredExtensions = Craft.Vizy.Config.getExtensions(this);
+            const richTextExtensions = [];
+
+            // Only include the extensions that are allowed (core or plugin) for this field config
+            registeredExtensions.forEach((registeredExtension) => {
+                // Core extensions are always included, or for the backward-compatible `_global` plugin
+                if (registeredExtension.core || registeredExtension.plugin === '_global') {
+                    richTextExtensions.push(registeredExtension.extension);
+                }
+
+                // Plugin-defined ones need to have the plugin enabled in Vizy's config
+                if (enabledExtensions.includes(registeredExtension.plugin)) {
+                    richTextExtensions.push(registeredExtension.extension);
+                }
+            });
 
             const blocks = [
                 // Despite block-only, we include Paragraph, as ProseMirror requires _something_
@@ -322,7 +337,7 @@ export default {
             ];
 
             if (this.richTextEnabled) {
-                extensions = extensions.concat(richText);
+                extensions = extensions.concat(richTextExtensions);
             }
 
             if (this.blocksEnabled) {
