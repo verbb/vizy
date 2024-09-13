@@ -101,7 +101,7 @@ document.addEventListener('onVizyConfigReady', (e) => {
     const { Mark, mergeAttributes } = Craft.Vizy.Config.tiptap.core;
 
     const NewBold = Mark.create({
-        name: 'new-bold',
+        name: 'newBold',
 
         parseHTML() {
             return [{ tag: 'strong' }];
@@ -120,10 +120,8 @@ document.addEventListener('onVizyConfigReady', (e) => {
         },
     });
 
-    Craft.Vizy.Config.registerExtensions((extensions) => {
-        return [
-            NewBold,
-        ];
+    Craft.Vizy.Config.registerExtensions((extensions, vizyInput) => {
+        return [{ plugin: 'new-bold', extension: NewBold }];
     });
 });
 ```
@@ -133,7 +131,7 @@ Here, we've re-created the **Bold** Mark and added it to the Vizy editor. Some t
 - We use `onVizyConfigReady` to be notified when Vizy itself is ready for our custom plugin to be added
 - We can access the Tiptap API with `Craft.Vizy.Config.tiptap.core`
 - We create a `Mark` with `Mark.create()` as you would with Tiptap, and define our mark. This is the same for `Node` or `Extension`.
-- We let Vizy know about this by registering the extension with `Craft.Vizy.Config.registerExtensions()`.
+- We let Vizy know about this by registering the extension with `Craft.Vizy.Config.registerExtensions()`. Be sure to use the plugin's handle for `plugin`, not the `name` of the Extension. This ensures the extension isn't run unless the plugin is enabled for the field.
 
 Now, this extension won't do anything on it's own without a button or command to allow the user to action to command.
 
