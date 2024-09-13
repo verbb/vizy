@@ -77,7 +77,7 @@ export default {
 
     created() {
         // Ensure this isn't reactive for nested Vizy fields (doesn't need to be anyway)
-        this.allButtons = Craft.Vizy.Config.getButtons();
+        this.allButtons = Craft.Vizy.Config.getButtons(this.field);
     },
 
     methods: {

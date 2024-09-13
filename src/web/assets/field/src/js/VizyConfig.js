@@ -29,24 +29,24 @@ export default class VizyConfig {
     }
 
     getTemplates() {
-        return this._getComponents(this.registeredTemplates, []);
+        return this._getComponents('templates', this.registeredTemplates, [], null);
     }
 
-    getExtensions() {
-        return this._getComponents(this.registeredExtensions, Extensions);
+    getExtensions(vizyInput) {
+        return this._getComponents('extensions', this.registeredExtensions, Extensions, vizyInput);
     }
 
-    getButtons() {
-        return this._getComponents(this.registeredButtons, Buttons);
+    getButtons(vizyInput) {
+        return this._getComponents('buttons', this.registeredButtons, Buttons, vizyInput);
     }
 
-    getCommands() {
-        return this._getComponents(this.registeredCommands, Commands);
+    getCommands(vizyInput) {
+        return this._getComponents('commands', this.registeredCommands, Commands, vizyInput);
     }
 
-    _getComponents(registeredComponents, components) {
+    _getComponents(type, registeredComponents, components, vizyInput) {
         registeredComponents.forEach((callback) => {
-            const addedComponents = callback(components);
+            const addedComponents = callback(components, vizyInput);
 
             if (!addedComponents) {
                 return;

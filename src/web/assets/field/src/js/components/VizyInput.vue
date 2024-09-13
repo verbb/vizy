@@ -313,7 +313,7 @@ export default {
                 // Focus.configure({ className: 'has-focus', mode: 'deepest' }),
             ];
 
-            const richText = Craft.Vizy.Config.getExtensions();
+            const richText = Craft.Vizy.Config.getExtensions(this);
 
             const blocks = [
                 // Despite block-only, we include Paragraph, as ProseMirror requires _something_

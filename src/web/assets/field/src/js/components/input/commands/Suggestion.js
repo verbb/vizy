@@ -12,7 +12,7 @@ export default {
     items: (options) => {
         const { vizyField } = options.editor;
         const vizySettings = vizyField.settings;
-        const allCommands = Craft.Vizy.Config.getCommands();
+        const allCommands = Craft.Vizy.Config.getCommands(vizyField);
         let commands = [];
 
         let includedCommands = [
