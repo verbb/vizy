@@ -32,10 +32,17 @@ use craft\helpers\StringHelper;
 use craft\fields\BaseRelationField;
 use craft\fields\conditions\EmptyFieldConditionRule;
 use craft\fields\Matrix;
+use craft\models\CategoryGroup;
+use craft\models\EntryType;
 use craft\models\FieldLayout;
+use craft\models\ImageTransform;
 use craft\models\Section;
+use craft\models\Volume;
+use craft\services\ElementSources;
 use craft\validators\ArrayValidator;
 use craft\web\twig\variables\Cp;
+
+use Illuminate\Support\Collection;
 
 use yii\base\Event;
 use yii\base\InvalidConfigException;
@@ -132,9 +139,9 @@ class VizyField extends Field
 
     private ?array $_blockTypesById = [];
     private ?array $_linkOptions = null;
-    private ?array $_sectionSources = null;
+    private ?array $_entrySources = null;
     private ?array $_categorySources = null;
-    private ?array $_volumeKeys = null;
+    private ?array $_assetSources = null;
     private ?array $_transforms = null;
     private ?int $_recursiveFieldCount = null;
 
@@ -659,8 +666,8 @@ class VizyField extends Field
 
         if (in_array('link', $buttons) || in_array('image', $buttons)) {
             $settings['linkOptions'] = $this->_getLinkOptions($element);
-            $settings['volumes'] = $this->_getVolumeKeys();
-            $settings['transforms'] = $this->_getTransforms();
+            $settings['volumes'] = $this->_assetSources();
+            $settings['transforms'] = $this->_transforms();
 
             $settings['allSiteOptions'][] = ['label' => Craft::t('vizy', 'Link to the current site'), 'value' => ''];
             
@@ -1112,26 +1119,26 @@ class VizyField extends Field
 
         $linkOptions = [];
 
-        $sectionSources = $this->_getSectionSources($element);
-        $categorySources = $this->_getCategorySources($element);
-        $volumeKeys = $this->_getVolumeKeys();
+        $entrySources = $this->_entrySources($element);
+        $categorySources = $this->_categorySources($element);
+        $assetSources = $this->_assetSources();
 
-        if (!empty($sectionSources)) {
+        if (!empty($entrySources)) {
             $linkOptions[] = [
                 'optionTitle' => Craft::t('vizy', 'Link to an entry'),
                 'elementType' => Entry::class,
                 'refHandle' => Entry::refHandle(),
-                'sources' => $sectionSources,
+                'sources' => $entrySources,
                 'criteria' => ['uri' => ':notempty:'],
             ];
         }
 
-        if (!empty($volumeKeys)) {
+        if (!empty($assetSources)) {
             $linkOptions[] = [
                 'optionTitle' => Craft::t('vizy', 'Link to an asset'),
                 'elementType' => Asset::class,
                 'refHandle' => Asset::refHandle(),
-                'sources' => $volumeKeys,
+                'sources' => $assetSources,
             ];
         }
 
@@ -1163,15 +1170,14 @@ class VizyField extends Field
         return $this->_linkOptions = $linkOptions;
     }
 
-    private function _getSectionSources(Element $element = null): array
+    private function _entrySources(?ElementInterface $element, bool $showSingles = false): array
     {
-        if ($this->_sectionSources !== null) {
-            return $this->_sectionSources;
+        if ($this->_entrySources !== null) {
+            return $this->_entrySources;
         }
 
         $sources = [];
         $sections = Craft::$app->getEntries()->getAllSections();
-        $showSingles = false;
 
         // Get all sites
         $sites = Craft::$app->getSites()->getAllSites();
@@ -1190,6 +1196,8 @@ class VizyField extends Field
             }
         }
 
+        $sources = array_values(array_unique($sources));
+
         if ($showSingles) {
             array_unshift($sources, 'singles');
         }
@@ -1200,63 +1208,84 @@ class VizyField extends Field
 
         $sources = array_values(array_unique($sources));
 
-        return $this->_sectionSources = $sources;
+        // Include custom sources
+        $customSources = $this->_getCustomSources(Entry::class);
+
+        if (!empty($customSources)) {
+            $sources = array_merge($sources, $customSources);
+        }
+
+        return $this->_entrySources = $sources;
     }
 
-    private function _getCategorySources(Element $element = null): array
+    private function _categorySources(?ElementInterface $element): array
     {
         if ($this->_categorySources !== null) {
             return $this->_categorySources;
         }
 
-        $sources = [];
-
-        if ($element) {
-            $categoryGroups = Craft::$app->getCategories()->getAllGroups();
-
-            foreach ($categoryGroups as $categoryGroup) {
-                // Does the category group have URLs in the same site as the element we're editing?
-                $categoryGroupSiteSettings = $categoryGroup->getSiteSettings();
-
-                if (isset($categoryGroupSiteSettings[$element->siteId]) && $categoryGroupSiteSettings[$element->siteId]->hasUrls) {
-                    $sources[] = 'group:' . $categoryGroup->uid;
-                }
-            }
+        if (!$element) {
+            return [];
         }
 
-        $sources = array_values(array_unique($sources));
+        $sources = Collection::make(Craft::$app->getCategories()->getAllGroups())
+            ->filter(fn(CategoryGroup $group) => $group->getSiteSettings()[$element->siteId]?->hasUrls ?? false)
+            ->map(fn(CategoryGroup $group) => "group:$group->uid")
+            ->values()
+            ->all();
+
+        // Include custom sources
+        $customSources = $this->_getCustomSources(Category::class);
+        
+        if (!empty($customSources)) {
+            $sources = array_merge($sources, $customSources);
+        }
 
         return $this->_categorySources = $sources;
     }
 
-    private function _getVolumeKeys(): array
+    private function _assetSources(bool $withUrlsOnly = false): array
     {
-        if ($this->_volumeKeys !== null) {
-            return $this->_volumeKeys;
+        if ($this->_assetSources !== null) {
+            return $this->_assetSources;
         }
 
         if (!$this->availableVolumes) {
             return [];
         }
 
-        $allVolumes = Craft::$app->getVolumes()->getAllVolumes();
-        $allowedVolumes = [];
-        $userService = Craft::$app->getUser();
+        $volumes = Collection::make(Craft::$app->getVolumes()->getAllVolumes());
 
-        foreach ($allVolumes as $volume) {
-            $allowedBySettings = $this->availableVolumes === '*' || (is_array($this->availableVolumes) && in_array($volume->uid, $this->availableVolumes));
-            
-            if ($allowedBySettings && ($this->showUnpermittedVolumes || $userService->checkPermission("viewAssets:$volume->uid"))) {
-                $allowedVolumes[] = 'volume:' . $volume->uid;
-            }
+        if (is_array($this->availableVolumes)) {
+            $volumes = $volumes->filter(fn(Volume $volume) => in_array($volume->uid, $this->availableVolumes));
         }
 
-        $allowedVolumes = array_values(array_unique($allowedVolumes));
+        if (!$this->showUnpermittedVolumes) {
+            $userService = Craft::$app->getUser();
+            $volumes = $volumes->filter(fn(Volume $volume) => $userService->checkPermission("viewAssets:$volume->uid"));
+        }
 
-        return $this->_volumeKeys = $allowedVolumes;
+        if ($withUrlsOnly) {
+            // only allow volumes that belong to FS that have public URLs
+            $volumes = $volumes->filter(fn(Volume $volume) => $volume->getFs()->hasUrls);
+        }
+
+        $sources = $volumes
+            ->map(fn(Volume $volume) => "volume:$volume->uid")
+            ->values()
+            ->all();
+
+        // Include custom sources
+        $customSources = $this->_getCustomSources(Asset::class);
+
+        if (!empty($customSources)) {
+            $sources = array_merge($sources, $customSources);
+        }
+
+        return $this->_assetSources = $sources;
     }
 
-    private function _getTransforms(): array
+    private function _transforms(): array
     {
         if ($this->_transforms !== null) {
             return $this->_transforms;
@@ -1295,6 +1324,20 @@ class VizyField extends Field
         }
 
         return $sourceOptions;
+    }
+
+    private function _getCustomSources(string $elementType): array
+    {
+        $customSources = [];
+        $elementSources = Craft::$app->getElementSources()->getSources($elementType, 'modal');
+        
+        foreach ($elementSources as $elementSource) {
+            if ($elementSource['type'] === ElementSources::TYPE_CUSTOM && isset($elementSource['key'])) {
+                $customSources[] = $elementSource['key'];
+            }
+        }
+
+        return $customSources;
     }
 
     private function _parseFieldHtml(string $html): string
