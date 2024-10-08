@@ -367,8 +367,9 @@ export default {
         },
 
         decodeHtml(html) {
+            // No need to serialize it again just to deserialize it
             if (Array.isArray(html)) {
-                html = JSON.stringify(html);
+                return html;
             }
 
             // The most easiest/efficient way to convert htmlentities...
