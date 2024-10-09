@@ -1,5 +1,21 @@
 # Changelog
 
+## 3.0.4 - 2024-10-09
+
+### Added
+- Add support for modifying nested nodes through Twig (for Table nodes).
+- Add support for entry/category/asset custom sources when picking links.
+- Add `vizyInput` as a callback parameter when registering custom extensions/buttons/commands in JavaScript.
+
+### Changed
+- Update custom-registered Vizy extension registration format.
+
+### Fixed
+- Fix an error when inserting links on non-multi site installs.
+- Fix an error when trying to deserialize HTML content.
+- Fix Vizy Block group name being incorrectly saved as uppercase.
+- Fix custom-registered Vizy extensions being globally enabled for all Vizy fields.
+
 ## 3.0.3 - 2024-08-14
 
 ### Fixed
