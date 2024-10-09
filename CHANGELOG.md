@@ -1,5 +1,15 @@
 # Changelog
 
+## 2.1.23 - 2024-10-09
+
+### Added
+- Add support for modifying nested nodes through Twig (for Table nodes).
+
+### Fixed
+- Fix an error when inserting links on non-multi site installs.
+- Fix an error when trying to deserialize HTML content.
+- Fix Vizy Block group name being incorrectly saved as uppercase.
+
 ## 2.1.22 - 2024-08-14
 
 ### Fixed
