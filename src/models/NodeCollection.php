@@ -318,15 +318,28 @@ class NodeCollection extends Markup
         return $result;
     }
 
-    private function _prepNodesForHtml($config = []): void
+    private function _prepNodesForHtml(array $config = [], array $nodes = []): void
     {
-        foreach ($this->getNodes() as $node) {
+        if (!$nodes) {
+            $nodes = $this->getNodes();
+        }
+
+        foreach ($nodes as $node) {
             // Apply any node config set in templates
             foreach ($config as $type => $nodeConfig) {
                 if ($node->getType() === $type) {
+
                     // Extract any mark config and apply to all marks of matching type
                     // Also remove it from the config, so it doesn't clash with the `marks` prop.
                     $marksConfig = ArrayHelper::remove($nodeConfig, 'marks');
+
+                    // Extract any nested node config (Table fields)
+                    $nestedNodeConfig = ArrayHelper::remove($nodeConfig, 'nodes');
+
+                    // Support configuring nested nodes
+                    if ($nestedNodeConfig) {
+                        $this->_prepNodesForHtml($nestedNodeConfig, $node->content);
+                    }
 
                     foreach ($node->content as $nodeContent) {
                         foreach ($nodeContent->marks as $mark) {

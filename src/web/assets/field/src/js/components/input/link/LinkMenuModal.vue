@@ -195,10 +195,14 @@ export default {
             },
         },
 
+        localizedRefHandles() {
+            return VizyLocalizedRefHandles || [];
+        },
+
         hasSiteSelect() {
             // Only add site selector if it looks like an element reference link
             if (this.modelValue && this.modelValue.url) {
-                const refHandlesRegex = Craft.Vizy.localizedRefHandles.join('|');
+                const refHandlesRegex = this.localizedRefHandles.join('|');
 
                 return this.modelValue.url.match(new RegExp(`(#(?:${refHandlesRegex}):\\d+)(?:@(\\d+))?`));
             }
@@ -226,7 +230,7 @@ export default {
         },
 
         'modelValue.site': function(newValue) {
-            const refHandlesRegex = Craft.Vizy.localizedRefHandles.join('|');
+            const refHandlesRegex = this.localizedRefHandles.join('|');
             const match = this.modelValue.url.match(new RegExp(`(#(?:${refHandlesRegex}):\\d+)(?:@(\\d+))?`));
 
             const selectedSiteId = parseInt(this.modelValue.site, 10);
