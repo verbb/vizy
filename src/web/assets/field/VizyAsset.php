@@ -27,30 +27,36 @@ class VizyAsset extends AssetBundle
         parent::init();
     }
 
-    public function registerAssetFiles($view)
+    public function registerAssetFiles($view): void
     {
         parent::registerAssetFiles($view);
 
         if ($view instanceof View) {
+            $this->registerRefHandles($view);
+
             $view->registerTranslations('vizy', [
                 'Link to the current site',
             ]);
         }
+    }
 
+
+    // Private Methods
+    // =========================================================================
+
+    private function registerRefHandles(View $view): void
+    {
         $refHandles = [];
+
         foreach (Craft::$app->getElements()->getAllElementTypes() as $elementType) {
             /** @var string|ElementInterface $elementType */
             if ($elementType::isLocalized() && ($refHandle = $elementType::refHandle()) !== null) {
                 $refHandles[] = $refHandle;
             }
         }
-        $refHandlesJson = Json::encode($refHandles);
 
-        $js = <<<JS
-if (typeof Craft.Vizy !== typeof undefined) {
-    window.Craft.Vizy.localizedRefHandles = $refHandlesJson;
-}
-JS;
-        $view->registerJs($js, View::POS_HEAD);
+        $view->registerJsWithVars(fn($refHandles) => <<<JS
+            window.VizyLocalizedRefHandles = $refHandles;
+        JS, [$refHandles], View::POS_END);
     }
 }
