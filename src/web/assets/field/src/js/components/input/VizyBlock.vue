@@ -864,6 +864,11 @@ export default {
                 return (acc[key] = postData[key], acc);
             }, {});
 
+            // Remove `hyperData` as it's junk, and will throw issues anyway due to its random IDs for link blocks
+            Object.keys(sortedPostData).forEach((k) => {
+                return k.startsWith('hyperData') && delete sortedPostData[k];
+            });
+
             let content = Craft.expandPostArray(sortedPostData);
 
             // Fix Craft's lack of handling for expanding a POST array where arrays contain null items.
