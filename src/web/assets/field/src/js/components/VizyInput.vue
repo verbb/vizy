@@ -248,7 +248,7 @@ export default {
                 window.addEventListener('resize', this.updateFixedToolbar);
 
                 // Handle the element editor slideout
-                const $slideout = document.querySelector('.slideout[data-element-editor].so-visible .so-body');
+                const $slideout = document.querySelector('.slideout[data-element-editor].showing-sidebar .so-content');
 
                 if ($slideout) {
                     $slideout.addEventListener('scroll', this.updateFixedToolbarEditor);
