@@ -46,10 +46,6 @@ export default [
     },
     {
         core: true,
-        extension: Bold,
-    },
-    {
-        core: true,
         extension: Code,
     },
     {
