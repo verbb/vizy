@@ -409,6 +409,12 @@ export default {
             // parent element is set to draggable. Note the direct DOM update instead of a prop.
             this.$el.setAttribute('draggable', false);
 
+            // Some components inside a Vizy Block hijack click behaviour, so the `mousedown` event on the input isn't triggered, so ensure it does.
+            // Note the use of the third `true` argument, which runs in the capture phase, preventing inner elements from stopping the event.
+            this.$el.addEventListener('click', () => {
+                this.vizyField.listenForChanges = true;
+            }, true);
+
             // Remove the ghost when moving a block. Most of the time, it's in the way
             this.$el.addEventListener('dragstart', (event) => {
                 if (event.srcElement instanceof Element || event.srcElement instanceof HTMLDocument) {
@@ -564,9 +570,6 @@ export default {
         },
 
         clickBlock(e) {
-            // Some components inside a Vizy Block hijack click behaviour, so the `mousedown` event on the input isn't triggered, so ensure it does.
-            this.vizyField.listenForChanges = true;
-
             // Manually trigger the gapcursor when clicking on the padding around a block. We need to use padding to get the
             // dropcursor to not flicker back and forth between blocks, but that doesn't work with gapcursor. So, we're going manual!
 
