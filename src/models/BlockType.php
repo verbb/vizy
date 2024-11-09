@@ -2,6 +2,7 @@
 namespace verbb\vizy\models;
 
 use verbb\vizy\Vizy;
+use verbb\vizy\elements\Block;
 
 use Craft;
 use craft\base\Model;
@@ -41,6 +42,11 @@ class BlockType extends Model
     public static function refHandle(): ?string
     {
         return null;
+    }
+
+    public static function fieldLayouts(?string $source): array
+    {
+        return Craft::$app->getFields()->getLayoutsByType(Block::class);
     }
 
 
