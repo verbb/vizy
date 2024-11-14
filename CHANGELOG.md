@@ -1,5 +1,15 @@
 # Changelog
 
+## 3.0.5 - 2024-11-14
+
+### Fixed
+- Fix `listenForChanges` check to include certain elements (element fields) which would prevent click event detection.
+- Fix an error when editing a Vizy field within another field’s layout, in the slide-out pane.
+- Fix duplicate Bold extension registration for editor.
+- Fix fixed toolbar not working in element editor slideout.
+- Fix compatibility with Hyper 2.1.x.
+- Fix a Craft 5.5+ incompatibility.
+
 ## 3.0.4 - 2024-10-09
 
 ### Added
