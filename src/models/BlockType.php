@@ -49,6 +49,11 @@ class BlockType extends Model
         return Craft::$app->getFields()->getLayoutsByType(Block::class);
     }
 
+    public static function defaultCardAttributes(): array
+    {
+        return [];
+    }
+
 
     // Properties
     // =========================================================================
