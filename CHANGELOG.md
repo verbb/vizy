@@ -63,6 +63,11 @@
 - Fix content changes being detected for nested fields when there are none. In addition, Vizy fields only listen for changes to their content when interacted with.
 - Fix field layout designer in settings not serializing changes correctly.
 
+## 2.1.24 - 2024-11-14
+
+### Fixed
+- Fix `listenForChanges` check to include certain elements (element fields) which would prevent click event detection.
+
 ## 2.1.23 - 2024-10-09
 
 ### Added
