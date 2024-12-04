@@ -10,8 +10,11 @@
         :element-revision-id="{{ element.revisionId ?: 'null' }}"
     >
         {# Render here so that ElementEditor.js doesn't detect a change from server-render to when Vue kicks in #}
-        <div v-if="$isDebug" class="input text" style="margin-bottom: 20px;">{{ value }}</div>
-        <div v-if="$isDebug" data-store-debug class="input text" style="margin-bottom: 20px;">{{ value }}</div>
+        {% if isDebug %}
+            <div class="input text" style="margin-bottom: 20px;">{{ value }}</div>
+            <div data-store-debug class="input text" style="margin-bottom: 20px;">{{ value }}</div>
+        {% endif %}
+
         <input data-store type="hidden" name="{{ name }}" value="{{ value }}">
     </vizy-input>
 </div>

@@ -698,6 +698,7 @@ class VizyField extends Field
             'name' => $this->handle,
             'field' => $this,
             'element' => $element,
+            'isDebug' => Plugin::isDebug(),
 
             // Prevent nested JSON content from being escaped, and don't encode special characters
             'value' => Json::encode($rawNodes, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE),
