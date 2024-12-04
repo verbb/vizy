@@ -1,5 +1,7 @@
 <template>
-    <div @mousedown="listenForChanges = true">
+    <div>
+        <slot></slot>
+
         <div v-if="editor" class="vui-rich-text" :class="{ 'has-focus': isFocused() }" :style="{ '--rows': settings.initialRows }">
             <vizy-user-template v-if="getUserTemplates('beforeMenuBar')" :template="getUserTemplates('beforeMenuBar')" :vizy-field="this" />
             <menu-bar v-if="buttons.length && richTextEnabled" ref="toolbar" :buttons="buttons" :editor="editor" :field="this" />
@@ -9,9 +11,6 @@
             <block-picker v-if="blocksEnabled" :editor="editor" :field="this" :block-groups="settings.blockGroups" />
             <vizy-user-template v-if="getUserTemplates('afterEditor')" :template="getUserTemplates('afterEditor')" :vizy-field="this" />
         </div>
-
-        <div v-if="$isDebug" class="input text" style="margin-top: 20px;">{{ jsonContent }}</div>
-        <input type="hidden" :name="name" :value="jsonContent">
     </div>
 </template>
 
@@ -82,20 +81,44 @@ export default {
     },
 
     props: {
-        name: {
+        handle: {
             type: String,
             required: true,
             default: '',
         },
 
-        settings: {
-            type: Object,
-            default: () => {},
+        elementId: {
+            type: [Number, String],
+            default: '',
+        },
+
+        elementType: {
+            type: String,
+            default: '',
+        },
+
+        elementSiteId: {
+            type: [Number, String],
+            default: 0,
+        },
+
+        elementDraftId: {
+            type: [Number, String],
+            default: '',
+        },
+
+        elementRevisionId: {
+            type: [Number, String],
+            default: '',
+        },
+
+        inputSettings: {
+            type: String,
+            default: '',
         },
 
         value: {
-            type: [String, Array],
-            required: true,
+            type: String,
             default: '',
         },
     },
@@ -104,6 +127,8 @@ export default {
         return {
             isLivePreview: false,
             mounted: false,
+            rendered: false,
+            listenForChanges: false,
             buttons: ['bold', 'italic'],
             showCodeEditor: false,
             codeEditorHtml: '',
@@ -116,13 +141,12 @@ export default {
             renderedJsCache: {},
             selectedBlockType: null,
             currentNodeHoverPosition: null,
-            listenForChanges: false,
         };
     },
 
     computed: {
-        jsonContent() {
-            return this.contentToValue(this.json);
+        settings() {
+            return JSON.parse(this.inputSettings);
         },
 
         toolbarFixed() {
@@ -165,6 +189,25 @@ export default {
     watch: {
         codeEditorHtml(newValue) {
             this.editor.chain().setContent(newValue, true).run();
+        },
+
+        json: {
+            deep: true,
+            handler(newValue) {
+                // Don't update the DOM until we want to
+                if (this.rendered && this.$el) {
+                    const $dataStore = this.$el.querySelector('[data-store]');
+                    const $dataStoreDebug = this.$el.querySelector('[data-store-debug]');
+
+                    if ($dataStore) {
+                        $dataStore.value = this.serializeValue(newValue);
+                    }
+
+                    if ($dataStoreDebug) {
+                        $dataStoreDebug.innerHTML = this.serializeValue(newValue);
+                    }
+                }
+            },
         },
     },
 
@@ -264,6 +307,15 @@ export default {
 
             // Setup listener for when toggling the code editor
             this.editor.on('vui:code-editor-toggle', this.setCodeEditor);
+
+            // Let the component know we're finished rendering, and to start updating changes
+            this.rendered = true;
+
+            // Once the field has settled, we can start listening for changes. This helps any PHP/JS JSON inconsistencies
+            // that would otherwise trigger a change in the field.
+            setTimeout(() => {
+                this.listenForChanges = true;
+            }, 1000);
         });
 
         // Keep track of any parent fields (at least their toolbars) so we can align them
@@ -272,10 +324,6 @@ export default {
                 this.parentToolbarOffset += parentInput.$refs.toolbar.$el.offsetHeight;
             }
         });
-
-        // For nested Vizy fields, the field will be serialized again on-load, but will produce content
-        // change warnings. So wait until ready, then re-serialize it.
-        this.refreshUnloadData();
     },
 
     created() {
@@ -406,15 +454,15 @@ export default {
             return false;
         },
 
-        contentToValue(content) {
+        serializeValue(value) {
             // Prevent a single empty paragraph from being generated when the field is empty
-            if (content && Array.isArray(content) && content.length === 1) {
-                if (content[0].type === 'paragraph' && !content[0].content) {
+            if (value && Array.isArray(value) && value.length === 1) {
+                if (value[0].type === 'paragraph' && !value[0].content) {
                     return null;
                 }
             }
 
-            return JSON.stringify(content);
+            return JSON.stringify(value);
         },
 
         getParsedBlockHtml(html, id) {
@@ -548,36 +596,6 @@ export default {
             }
 
             return parents;
-        },
-
-        refreshUnloadData() {
-            // Give it a second for everything to be ready
-            setTimeout(() => {
-                // Check if this is a new block, if so, skip, because that would reset current un-saved content
-                if (get(this.editor, 'storage.vizyBlock.isNew')) {
-                    return;
-                }
-
-                // Re-serialize the form data, to prevent unload warnings for nested Vizy fields
-                const $mainForm = $('form#main-form');
-
-                // We only ever want to do this once, after Vue has loaded, as they'll be determined to be changed data, when it's not (on-load)
-                if ($mainForm.length && !$mainForm.data('vue-serialized-element-content')) {
-                    const elementEditor = $mainForm.data('elementEditor');
-
-                    if (elementEditor) {
-                        // Serialize the form again, now Vue is ready
-                        const formData = elementEditor.serializeForm(true);
-
-                        // Update the local cache, and the DOM cache
-                        elementEditor.lastSerializedValue = formData;
-                        $mainForm.data('initialSerializedValue', formData);
-
-                        // Mark the form as "vue-loaded" so that we don't re-serialize content when new components are created
-                        $mainForm.data('vue-serialized-element-content', true);
-                    }
-                }
-            }, 500);
         },
 
         isFocused() {

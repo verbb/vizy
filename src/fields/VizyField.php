@@ -246,19 +246,6 @@ class VizyField extends Field
             return $value;
         }
 
-        // To avoid collisions with other POST items, we store all serialized Vizy content in `vizyData` 
-        // which is all we care about. Due to how Craft works, we'll get lots of other field content coming
-        // through which we can discard. For example:
-        //
-        // fields[richContent][blocks][vizy-block-X2y6Pysezv][fields][image][]: 6
-        // fields[richContent][blocks][vizy-block-X2y6Pysezv][fields][text]: Some Text
-        // fields[richContent]: [{"type":"vizyBlock","attrs": ...}]
-        //
-        // We're after just the last item, but its order cannot be guaranteed. It's safer to store that as `fields[richContent][vizyData]`.
-        if (is_array($value) && isset($value['vizyData'])) {
-            $value = $value['vizyData'];
-        }
-
         if (is_string($value) && !empty($value)) {
             $value = Json::decodeIfJson($value);
         }
@@ -267,14 +254,18 @@ class VizyField extends Field
             $value = [];
         }
 
-        // Convert serialized data to a collection of nodes.
         return new NodeCollection($this, $value, $element);
     }
 
     public function serializeValue(mixed $value, ElementInterface $element = null): mixed
     {
         if ($value instanceof NodeCollection) {
-            return $value->serializeValues($element);
+            $value = $value->serializeValues($element);
+
+            // Save the content as encoded JSON. We're getting some strange re-ordering of properties
+            // when saving actual JSON to the database, and this re-ordering messes up "changed" content.
+            // This is likely to do with the MySQL JSON column type in Craft 5.
+            return Json::encode($value);
         }
 
         return $value;
@@ -706,8 +697,11 @@ class VizyField extends Field
             'id' => $id,
             'name' => $this->handle,
             'field' => $this,
-            'value' => Json::encode($rawNodes, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_QUOT),
-            'settings' => Json::encode($settings, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_QUOT),
+            'element' => $element,
+
+            // Prevent nested JSON content from being escaped, and don't encode special characters
+            'value' => Json::encode($rawNodes, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE),
+            'settings' => Json::encode($settings, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE),
         ]);
     }
 
@@ -901,14 +895,8 @@ class VizyField extends Field
                         }
                     }
                     
-                    // Because Vizy Vue components serialize the input into JSON (including nested fields), we
-                    // actually don't want the rendered block fields to use the same `fields` namespace as other
-                    // fields do. It's not required for the field, and only used to serialize into JSON.
-                    // We don't have control over the output of fields to remove `name` attributes, so changing
-                    // the namespace is the way to go. This also prevents Craft's JS detecting field changes.
-                    $newNamespace = ($originalNamespace === 'fields') ? 'vizyBlockFields' : $originalNamespace;
-                    $namespace = $view->namespaceInputName($this->handle . "[blocks][__VIZY_BLOCK_{$placeholderKey}__]", $newNamespace);
-                    $view->setNamespace($namespace);
+                    // Disregard the namespace of parent fields, or even using `fields`. This keeps our field data separate to Craft
+                    $view->setNamespace("vizyData[__VIZY_BLOCK_{$placeholderKey}__]");
 
                     $form = $fieldLayout->createForm($blockElement);
                     $blockTypeArray['tabs'] = $form->getTabMenu();
@@ -1003,14 +991,8 @@ class VizyField extends Field
                         }
                     }
 
-                    // Because Vizy Vue components serialize the input into JSON (including nested fields), we
-                    // actually don't want the rendered block fields to use the same `fields` namespace as other
-                    // fields do. It's not required for the field, and only used to serialize into JSON.
-                    // We don't have control over the output of fields to remove `name` attributes, so changing
-                    // the namespace is the way to go. This also prevents Craft's JS detecting field changes.
-                    $newNamespace = ($originalNamespace === 'fields') ? 'vizyBlockFields' : $originalNamespace;
-                    $namespace = $view->namespaceInputName($this->handle . "[blocks][__VIZY_BLOCK_{$placeholderKey}__]", $newNamespace);
-                    $view->setNamespace($namespace);
+                    // Disregard the namespace of parent fields, or even using `fields`. This keeps our field data separate to Craft
+                    $view->setNamespace("vizyData[__VIZY_BLOCK_{$placeholderKey}__]");
 
                     $fieldsHtml = $view->namespaceInputs($fieldLayout->createForm($blockElement)->render());
                     $fieldsHtml = $this->_parseFieldHtml($fieldsHtml);
@@ -1343,8 +1325,14 @@ class VizyField extends Field
     private function _parseFieldHtml(string $html): string
     {
         // Parse some known Vue-based fields in Vizy blocks which need to be marked as pre-rendered, otherwise
-        // Vizy will thing they exist in _this_ Vue app and try to compile them.
-        $html = str_replace(['<hyper-input', '<icon-picker-input'], ['<hyper-input v-pre', '<icon-picker-input v-pre'], $html);
+        // Vizy will thing they exist in _this_ Vue app and try to compile them. Also mark nested Vizy fields are pre-rendered
+        // so as not to double-bind.
+        // TODO: make this more accessible.
+        $tags = ['hyper-input', 'icon-picker-input', 'video-picker-input', 'vizy-input'];
+
+        foreach ($tags as $tag) {
+            $html = str_replace("<{$tag}", "<{$tag} v-pre", $html);
+        }
 
         return $html;
     }

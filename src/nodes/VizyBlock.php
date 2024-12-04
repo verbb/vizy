@@ -3,6 +3,7 @@ namespace verbb\vizy\nodes;
 
 use verbb\vizy\base\Node;
 use verbb\vizy\elements\Block as BlockElement;
+use verbb\vizy\fields\VizyField;
 use verbb\vizy\helpers\Matrix;
 
 use Craft;
@@ -212,20 +213,6 @@ class VizyBlock extends Node
     {
         $value = parent::serializeValue($element);
 
-        // For any nested Vizy fields, we want to deserialize the JSON from the front-end and expand
-        // it to a normal array. This helps with particularly character encoding and htmlentities.
-        $fields = $value['attrs']['values']['content']['fields'] ?? [];
-
-        foreach ($fields as $fieldKey => $field) {
-            if (is_string($field)) {
-                if (str_starts_with($field, '[{')) {
-                    $field = Json::decodeIfJson($field);
-                }
-
-                $value['attrs']['values']['content']['fields'][$fieldKey] = $field;
-            }
-        }
-
         // Create a fake element with the same fieldtype as our block
         $block = $this->getBlockElement($element);
 
@@ -245,6 +232,12 @@ class VizyBlock extends Node
 
                 // Ensure each field's content is serialized properly. Use the `layoutElementUid`
                 $serializedFieldValues = $field->serializeValue($fieldValue, $block);
+
+                // Ensure any array values are serialized as JSON, to match their value in Vue serialization
+                if (is_array($serializedFieldValues)) {
+                    $serializedFieldValues = Json::encode($serializedFieldValues);
+                }
+
                 $value['attrs']['values']['content']['fields'][$field->layoutElement->uid] = $serializedFieldValues;
 
                 // Remove deprecated content that uses the handle. Can be removed at the next breakpoint
@@ -299,7 +292,18 @@ class VizyBlock extends Node
                 if (str_contains($handle, '-')) {
                     foreach ($fieldLayout->getCustomFields() as $field) {
                         if ($field->layoutElement && $field->layoutElement->uid === $handle) {
+                            // Normallize empty content for JSON
+                            if ($fieldValue === null) {
+                                $fieldValue = '';
+                            }
+
                             $fieldContent[$field->handle] = $fieldValue;
+
+                            // Normalize nested Vizy field data
+                            if ($field instanceof VizyField) {
+                                $fieldContent[$field->handle] = Json::encode($field->normalizeValue($fieldValue, $element)->getRawNodes());
+                            }
+
                         }
                     }
                 } else {

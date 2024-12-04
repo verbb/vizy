@@ -368,12 +368,6 @@ export default {
 
         this.$events.on('vizy-blocks:collapseAll', this.collapseBlock);
         this.$events.on('vizy-blocks:expandAll', this.expandBlock);
-
-        // Trigger a field update immediately on creation, in case the generated fields update their serialized data
-        // which is common due to `vizyData` being added on nested fields. Also wait for a little for the DOM to be ready.
-        setTimeout(() => {
-            this.onFieldUpdate();
-        }, 50);
     },
 
     mounted() {
@@ -408,12 +402,6 @@ export default {
             // This is a dirty hack to fix Firefox's inability to select inputs/textareas when the
             // parent element is set to draggable. Note the direct DOM update instead of a prop.
             this.$el.setAttribute('draggable', false);
-
-            // Some components inside a Vizy Block hijack click behaviour, so the `mousedown` event on the input isn't triggered, so ensure it does.
-            // Note the use of the third `true` argument, which runs in the capture phase, preventing inner elements from stopping the event.
-            this.$el.addEventListener('click', () => {
-                this.vizyField.listenForChanges = true;
-            }, true);
 
             // Remove the ghost when moving a block. Most of the time, it's in the way
             this.$el.addEventListener('dragstart', (event) => {
@@ -692,164 +680,6 @@ export default {
         },
 
         onFieldUpdate() {
-            this.serializeFieldContent();
-        },
-
-        findContentBlocksForBlock(content) {
-            let foundContent = {};
-
-            if (!isEmpty(content)) {
-                // Special-handling when this field is in the element slideout or live preview
-                const slideout = this.$el.closest('.slideout[data-element-editor] .so-body');
-                const livePreview = document.querySelector('.lp-editor-container .lp-content');
-
-                if (slideout || livePreview) {
-                    // eslint-disable-next-line
-                    content = Object.values(content)[0];
-
-                    // Extra handling for nested Vizy fields
-                    if (isEmpty(content.fields)) {
-                        content = { fields: content };
-                    }
-                }
-
-                // We change the root `fields` to `vizyBlockFields` but not for nested items.
-                let contentRoot = content.vizyBlockFields;
-
-                if (isEmpty(contentRoot)) {
-                    contentRoot = content.fields;
-                }
-
-                if (!isEmpty(contentRoot)) {
-                    Object.entries(contentRoot).forEach(([fieldHandle, fieldBlocks]) => {
-                        // In some instances (when using a recusive field) we've actually already got the block content here
-                        if (fieldBlocks.blocks === undefined && fieldBlocks.entries === undefined) {
-                            foundContent = { fields: contentRoot };
-                        }
-
-                        // For the below handle `entries` for Matrix fields, which used to be `blocks`, but they operate under the same principle.
-                        // `blocks` will still be used by nested Vizy fields.
-                        const blocks = fieldBlocks.blocks ?? fieldBlocks.entries ?? [];
-
-                        if (!isEmpty(blocks)) {
-                            Object.entries(blocks).forEach(([blockId, blockFields]) => {
-                                if (blockId === this.node.attrs.id) {
-                                    foundContent = blockFields;
-                                } else if (isEmpty(foundContent)) {
-                                    // Because we recurively iterate down many children to find the _first_
-                                    // instance where our block data exists, we want to check if it's already set.
-                                    // It's more critical for nested Vizy fields which have the serialized content
-                                    // and the POST content from fields (which we don't want). Otherwise, we just
-                                    // end up overwriting the data we want!
-                                    foundContent = this.findContentBlocksForBlock(blockFields);
-                                }
-                            });
-                        }
-                    });
-                }
-            }
-
-            return foundContent;
-        },
-
-        fixSuperTableMatrixContent(obj) {
-            const patternRegex = /^__BLOCK_[a-zA-Z0-9]+__$/;
-
-            if (isArray(obj)) {
-                obj.forEach((item) => {
-                    this.fixSuperTableMatrixContent(item);
-                });
-            } else if (isObject(obj)) {
-                const keys = Object.keys(obj);
-
-                keys.forEach((key) => {
-                    if (isObject(obj[key])) {
-                        this.fixSuperTableMatrixContent(obj[key]);
-                    }
-                });
-
-                // Check for a `blocks` key
-                if (keys.includes('blocks')) {
-                    const blockKeys = Object.keys(obj.blocks);
-
-                    // Check if this contains an object with keys `__BLOCK_*`
-                    if (blockKeys.some((key) => { return patternRegex.test(key); })) {
-                        // Ensure there's a `new*` key on the same object. We want to merge into that.
-                        const newKey = blockKeys.find((key) => { return /^new\d+$/.test(key); });
-
-                        if (newKey && blockKeys.length === 2) {
-                            const newBlockData = merge(obj.blocks[blockKeys[0]], obj.blocks[blockKeys[1]]);
-
-                            // Reset the content, we want to merge into `new*`
-                            obj.blocks = {};
-                            obj.blocks[newKey] = newBlockData;
-                        }
-                    }
-                }
-            }
-
-            return obj;
-        },
-
-        fixArrayIndexes(obj) {
-            if (Array.isArray(obj)) {
-                // Check if the array has any missing indexes
-                const indexes = Object.keys(obj).map(Number).sort();
-                const expectedIndexes = Array.from({ length: obj.length }, (_, i) => { return i; });
-                const hasMissingIndexes = !expectedIndexes.every((i) => { return indexes.includes(i); });
-
-                // If the array has missing indexes, re-index it
-                if (hasMissingIndexes) {
-                    obj = obj.filter((item) => { return item !== undefined; });
-                }
-            } else if (typeof obj === 'object' && obj !== null) {
-                // Recursively check any nested objects or arrays
-                for (const key in obj) {
-                    obj[key] = this.fixArrayIndexes(obj[key]);
-                }
-            }
-
-            return obj;
-        },
-
-        normalizeIntegersInArrays(obj) {
-            // Helper function to check if a value is an integer string
-            function isIntegerString(value) {
-                return typeof value === 'string' && /^\d+$/.test(value);
-            }
-
-            // Recursive function to traverse and normalize the object
-            function traverseAndNormalize(current) {
-                if (Array.isArray(current)) {
-                    // Check if all elements in the array are integer strings
-                    if (current.every(isIntegerString)) {
-                        // Convert all elements to integers
-                        return current.map(Number);
-                    }
-
-                    return current;
-                }
-
-                if (typeof current === 'object' && current !== null) {
-                    for (const key in current) {
-                        if (Object.prototype.hasOwnProperty.call(current, key)) {
-                            current[key] = traverseAndNormalize(current[key]);
-                        }
-                    }
-                }
-
-                return current;
-            }
-
-            return traverseAndNormalize(obj);
-        },
-
-        serializeFieldContent() {
-            // Check if there's any fatal errors for this block
-            if (isEmpty(this.blockType)) {
-                return;
-            }
-
             // We don't want to update serialized content on-load, because this can trigger a false-positive that something has changed
             // when there are nested fields. Instead, wait until we're okay to make changes (the field has been interacted with)
             if (!this.vizyField.listenForChanges) {
@@ -857,38 +687,11 @@ export default {
             }
 
             const postData = Garnish.getPostData(this.$refs.fields.$el);
+            const content = Craft.expandPostArray(postData);
 
-            // In some specific circumstances, the order of inputs may be incorrect, and will affect how some fields
-            // are serialized. So we order the post data object by their keys. For example:
-            // vizyBlockFields[vizy][blocks][vizy-block-HxFsB55qVX][fields][assets][0] = '114'
-            // vizyBlockFields[vizy][blocks][vizy-block-HxFsB55qVX][fields][assets] = ''
-            // will produce invalid content, overwriting the former. See https://github.com/verbb/hyper/issues/104
-            const sortedPostData = Object.keys(postData).sort().reduce((acc, key) => {
-                return (acc[key] = postData[key], acc);
-            }, {});
-
-            // Remove `hyperData` as it's junk, and will throw issues anyway due to its random IDs for link blocks
-            Object.keys(sortedPostData).forEach((k) => {
-                return k.startsWith('hyperData') && delete sortedPostData[k];
-            });
-
-            let content = Craft.expandPostArray(sortedPostData);
-
-            // Fix Craft's lack of handling for expanding a POST array where arrays contain null items.
-            // This causes issues with Table fields when deleting rows.
-            content = this.fixArrayIndexes(content);
-
-            // Craft's `expandPostArray` also casts integer arrays (for element fields) as strings. This causes incorrect changes in data to be flagged as
-            // PHP will send JSON for field content as `"assets": [123, 146]` as integers, but this will report `"assets": ["123", "146"]`.
-            content = this.normalizeIntegersInArrays(content);
-
-            let fieldContent = this.findContentBlocksForBlock(content);
-
-            // For ST/Matrix/Vizy deeply-nested combinations, there's a caveat to how new block namespaces
-            // work that we need to handle. If we have Vizy > ST > Vizy > Vizy, the inner fields will have an issue
-            // where values will be using the `__BLOCK_*` placeholder, which is incorrect. We can't feasibly
-            // parse this with JS like ST does using jQuery, so we combine any of those values into their correct `new*` key.
-            fieldContent = this.fixSuperTableMatrixContent(fieldContent);
+            // This will be in the format `vizyData[267267872][fields]...`, and for nested setups, it'll all be one level
+            // so ensure that we grab the correct data for this block.
+            const fieldContent = content.vizyData[this.node.attrs.id] || [];
 
             // Generate a POST data object, and save it
             const values = { ...this.values };

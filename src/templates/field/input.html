@@ -1,3 +1,17 @@
-<div class="vizy-input-component">
-    <vizy-input :value="{{ value }}" :settings="{{ settings }}" name="{{ name }}[vizyData]"></vizy-input>
+<div class="vizy-input-component" v-cloak>
+    <vizy-input
+        value="{{ value }}"
+        input-settings="{{ settings }}"
+        handle="{{ field.handle }}"
+        :element-id="{{ element.id ?: 'null' }}"
+        element-type="{{ className(element) }}"
+        :element-site-id="{{ element.siteId ?: 'null' }}"
+        :element-draft-id="{{ element.draftId ?: 'null' }}"
+        :element-revision-id="{{ element.revisionId ?: 'null' }}"
+    >
+        {# Render here so that ElementEditor.js doesn't detect a change from server-render to when Vue kicks in #}
+        <div v-if="$isDebug" class="input text" style="margin-bottom: 20px;">{{ value }}</div>
+        <div v-if="$isDebug" data-store-debug class="input text" style="margin-bottom: 20px;">{{ value }}</div>
+        <input data-store type="hidden" name="{{ name }}" value="{{ value }}">
+    </vizy-input>
 </div>

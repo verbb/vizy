@@ -25,34 +25,15 @@ export default {
                 // Ensure any Craft fields are prepped.
                 Craft.initUiElements(this.$el);
 
-                // For any nested Vizy fields, mark them as Vue-rendered. This prevents us double-binding.
-                this.$el.querySelectorAll('.vizy-input-component').forEach((item) => {
-                    item.parentElement.__vueInit = true;
-                });
-
                 this.$nextTick(() => {
                     // Watch all field content for changes to serialize them to our text inputs that are stored in JSON blocks.
                     this.watchFieldChanges();
-
-                    // Special fix for Redactor. For some reason, when clicking on formatting buttons, we lose
-                    // focus on ProseMirror. One day, we'll figure out what's really going on here
-                    this.applyRedactorFix();
-
-                    // Special fix for the removal of `tabindex` on fields causing an issue only after blocks have moved
-                    // https://github.com/verbb/vizy/issues/267
-                    this.applyTabIndexFix();
-
-                    this.applyNeoFix();
                 });
             }
         });
     },
 
     methods: {
-        vizyBlock() {
-            return this.$parent.$parent.$parent.$parent;
-        },
-
         watchFieldChanges() {
             const updateFunction = debounce(this.emitUpdate, 50);
 
@@ -75,56 +56,6 @@ export default {
             // MutationObserver doesn't listen to value changes, so add handling for input events
             $(this.$el).on('input change', 'input, textarea, select', (e) => {
                 this.emitUpdate();
-            });
-        },
-
-        applyRedactorFix() {
-            const $redactorToolbars = this.$el.querySelectorAll('.redactor-toolbar');
-
-            if ($redactorToolbars.length) {
-                $redactorToolbars.forEach(($redactorToolbar) => {
-                    // This prevents focus being taken off the Redactor editor
-                    $redactorToolbar.addEventListener('mousedown', (e) => {
-                        e.preventDefault();
-                    });
-                });
-            }
-        },
-
-        applyNeoFix() {
-            if (!this.$el.querySelector('[data-type="benf\\\\neo\\\\Field"]')) {
-                return;
-            }
-
-            // When Neo fields are initialized, they trigger `initialSerializedValue` on the main form. This is fine normally, but when moving blocks
-            // and the field is re-rendered and its JS re-initialized, the form is re-serialized with content now. This resets any Vizy changes
-            // which have just happened due to a move. It's a bit icky, but remove the Vizy field (top-level) serialized data, so that it's actually saved
-            // See https://github.com/verbb/vizy/issues/272
-            const $mainForm = $('form#main-form');
-            const actionName = encodeURIComponent(this.vizyBlock().vizyField.name);
-
-            let data = $mainForm.data('initialSerializedValue');
-            data = data.replace(new RegExp(`${Craft.escapeRegex(actionName)}[^&]*&?`), '');
-            $mainForm.data('initialSerializedValue', data);
-
-            // There's also a duplicated buttons rows on re-initialization
-            this.$el.querySelectorAll('[data-type="benf\\\\neo\\\\Field"]').forEach(($neoField) => {
-                const $buttons = $neoField.querySelectorAll('.ni_buttons');
-
-                if ($buttons.length > 1) {
-                    // Keep only the last occurrence
-                    $buttons.forEach(($button, index) => {
-                        if (index != ($buttons.length - 1)) {
-                            $button.remove();
-                        }
-                    });
-                }
-            });
-        },
-
-        applyTabIndexFix() {
-            this.$el.querySelectorAll('.field').forEach(($field) => {
-                $field.setAttribute('tabindex', -1);
             });
         },
 
@@ -154,7 +85,6 @@ export default {
 
             return h(compile(`<div class="vizyblock-invalid"><p class="error">${message}</p></div>`));
         }
-
     },
 };
 
