@@ -63,6 +63,19 @@ Event::on(Bold::class, Bold::EVENT_MODIFY_TAG, function(ModifyMarkTagEvent $even
 });
 ```
 
+## The `modifyRenderedNode` event
+The event that is triggered for when a node's HTML has been generated and is rendered.
+
+```php
+use verbb\vizy\events\ModifyRenderedNodeEvent;
+use verbb\vizy\nodes\Image;
+use yii\base\Event;
+
+Event::on(Image::class, Image::EVENT_MODIFY_RENDERED_NODE, function(ModifyRenderedNodeEvent $event) {
+    $event->renderedNode = '<div class="wrapper">' . $event->renderedNode . '</div>';
+});
+```
+
 ## The `registerLinkOptions` event
 The event that is triggered when registering the link options for the field.
 
