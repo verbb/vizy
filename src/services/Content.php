@@ -122,7 +122,7 @@ class Content extends Component
                             if ($modifiedContent) {
                                 $elementContent[$fieldLayoutUid] = Json::encode($fieldContent);
 
-                                Db::update('{{%elements_sites}}', ['content' => Db::prepareForJsonColumn($elementContent)], ['id' => $row['id']]);
+                                Db::update('{{%elements_sites}}', ['content' => Json::encode($elementContent)], ['id' => $row['id']]);
                             }
                         }
                     }
