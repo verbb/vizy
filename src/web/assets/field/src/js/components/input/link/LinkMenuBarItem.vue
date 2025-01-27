@@ -229,6 +229,7 @@ export default {
                 criteria: selectedElement.criteria,
                 defaultSiteId: this.elementSiteId,
                 autoFocusSearchBox: false,
+                showSiteMenu: Craft.sites.length > 1 ? true : false,
                 onSelect: $.proxy((elements) => {
                     if (elements.length) {
                         const [element] = elements;
