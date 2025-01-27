@@ -3,6 +3,7 @@ namespace verbb\vizy\controllers;
 
 use verbb\vizy\Vizy;
 use verbb\vizy\helpers\Fields;
+use verbb\vizy\models\BlockType;
 
 use Craft;
 use craft\base\Element;
@@ -29,7 +30,9 @@ class FieldController extends Controller
         $fieldIds = $this->request->getParam('fieldIds');
         $layoutConfig = $this->request->getParam('layout', []);
 
-        $fieldLayout = new FieldLayout();
+        $fieldLayout = new FieldLayout([
+            'type' => BlockType::class,
+        ]);
 
         if ($fieldLayoutUid) {
             $fieldLayout = Craft::$app->getFields()->getLayoutByUid($fieldLayoutUid);
@@ -41,7 +44,9 @@ class FieldController extends Controller
         }
 
         if (!$fieldLayout) {
-            $fieldLayout = new FieldLayout();
+            $fieldLayout = new FieldLayout([
+                'type' => BlockType::class,
+            ]);
         }
 
         // Render the HTML for the FLD to send back to Vue
