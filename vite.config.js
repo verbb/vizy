@@ -24,6 +24,9 @@ export default ({ command }) => ({
             input: {
                 vizy: '/field/src/js/vizy.js',
             },
+            output: {
+                sourcemapExcludeSources: true,
+            },
         },
     },
 
