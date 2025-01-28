@@ -49,11 +49,33 @@ class FieldController extends Controller
             ]);
         }
 
+        // Filter out Matrix, Super Table and Neo for now, we've got to figure something out...
+        // https://github.com/verbb/vizy/issues/314
+        $availableCustomFields = [];
+
+        $excludedFieldTypes = [
+            'craft\\fields\\Matrix',
+            'verbb\\supertable\\fields\\SuperTableField',
+            'benf\\neo\\Field',
+        ];
+
+        foreach ($fieldLayout->getAvailableCustomFields() as $key => $fieldLayoutElements) {
+            foreach ($fieldLayoutElements as $fieldLayoutElement) {
+                // Use a string check so we don't have to check for plugin installs
+                if (in_array(get_class($fieldLayoutElement->getField()), $excludedFieldTypes)) {
+                    continue;
+                }
+
+                $availableCustomFields[$key][] = $fieldLayoutElement;
+            }
+        }
+
         // Render the HTML for the FLD to send back to Vue
         $html = Fields::fieldLayoutDesignerHtml($fieldLayout, [
             // Ensure to namespace the FLD so it's unique. Important when used in Matrix blocks
             // as under normal Vizy field circumstances, you edit one FLD at a time.
             'id' => str_replace('type-', '', $blockTypeId) . 'fld' . mt_rand(),
+            'availableCustomFields' => $availableCustomFields,
         ]);
 
         $headHtml = $view->getHeadHtml();
