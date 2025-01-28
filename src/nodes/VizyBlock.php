@@ -304,6 +304,12 @@ class VizyBlock extends Node
                                 $fieldContent[$field->handle] = Json::encode($field->normalizeValue($fieldValue, $element)->getRawNodes());
                             }
 
+                            // Matrix fields can't normalize string content, so ensure it's decoded
+                            if ($field instanceof MatrixField) {
+                                if (is_string($fieldValue)) {
+                                    $fieldContent[$field->handle] = Json::decode($fieldValue);
+                                }
+                            }
                         }
                     }
                 } else {
