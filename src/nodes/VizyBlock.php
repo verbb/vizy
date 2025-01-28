@@ -310,6 +310,13 @@ class VizyBlock extends Node
                                     $fieldContent[$field->handle] = Json::decode($fieldValue);
                                 }
                             }
+
+                            // Relation fields can't normalize string content, so ensure it's decoded
+                            if ($field instanceof BaseRelationField) {
+                                if (is_string($fieldValue)) {
+                                    $fieldContent[$field->handle] = Json::decode($fieldValue);
+                                }
+                            }
                         }
                     }
                 } else {
