@@ -691,19 +691,21 @@ export default {
 
             // This will be in the format `vizyData[267267872][fields]...`, and for nested setups, it'll all be one level
             // so ensure that we grab the correct data for this block.
-            const fieldContent = content.vizyData[this.node.attrs.id] || [];
+            const fieldContent = content?.vizyData?.[this.node.attrs.id] || null;
 
-            // Generate a POST data object, and save it
-            const values = { ...this.values };
+            if (fieldContent) {
+                // Generate a POST data object, and save it
+                const values = { ...this.values };
 
-            values.content = fieldContent;
+                values.content = fieldContent;
 
-            // We can't use `updateAttributes()` here, because that will only operate on the selected node. This function
-            // will often be called for all nodes in a collection, such as when re-ordering blocks which affect more
-            // than just the block being moved due to Tiptap/Vue rendering. As such, it's not best-practice, but we update
-            // the node attributes directly. See https://share.cleanshot.com/8dkt1vQY for this in action with `updateAttributes()`
-            // eslint-disable-next-line vue/no-mutating-props
-            this.node.attrs.values = values;
+                // We can't use `updateAttributes()` here, because that will only operate on the selected node. This function
+                // will often be called for all nodes in a collection, such as when re-ordering blocks which affect more
+                // than just the block being moved due to Tiptap/Vue rendering. As such, it's not best-practice, but we update
+                // the node attributes directly. See https://share.cleanshot.com/8dkt1vQY for this in action with `updateAttributes()`
+                // eslint-disable-next-line vue/no-mutating-props
+                this.node.attrs.values = values;
+            }
         },
     },
 };
