@@ -1,5 +1,25 @@
 # Changelog
 
+## 3.0.6 - 2025-02-02
+
+### Added
+- Add `Node::EVENT_MODIFY_RENDERED_NODE` event to modify the fully rendered HTML of a node.
+- Add back content migration for some fields to use (Hyper).
+
+### Changed
+- Disable Matrix, Neo and Super Table fields from being able to be included in Vizy blocks, until proper support has been added.
+- Improve source map bundle size.
+- Update icons to Font Awesome 6.
+- Update the element selector window for element-based links to only show the site menu for multi-site installs.
+- Refactor change-handling to better deal with Craft 5 ElementEditor updates and other fields.
+
+### Fixed
+- Fix an error with element select fields in Craft 5.6+ when used in a Vizy block.
+- Fix Vizy Block settings icon alignment.
+- Fix an error when handling Matrix blocks in Vizy blocks.
+- Fix an error when creating new Vizy Blocks for Vizy fields.
+- Fix `Db::prepareForJsonColumn` deprecation and handling.
+
 ## 3.0.5 - 2024-11-14
 
 ### Fixed
