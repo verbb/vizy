@@ -1,5 +1,10 @@
 # Changelog
 
+## 2.1.25 - 2025-02-02
+
+### Added
+- Add `Node::EVENT_MODIFY_RENDERED_NODE` event to modify the fully rendered HTML of a node.
+
 ## 2.1.24 - 2024-11-14
 
 ### Fixed
