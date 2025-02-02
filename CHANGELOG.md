@@ -73,6 +73,11 @@
 - Fix content changes being detected for nested fields when there are none. In addition, Vizy fields only listen for changes to their content when interacted with.
 - Fix field layout designer in settings not serializing changes correctly.
 
+## 2.1.25 - 2025-02-02
+
+### Added
+- Add `Node::EVENT_MODIFY_RENDERED_NODE` event to modify the fully rendered HTML of a node.
+
 ## 2.1.24 - 2024-11-14
 
 ### Fixed

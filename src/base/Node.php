@@ -3,6 +3,7 @@ namespace verbb\vizy\base;
 
 use verbb\vizy\Vizy;
 use verbb\vizy\events\ModifyNodeTagEvent;
+use verbb\vizy\events\ModifyRenderedNodeEvent;
 use verbb\vizy\helpers\Nodes;
 
 use Craft;
@@ -22,6 +23,7 @@ class Node extends Component implements NodeInterface
     // =========================================================================
 
     public const EVENT_MODIFY_TAG = 'modifyTag';
+    public const EVENT_MODIFY_RENDERED_NODE = 'modifyRenderedNode';
 
 
     // Static Methods
@@ -140,7 +142,15 @@ class Node extends Component implements NodeInterface
     {
         Craft::configure($this, $config);
 
-        return Vizy::$plugin->getNodes()->renderNode($this);
+        $renderedNode = Vizy::$plugin->getNodes()->renderNode($this);
+
+        $event = new ModifyRenderedNodeEvent([
+            'renderedNode' => $renderedNode,
+        ]);
+
+        $this->trigger(self::EVENT_MODIFY_RENDERED_NODE, $event);
+
+        return $event->renderedNode;
     }
 
     public function renderHtml(array $config = []): ?Markup

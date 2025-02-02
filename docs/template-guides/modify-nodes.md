@@ -147,3 +147,27 @@ Here, we're including two items for the tag. The first item being a `div` with a
     <p>That was the day I invented time travel. I remember it vividly.</p>
 </div>
 ``` 
+
+There are also times where modifying just the tag will be limiting. For example, an `Image` node is self-closing, so if you want to add a wrapper `<div>` or create multiple HTML elements associated with that node, it's going to produce invalid HTML.
+
+In that scenario, we recommend taking full control over the rendering of a node.
+
+```php
+use craft\helpers\Html;
+
+use verbb\vizy\events\ModifyRenderedNodeEvent;
+use verbb\vizy\nodes\Image;
+
+use yii\base\Image;
+
+Event::on(Image::class, Image::EVENT_MODIFY_RENDERED_NODE, function(ModifyRenderedNodeEvent $event) {
+    $image = $event->renderedNode;
+
+    $copyrightText = Html::tag('span', '© This is my copyright text');
+    $copyright = Html::tag('div', $copyrightText, ['class' => 'copyright']);
+    $wrapper = Html::tag('div', $image . $copyright, ['class' => 'vizy__image']);
+
+    $event->renderedNode = $wrapper;
+});
+```
+ 
