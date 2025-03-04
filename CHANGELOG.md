@@ -1,5 +1,10 @@
 # Changelog
 
+## 3.0.7 - 2025-03-05
+
+### Fixed
+- Fix handling of some complex fields, where their content wasn’t being JSON-decoded.
+
 ## 3.0.6 - 2025-02-02
 
 ### Added
