@@ -71,7 +71,7 @@ class Content extends Component
                     // We have to use field instances, not just the field
                     foreach ($this->findFieldUsages($vizyField) as $fieldLayoutUid) {
                         // Find content rows for each field instance
-                        $sql = Craft::$app->getDb()->getQueryBuilder()->jsonExtract('elements_sites.content', [$fieldLayoutUid]);
+                        $sql = Craft::$app->getDb()->getQueryBuilder()->jsonExtract('content', [$fieldLayoutUid]);
 
                         $rows = (new Query())
                             ->select(['content', 'id', 'elementId'])
