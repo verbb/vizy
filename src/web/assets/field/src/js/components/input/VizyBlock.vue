@@ -689,7 +689,7 @@ export default {
             const postData = Garnish.getPostData(this.$refs.fields.$el);
             const content = Craft.expandPostArray(postData);
 
-            // This will be in the format `vizyData[267267872][fields]...`, and for nested setups, it'll all be one level
+            // This will be in the format `vizyData[267267872][hkhj456kj2][fields]...`, and for nested setups, it'll all be one level
             // so ensure that we grab the correct data for this block.
             const fieldContent = content?.vizyData?.[this.node.attrs.id] || null;
 
@@ -697,7 +697,14 @@ export default {
                 // Generate a POST data object, and save it
                 const values = { ...this.values };
 
-                values.content = fieldContent;
+                // Each Vizy field is namespaced with a unique key to work with slide-outs and rendering. This is because
+                // the main Vizy field and the instance in a slide-out are both on the page and not rendered as unique.
+                // Craft namespaces HTML for each slide-out but not in this case, as we're forcing a `vizyData` namespace.
+                // We don't need it for anything structurally, so discard it. It's purely a rendering namespace.
+                // https://github.com/verbb/vizy/issues/335
+                const namespaceKey = Object.keys(fieldContent)[0];
+
+                values.content = fieldContent[namespaceKey];
 
                 // We can't use `updateAttributes()` here, because that will only operate on the selected node. This function
                 // will often be called for all nodes in a collection, such as when re-ordering blocks which affect more

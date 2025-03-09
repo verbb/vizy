@@ -896,8 +896,9 @@ class VizyField extends Field
                         }
                     }
                     
-                    // Disregard the namespace of parent fields, or even using `fields`. This keeps our field data separate to Craft
-                    $view->setNamespace("vizyData[__VIZY_BLOCK_{$placeholderKey}__]");
+                    // Disregard the namespace of parent fields, or even using `fields`. This keeps our field data separate to Craft.
+                    // Also add a unique key to store data, to play nicely with slide-outs and their own namespace (that we don't use).
+                    $view->setNamespace("vizyData[__VIZY_BLOCK_{$placeholderKey}__][{$placeholderKey}]");
 
                     $form = $fieldLayout->createForm($blockElement);
                     $blockTypeArray['tabs'] = $form->getTabMenu();
@@ -992,8 +993,9 @@ class VizyField extends Field
                         }
                     }
 
-                    // Disregard the namespace of parent fields, or even using `fields`. This keeps our field data separate to Craft
-                    $view->setNamespace("vizyData[__VIZY_BLOCK_{$placeholderKey}__]");
+                    // Disregard the namespace of parent fields, or even using `fields`. This keeps our field data separate to Craft.
+                    // Also add a unique key to store data, to play nicely with slide-outs and their own namespace (that we don't use).
+                    $view->setNamespace("vizyData[__VIZY_BLOCK_{$placeholderKey}__][{$placeholderKey}]");
 
                     $fieldsHtml = $view->namespaceInputs($fieldLayout->createForm($blockElement)->render());
                     $fieldsHtml = $this->_parseFieldHtml($fieldsHtml);
