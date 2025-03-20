@@ -793,7 +793,6 @@ export default {
 
 .vizyblock-header .preview {
     margin-left: 7px;
-    max-width: 50%;
     text-overflow: ellipsis;
     overflow: hidden;
     font-size: 12px;
