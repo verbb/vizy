@@ -168,8 +168,10 @@ class VizyBlock extends Node
 
         // Create a fake element with the same fieldtype as our block
         $block = $this->getBlockElement();
+        $field = $this->getField();
 
         $variables = array_merge($this->toArray(), $block->getFieldValues());
+        $variables[$field->handle] = $field;
 
         return $view->renderTemplate($this->_blockType->template, $variables, View::TEMPLATE_MODE_SITE);
     }
