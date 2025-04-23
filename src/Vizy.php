@@ -32,7 +32,7 @@ class Vizy extends Plugin
 
     public bool $hasCpSection = false;
     public bool $hasCpSettings = true;
-    public string $schemaVersion = '0.9.0';
+    public string $schemaVersion = '0.9.1';
 
 
     // Traits
