@@ -121,7 +121,7 @@ class m250422_000000_character_encoding extends Migration
                 $data[$key] = $this->_sanitizeArrayRecursive($value, $antiXss);
             } else if (is_string($value)) {
                 // Ensure that HTML entities are decoded for saving
-                $value = html_entity_decode($value);
+                $value = $this->_safeHtmlEntityDecode($value);
 
                 // Clean up each string, must be done recursively, otherwise a JSON-encoded string won't be cleaned properly.
                 $data[$key] = $antiXss->xss_clean($value);
@@ -129,5 +129,29 @@ class m250422_000000_character_encoding extends Migration
         }
 
         return $data;
+    }
+
+    private function _safeHtmlEntityDecode(string $value): string
+    {
+        return preg_replace_callback('/&#(\d+);|&#x([a-fA-F0-9]+);|&[a-zA-Z0-9#]+;/', function ($matches) {
+            // Determine numeric code point
+            if (!empty($matches[1])) {
+                $codePoint = (int) $matches[1];
+            } elseif (!empty($matches[2])) {
+                $codePoint = hexdec($matches[2]);
+            } else {
+                // Named entity - decode and get first character
+                $decoded = html_entity_decode($matches[0], ENT_QUOTES | ENT_HTML5, 'UTF-8');
+                $codePoint = mb_ord($decoded, 'UTF-8');
+            }
+
+            // If code point is safe (U+0000 to U+FFFF), decode it
+            if ($codePoint <= 0xFFFF) {
+                return html_entity_decode($matches[0], ENT_QUOTES | ENT_HTML5, 'UTF-8');
+            }
+
+            // Otherwise, return the original encoded entity
+            return $matches[0];
+        }, $value);
     }
 }

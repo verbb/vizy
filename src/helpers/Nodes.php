@@ -273,6 +273,20 @@ class Nodes
             // Un-serialize any emoji's
             $text = StringHelper::shortcodesToEmoji($text);
 
+            // Decode any unicode entities (U+10000 or higher). These are stored encoded due to lack of `utf8mb4` support
+            $text = preg_replace_callback('/&#(\d+);|&#x([a-fA-F0-9]+);/', function ($matches) {
+                // Decimal or hex entity
+                $codePoint = !empty($matches[1]) ? (int)$matches[1] : hexdec($matches[2]);
+
+                // Only decode if it's a 4-byte character (U+10000 or higher)
+                if ($codePoint >= 0x10000) {
+                    return mb_convert_encoding('&#' . $codePoint . ';', 'UTF-8', 'HTML-ENTITIES');
+                }
+
+                // Leave lower code points untouched
+                return $matches[0];
+            }, $text);
+
             $rawNode['content'][$key]['text'] = $text;
         }
 
