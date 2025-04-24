@@ -21,6 +21,9 @@ use voku\helper\AntiXSS;
 
 class m250422_000000_character_encoding extends Migration
 {
+    // Public Methods
+    // =========================================================================
+
     public function safeUp()
     {
         $data = [];
@@ -65,6 +68,8 @@ class m250422_000000_character_encoding extends Migration
             }
         }
 
+        $antiXss = new AntiXSS();
+
         foreach ($data as $d) {
             $contentRows = (new Query())
                 ->select(['id', $d['column'] . ' AS value'])
@@ -82,11 +87,9 @@ class m250422_000000_character_encoding extends Migration
                     continue;
                 }
 
-                // Ensure that HTML entities are decoded for saving, and cleaned - this reflects Vizy 2 handling.
-                $newValue = html_entity_decode($currentValue);
-
-                $antiXss = new AntiXSS();
-                $newValue = $antiXss->xss_clean((string)$newValue);
+                // Iterate through each string in the data structure to switch HTML entities to Vizy handling and clean.
+                $newValue = $this->_sanitizeArrayRecursive(Json::decode($currentValue), $antiXss);
+                $newValue = Json::encode($newValue);
 
                 if ($currentValue === $newValue) {
                     continue;
@@ -105,5 +108,26 @@ class m250422_000000_character_encoding extends Migration
     {
         echo "m250422_000000_character_encoding cannot be reverted.\n";
         return false;
+    }
+
+
+    // Private Methods
+    // =========================================================================
+
+    private function _sanitizeArrayRecursive(array $data, AntiXSS $antiXss): array
+    {
+        foreach ($data as $key => $value) {
+            if (is_array($value)) {
+                $data[$key] = $this->_sanitizeArrayRecursive($value, $antiXss);
+            } else if (is_string($value)) {
+                // Ensure that HTML entities are decoded for saving
+                $value = html_entity_decode($value);
+
+                // Clean up each string, must be done recursively, otherwise a JSON-encoded string won't be cleaned properly.
+                $data[$key] = $antiXss->xss_clean($value);
+            }
+        }
+
+        return $data;
     }
 }
