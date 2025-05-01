@@ -98,6 +98,17 @@
 - Fix content changes being detected for nested fields when there are none. In addition, Vizy fields only listen for changes to their content when interacted with.
 - Fix field layout designer in settings not serializing changes correctly.
 
+## 2.1.26 - 2025-05-01
+
+### Added
+- Add support for `utf8mb4` encoded values.
+- Add Vizy field context to block templates.
+
+### Fixed
+- Fix an error with Vizy blocks containing relation fields.
+- Fix migration from Craft 3, where special characters and HTML entities weren’t being decoded and content not correctly sanitized.
+- Fix an error when using relation fields like Assets in Vizy blocks.
+
 ## 2.1.25 - 2025-02-02
 
 ### Added
