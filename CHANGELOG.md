@@ -1,5 +1,18 @@
 # Changelog
 
+## 3.0.8 - 2025-05-01
+
+### Added
+- Add Vizy field context to block templates.
+- Add Craft 5 content migration for Vizy fields that contained Super Table fields.
+
+### Fixed
+- Fix an error when changing field layout fields in Craft 5.7+.
+- Fix lightswitch UI for Craft 5.7+.
+- Fix collapsed Vizy block’s truncated text overflow.
+- Fix a namespace issue for Vizy block fields.
+- Fix an error when migrating content for prefixed databases.
+
 ## 3.0.7 - 2025-03-05
 
 ### Fixed
