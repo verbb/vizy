@@ -245,6 +245,13 @@ class VizyBlock extends Node
                 $serializedFieldValues = $field->serializeValue($fieldValue, $block);
                 $value['attrs']['values']['content']['fields'][$field->handle] = $serializedFieldValues;
 
+                // Fix relation fields in their `afterElementSave` function trying to create relations
+                // We still want relation fields to run `afterElementSave` however (see Asset fields)
+                if ($field instanceof BaseRelationField) {
+                    $field->maintainHierarchy = false;
+                    $field->localizeRelations = false;
+                }
+
                 // Ensure we call each field's `afterElementSave` method. This would be auto-done
                 // if a VizyBlock node was an element, and we were saving that.
                 // We have to pass `isNew = false` for relation fields to prevent creating relations records
