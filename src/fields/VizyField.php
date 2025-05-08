@@ -520,7 +520,7 @@ class VizyField extends Field
             $blockElement = $block->getBlockElement($element);
             $blockElement->setScenario($scenario);
 
-            if (!$blockElement->validate()) {
+            if ($block->enabled && !$blockElement->validate()) {
                 $element->addModelErrors($blockElement, "{$this->handle}[{$i}]");
             }
         }
