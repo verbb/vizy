@@ -59,14 +59,14 @@ class NodeCollection extends Markup
 
         $this->element = $element;
         $this->field = $field;
-        $this->rawNodes = $nodes;
+        $this->rawNodes = $this->_normalizeRawNodes($nodes);
 
         // Save here as we're recursively populating nodes/marks
         $this->_registeredNodesByType = Vizy::$plugin->getNodes()->getRegisteredNodesByType();
         $this->_registeredMarksByType = Vizy::$plugin->getNodes()->getRegisteredMarksByType();
 
         // Prepare node/mark classes for the collection
-        $this->nodes = $this->_populateNodes($nodes);
+        $this->nodes = $this->_populateNodes($this->rawNodes);
         $this->nodes = $this->_normalizeNodes($this->getNodes(), $this->element);
 
         parent::__construct(null, null);
@@ -202,6 +202,24 @@ class NodeCollection extends Markup
 
     // Private Methods
     // =========================================================================
+
+    private function _normalizeRawNodes(array $nodes): array
+    {
+        foreach ($nodes as &$node) {
+            // For all content items, ensure we filter any null values. Possible from unregistered nodes
+            if (isset($node['content']) && is_array($node['content'])) {
+                $node['content'] = array_values(array_filter(
+                    array_map(function ($item) {
+                        // Skip null values
+                        return $item === null ? null : $this->_normalizeRawNodes([$item])[0] ?? null;
+                    }, $node['content']),
+                    fn($item) => $item !== null
+                ));
+            }
+        }
+
+        return $nodes;
+    }
 
     private function _normalizeNodes(array $nodes, ElementInterface $element = null): array
     {
