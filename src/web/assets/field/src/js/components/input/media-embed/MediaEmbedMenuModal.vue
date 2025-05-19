@@ -1,5 +1,7 @@
 <template>
+    <!-- Use `v-if` here to prevent modal content from rendering -->
     <menu-bar-modal
+        v-if="proxyShow"
         v-model="proxyShow"
         class="vui-modal-media-embed-edit"
         :confirm-button="$attrs['confirm-button']"

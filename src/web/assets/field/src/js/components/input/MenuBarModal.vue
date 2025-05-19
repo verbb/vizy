@@ -62,8 +62,6 @@ export default {
     emits: ['update:modelValue', 'confirm', 'cancel'],
 
     mounted() {
-
-
         // Create keyboard shortcuts
         this._keyListener = function(e) {
             const currentModal = this.$vfm.openedModals[0];

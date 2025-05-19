@@ -1,5 +1,7 @@
 <template>
+    <!-- Use `v-if` here to prevent modal content from rendering -->
     <menu-bar-modal
+        v-if="proxyShow"
         v-model="proxyShow"
         :confirm-button="$attrs['confirm-button']"
         @confirm="confirmModal"
