@@ -1,5 +1,10 @@
 # Changelog
 
+## 2.1.27 - 2025-05-20
+
+### Changed
+- Vizy Blocks now only validate enabled blocks.
+
 ## 2.1.26 - 2025-05-01
 
 ### Added
