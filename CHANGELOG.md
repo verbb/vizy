@@ -1,6 +1,15 @@
 # Changelog
 
-# 3.0.8 - 2025-05-01
+## 3.0.9 - 2025-05-20
+
+### Changed
+- Vizy Blocks now only validate enabled blocks.
+
+### Fixed
+- Fix an error with Live Preview and some buttons (link, iframe, image).
+- Fix an error for some nodes by not normalizing raw content.
+
+## 3.0.8 - 2025-05-01
 
 ### Added
 - Add Vizy field context to block templates.
