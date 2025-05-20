@@ -1,6 +1,6 @@
 # Changelog
 
-## 3.0.8 - 2025-05-01
+# 3.0.8 - 2025-05-01
 
 ### Added
 - Add Vizy field context to block templates.
@@ -110,6 +110,11 @@
 - Fix an error when saving Vizy blocks in some scenarios, where blocks incorrectly had an invalid ID.
 - Fix content changes being detected for nested fields when there are none. In addition, Vizy fields only listen for changes to their content when interacted with.
 - Fix field layout designer in settings not serializing changes correctly.
+
+## 2.1.27 - 2025-05-20
+
+### Changed
+- Vizy Blocks now only validate enabled blocks.
 
 ## 2.1.26 - 2025-05-01
 
