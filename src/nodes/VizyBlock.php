@@ -58,13 +58,18 @@ class VizyBlock extends Node
         $blockTypeId = $this->attrs['values']['type'] ?? '';
 
         if ($blockTypeId) {
-            $this->_blockType = $this->getField()->getBlockTypeById($blockTypeId);
+            // We might be trying to get the block type via ID or handle (GQL uses handles)
+            $this->_blockType = $this->getField()->getBlockTypeByIdOrHandle($blockTypeId);
 
             if ($this->_blockType) {
                 $this->_fieldLayout = $this->_blockType->getFieldLayout();
 
                 // Save as shortcut to the blocktype handle, for templating ease
                 $this->handle = $this->_blockType->handle;
+
+                // Also update the blockTypeId, in case the handle was supplied
+                $this->attrs['values']['type'] = $this->_blockType->id;
+                $this->rawNode['attrs']['values']['type'] = $this->_blockType->id;
 
                 // Add in the blocktype enabled/disabled state, independent on the block enabled/disabled
                 $this->attrs['values']['typeEnabled'] = $this->_blockType->enabled;

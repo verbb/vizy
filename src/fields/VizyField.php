@@ -468,6 +468,23 @@ class VizyField extends Field
         return null;
     }
 
+    public function getBlockTypeByIdOrHandle(string $blockTypeId): ?BlockType
+    {
+        if (isset($this->_blockTypesById[$blockTypeId])) {
+            return $this->_blockTypesById[$blockTypeId];
+        }
+
+        foreach ($this->fieldData as $group) {
+            foreach ($group['blockTypes'] as $block) {
+                if ($block['id'] === $blockTypeId || $block['handle'] === $blockTypeId) {
+                    return $this->_blockTypesById[$blockTypeId] = new BlockType($block);
+                }
+            }
+        }
+
+        return null;
+    }
+
     public function getBlockTypes(): array
     {
         $blockTypes = [];
