@@ -68,7 +68,9 @@ class m250422_000000_character_encoding extends Migration
             }
         }
 
+        // Allow some tags in Vizy block content (and regular content)
         $antiXss = new AntiXSS();
+        $antiXss->removeEvilHtmlTags(['iframe']);
 
         foreach ($data as $d) {
             $contentRows = (new Query())
