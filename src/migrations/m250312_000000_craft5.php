@@ -177,7 +177,7 @@ class m250312_000000_craft5 extends Migration
                             $superTableBlockTypeId = $superTableBlock['type'] ?? null;
 
                             // If the `type` is stored in the Craft 4 way (ID) swap it with the handle
-                            if (is_int($superTableBlockTypeId)) {
+                            if (is_numeric($superTableBlockTypeId)) {
                                 $modifiedContent = true;
 
                                 $superTableBlocks[$superTableBlockKey]['type'] = $this->superTableFieldBlockMap[$superTableBlockTypeId] ?? null;
