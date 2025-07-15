@@ -260,5 +260,9 @@ export default {
 
 .lightswitch.extra-small.on .lightswitch-container .handle {
     inset-inline-start: calc(50% - 5px);
+
+    &:before {
+        display: none;
+    }
 }
 </style>
