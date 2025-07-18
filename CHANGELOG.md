@@ -120,6 +120,11 @@
 - Fix content changes being detected for nested fields when there are none. In addition, Vizy fields only listen for changes to their content when interacted with.
 - Fix field layout designer in settings not serializing changes correctly.
 
+## 2.1.28 - 2025-07-18
+
+### Fixed
+- Fix an error migrating Vizy 1 content containing Vizy Block fields with `<iframe>` content.
+
 ## 2.1.27 - 2025-05-20
 
 ### Changed
