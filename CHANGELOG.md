@@ -1,5 +1,10 @@
 # Changelog
 
+## 2.1.28 - 2025-07-18
+
+### Fixed
+- Fix an error migrating Vizy 1 content containing Vizy Block fields with `<iframe>` content.
+
 ## 2.1.27 - 2025-05-20
 
 ### Changed
