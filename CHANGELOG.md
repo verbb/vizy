@@ -1,5 +1,15 @@
 # Changelog
 
+## 3.0.10 - 2025-07-18
+
+### Added
+- Add support for programatically creating Vizy Block content with the Vizy Block Type handle.
+
+### Fixed
+- Fix extra-small lightswitch style.
+- Fix an error migrating Vizy 1 content containing Vizy Block fields with `<iframe>` content.
+- Fix Super Table migration from Craft 4 handling.
+
 ## 3.0.9 - 2025-05-20
 
 ### Changed
