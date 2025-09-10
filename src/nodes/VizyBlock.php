@@ -306,15 +306,19 @@ class VizyBlock extends Node
 
                             $fieldContent[$field->handle] = $fieldValue;
 
-                            // Normalize nested Vizy field data
-                            if ($field instanceof VizyField) {
-                                $fieldContent[$field->handle] = Json::encode($field->normalizeValue($fieldValue, $element)->getRawNodes());
-                            } else {
-                                // Otherwise, anything that _looks_ like encoded JSON should be decoded
-                                // This includes Matrix, Relation fields and Link fields
-                                if (is_string($fieldValue) && Json::isJsonObject($fieldValue)) {
-                                    $fieldContent[$field->handle] = Json::decode($fieldValue);
+                            try {
+                                // Normalize nested Vizy field data
+                                if ($field instanceof VizyField) {
+                                    $fieldContent[$field->handle] = Json::encode($field->normalizeValue($fieldValue, $element)->getRawNodes());
+                                } else {
+                                    // Otherwise, anything that _looks_ like encoded JSON should be decoded
+                                    // This includes Matrix, Relation fields and Link fields
+                                    if (is_string($fieldValue) && Json::isJsonObject($fieldValue)) {
+                                        $fieldContent[$field->handle] = Json::decode($fieldValue);
+                                    }
                                 }
+                            } catch (Throwable $e) {
+                                // Ignore any errors, they'll typically be JSON issues.
                             }
                         }
                     }
