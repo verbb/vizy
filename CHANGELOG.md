@@ -1,5 +1,13 @@
 # Changelog
 
+## 3.0.11 - 2025-09-16
+
+### Changed
+- Update migration-mode check.
+
+### Fixed
+- Fix an error for some field content, that appeared JSON-like, but wasn’t error-handled gracefully.
+
 ## 3.0.10 - 2025-07-18
 
 ### Added
