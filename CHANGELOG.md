@@ -130,6 +130,11 @@
 - Fix content changes being detected for nested fields when there are none. In addition, Vizy fields only listen for changes to their content when interacted with.
 - Fix field layout designer in settings not serializing changes correctly.
 
+## 2.1.29 - 2025-09-16
+
+### Changed
+- Update migration-mode check.
+
 ## 2.1.28 - 2025-07-18
 
 ### Fixed
