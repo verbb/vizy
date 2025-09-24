@@ -2,7 +2,7 @@
     "name": "verbb/vizy",
     "description": "A flexible visual editor field for Craft.",
     "type": "craft-plugin",
-    "version": "3.0.10",
+    "version": "4.0.0-alpha.1",
     "keywords": [
         "craft",
         "cms",
@@ -27,11 +27,11 @@
         }
     ],
     "require": {
-        "php": "^8.2",
-        "craftcms/cms": "^5.0.0",
+        "php": "^8.4",
+        "craftcms/cms": "6.x-dev",
         "nystudio107/craft-plugin-vite": "^5.0.0",
         "ueberdosis/tiptap-php": "^1.0",
-        "verbb/base": "^3.0.0",
+        "verbb/base": "dev-craft-6",
         "voku/anti-xss": "^4.1",
         "yii2mod/yii2-array-query": "^1.4"
     },
@@ -43,7 +43,9 @@
     "extra": {
         "name": "Vizy",
         "handle": "vizy",
-        "changelogUrl": "https://raw.githubusercontent.com/verbb/vizy/craft-5/CHANGELOG.md",
+        "changelogUrl": "https://raw.githubusercontent.com/verbb/vizy/craft-6/CHANGELOG.md",
         "class": "verbb\\vizy\\Vizy"
-    }
+    },
+    "minimum-stability": "dev",
+    "prefer-stable": true
 }
