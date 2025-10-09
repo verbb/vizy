@@ -199,24 +199,28 @@ export default {
                     const $dataStore = this.$el.querySelector('[data-store]');
                     const $dataStoreDebug = this.$el.querySelector('[data-store-debug]');
 
-                    if ($dataStore) {
-                        // Compare the initial JS-serialized data with the newly updated data
-                        // to ensure that we're not updating the Vizy content if nothing has changed
-                        const initValue = this.serializeValue(this.initValue);
-                        const updatedValue = this.serializeValue(newValue);
+                    // Compare the initial JS-serialized data with the newly updated data
+                    // to ensure that we're not updating the Vizy content if nothing has changed
+                    const initValue = this.serializeValue(this.initValue);
+                    const updatedValue = this.serializeValue(newValue);
 
-                        // Ensure that we don't update the value if not yet set after mount
-                        // (don't forget it's been cast to a string)
-                        if (initValue !== 'null') {
-                            // Check if there's an actual different between the init and new state (as serialized strings)
-                            if (initValue !== updatedValue) {
-                                $dataStore.value = this.serializeValue(newValue);
-                            }
-                        }
+                    // Ensure that we don't update the value if not yet set after mount
+                    // (don't forget it's been cast to a string)
+                    if (initValue === 'null') {
+                        return;
+                    }
+
+                    // Check if there's an actual different between the init and new state (as serialized strings)
+                    if (initValue === updatedValue) {
+                        return;
+                    }
+
+                    if ($dataStore) {
+                        $dataStore.value = updatedValue;
                     }
 
                     if ($dataStoreDebug) {
-                        $dataStoreDebug.innerHTML = this.serializeValue(newValue);
+                        $dataStoreDebug.innerHTML = updatedValue;
                     }
                 }
             },
