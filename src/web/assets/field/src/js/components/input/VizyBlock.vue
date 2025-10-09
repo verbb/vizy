@@ -680,12 +680,6 @@ export default {
         },
 
         onFieldUpdate() {
-            // We don't want to update serialized content on-load, because this can trigger a false-positive that something has changed
-            // when there are nested fields. Instead, wait until we're okay to make changes (the field has been interacted with)
-            if (!this.vizyField.listenForChanges) {
-                return;
-            }
-
             const postData = Garnish.getPostData(this.$refs.fields.$el);
             const content = Craft.expandPostArray(postData);
 

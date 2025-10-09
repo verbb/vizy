@@ -128,7 +128,6 @@ export default {
             isLivePreview: false,
             mounted: false,
             rendered: false,
-            listenForChanges: false,
             buttons: ['bold', 'italic'],
             showCodeEditor: false,
             codeEditorHtml: '',
@@ -139,6 +138,7 @@ export default {
             cachedFieldHtml: {},
             cachedFieldJs: {},
             renderedJsCache: {},
+            initValue: null,
             selectedBlockType: null,
             currentNodeHoverPosition: null,
         };
@@ -200,7 +200,19 @@ export default {
                     const $dataStoreDebug = this.$el.querySelector('[data-store-debug]');
 
                     if ($dataStore) {
-                        $dataStore.value = this.serializeValue(newValue);
+                        // Compare the initial JS-serialized data with the newly updated data
+                        // to ensure that we're not updating the Vizy content if nothing has changed
+                        const initValue = this.serializeValue(this.initValue);
+                        const updatedValue = this.serializeValue(newValue);
+
+                        // Ensure that we don't update the value if not yet set after mount
+                        // (don't forget it's been cast to a string)
+                        if (initValue !== 'null') {
+                            // Check if there's an actual different between the init and new state (as serialized strings)
+                            if (initValue !== updatedValue) {
+                                $dataStore.value = this.serializeValue(newValue);
+                            }
+                        }
                     }
 
                     if ($dataStoreDebug) {
@@ -311,11 +323,12 @@ export default {
             // Let the component know we're finished rendering, and to start updating changes
             this.rendered = true;
 
-            // Once the field has settled, we can start listening for changes. This helps any PHP/JS JSON inconsistencies
-            // that would otherwise trigger a change in the field.
+            // Once the field has settled, take a snapshot of the value for the field. This helps us compare if anything
+            // has changed, which it often does as jQuery kicks in, or Vue for other fields in Vizy blocks.
             setTimeout(() => {
-                this.listenForChanges = true;
+                this.initValue = this.clone(this.json);
             }, 1000);
+
         });
 
         // Keep track of any parent fields (at least their toolbars) so we can align them
