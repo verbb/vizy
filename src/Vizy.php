@@ -12,8 +12,10 @@ use verbb\vizy\models\Settings;
 
 use Craft;
 use craft\base\Plugin;
+use craft\elements\Entry;
 use craft\events\RegisterComponentTypesEvent;
 use craft\events\RegisterGqlTypesEvent;
+use craft\events\SetEagerLoadedElementsEvent;
 use craft\helpers\UrlHelper;
 use craft\services\Fields;
 use craft\services\Gql;
@@ -111,6 +113,22 @@ class Vizy extends Plugin
                 // Only override things if this is coming from a Vizy field
                 if ($ownerElementType === BlockElement::class) {
                     Craft::$app->runAction('vizy/field/create-matrix-entry')->send();
+                }
+            }
+        });
+
+        // Handle an issue with Matrix fields in Vizy blocks, that have relation fields that are also eager-loaded. More noticable in GQL.
+        // We need to essentially turn off eager-loading for relational fields in the Matrix field, because we can't figure out a way for
+        // a Vizy Block Type to be a field layout provider, and to set the correct eager loading field handle.
+        // https://www.loom.com/share/857e3b55a67e449286fd8cb2ee245e2e
+        Event::on(Entry::class, Entry::EVENT_SET_EAGER_LOADED_ELEMENTS, function(SetEagerLoadedElementsEvent $event) {
+            // Check first if we're rendering any Matrix fields in a Vizy block
+            $vizyMatrixFields = Vizy::$plugin->getNestedMatrixFields();
+
+            // Check if this entry is being rendered in the Vizy Block's Matrix field, and disable eager-loading
+            if ($vizyMatrixFields && $field = $event->sender->getField()) {
+                if (in_array($field->handle, $vizyMatrixFields)) {
+                    $event->handled = true;
                 }
             }
         });

@@ -21,6 +21,8 @@ trait PluginTrait
 
     public static ?Vizy $plugin = null;
 
+    private array $_nestedMatrixFields = [];
+
 
     // Traits
     // =========================================================================
@@ -89,5 +91,15 @@ trait PluginTrait
     public function getVite(): VitePluginService
     {
         return $this->get('vite');
+    }
+
+    public function setNestedMatrixFields(mixed $value): void
+    {
+        $this->_nestedMatrixFields[] = $value;
+    }
+
+    public function getNestedMatrixFields(): array
+    {
+        return $this->_nestedMatrixFields;
     }
 }

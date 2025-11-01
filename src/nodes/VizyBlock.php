@@ -1,6 +1,7 @@
 <?php
 namespace verbb\vizy\nodes;
 
+use verbb\vizy\Vizy;
 use verbb\vizy\base\Node;
 use verbb\vizy\elements\Block as BlockElement;
 use verbb\vizy\fields\VizyField;
@@ -307,6 +308,11 @@ class VizyBlock extends Node
                             $fieldContent[$field->handle] = $fieldValue;
 
                             try {
+                                if ($field instanceof MatrixField) {
+                                    // We need to record any Matrix fields in a Vizy block for special-handling
+                                    Vizy::$plugin->setNestedMatrixFields($field->handle);
+                                }
+
                                 // Normalize nested Vizy field data
                                 if ($field instanceof VizyField) {
                                     $fieldContent[$field->handle] = Json::encode($field->normalizeValue($fieldValue, $element)->getRawNodes());
