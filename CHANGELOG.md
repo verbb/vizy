@@ -1,5 +1,14 @@
 # Changelog
 
+## 3.0.12 - 2025-11-06
+
+### Changed
+- Improve change-detection checks for Vizy Blocks.
+
+### Fixed
+- Fix an issue for Vizy Blocks that contained relational fields, when the fields were eager-loaded.
+- Fix an issue for Table nodes, where attributes set on `table` were also set on `tbody`.
+
 ## 3.0.11 - 2025-09-16
 
 ### Changed
