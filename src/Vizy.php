@@ -67,6 +67,7 @@ class Vizy extends Plugin
     {
         return Craft::$app->getResponse()->redirect(UrlHelper::cpUrl('vizy/settings'));
     }
+    
 
     // Protected Methods
     // =========================================================================

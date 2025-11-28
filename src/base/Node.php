@@ -215,6 +215,25 @@ class Node extends Component implements NodeInterface
 
     public function normalizeValue(?ElementInterface $element = null): ?array
     {
+        // Tiptap can't handle any empty text nodes in content, so filter these out.
+        $rawContent = $this->rawNode['content'] ?? [];
+
+        if ($rawContent) {
+            foreach ($rawContent as $key => $content) {
+                $type = $content['type'] ?? null;
+                $text = $content['text'] ?? null;
+
+                if ($type === 'text' && $text !== null) {
+                    if (trim($text) === '') {
+                        unset($rawContent[$key]);
+                    }
+                }
+            }
+
+            // Reset keys if needed
+            $this->rawNode['content'] = array_values($rawContent);
+        }
+
         return $this->rawNode;
     }
 
