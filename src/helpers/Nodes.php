@@ -10,8 +10,6 @@ use craft\helpers\Html;
 use craft\helpers\HtmlPurifier;
 use craft\validators\HandleValidator;
 
-use voku\helper\AntiXSS;
-
 class Nodes
 {
     // Static Methods
@@ -45,7 +43,7 @@ class Nodes
             
                 $html[] = self::renderNode($nestedNode, $prevNestedNode, $nextNestedNode, $nestedNodeMarkStack);
             }
-        } else if ($text = $node->getText()) {
+        } else if ($text = $node->renderText()) {
             $html[] = $text;
         }
 
@@ -222,38 +220,6 @@ class Nodes
 
     public static function serializeContent($rawNode)
     {
-        $nodeType = $rawNode['type'] ?? '';
-        $content = $rawNode['content'] ?? [];
-
-        $antiXss = new AntiXSS();
-
-        foreach ($content as $key => $block) {
-            $type = $block['type'] ?? '';
-
-            // We only want to modify simple nodes and their text content, not complicated
-            // nodes like VizyBlocks, which could mess things up as fields control their content.
-            $text = $block['text'] ?? '';
-
-            // Escape any HTML tags used in the text. Maybe we're writing HTML in text?
-            // But don't encode quotes, things like `&quot;` are invalid in JSON
-            // Important to do this before emoji processing, as that'll replace `«`, etc characters
-            if ($nodeType === 'codeBlock') {
-                // Escape `<` and `>` for script HTML tags in code blocks. While AntiXSS will filter out any
-                // `<script>` tags (correctly), they're valid in code blocks so long as they're escaped.
-                // Using `htmlspecialchars` is too troublesome with ampersands, etc.
-                $text = str_replace(['<', '>'], ['&lt;', '&gt;'], $text);
-            } else {
-                $text = $antiXss->xss_clean((string)$text);
-            }
-
-            $rawNode['content'][$key]['text'] = $text;
-
-            // If this is now an empty text node, remove it. Tiptap won't like it.
-            if ($rawNode['content'][$key]['text'] === '' && $type === 'text') {
-                unset($rawNode['content'][$key]);
-            }
-        }
-
         return $rawNode;
     }
 

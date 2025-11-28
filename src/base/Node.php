@@ -10,6 +10,7 @@ use Craft;
 use craft\base\Component;
 use craft\base\ElementInterface;
 use craft\base\FieldInterface;
+use craft\helpers\Html;
 use craft\helpers\Template;
 
 use GraphQL\Type\Definition\Type;
@@ -118,9 +119,16 @@ class Node extends Component implements NodeInterface
         return $this->attrs;
     }
 
+    public function getRawText(): ?string
+    {
+        // Careful calling this in practice, don't trust content!
+        return $this->text;
+    }
+
     public function getText(): ?Markup
     {
-        return Template::raw((string)$this->text);
+        // Ensure that we escape text by default
+        return Template::raw($this->renderText());
     }
 
     public function setText(mixed $value): void
@@ -161,6 +169,12 @@ class Node extends Component implements NodeInterface
     public function renderStaticHtml(): ?Markup
     {
         return $this->renderHtml();
+    }
+
+    public function renderText(): string
+    {
+        // Important to escape as plain text
+        return Html::encode($this->getRawText());
     }
 
     public function getStaticText(): string
