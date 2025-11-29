@@ -1,5 +1,13 @@
 # Changelog
 
+## 3.0.13 - 2025-11-29
+
+### Changed
+- Improve content-encoding handling for special-characters, HTML content, emoji’s and more.
+
+### Fixed
+- Fix empty text nodes not being filtered out correctly.
+
 ## 3.0.12 - 2025-11-06
 
 ### Changed
