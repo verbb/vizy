@@ -222,3 +222,23 @@
         value: field.defaultTransform,
     }) }}
 </div>
+
+<a class="fieldtoggle" data-target="link-settings">{{ 'Link Settings' | t('vizy') }}</a>
+
+<div id="link-settings" class="hidden">
+    {{ forms.checkboxSelectField({
+        name: 'linkSettings',
+        label: 'Enabled Link Settings' | t('vizy'),
+        instructions: 'Select which settings a “link” button should allow.' | t('vizy'),
+        options: [
+            { label: 'Link Text' | t('vizy'), value: 'text' },
+            { label: 'New Window' | t('vizy'), value: 'newWindow' },
+            { label: 'Site' | t('vizy'), value: 'site' },
+            { label: 'Title' | t('vizy'), value: 'title' },
+            { label: 'Classes' | t('vizy'), value: 'classes' },
+        ],
+        values: field.linkSettings,
+        showAllOption: false,
+    }) }}
+
+</div>

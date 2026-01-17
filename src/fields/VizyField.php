@@ -134,6 +134,7 @@ class VizyField extends Field
     public ?int $maxBlocks = null;
     public string $blockTypeBehaviour = self::PICKER_BEHAVIOUR_CLICK;
     public string $editorMode = self::MODE_COMBINED;
+    public array $linkSettings = ['text', 'newWindow', 'site', 'title', 'classes'];
 
     private static array $_registeredPlugins = [];
 
@@ -649,6 +650,7 @@ class VizyField extends Field
             'pasteAsPlainText' => $this->pasteAsPlainText,
             'blockTypeBehaviour' => $this->blockTypeBehaviour,
             'editorMode' => $this->editorMode,
+            'linkSettings' => $this->linkSettings,
             'plugins' => self::$_registeredPlugins,
         ];
 

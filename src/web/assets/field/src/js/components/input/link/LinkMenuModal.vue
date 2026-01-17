@@ -32,7 +32,7 @@
             </ul>
         </div>
 
-        <div id="text-field" class="field">
+        <div v-if="isAllowedSetting('text')" id="text-field" class="field">
             <div class="heading">
                 <label id="text-label" for="text">{{ t('vizy', 'Text') }}</label>
             </div>
@@ -49,7 +49,7 @@
             </div>
         </div>
 
-        <div id="target-field" class="checkboxfield field">
+        <div v-if="isAllowedSetting('newWindow')" id="target-field" class="checkboxfield field">
             <div class="input ltr">
                 <input
                     :id="targetId"
@@ -63,7 +63,7 @@
             </div>
         </div>
 
-        <div v-if="hasSiteSelect" id="site-field" class="field">
+        <div v-if="isAllowedSetting('site') && hasSiteSelect" id="site-field" class="field">
             <div class="heading">
                 <label id="site-label" for="site">{{ t('vizy', 'Site') }}</label>
             </div>
@@ -80,10 +80,15 @@
             </div>
         </div>
 
-        <a :class="['fieldtoggle', { 'expanded': advancedPane }]" data-target="advanced" @click.prevent="toggleAdvanced">{{ t('app', 'Advanced') }}</a>
+        <a
+            v-if="isAllowedSetting('title') || isAllowedSetting('classes')"
+            :class="['fieldtoggle', { 'expanded': advancedPane }]"
+            data-target="advanced"
+            @click.prevent="toggleAdvanced"
+        >{{ t('app', 'Advanced') }}</a>
 
         <div :class="{ 'hidden': !advancedPane }">
-            <div id="title-field" class="field">
+            <div v-if="isAllowedSetting('title')" id="title-field" class="field">
                 <div class="heading">
                     <label id="title-label" for="title">{{ t('vizy', 'Title') }}</label>
                 </div>
@@ -100,7 +105,7 @@
                 </div>
             </div>
 
-            <div id="classes-field" class="field">
+            <div v-if="isAllowedSetting('classes')" id="classes-field" class="field">
                 <div class="heading">
                     <label id="classes-label" for="classes">{{ t('vizy', 'Classes') }}</label>
                 </div>
@@ -322,6 +327,12 @@ export default {
             }).run();
 
             this.proxyShow = false;
+        },
+
+        isAllowedSetting(setting) {
+            const settings = this.field.settings.linkSettings;
+
+            return settings.includes(setting);
         },
     },
 };
