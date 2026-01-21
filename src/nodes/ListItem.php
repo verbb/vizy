@@ -58,7 +58,8 @@ class ListItem extends Node
         $content = $value['content'] ?? [];
         $firstNode = $value['content'][0]['type'] ?? null;
 
-        if (count($content) === 1 && $firstNode === 'text') {
+        // There should always, only be a single paragraph content
+        if ($firstNode !== 'paragraph') {
             $value['content'] = [['type' => 'paragraph', 'attrs' => [], 'content' => $value['content']]];
         }
 
@@ -80,7 +81,8 @@ class ListItem extends Node
         $content = $value['content'] ?? [];
         $firstNode = $value['content'][0]['type'] ?? null;
 
-        if (count($content) === 1 && $firstNode === 'text') {
+        // There should always, only be a single paragraph content
+        if ($firstNode !== 'paragraph') {
             $value['content'] = [['type' => 'paragraph', 'attrs' => [], 'content' => $value['content']]];
         }
 
