@@ -1,5 +1,13 @@
 # Changelog
 
+## 3.0.14 - 2026-01-23
+
+### Added
+- Add Link Settings to Vizy fields to allow control of what settings a Link button has access to.
+
+### Fixed
+- Fix handling of corrupted list items not being normalized properly.
+
 ## 3.0.13 - 2025-11-29
 
 ### Changed
