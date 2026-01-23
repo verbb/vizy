@@ -523,7 +523,7 @@ export default {
 
                         if (fieldUid) {
                             // Get the original HTML
-                            const $newHtml = $(this.blockType.fieldsHtml).find(`[data-layout-element="${fieldUid}"] .selectize`);
+                            const $newHtml = $(this.fieldsHtml).find(`[data-layout-element="${fieldUid}"] .selectize`);
 
                             if ($newHtml.length) {
                                 // IDs and names will include placholders for Vizy, but if in a Matrix/Super Table field, will contain those
