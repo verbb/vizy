@@ -923,24 +923,7 @@ class VizyField extends Field
                     $blockTypeArray['tabs'] = $form->getTabMenu();
                     
                     $fieldsHtml = $view->namespaceInputs($form->render());
-                    $fieldsHtml = $this->_parseFieldHtml($fieldsHtml);
-
                     $footHtml = $view->clearJsBuffer(false);
-
-                    // Just in case some JS slips through (see dismissable UI element tips)
-                    preg_match_all('#<script>(.*?)<\/script>#is', $fieldsHtml, $extraJs);
-
-                    if (isset($extraJs[1])) {
-                        $footHtml = $footHtml . implode('', $extraJs[1]);
-                    }
-
-                    $fieldsHtml = preg_replace('#<script>(.*?)<\/script>#is', '', $fieldsHtml);
-
-                    // Handle non-inline script tags - just remove for now
-                    $fieldsHtml = preg_replace('#(<script.*?<\/script>)#is', '', $fieldsHtml);
-
-                    // Similar situation for CSS
-                    $fieldsHtml = preg_replace('#<style(.*?)<\/style>#is', '', $fieldsHtml);
 
                     $blockTypeArray['fieldsHtml'] = $fieldsHtml;
 
@@ -1017,23 +1000,7 @@ class VizyField extends Field
                     $view->setNamespace("vizyData[__VIZY_BLOCK_{$placeholderKey}__][{$placeholderKey}]");
 
                     $fieldsHtml = $view->namespaceInputs($fieldLayout->createForm($blockElement)->render());
-                    $fieldsHtml = $this->_parseFieldHtml($fieldsHtml);
                     $footHtml = $view->clearJsBuffer(false);
-
-                    // Just in case some JS slips through (see dismissable UI element tips)
-                    preg_match_all('#<script>(.*?)<\/script>#is', $fieldsHtml, $extraJs);
-
-                    if (isset($extraJs[1])) {
-                        $footHtml = $footHtml . implode('', $extraJs[1]);
-                    }
-
-                    $fieldsHtml = preg_replace('#<script>(.*?)<\/script>#is', '', $fieldsHtml);
-
-                    // Handle non-inline script tags - just remove for now
-                    $fieldsHtml = preg_replace('#(<script.*?<\/script>)#is', '', $fieldsHtml);
-
-                    // Similar situation for CSS
-                    $fieldsHtml = preg_replace('#<style(.*?)<\/style>#is', '', $fieldsHtml);
 
                     $view->setNamespace($originalNamespace);
 
@@ -1342,20 +1309,5 @@ class VizyField extends Field
         }
 
         return $customSources;
-    }
-
-    private function _parseFieldHtml(string $html): string
-    {
-        // Parse some known Vue-based fields in Vizy blocks which need to be marked as pre-rendered, otherwise
-        // Vizy will thing they exist in _this_ Vue app and try to compile them. Also mark nested Vizy fields are pre-rendered
-        // so as not to double-bind.
-        // TODO: make this more accessible.
-        $tags = ['hyper-input', 'icon-picker-input', 'video-picker-input', 'vizy-input'];
-
-        foreach ($tags as $tag) {
-            $html = str_replace("<{$tag}", "<{$tag} v-pre", $html);
-        }
-
-        return $html;
     }
 }

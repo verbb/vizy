@@ -93,7 +93,7 @@
 
             <collapse-transition>
                 <div v-show="!collapsed">
-                    <vizy-block-fields v-if="fieldsHtml" ref="fields" :key="updateFieldsHtml" class="vizyblock-fields" :template="fieldsHtml" @update="onFieldUpdate" />
+                    <div ref="portalMount" class="vizyblock-fields"></div>
                 </div>
             </collapse-transition>
         </div>
@@ -123,7 +123,6 @@ import { NodeViewWrapper } from '@tiptap/vue-3';
 import CollapseTransition from '@ivanv/vue-collapse-transition/src/CollapseTransition.vue';
 
 import LightswitchField from '../settings/LightswitchField.vue';
-import VizyBlockFields from './VizyBlockFields.vue';
 
 import htmlize from '@utils/htmlize';
 import { getClosest } from '@utils/dom';
@@ -134,7 +133,6 @@ export default {
     components: {
         NodeViewWrapper,
         LightswitchField,
-        VizyBlockFields,
         CollapseTransition,
     },
 
@@ -179,9 +177,10 @@ export default {
         return {
             activeTab: null,
             tippy: null,
-            fieldsHtml: '',
             mounted: false,
-            updateFieldsHtml: 0,
+            currentPortalId: null,
+            portalEventName: null,
+            portalUpdateHandler: null,
         };
     },
 
@@ -275,8 +274,10 @@ export default {
         preview() {
             let previewHtml = '';
 
-            if (this.mounted) {
-                const $fields = $(this.$refs.fields.$el).children().children();
+            const portalRoot = this.getPortalRoot();
+
+            if (portalRoot) {
+                const $fields = $(portalRoot).children().children();
 
                 for (let i = 0; i < $fields.length; i++) {
                     const $field = $($fields[i]);
@@ -338,17 +339,18 @@ export default {
         'node.attrs.enabled': function(newValue, oldValue) {
             this.collapsed = !newValue;
         },
-        'node.attrs.id': function(newValue, oldValue) {
-            // When blocks are moved, they'll be re-ordered and re-rendered in their new order, But this really messes
-            // up our DOM handling for fields. So keep track of when the ID changes to detect when blocks have been
-            // updated by moving. We then need to fetch the cached HTML, and re-init any JS.
-            this.fieldsHtml = this.vizyField.getCachedFieldHtml(newValue);
+        'node.attrs.id': function(newId, oldId) {
+            // Instance got rebound to a different blockId
+            if (oldId) {
+                this.unbindPortalUpdate();
+                this.vizyField.detachPortal(oldId);
+            }
 
-            // Trigger the fields to update, manually by changing the update variable (which is keyed to the component)
-            this.updateFieldsHtml += 1;
+            this.currentPortalId = newId;
 
             this.$nextTick(() => {
-                this.appendJs();
+                this.vizyField.attachPortal(newId, this.$refs.portalMount);
+                this.bindPortalUpdate(newId);
 
                 this.setFirstActiveTab();
             });
@@ -356,27 +358,19 @@ export default {
     },
 
     created() {
-        // Listen to an even raised (when moving a block) to serialize the DOM content of this block.
-        // This is because Vue will re-render all blocks from scratch, and we'll loose our block content.
-        // So save it before we re-render, after which, it'll render the saved HTML on-render.
-        this.$nextTick(() => {
-            this.$events.on('vizy-blocks:updateDOM', this.onUpdateDOM);
-        });
-
-        // Set the HTML for the block's fields
-        this.fieldsHtml = this.vizyField.getCachedFieldHtml(this.node.attrs.id);
-
         this.$events.on('vizy-blocks:collapseAll', this.collapseBlock);
         this.$events.on('vizy-blocks:expandAll', this.expandBlock);
     },
 
     mounted() {
         this.$nextTick(() => {
-            this.appendJs();
-
             this.setFirstActiveTab();
 
-            this.mounted = true;
+            this.currentPortalId = this.node.attrs.id;
+            this.vizyField.attachPortal(this.currentPortalId, this.$refs.portalMount);
+
+            // Listen for portal update events for *this* id
+            this.bindPortalUpdate(this.currentPortalId);
 
             const $template = this.$el.querySelector('#vizy-block-settings-template');
 
@@ -430,19 +424,75 @@ export default {
     },
 
     beforeUnmount() {
-        // If we insert a new node before this Vizy node, it'll cause a re-render. But due to how
-        // Tiptap works, it will wipe out all non-saved content. Because we're not fully data-driven
-        // in our components, we need to cache the HTML now, before the component gets re-rendered as a
-        // new Vue component instance. Test this by adding a Vizy block, then a paragraph directly before
-        this.onUpdateDOM();
-
         // Destroy event listeners for this block
-        this.$events.off('vizy-blocks:updateDOM', this.onUpdateDOM);
         this.$events.off('vizy-blocks:collapseAll', this.collapseBlock);
         this.$events.off('vizy-blocks:expandAll', this.expandBlock);
+
+        if (this.currentPortalId) {
+            this.unbindPortalUpdate();
+            this.vizyField.detachPortal(this.currentPortalId);
+        }
     },
 
     methods: {
+        bindPortalUpdate(blockId) {
+            this.unbindPortalUpdate();
+
+            this.portalEventName = this.vizyField.portalEventName(blockId);
+
+            this.portalUpdateHandler = () => {
+                this.handlePortalUpdate();
+            };
+
+            this.$events.on(this.portalEventName, this.portalUpdateHandler);
+        },
+
+        unbindPortalUpdate() {
+            if (this.portalEventName && this.portalUpdateHandler) {
+                this.$events.off(this.portalEventName, this.portalUpdateHandler);
+            }
+
+            this.portalEventName = null;
+            this.portalUpdateHandler = null;
+        },
+
+        handlePortalUpdate() {
+            const portalEntry = this.vizyField.portals?.get?.(this.node.attrs.id);
+            const portalEl = portalEntry?.el;
+
+            if (!portalEl) {
+                return;
+            }
+
+            const postData = Garnish.getPostData(portalEl);
+            const content = Craft.expandPostArray(postData);
+
+            const fieldContent = content?.vizyData?.[this.node.attrs.id] || null;
+
+            if (!fieldContent) {
+                return;
+            }
+
+            const namespaceKey = Object.keys(fieldContent)[0];
+            const values = { ...(this.values || {}) };
+
+            values.content = fieldContent[namespaceKey];
+
+            // eslint-disable-next-line vue/no-mutating-props
+            this.node.attrs.values = values;
+        },
+
+        getPortalRoot() {
+            const mount = this.$refs.portalMount;
+
+            if (!mount) {
+                return null;
+            }
+
+            // Portal root is the persistent DOM you move around
+            return mount.querySelector('[data-vizy-portal]') || null;
+        },
+
         isEmpty(value) {
             return isEmpty(value);
         },
@@ -477,86 +527,6 @@ export default {
             return Garnish.getInputPostVal($input);
         },
 
-        onUpdateDOM() {
-            if (this.$refs.fields) {
-                const $fieldsHtml = $(this.$refs.fields.$el.childNodes).clone();
-
-                // Special-case for Redactor. We need to reset it to its un-initialized form
-                // because it doesn't have better double-binding checks.
-                if ($fieldsHtml.find('.redactor-box').length) {
-                    $fieldsHtml.find('.redactor-box').each((index, element) => {
-                        // Skip any Redactor fields in nested Vizy fields within the block. They handle themselves.
-                        if ($(element).parents('.vui-editor').length) {
-                            return;
-                        }
-
-                        // Rip out the `textarea` which is all we need
-                        const $textarea = $(element).find('textarea').htmlize();
-                        $(element).replaceWith($textarea);
-                    });
-                }
-
-                // Special-case for CKEditor. We need to reset it to its un-initialized form
-                // because it doesn't have better double-binding checks.
-                if ($fieldsHtml.find('.ck-editor').length) {
-                    $fieldsHtml.find('.ck-editor').each((index, element) => {
-                        // Skip any CKEditor fields in nested Vizy fields within the block. They handle themselves.
-                        if ($(element).parents('.vui-editor').length) {
-                            return;
-                        }
-
-                        // Rip out the `textarea` which is all we need
-                        const $textarea = $(element).find('textarea').htmlize();
-                        $(element).replaceWith($textarea);
-                    });
-                }
-
-                // Special-case for Selectize. We need to reset it to its un-initialized form
-                // because it doesn't have better double-binding checks.
-                if ($fieldsHtml.find('.selectize').length) {
-                    $fieldsHtml.find('.selectize').each((index, element) => {
-                        // This is absolutely ridiculous. Selectize strips out `<option>` elements, so we can't
-                        // fetch the original data from the DOM. Instead, find it in the original block type template.
-
-                        // Get the original field HTML from it's `data-layout-element` which contains the UID
-                        const fieldUid = $(element).parents('[data-type]').data('layout-element');
-
-                        if (fieldUid) {
-                            // Get the original HTML
-                            const $newHtml = $(this.fieldsHtml).find(`[data-layout-element="${fieldUid}"] .selectize`);
-
-                            if ($newHtml.length) {
-                                // IDs and names will include placholders for Vizy, but if in a Matrix/Super Table field, will contain those
-                                // which can't be easily replaced like Vizy placeholders can. So be sure to swap them back to what they were
-                                $newHtml.find('select').attr('id', $(element).find('select').attr('id'));
-                                $newHtml.find('select').attr('name', $(element).find('select').attr('name'));
-
-                                // Restore any selected elements
-                                $newHtml.find('select').val($(element).find('select').val());
-
-                                // Replace the HTML with the altered original template
-                                element.outerHTML = $newHtml.htmlize();
-                            }
-                        }
-                    });
-                }
-
-                const $assetFields = $fieldsHtml.find('[data-type="craft\\\\fields\\\\Assets"]');
-
-                // Prevent multiple "Upload files" buttons when re-rendering Assets fields
-                if ($assetFields.length) {
-                    $assetFields.each((index, element) => {
-                        // Asset field's JS will create the button if required
-                        $(element).find('[data-icon="upload"').remove();
-                    });
-                }
-
-                const fieldsHtml = $fieldsHtml.htmlize();
-
-                this.vizyField.setCachedFieldHtml(this.node.attrs.id, fieldsHtml);
-            }
-        },
-
         clickBlock(e) {
             // Manually trigger the gapcursor when clicking on the padding around a block. We need to use padding to get the
             // dropcursor to not flicker back and forth between blocks, but that doesn't work with gapcursor. So, we're going manual!
@@ -579,8 +549,14 @@ export default {
         clickTab(index) {
             this.activeTab = index;
 
+            const portalRoot = this.getPortalRoot();
+
+            if (!portalRoot) {
+                return;
+            }
+
             // Only select immediate children of `.vizyblock-fields` to not affect nested Vizy fields
-            const $tabs = this.$refs.fields.$el.querySelectorAll(':scope > div');
+            const $tabs = portalRoot.querySelectorAll(':scope > div');
 
             $tabs.forEach(($tab) => {
                 if ($tab.getAttribute('id').includes(this.activeTab)) {
@@ -608,26 +584,6 @@ export default {
         setFirstActiveTab() {
             if (this.tabs) {
                 [this.activeTab] = Object.keys(this.tabs);
-            }
-        },
-
-        appendJs() {
-            // Check if there's any fatal errors for this block
-            if (isEmpty(this.blockType)) {
-                return;
-            }
-
-            // Add any JS required by fields
-            const footHtml = this.vizyField.getCachedFieldJs(this.node.attrs.id);
-            const $script = document.querySelector(`#script-${this.node.attrs.id}`);
-
-            if (footHtml) {
-                // But first check if already output. Otherwise, multiple bindings!
-                if ($script) {
-                    $script.parentElement.removeChild($script);
-                }
-
-                Craft.appendBodyHtml(footHtml);
             }
         },
 
@@ -671,42 +627,8 @@ export default {
         },
 
         clickMove() {
-            // Before we move blocks, save the dom state. Use an event to notify all blocks, because Vue will
-            // re-render all blocks, due to how tiptap/prosemirror renders.
-            this.$events.emit('vizy-blocks:updateDOM');
-
             // Record which block type is clicked on to help us add checks for allowing between inputs
             this.vizyField.selectedBlockType = this.blockType.id;
-        },
-
-        onFieldUpdate() {
-            const postData = Garnish.getPostData(this.$refs.fields.$el);
-            const content = Craft.expandPostArray(postData);
-
-            // This will be in the format `vizyData[267267872][hkhj456kj2][fields]...`, and for nested setups, it'll all be one level
-            // so ensure that we grab the correct data for this block.
-            const fieldContent = content?.vizyData?.[this.node.attrs.id] || null;
-
-            if (fieldContent) {
-                // Generate a POST data object, and save it
-                const values = { ...this.values };
-
-                // Each Vizy field is namespaced with a unique key to work with slide-outs and rendering. This is because
-                // the main Vizy field and the instance in a slide-out are both on the page and not rendered as unique.
-                // Craft namespaces HTML for each slide-out but not in this case, as we're forcing a `vizyData` namespace.
-                // We don't need it for anything structurally, so discard it. It's purely a rendering namespace.
-                // https://github.com/verbb/vizy/issues/335
-                const namespaceKey = Object.keys(fieldContent)[0];
-
-                values.content = fieldContent[namespaceKey];
-
-                // We can't use `updateAttributes()` here, because that will only operate on the selected node. This function
-                // will often be called for all nodes in a collection, such as when re-ordering blocks which affect more
-                // than just the block being moved due to Tiptap/Vue rendering. As such, it's not best-practice, but we update
-                // the node attributes directly. See https://share.cleanshot.com/8dkt1vQY for this in action with `updateAttributes()`
-                // eslint-disable-next-line vue/no-mutating-props
-                this.node.attrs.values = values;
-            }
         },
     },
 };

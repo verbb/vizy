@@ -15,7 +15,7 @@
 </template>
 
 <script>
-import { find, get } from 'lodash-es';
+import { find, get, debounce } from 'lodash-es';
 
 import { Editor, EditorContent } from '@tiptap/vue-3';
 
@@ -135,6 +135,9 @@ export default {
             json: null,
             html: null,
             parentToolbarOffset: 0,
+            portalLayerEl: null,
+            portals: new Map(),
+            portalScopeId: `vizy:${this.handle}:${Math.random().toString(36).slice(2, 10)}`,
             cachedFieldHtml: {},
             cachedFieldJs: {},
             renderedJsCache: {},
@@ -228,6 +231,12 @@ export default {
     },
 
     mounted() {
+        // Setup the portal container to house our rendered field content
+        this.portalLayerEl = document.createElement('div');
+        this.portalLayerEl.className = 'vui-vizy-portals';
+        this.portalLayerEl.style.display = 'none';
+        this.$el.appendChild(this.portalLayerEl);
+
         // Setup config for editor, from field config
         this.editor = new Editor({
             extensions: this.getExtensions(),
@@ -285,7 +294,10 @@ export default {
         this.json = this.editor.getJSON().content;
         this.html = this.editor.getHTML();
 
-        // Prepare all vizy blocks be caching their HTML/JS
+        // Ensure that we update portal content as we add/delete nodes
+        this.editor.on('update', () => { return this.reconcilePortalsWithDoc(); });
+
+        // Prepare all vizy blocks by caching their HTML/JS
         this.json.forEach((block) => {
             if (block.type === 'vizyBlock') {
                 const { id } = block.attrs;
@@ -355,6 +367,125 @@ export default {
     },
 
     methods: {
+        ensurePortal(blockId) {
+            let entry = this.portals.get(blockId);
+
+            if (!entry) {
+                const el = document.createElement('div');
+                el.dataset.vizyPortal = blockId;
+                el.dataset.vizyPortalScope = this.portalScopeId;
+
+                // Initial HTML for first render
+                const html = this.getCachedFieldHtml(blockId);
+                el.innerHTML = html || '';
+
+                // Init Craft UI ONCE
+                Craft.initUiElements(el);
+
+                // Observe changes ONCE
+                const emitUpdate = this.debouncedPortalUpdate(blockId);
+
+                const mo = new MutationObserver(() => {
+                    return emitUpdate();
+                });
+
+                mo.observe(el, {
+                    childList: true,
+                    attributes: true,
+                    subtree: true,
+                    characterData: true,
+                });
+
+                $(el).on('input change', 'input, textarea, select', () => {
+                    return emitUpdate();
+                });
+
+                entry = { el, observer: mo, jsAppended: false };
+                this.portals.set(blockId, entry);
+
+                // Keep it “parked” by default
+                this.portalLayerEl.appendChild(el);
+            }
+
+            return entry;
+        },
+
+        attachPortal(blockId, mountEl) {
+            const entry = this.ensurePortal(blockId);
+
+            // Move persistent DOM into this block’s visible mount point
+            if (entry.el.parentNode !== mountEl) {
+                mountEl.appendChild(entry.el);
+            }
+
+            // Append JS once per blockId
+            if (!entry.jsAppended) {
+                const js = this.getCachedFieldJs(blockId);
+
+                if (js) {
+                    Craft.appendBodyHtml(js);
+                }
+
+                entry.jsAppended = true;
+            }
+        },
+
+        detachPortal(blockId) {
+            const entry = this.portals.get(blockId);
+
+            if (!entry) {
+                return;
+            }
+
+            if (entry.el.parentNode !== this.portalLayerEl) {
+                this.portalLayerEl.appendChild(entry.el);
+            }
+        },
+
+        debouncedPortalUpdate(blockId) {
+            // Return a stable debounced fn per blockId
+            if (!this._portalUpdateFns) {
+                this._portalUpdateFns = new Map();
+            }
+
+            if (!this._portalUpdateFns.has(blockId)) {
+                const fn = debounce(() => {
+                    this.$events.emit(this.portalEventName(blockId));
+                }, 50);
+
+                this._portalUpdateFns.set(blockId, fn);
+            }
+
+            return this._portalUpdateFns.get(blockId);
+        },
+
+        reconcilePortalsWithDoc() {
+            // Call on editor updates - remove portals for deleted blocks
+            const alive = new Set();
+
+            this.editor.state.doc.descendants((node) => {
+                if (node.type.name === 'vizyBlock') {
+                    alive.add(node.attrs.id);
+                }
+            });
+
+            for (const [blockId, entry] of this.portals) {
+                if (!alive.has(blockId)) {
+                    entry.observer?.disconnect?.();
+
+                    $(entry.el).off();
+
+                    entry.el.remove();
+                    this.portals.delete(blockId);
+                    this._portalUpdateFns?.delete?.(blockId);
+                }
+            }
+        },
+
+        portalEventName(blockId) {
+            return `vizy:${this.portalScopeId}:portal:update:${blockId}`;
+        },
+
         getExtensions() {
             let extensions = [
                 // Core Extensions
@@ -517,16 +648,7 @@ export default {
                 });
             }
 
-            let fieldJs = this.getParsedBlockHtml(html, blockId);
-
-            // When re-rendering the block, we'll want to remove some things that are initialized
-            // multiple times. This will likely grow as we find more incompatible fields...
-            if (this.renderedJsCache[blockId]) {
-                // Static Super Table fields contain JS to auto-add a row when the field is initialised
-                // and un-saved. Unfortunately, this messes up Vizy which re-renders the block when moving.
-                // This only effect un-saved, brand-new ST rows which still rely on this JS to auto-add a row.
-                fieldJs = fieldJs.replace(/(superTableInput.addRow.*?;)/g, 'null');
-            }
+            const fieldJs = this.getParsedBlockHtml(html, blockId);
 
             // Save this to our internal cache for next time
             this.renderedJsCache[blockId] = fieldJs;
@@ -541,20 +663,6 @@ export default {
         getBlockSettings(blockId) {
             return find(this.settings.blocks, { id: blockId }) || {};
         },
-
-        // updateCachedFieldHtml() {
-        //     var blockFields = this.editor.view.dom.querySelectorAll('.vizyblock-fields');
-
-        //     blockFields.forEach(blockField => {
-        //         var blockId = blockField.getAttribute('data-id');
-        //         var html = $(blockField).htmlize();
-
-        //         // console.log(id);
-        //         // console.log(html);
-
-        //         this.cachedFieldHtml[blockId] = html;
-        //     });
-        // },
 
         openLivePreviewCallback() {
             this.isLivePreview = true;
