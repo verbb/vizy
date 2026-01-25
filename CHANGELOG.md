@@ -1,5 +1,13 @@
 # Changelog
 
+## 3.1.0 - 2026-01-25
+
+### Changed
+- Revamp Vizy Block field rendering to use DOM portals, rather than within Vue/Tiptap directly.
+
+### Fixed
+- Fix Vizy Block’s containing selectize dropdowns not working correctly when moving blocks.
+
 ## 3.0.14 - 2026-01-23
 
 ### Added
