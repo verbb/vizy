@@ -9,10 +9,12 @@ use verbb\vizy\helpers\Matrix;
 
 use Craft;
 use craft\base\ElementInterface;
+use craft\elements\ContentBlock;
 use craft\errors\InvalidFieldException;
 use craft\events\ElementEvent;
 use craft\fields\BaseRelationField;
 use craft\fields\Matrix as MatrixField;
+use craft\fields\ContentBlock as ContentBlockField;
 use craft\helpers\Html;
 use craft\helpers\Json;
 use craft\helpers\Template;
@@ -241,6 +243,11 @@ class VizyBlock extends Node
                 // Ensure each field's content is serialized properly. Use the `layoutElementUid`
                 $serializedFieldValues = $field->serializeValue($fieldValue, $block);
 
+                // Content Blocks are special in that they require an ID, which they'll never had
+                if ($field instanceof ContentBlockField && $fieldValue instanceof ContentBlock) {
+                    $serializedFieldValues['fields'] = $fieldValue->getSerializedFieldValues();
+                }
+
                 // Ensure any array values are serialized as JSON, to match their value in Vue serialization
                 if (is_array($serializedFieldValues)) {
                     $serializedFieldValues = Json::encode($serializedFieldValues);
@@ -276,6 +283,19 @@ class VizyBlock extends Node
                                     // This is okay for our needs, as all we care about are fields running their `afterElementSave()`
                                     // anyway, which for assets is moving from the temp folder to their correct directory.
                                 }
+                            }
+                        }
+                    }
+                }
+
+                // Process all Content Block fields
+                if ($field instanceof ContentBlockField) {
+                    if ($fieldValue = $fieldValue->getFieldLayout()) {
+                        foreach ($fieldValue->getCustomFields() as $contentBlockField) {
+                            try {
+                                $contentBlockField->afterElementSave($fieldValue, true);
+                            } catch (Throwable $e) {
+
                             }
                         }
                     }

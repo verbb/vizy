@@ -12,7 +12,9 @@ use verbb\vizy\models\Settings;
 
 use Craft;
 use craft\base\Plugin;
+use craft\elements\ContentBlock;
 use craft\elements\Entry;
+use craft\events\ModelEvent;
 use craft\events\RegisterComponentTypesEvent;
 use craft\events\RegisterGqlTypesEvent;
 use craft\events\SetEagerLoadedElementsEvent;
@@ -115,6 +117,15 @@ class Vizy extends Plugin
                 if ($ownerElementType === BlockElement::class) {
                     Craft::$app->runAction('vizy/field/create-matrix-entry')->send();
                 }
+            }
+        });
+
+        // Content Blocks within Vizy Blocks will try and save immediately, so we need to prevent that.
+        Event::on(ContentBlock::class, ContentBlock::EVENT_BEFORE_SAVE, function(ModelEvent $event) {
+            $contentBlock = $event->sender;
+
+            if ($contentBlock->getOwner() instanceof BlockElement) {
+                $event->isValid = false;
             }
         });
 
