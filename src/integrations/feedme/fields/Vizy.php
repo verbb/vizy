@@ -2,6 +2,7 @@
 namespace verbb\vizy\integrations\feedme\fields;
 
 use verbb\vizy\fields\VizyField;
+use verbb\vizy\integrations\feedme\VizyBlock;
 
 use craft\helpers\Json;
 
@@ -38,6 +39,11 @@ class Vizy extends Field implements FieldInterface
     {
         $value = $this->fetchValue() ?? null;
 
+        // Check to see if we're passing in raw JSON, assume it's schema-ready
+        if (is_string($value) && Json::isJsonObject($value)) {
+            return $value;
+        }
+
         if (!$value) {
             $value = ['content' => ''];
         }
@@ -56,6 +62,7 @@ class Vizy extends Field implements FieldInterface
                 new Nodes\TableHeader,
                 new Nodes\TableRow,
                 new Marks\Underline,
+                new VizyBlock,
             ],
         ]);
 
