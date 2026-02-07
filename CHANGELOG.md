@@ -1,5 +1,11 @@
 # Changelog
 
+## 3.1.1 - 2026-02-07
+
+### Added
+- Add support for importing Vizy Blocks for Feed Me feeds. Still requires constructing payload manually.
+- Add support for Craft Content Block fields within Vizy Blocks.
+
 ## 3.1.0 - 2026-01-25
 
 ### Changed
