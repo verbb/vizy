@@ -313,43 +313,43 @@ class VizyBlock extends Node
         // Convert any custom field values from their `layoutElementUid` to their handle.
         if ($fieldLayout = $this->getFieldLayout()) {
             $fieldContent = [];
-            $fieldLayout = $this->getFieldLayout();
             $fields = $value['attrs']['values']['content']['fields'] ?? [];
 
-            foreach ($fields as $handle => $fieldValue) {
-                if (str_contains($handle, '-')) {
-                    foreach ($fieldLayout->getCustomFields() as $field) {
-                        if ($field->layoutElement && $field->layoutElement->uid === $handle) {
-                            // Normallize empty content for JSON
-                            if ($fieldValue === null) {
-                                $fieldValue = '';
-                            }
+            foreach ($fields as $handleOrUid => $fieldValue) {
+                // Normalize empty content for JSON
+                if ($fieldValue === null) {
+                    $fieldValue = '';
+                }
 
-                            $fieldContent[$field->handle] = $fieldValue;
+                foreach ($fieldLayout->getCustomFields() as $field) {
+                    // Check if this is the right field, using either the UID or the handle
+                    $matchesField = ($field->layoutElement?->uid === $handleOrUid || $field->layoutElement?->handle === $handleOrUid || $field->handle === $handleOrUid);
 
-                            try {
-                                if ($field instanceof MatrixField) {
-                                    // We need to record any Matrix fields in a Vizy block for special-handling
-                                    Vizy::$plugin->setNestedMatrixFields($field->handle);
-                                }
+                    if (!$matchesField) {
+                        continue;
+                    }
 
-                                // Normalize nested Vizy field data
-                                if ($field instanceof VizyField) {
-                                    $fieldContent[$field->handle] = Json::encode($field->normalizeValue($fieldValue, $element)->getRawNodes());
-                                } else {
-                                    // Otherwise, anything that _looks_ like encoded JSON should be decoded
-                                    // This includes Matrix, Relation fields and Link fields
-                                    if (is_string($fieldValue) && Json::isJsonObject($fieldValue)) {
-                                        $fieldContent[$field->handle] = Json::decode($fieldValue);
-                                    }
-                                }
-                            } catch (Throwable $e) {
-                                // Ignore any errors, they'll typically be JSON issues.
+                    $fieldContent[$field->handle] = $fieldValue;
+
+                    try {
+                        if ($field instanceof MatrixField) {
+                            // We need to record any Matrix fields in a Vizy block for special-handling
+                            Vizy::$plugin->setNestedMatrixFields($field->handle);
+                        }
+
+                        // Normalize nested Vizy field data
+                        if ($field instanceof VizyField) {
+                            $fieldContent[$field->handle] = Json::encode($field->normalizeValue($fieldValue, $element)->getRawNodes());
+                        } else {
+                            // Otherwise, anything that _looks_ like encoded JSON should be decoded
+                            // This includes Matrix, Relation fields and Link fields
+                            if (is_string($fieldValue) && Json::isJsonObject($fieldValue)) {
+                                $fieldContent[$field->handle] = Json::decode($fieldValue);
                             }
                         }
+                    } catch (Throwable $e) {
+                        // Ignore any errors, they'll typically be JSON issues.
                     }
-                } else {
-                    $fieldContent[$handle] = $fieldValue;
                 }
             }
 
