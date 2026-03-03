@@ -1,5 +1,13 @@
 # Changelog
 
+## 3.1.2 - 2026-03-03
+
+### Added
+- Add `vizy/content/fix-vizy-block-field-uids` console command to assist with some migration issues for missing field layout fields in Vizy Blocks.
+
+### Fixed
+- Fix Vizy Block’s not normalize content when stored with deprecated field handles.
+
 ## 3.1.1 - 2026-02-07
 
 ### Added
