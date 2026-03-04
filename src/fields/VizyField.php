@@ -897,6 +897,7 @@ class VizyField extends Field
                     $blockTypeArray = $blockType->toArray();
 
                     $view->startJsBuffer();
+                    $view->startScriptBuffer();
 
                     // Create a fake element with the same fieldtype as our block
                     $blockElement = new BlockElement();
@@ -924,14 +925,13 @@ class VizyField extends Field
                     
                     $fieldsHtml = $view->namespaceInputs($form->render());
                     $footHtml = $view->clearJsBuffer(false);
+                    $scriptHtml = $view->clearScriptBuffer();
 
                     $blockTypeArray['fieldsHtml'] = $fieldsHtml;
 
                     $view->setNamespace($originalNamespace);
 
-                    if ($footHtml) {
-                        $footHtml = '<script id="script-__VIZY_BLOCK_' . $placeholderKey . '__">' . $footHtml . '</script>';
-                    }
+                    $footHtml = $this->_composeDeferredFootHtml($footHtml, $scriptHtml, $placeholderKey);
 
                     // Reset $_isFresh's
                     if ($fieldLayout = $blockElement->getFieldLayout()) {
@@ -971,6 +971,7 @@ class VizyField extends Field
                     }
 
                     $view->startJsBuffer();
+                    $view->startScriptBuffer();
 
                     // Create a fake element with the same fieldtype as our block
                     $blockElement = $block->getBlockElement($element);
@@ -1001,12 +1002,11 @@ class VizyField extends Field
 
                     $fieldsHtml = $view->namespaceInputs($fieldLayout->createForm($blockElement)->render());
                     $footHtml = $view->clearJsBuffer(false);
+                    $scriptHtml = $view->clearScriptBuffer();
 
                     $view->setNamespace($originalNamespace);
 
-                    if ($footHtml) {
-                        $footHtml = '<script id="script-__VIZY_BLOCK_' . $placeholderKey . '__">' . $footHtml . '</script>';
-                    }
+                    $footHtml = $this->_composeDeferredFootHtml($footHtml, $scriptHtml, $placeholderKey);
 
                     $blocks[] = [
                         'id' => $blockId,
@@ -1309,5 +1309,33 @@ class VizyField extends Field
         }
 
         return $customSources;
+    }
+
+    private function _composeDeferredFootHtml(string|false $js, array|false $scripts, string $placeholderKey): string
+    {
+        $payload = '';
+
+        if (is_string($js) && $js !== '') {
+            $payload .= '<script id="script-__VIZY_BLOCK_' . $placeholderKey . '__">' . $js . '</script>';
+        }
+
+        if (is_array($scripts)) {
+            $payload .= $this->_flattenScriptBuffer($scripts);
+        }
+
+        return $payload;
+    }
+
+    private function _flattenScriptBuffer(array $scripts): string
+    {
+        $output = '';
+
+        foreach ($scripts as $positionScripts) {
+            if (is_array($positionScripts) && $positionScripts) {
+                $output .= implode("\n", $positionScripts) . "\n";
+            }
+        }
+
+        return $output;
     }
 }
