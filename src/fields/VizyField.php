@@ -184,18 +184,8 @@ class VizyField extends Field
         $inputNamePrefix = $view->getNamespace();
         $inputIdPrefix = Html::id($inputNamePrefix);
 
+        // Register Vizy assets; roots are mounted automatically by vizy.js.
         Plugin::registerAsset('field/src/js/vizy.js');
-
-        // Create the Vizy Settings Vue component
-        $js = 'new Craft.Vizy.Settings(' .
-            Json::encode($inputNamePrefix, JSON_UNESCAPED_UNICODE) . ', ' .
-            Json::encode($fieldData, JSON_UNESCAPED_UNICODE) . ', ' .
-            Json::encode($settings, JSON_UNESCAPED_UNICODE) .
-        ');';
-
-        // Wait for Vizy JS to be loaded, either through an event listener, or by a flag.
-        // This covers if this script is run before, or after the Vizy JS has loaded
-        $view->registerJs('document.addEventListener("vizy-loaded", function(e) {' . $js . '}); if (Craft.VizyReady) {' . $js . '}');
 
         $volumeOptions = [];
 
@@ -686,19 +676,8 @@ class VizyField extends Field
             }
         }
 
-        // Register the Vizy JS for Vite
+        // Register Vizy assets; roots are mounted automatically by vizy.js.
         Plugin::registerAsset('field/src/js/vizy.js');
-
-        // JS logic will handle whether to run this on nested fields or not. For the most part, Vue will
-        // automatically render any nested fields when run from the root component.
-        $js = 'new Craft.Vizy.Input(' .
-            '"' . $view->namespaceInputId($id) . '", ' .
-            '"' . $view->namespaceInputName($this->handle) . '"' .
-        ');';
-
-        // Wait for Vizy JS to be loaded, either through an event listener, or by a flag.
-        // This covers if this script is run before, or after the Vizy JS has loaded
-        $view->registerJs('document.addEventListener("vizy-loaded", function(e) {' . $js . '}); if (Craft.VizyReady) {' . $js . '}');
 
         // Let the field know if this is the root field for nested fields
         $settings['isRoot'] = $this->_isRootField($element);
