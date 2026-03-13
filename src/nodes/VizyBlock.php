@@ -175,7 +175,7 @@ class VizyBlock extends Node
         }
 
         // Create a fake element with the same fieldtype as our block
-        $block = $this->getBlockElement();
+        $block = $this->getBlockElement($this->getElement());
         $field = $this->getField();
 
         $variables = array_merge($this->toArray(), $block->getFieldValues());
@@ -195,7 +195,7 @@ class VizyBlock extends Node
         }
 
         // Create a fake element with the same fieldtype as our block
-        $block = $this->getBlockElement();
+        $block = $this->getBlockElement($this->getElement());
 
         foreach ($block->getFieldLayout()->getTabs() as $tab) {
             foreach ($tab->elements as $tabElement) {
@@ -359,15 +359,20 @@ class VizyBlock extends Node
         return $value;
     }
 
-    public function getBlockElement($element = null): BlockElement
+    public function getBlockElement(?ElementInterface $element = null): BlockElement
     {
         if ($this->_blockElement) {
+            // Keep owner/site context in sync for cached synthetic block elements.
+            if ($element) {
+                $this->_blockElement->setOwner($element);
+            }
+
             return $this->_blockElement;
         }
 
         $block = new BlockElement();
         $block->id = rand();
-        $block->setOwner($element);
+        $block->setOwner($element ?: $this->getElement());
 
         if ($fieldLayout = $this->getFieldLayout()) {
             $block->setFieldLayout($fieldLayout);
