@@ -1,5 +1,14 @@
 # Changelog
 
+## 3.1.3 - 2026-03-15
+
+### Changed
+- Refactor Vizy field bootstrapping to DOM auto-mount.
+
+### Fixed
+- Fix Vizy Block content not being consistently site-aware.
+- Fix an error for CKEditor 5+ and other plugins using `registerScriptWithVars()`.
+
 ## 3.1.2 - 2026-03-03
 
 ### Added
