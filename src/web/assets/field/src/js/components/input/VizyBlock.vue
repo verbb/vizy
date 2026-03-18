@@ -178,6 +178,7 @@ export default {
             activeTab: null,
             tippy: null,
             mounted: false,
+            preview: '',
             currentPortalId: null,
             portalEventName: null,
             portalUpdateHandler: null,
@@ -271,68 +272,6 @@ export default {
             return anyCollapsed;
         },
 
-        preview() {
-            let previewHtml = '';
-
-            const portalRoot = this.getPortalRoot();
-
-            if (portalRoot) {
-                const $fields = $(portalRoot).children().children();
-
-                for (let i = 0; i < $fields.length; i++) {
-                    const $field = $($fields[i]);
-                    const $inputs = $field.children('.input').find('select,input[type!="hidden"],textarea,.label');
-
-                    let inputPreviewText = '';
-
-                    for (let j = 0; j < $inputs.length; j++) {
-                        const $input = $($inputs[j]);
-                        let value;
-
-                        if ($input.hasClass('vui-json-content')) {
-                            continue;
-                        }
-
-                        if ($input.hasClass('label')) {
-                            const $maybeLightswitchContainer = $input.parent().parent();
-
-                            if ($maybeLightswitchContainer.hasClass('lightswitch') && (
-                                ($maybeLightswitchContainer.hasClass('on') && $input.hasClass('off')) ||
-                                (!$maybeLightswitchContainer.hasClass('on') && $input.hasClass('on'))
-                            )) {
-                                continue;
-                            }
-
-                            value = $input.text();
-                        } else {
-                            value = Craft.getText(this._inputPreviewText($input));
-                        }
-
-                        if (value instanceof Array) {
-                            value = value.join(', ');
-                        }
-
-                        if (value) {
-                            value = Craft.trim(Craft.escapeHtml(value));
-
-                            if (value) {
-                                if (inputPreviewText) {
-                                    inputPreviewText += ', ';
-                                }
-
-                                inputPreviewText += value;
-                            }
-                        }
-                    }
-
-                    if (inputPreviewText) {
-                        previewHtml += (previewHtml ? ' <span>|</span> ' : '') + inputPreviewText;
-                    }
-                }
-            }
-
-            return previewHtml;
-        },
     },
 
     watch: {
@@ -351,6 +290,7 @@ export default {
             this.$nextTick(() => {
                 this.vizyField.attachPortal(newId, this.$refs.portalMount);
                 this.bindPortalUpdate(newId);
+                this.queuePreviewRefresh();
 
                 this.setFirstActiveTab();
             });
@@ -368,6 +308,7 @@ export default {
 
             this.currentPortalId = this.node.attrs.id;
             this.vizyField.attachPortal(this.currentPortalId, this.$refs.portalMount);
+            this.queuePreviewRefresh();
 
             // Listen for portal update events for *this* id
             this.bindPortalUpdate(this.currentPortalId);
@@ -480,6 +421,8 @@ export default {
 
             // eslint-disable-next-line vue/no-mutating-props
             this.node.attrs.values = values;
+
+            this.queuePreviewRefresh();
         },
 
         getPortalRoot() {
@@ -491,6 +434,77 @@ export default {
 
             // Portal root is the persistent DOM you move around
             return mount.querySelector('[data-vizy-portal]') || null;
+        },
+
+        queuePreviewRefresh() {
+            this.$nextTick(() => {
+                window.requestAnimationFrame(() => {
+                    this.refreshPreview();
+                });
+            });
+        },
+
+        refreshPreview() {
+            let previewHtml = '';
+
+            const portalRoot = this.getPortalRoot();
+
+            if (portalRoot) {
+                const $fields = $(portalRoot).children().children();
+
+                for (let i = 0; i < $fields.length; i++) {
+                    const $field = $($fields[i]);
+                    const $inputs = $field.children('.input').find('select,input[type!="hidden"],textarea,.label');
+
+                    let inputPreviewText = '';
+
+                    for (let j = 0; j < $inputs.length; j++) {
+                        const $input = $($inputs[j]);
+                        let value;
+
+                        if ($input.hasClass('vui-json-content')) {
+                            continue;
+                        }
+
+                        if ($input.hasClass('label')) {
+                            const $maybeLightswitchContainer = $input.parent().parent();
+
+                            if ($maybeLightswitchContainer.hasClass('lightswitch') && (
+                                ($maybeLightswitchContainer.hasClass('on') && $input.hasClass('off')) ||
+                                (!$maybeLightswitchContainer.hasClass('on') && $input.hasClass('on'))
+                            )) {
+                                continue;
+                            }
+
+                            value = $input.text();
+                        } else {
+                            value = Craft.getText(this._inputPreviewText($input));
+                        }
+
+                        if (value instanceof Array) {
+                            value = value.join(', ');
+                        }
+
+                        if (value) {
+                            value = Craft.trim(Craft.escapeHtml(value));
+
+                            if (value) {
+                                if (inputPreviewText) {
+                                    inputPreviewText += ', ';
+                                }
+
+                                inputPreviewText += value;
+                            }
+                        }
+                    }
+
+                    if (inputPreviewText) {
+                        previewHtml += (previewHtml ? ' <span>|</span> ' : '') + inputPreviewText;
+                    }
+                }
+            }
+
+            this.preview = previewHtml;
         },
 
         isEmpty(value) {
@@ -604,6 +618,7 @@ export default {
 
         collapseBlock() {
             this.collapsed = true;
+            this.queuePreviewRefresh();
 
             if (this.tippy) {
                 this.tippy.hide();
@@ -612,6 +627,7 @@ export default {
 
         expandBlock() {
             this.collapsed = false;
+            this.queuePreviewRefresh();
 
             if (this.tippy) {
                 this.tippy.hide();
