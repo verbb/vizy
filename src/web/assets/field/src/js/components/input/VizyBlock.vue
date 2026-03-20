@@ -288,11 +288,13 @@ export default {
             this.currentPortalId = newId;
 
             this.$nextTick(() => {
-                this.vizyField.attachPortal(newId, this.$refs.portalMount);
-                this.bindPortalUpdate(newId);
-                this.queuePreviewRefresh();
-
-                this.setFirstActiveTab();
+                const mount = this.$refs.portalMount;
+                if (mount) {
+                    this.vizyField.attachPortal(newId, mount);
+                    this.bindPortalUpdate(newId);
+                    this.queuePreviewRefresh();
+                    this.setFirstActiveTab();
+                }
             });
         },
     },
@@ -307,11 +309,12 @@ export default {
             this.setFirstActiveTab();
 
             this.currentPortalId = this.node.attrs.id;
-            this.vizyField.attachPortal(this.currentPortalId, this.$refs.portalMount);
-            this.queuePreviewRefresh();
-
-            // Listen for portal update events for *this* id
-            this.bindPortalUpdate(this.currentPortalId);
+            const mount = this.$refs.portalMount;
+            if (mount) {
+                this.vizyField.attachPortal(this.currentPortalId, mount);
+                this.queuePreviewRefresh();
+                this.bindPortalUpdate(this.currentPortalId);
+            }
 
             const $template = this.$el.querySelector('#vizy-block-settings-template');
 
