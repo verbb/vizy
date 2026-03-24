@@ -1,5 +1,11 @@
 # Changelog
 
+## 3.1.4 - 2026-03-24
+
+### Fixed
+- Fix an issue where blocktype definition could be lost when rendering Vizy fields.
+- Fix Vizy Block preview not persisting on page reload.
+
 ## 3.1.3 - 2026-03-15
 
 ### Changed
