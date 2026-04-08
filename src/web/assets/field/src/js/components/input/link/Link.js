@@ -2,10 +2,19 @@ import { Plugin, PluginKey } from 'prosemirror-state';
 import { mergeAttributes } from '@tiptap/core';
 import Link from '@tiptap/extension-link';
 
+import { normalizeLinkHref } from '@utils/string';
+
 export default Link.extend({
     addAttributes() {
+        const parentAttrs = this.parent?.() || {};
+
         return {
-            ...this.parent?.(),
+            ...parentAttrs,
+
+            href: {
+                ...parentAttrs.href,
+                parseHTML: (element) => { return normalizeLinkHref(element.getAttribute('href')); },
+            },
 
             class: {
                 default: null,

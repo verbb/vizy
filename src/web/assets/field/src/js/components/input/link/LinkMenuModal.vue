@@ -131,6 +131,7 @@
 import { TextSelection } from 'prosemirror-state';
 
 import { getMarkRange } from '@utils/tiptap/marks';
+import { normalizeLinkHref } from '@utils/string';
 import MenuBarModal from '../MenuBarModal.vue';
 
 export default {
@@ -278,7 +279,7 @@ export default {
             }
 
             const data = {
-                href: this.modelValue.url,
+                href: normalizeLinkHref(this.modelValue.url),
                 target: this.modelValue.target ? '_blank' : '',
                 class: this.modelValue.class,
                 title: this.modelValue.title,

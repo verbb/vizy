@@ -64,3 +64,36 @@ export const generateKebab = function(sourceValue) {
 export const getId = function(prefix = '') {
     return prefix + Craft.randomString(10);
 };
+
+/**
+ * If the value is a bare email (no URI scheme), prefix with mailto: so the
+ * browser treats it as an email link. Leaves http(s), mailto, tel, Craft refs (#handle:id), paths, etc. unchanged.
+ *
+ * @param {string|null|undefined} raw
+ * @returns {string|null|undefined}
+ */
+export function normalizeLinkHref(raw) {
+    if (raw == null || typeof raw !== 'string') {
+        return raw;
+    }
+
+    const href = raw.trim();
+
+    if (!href) {
+        return href;
+    }
+
+    if (/^[a-z][a-z0-9+.-]*:/i.test(href)) {
+        return href;
+    }
+
+    if (href.startsWith('#') || href.startsWith('/') || href.startsWith('?') || href.startsWith('//')) {
+        return href;
+    }
+
+    if (/^\S+@\S+\.\S+$/.test(href)) {
+        return `mailto:${href}`;
+    }
+
+    return href;
+}
