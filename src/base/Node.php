@@ -237,8 +237,11 @@ class Node extends Component implements NodeInterface
                 $type = $content['type'] ?? null;
                 $text = $content['text'] ?? null;
 
+                // Only drop genuinely empty text nodes. Whitespace-only nodes (e.g. a single
+                // space between adjacent marks) must be kept or HTML output loses spaces — see
+                // https://github.com/verbb/vizy/issues/366
                 if ($type === 'text' && $text !== null) {
-                    if (trim($text) === '') {
+                    if ($text === '') {
                         unset($rawContent[$key]);
                     }
                 }
