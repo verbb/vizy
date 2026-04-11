@@ -1,5 +1,13 @@
 # Changelog
 
+## 3.1.5 - 2026-04-11
+
+### Added
+- Add automatic “mailto” handling for links that are emails.
+
+### Fixed
+- Fix whitespace-only text nodes not preserving spaces between marks.
+
 ## 3.1.4 - 2026-03-24
 
 ### Fixed
