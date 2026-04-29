@@ -1,5 +1,10 @@
 # Changelog
 
+## 2.1.30 - 2026-04-29
+
+### Changed
+- Update `tiptap` and `qs` dependencies.
+
 ## 2.1.29 - 2025-09-16
 
 ### Changed
