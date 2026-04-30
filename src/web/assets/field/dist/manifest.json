@@ -7,7 +7,11 @@
     "css": [
       "assets/vizy-f7f54ecd.css"
     ],
+<<<<<<< HEAD
     "file": "assets/vizy-18b4e87f.js",
+=======
+    "file": "assets/vizy-7b148e00.js",
+>>>>>>> origin/craft-4
     "isEntry": true,
     "src": "field/src/js/vizy.js"
   }
