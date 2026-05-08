@@ -822,6 +822,103 @@ export default {
             return traverseAndNormalize(obj);
         },
 
+        normalizeOrderedTableContent(fieldContent) {
+            const orderedTableRows = this.getOrderedTableRows();
+            const fields = fieldContent?.fields;
+
+            if (!fields || !Object.keys(orderedTableRows).length) {
+                return fieldContent;
+            }
+
+            Object.keys(orderedTableRows).forEach((fieldHandle) => {
+                const fieldValue = fields[fieldHandle];
+
+                if (!fieldValue || typeof fieldValue !== 'object') {
+                    return;
+                }
+
+                const rows = orderedTableRows[fieldHandle]
+                    .filter((rowKey) => { return Object.prototype.hasOwnProperty.call(fieldValue, rowKey); })
+                    .map((rowKey) => { return fieldValue[rowKey]; });
+
+                if (rows.length) {
+                    fields[fieldHandle] = rows;
+                }
+            });
+
+            return fieldContent;
+        },
+
+        getOrderedTableRows() {
+            const rows = {};
+
+            this.$refs.fields.$el.querySelectorAll('tr').forEach((rowEl) => {
+                const rowInfo = this.getTableRowInfo(rowEl);
+
+                if (!rowInfo) {
+                    return;
+                }
+
+                if (!rows[rowInfo.fieldHandle]) {
+                    rows[rowInfo.fieldHandle] = [];
+                }
+
+                if (!rows[rowInfo.fieldHandle].includes(rowInfo.rowKey)) {
+                    rows[rowInfo.fieldHandle].push(rowInfo.rowKey);
+                }
+            });
+
+            return rows;
+        },
+
+        getTableRowInfo(rowEl) {
+            const tableFieldEl = this.getTableFieldElement(rowEl);
+
+            if (!tableFieldEl) {
+                return null;
+            }
+
+            const inputs = rowEl.querySelectorAll('input[name], textarea[name], select[name]');
+
+            for (let i = 0; i < inputs.length; i++) {
+                const parts = this.parseInputName(inputs[i].name);
+
+                // Only normalize direct Craft Table fields for this Vizy block.
+                if (
+                    parts[2] === 'blocks' &&
+                    parts[3] === this.node.attrs.id &&
+                    parts[4] === 'fields' &&
+                    parts.length > 7 &&
+                    /^\d+$/.test(parts[6])
+                ) {
+                    return {
+                        fieldHandle: parts[5],
+                        rowKey: parts[6],
+                    };
+                }
+            }
+
+            return null;
+        },
+
+        getTableFieldElement(rowEl) {
+            let fieldEl = rowEl.closest('[data-type]');
+
+            while (fieldEl) {
+                if (fieldEl.getAttribute('data-type') === 'craft\\fields\\Table') {
+                    return fieldEl;
+                }
+
+                fieldEl = fieldEl.parentElement?.closest('[data-type]');
+            }
+
+            return null;
+        },
+
+        parseInputName(name) {
+            return name.replace(/\]/g, '').split('[');
+        },
+
         serializeFieldContent() {
             // Check if there's any fatal errors for this block
             if (isEmpty(this.blockType)) {
@@ -856,6 +953,10 @@ export default {
             content = this.normalizeIntegersInArrays(content);
 
             let fieldContent = this.findContentBlocksForBlock(content);
+
+            // Preserve Craft Table row order before numeric keys are serialized to JSON.
+            // https://github.com/verbb/vizy/issues/333
+            fieldContent = this.normalizeOrderedTableContent(fieldContent);
 
             // For ST/Matrix/Vizy deeply-nested combinations, there's a caveat to how new block namespaces
             // work that we need to handle. If we have Vizy > ST > Vizy > Vizy, the inner fields will have an issue
