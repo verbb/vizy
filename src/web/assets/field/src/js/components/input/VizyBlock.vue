@@ -410,6 +410,9 @@ export default {
 
             const postData = Garnish.getPostData(portalEl);
             const content = Craft.expandPostArray(postData);
+            // Preserve Craft Table row order before numeric keys are serialized to JSON.
+            // https://github.com/verbb/vizy/issues/333
+            this.normalizeOrderedTableContent(portalEl, content);
 
             const fieldContent = content?.vizyData?.[this.node.attrs.id] || null;
 
@@ -426,6 +429,110 @@ export default {
             this.node.attrs.values = values;
 
             this.queuePreviewRefresh();
+        },
+
+        normalizeOrderedTableContent(portalEl, content) {
+            const orderedTableRows = this.getOrderedTableRows(portalEl);
+            const blockContent = content?.vizyData?.[this.node.attrs.id] || null;
+
+            if (!blockContent || !Object.keys(orderedTableRows).length) {
+                return;
+            }
+
+            Object.keys(blockContent).forEach((namespaceKey) => {
+                const fields = blockContent[namespaceKey]?.fields;
+
+                if (!fields) {
+                    return;
+                }
+
+                Object.keys(orderedTableRows).forEach((fieldHandle) => {
+                    const fieldValue = fields[fieldHandle];
+
+                    if (!fieldValue || typeof fieldValue !== 'object') {
+                        return;
+                    }
+
+                    const rows = orderedTableRows[fieldHandle]
+                        .filter((rowKey) => { return Object.prototype.hasOwnProperty.call(fieldValue, rowKey); })
+                        .map((rowKey) => { return fieldValue[rowKey]; });
+
+                    if (rows.length) {
+                        fields[fieldHandle] = rows;
+                    }
+                });
+            });
+        },
+
+        getOrderedTableRows(portalEl) {
+            const rows = {};
+
+            portalEl.querySelectorAll('tr').forEach((rowEl) => {
+                const rowInfo = this.getTableRowInfo(rowEl);
+
+                if (!rowInfo) {
+                    return;
+                }
+
+                if (!rows[rowInfo.fieldHandle]) {
+                    rows[rowInfo.fieldHandle] = [];
+                }
+
+                if (!rows[rowInfo.fieldHandle].includes(rowInfo.rowKey)) {
+                    rows[rowInfo.fieldHandle].push(rowInfo.rowKey);
+                }
+            });
+
+            return rows;
+        },
+
+        getTableRowInfo(rowEl) {
+            const tableFieldEl = this.getTableFieldElement(rowEl);
+
+            if (!tableFieldEl) {
+                return null;
+            }
+
+            const inputs = rowEl.querySelectorAll('input[name], textarea[name], select[name]');
+
+            for (let i = 0; i < inputs.length; i++) {
+                const parts = this.parseInputName(inputs[i].name);
+                const fieldsIndex = parts.indexOf('fields');
+
+                // Only normalize direct block fields. Nested field content has another path after `fields`.
+                if (
+                    parts[0] === 'vizyData' &&
+                    parts[1] === this.node.attrs.id &&
+                    fieldsIndex === 3 &&
+                    parts.length > 6 &&
+                    /^\d+$/.test(parts[5])
+                ) {
+                    return {
+                        fieldHandle: parts[4],
+                        rowKey: parts[5],
+                    };
+                }
+            }
+
+            return null;
+        },
+
+        getTableFieldElement(rowEl) {
+            let fieldEl = rowEl.closest('[data-type]');
+
+            while (fieldEl) {
+                if (fieldEl.getAttribute('data-type') === 'craft\\fields\\Table') {
+                    return fieldEl;
+                }
+
+                fieldEl = fieldEl.parentElement?.closest('[data-type]');
+            }
+
+            return null;
+        },
+
+        parseInputName(name) {
+            return name.replace(/\]/g, '').split('[');
         },
 
         getPortalRoot() {
