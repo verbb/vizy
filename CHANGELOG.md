@@ -1,5 +1,10 @@
 # Changelog
 
+## 2.1.31 - 2026-05-10
+
+### Fixed
+- Fix an issue with Vizy Blocks containing a Table field not preserving sort order.
+
 ## 2.1.30 - 2026-04-29
 
 ### Changed
