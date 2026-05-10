@@ -213,6 +213,11 @@
 - Fix content changes being detected for nested fields when there are none. In addition, Vizy fields only listen for changes to their content when interacted with.
 - Fix field layout designer in settings not serializing changes correctly.
 
+## 2.1.31 - 2026-05-10
+
+### Fixed
+- Fix an issue with Vizy Blocks containing a Table field not preserving sort order.
+
 ## 2.1.30 - 2026-04-29
 
 ### Changed
