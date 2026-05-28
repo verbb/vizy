@@ -44,6 +44,12 @@ class Matrix
     private static function filterContent($content, $entryTypes, $blockFields)
     {
         foreach ($content as $blockKey => $block) {
+            if (!is_array($block)) {
+                unset($content[$blockKey]);
+
+                continue;
+            }
+
             $type = $block['type'] ?? '';
             $fields = $block['fields'] ?? [];
 
