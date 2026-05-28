@@ -3,20 +3,14 @@ namespace verbb\vizy\console\controllers;
 
 use verbb\vizy\Vizy;
 use verbb\vizy\fields\VizyField;
-use verbb\vizy\helpers\ArrayHelper;
 
 use Craft;
 use craft\base\FieldInterface;
 use craft\console\Controller;
-use craft\db\Migration;
 use craft\db\Query;
-use craft\fields\ContentBlock as ContentBlockField;
-use craft\fields\Matrix as MatrixField;
-use craft\fieldlayoutelements\BaseField;
 use craft\fieldlayoutelements\CustomField;
 use craft\helpers\Console;
 use craft\helpers\Db;
-use craft\helpers\FileHelper;
 use craft\helpers\Json;
 
 use yii\console\ExitCode;
@@ -50,8 +44,6 @@ class ContentController extends Controller
             ->where(['type' => VizyField::class])
             ->all();
 
-        $missingUids = [];
-
         foreach ($vizyFields as $vizyFieldData) {
             $vizyField = Craft::$app->getFields()->getFieldByUid($vizyFieldData['uid']);
 
@@ -78,81 +70,20 @@ class ContentController extends Controller
                             $contentModified = false;
                             $fieldContent = $elementContent[$fieldLayoutUid] ?? null;
 
-                            if (is_string($fieldContent) && Json::isJsonObject($fieldContent)) {
-                                $fieldContent = Json::decode($fieldContent);
+                            if (is_string($fieldContent) && $fieldContent !== '') {
+                                try {
+                                    $decodedFieldContent = Json::decode($fieldContent);
+
+                                    if (is_array($decodedFieldContent)) {
+                                        $fieldContent = $decodedFieldContent;
+                                    }
+                                } catch (Throwable) {
+                                    $fieldContent = null;
+                                }
                             }
 
                             if ($fieldContent && is_array($fieldContent)) {
-                                foreach (ArrayHelper::flatten($fieldContent) as $flatKey => $flatContent) {
-                                    $searchKey = 'content.fields.';
-
-                                    if (str_contains($flatKey, $searchKey)) {
-                                        // Extract either a handle or UID from the key
-                                        preg_match('/content\.fields\.([^.]+)$/', $flatKey, $matches);
-                                        $handleOrUid = $matches[1] ?? null;
-
-                                        // Not a UID, so all good - skip
-                                        if (!str_contains($handleOrUid, '-')) {
-                                            continue;
-                                        }
-
-                                        // Find an existing field based on the UID
-                                        $matchedHandle = $this->_fieldUidHandleMap[$handleOrUid] ?? null;
-
-                                        // If we found a field, then we're all good. UID or handle, it'll resolve correctly.
-                                        // We don't want to change UID to handle mappings, due to some fields like Content Blocks and Matrix
-                                        // actually needing them there, so it's all valid.
-                                        if ($matchedHandle) {
-                                            continue;
-                                        }
-
-                                        $newFieldKey = null;
-
-                                        // If the UID in content is missing from our map, we need to prompt the user for the correct handle
-                                        if ($flatContent) {
-                                            // If we've already processed this field, we already know the correct handle
-                                            if (isset($this->_foundFieldUidHandleMap[$handleOrUid])) {
-                                                $newFieldKey = str_replace($handleOrUid, $this->_foundFieldUidHandleMap[$handleOrUid], $flatKey);
-                                            } else {
-                                                // Find the block type based off the content, to get a list of possible fields
-                                                $blockTypeIdPath = substr($flatKey, 0, (strrpos($flatKey, 'content.fields') - 1)) . '.type';
-
-                                                if ($blockTypeId = ArrayHelper::getValue($fieldContent, $blockTypeIdPath)) { 
-                                                    if ($blockType = $vizyField->getBlockTypeByIdOrHandle($blockTypeId)) {
-                                                        $selectedHandles = [];
-
-                                                        // Get all possible fields for the block type
-                                                        foreach ($blockType->getFieldLayout()->getCustomFields() as $field) {
-                                                            $selectedHandles[$field->handle] = $field->handle;
-                                                        }
-
-                                                        // Prompt the user for the correct handle
-                                                        if ($selectedHandles) {
-                                                            $this->stdout('Unable to find field for content: ' . $flatKey . PHP_EOL, Console::FG_RED);
-                                                            $this->stdout('Content preview: ' . $flatContent . PHP_EOL, Console::FG_RED);
-                                                            $selectedHandle = $this->select('Select field handle:', $selectedHandles);
-
-                                                            // Update our map with the chosen handle so next time we don't have to prompt the user
-                                                            $this->_foundFieldUidHandleMap[$handleOrUid] = $selectedHandle;
-
-                                                            $newFieldKey = str_replace($handleOrUid, $this->_foundFieldUidHandleMap[$handleOrUid], $flatKey);
-                                                        }
-                                                    }
-                                                }
-                                            }
-                                        }
-
-                                        if ($newFieldKey) {
-                                            // Craft::dd([$fieldContent, $newFieldKey]);
-                                            $this->stdout('Updating field content for Element #' . $row['elementId'] . ':' . $row['siteId'] . PHP_EOL, Console::FG_GREEN);
-                                            $this->stdout('Field content: ' . $flatContent . PHP_EOL, Console::FG_GREEN);
-
-                                            $contentModified = true;
-
-                                            ArrayHelper::setValue($fieldContent, $newFieldKey, $flatContent);
-                                        }
-                                    }
-                                }
+                                $contentModified = $this->_fixVizyContentFieldUids($fieldContent, $vizyField, 'content') || $contentModified;
                             }
 
                             if ($contentModified) {
@@ -169,6 +100,169 @@ class ContentController extends Controller
         }
 
         return ExitCode::OK;
+    }
+
+
+    // Private Methods
+    // =========================================================================
+
+    private function _fixVizyContentFieldUids(array &$nodes, VizyField $vizyField, string $path): bool
+    {
+        $modified = false;
+
+        foreach ($nodes as $nodeKey => &$node) {
+            if (!is_array($node)) {
+                continue;
+            }
+
+            $nodePath = $path . '.' . $nodeKey;
+
+            if (($node['type'] ?? null) === 'vizyBlock') {
+                $modified = $this->_fixVizyBlockFieldUids($node, $vizyField, $nodePath) || $modified;
+            }
+
+            if (isset($node['content']) && is_array($node['content'])) {
+                $modified = $this->_fixVizyContentFieldUids($node['content'], $vizyField, $nodePath . '.content') || $modified;
+            }
+        }
+
+        return $modified;
+    }
+
+    private function _fixVizyBlockFieldUids(array &$node, VizyField $vizyField, string $path): bool
+    {
+        $modified = false;
+        $blockTypeId = $node['attrs']['values']['type'] ?? null;
+
+        if (!$blockTypeId) {
+            return false;
+        }
+
+        $blockType = $vizyField->getBlockTypeByIdOrHandle($blockTypeId);
+        $fieldLayout = $blockType?->getFieldLayout();
+
+        if (!$fieldLayout) {
+            return false;
+        }
+
+        if (!isset($node['attrs']['values']['content']['fields']) || !is_array($node['attrs']['values']['content']['fields'])) {
+            return false;
+        }
+
+        $fields = &$node['attrs']['values']['content']['fields'];
+
+        foreach (array_keys($fields) as $handleOrUid) {
+            $fieldValue = &$fields[$handleOrUid];
+            $fieldPath = $path . '.attrs.values.content.fields.' . $handleOrUid;
+            $field = $this->_fieldForContentKey($fieldLayout, $handleOrUid);
+
+            if (!$field && str_contains($handleOrUid, '-') && !isset($this->_fieldUidHandleMap[$handleOrUid]) && $fieldValue) {
+                $selectedHandle = $this->_promptForFieldHandle($handleOrUid, $fieldValue, $fieldLayout, $fieldPath);
+
+                if ($selectedHandle) {
+                    $field = $fieldLayout->getFieldByHandle($selectedHandle);
+                    $fields[$selectedHandle] = $fieldValue;
+                    unset($fields[$handleOrUid]);
+
+                    $this->stdout('Updating field content for ' . $fieldPath . PHP_EOL, Console::FG_GREEN);
+                    $this->stdout('Field content: ' . $this->_previewFieldContent($fieldValue) . PHP_EOL, Console::FG_GREEN);
+
+                    $handleOrUid = $selectedHandle;
+                    $fieldPath = $path . '.attrs.values.content.fields.' . $handleOrUid;
+                    $fieldValue = &$fields[$handleOrUid];
+                    $modified = true;
+                }
+            }
+
+            if ($field instanceof VizyField) {
+                $modified = $this->_fixNestedVizyFieldValue($fieldValue, $field, $fieldPath) || $modified;
+            }
+
+            unset($fieldValue);
+        }
+
+        return $modified;
+    }
+
+    private function _fixNestedVizyFieldValue(mixed &$fieldValue, VizyField $vizyField, string $path): bool
+    {
+        $wasJson = false;
+        $value = $fieldValue;
+
+        if (is_string($value) && $value !== '') {
+            try {
+                $decodedValue = Json::decode($value);
+
+                if (is_array($decodedValue)) {
+                    $value = $decodedValue;
+                    $wasJson = true;
+                }
+            } catch (Throwable) {
+                return false;
+            }
+        }
+
+        if (!is_array($value)) {
+            return false;
+        }
+
+        $modified = $this->_fixVizyContentFieldUids($value, $vizyField, $path);
+
+        if ($modified) {
+            $fieldValue = $wasJson ? Json::encode($value) : $value;
+        }
+
+        return $modified;
+    }
+
+    private function _fieldForContentKey($fieldLayout, string $handleOrUid): ?FieldInterface
+    {
+        foreach ($fieldLayout->getCustomFields() as $field) {
+            if (
+                $field->handle === $handleOrUid ||
+                $field->uid === $handleOrUid ||
+                $field->layoutElement?->handle === $handleOrUid ||
+                $field->layoutElement?->uid === $handleOrUid ||
+                $field->layoutElement?->getFieldUid() === $handleOrUid
+            ) {
+                return $field;
+            }
+        }
+
+        return null;
+    }
+
+    private function _promptForFieldHandle(string $uid, mixed $fieldValue, $fieldLayout, string $path): ?string
+    {
+        if (isset($this->_foundFieldUidHandleMap[$uid])) {
+            return $this->_foundFieldUidHandleMap[$uid];
+        }
+
+        $selectedHandles = [];
+
+        foreach ($fieldLayout->getCustomFields() as $field) {
+            $selectedHandles[$field->handle] = $field->handle;
+        }
+
+        if (!$selectedHandles) {
+            return null;
+        }
+
+        $this->stdout('Unable to find field for content: ' . $path . PHP_EOL, Console::FG_RED);
+        $this->stdout('Content preview: ' . $this->_previewFieldContent($fieldValue) . PHP_EOL, Console::FG_RED);
+
+        $selectedHandle = $this->select('Select field handle:', $selectedHandles);
+
+        return $this->_foundFieldUidHandleMap[$uid] = $selectedHandle;
+    }
+
+    private function _previewFieldContent(mixed $fieldValue): string
+    {
+        if (is_scalar($fieldValue) || $fieldValue === null) {
+            return (string)$fieldValue;
+        }
+
+        return Json::encode($fieldValue);
     }
 
 
