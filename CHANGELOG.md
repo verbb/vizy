@@ -1,5 +1,11 @@
 # Changelog
 
+## 3.1.8 - 2026-05-30
+
+### Fixed
+- Fix Matrix content filtering for malformed block values.
+- Fix `vizy/content/fix-vizy-block-field-uids` not repairing nested Vizy block field content.
+
 ## 3.1.7 - 2026-05-10
 
 ### Fixed
