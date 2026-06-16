@@ -3,9 +3,13 @@ namespace verbb\vizy\elements;
 
 use verbb\vizy\fields\VizyField;
 use verbb\vizy\helpers\Matrix;
+use verbb\vizy\elements\MatrixAnchor;
 use verbb\vizy\models\BlockType;
 
+use Craft;
 use craft\base\Element;
+use craft\base\ElementInterface;
+use craft\elements\User;
 use craft\models\FieldLayout;
 
 class Block extends Element
@@ -24,6 +28,7 @@ class Block extends Element
 
     private ?FieldLayout $_fieldLayout = null;
     private mixed $_owner = null;
+    private ?MatrixAnchor $_matrixAnchor = null;
     private ?BlockType $_type = null;
     private ?VizyField $_field = null;
 
@@ -94,11 +99,32 @@ class Block extends Element
         }
     }
 
+    public function getMatrixAnchor(): ?MatrixAnchor
+    {
+        return $this->_matrixAnchor;
+    }
+
+    public function setMatrixAnchor(?MatrixAnchor $anchor): void
+    {
+        $this->_matrixAnchor = $anchor;
+    }
+
     public function isFieldDirty(string $fieldHandle): bool
     {
         // Keep an eye on the ramifications of setting this. We override this because for assets fields,
         // the BaseRelationField class will try and create a relation, which we don't want. 
         // This is the only feasible way  to flag the `afterElementSave` BaseRelationField not to proceed.
+        return false;
+    }
+
+    public function canSave(User $user): bool
+    {
+        $owner = $this->getOwner();
+
+        if ($owner instanceof ElementInterface) {
+            return Craft::$app->getElements()->canSave($owner, $user);
+        }
+
         return false;
     }
 

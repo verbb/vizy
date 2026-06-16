@@ -345,6 +345,16 @@ export default {
                 this.initValue = this.clone(this.json);
             }, 1000);
 
+            Craft.Vizy.flushPortalUpdates = Craft.Vizy.flushPortalUpdates || [];
+            this._flushPortalUpdates = () => {
+                for (const blockId of this.portals.keys()) {
+                    this.$events.emit(this.portalEventName(blockId));
+                }
+
+                this.syncJsonToDataStore();
+            };
+            Craft.Vizy.flushPortalUpdates.push(this._flushPortalUpdates);
+
         });
 
         // Keep track of any parent fields (at least their toolbars) so we can align them
@@ -363,6 +373,14 @@ export default {
     },
 
     beforeUnmount() {
+        if (this._flushPortalUpdates && Craft.Vizy.flushPortalUpdates) {
+            const index = Craft.Vizy.flushPortalUpdates.indexOf(this._flushPortalUpdates);
+
+            if (index !== -1) {
+                Craft.Vizy.flushPortalUpdates.splice(index, 1);
+            }
+        }
+
         this.editor.destroy();
     },
 
@@ -611,6 +629,131 @@ export default {
             }
 
             return JSON.stringify(value);
+        },
+
+        getDocJsonContent() {
+            const content = [];
+
+            this.editor?.state?.doc?.forEach((node) => {
+                content.push(node.toJSON());
+            });
+
+            return content;
+        },
+
+        getBlockFieldContentFromPortal(blockId, portalEl, expandedContent = null) {
+            if (!portalEl) {
+                return null;
+            }
+
+            const content = expandedContent || Craft.expandPostArray(Garnish.getPostData(portalEl));
+            const fieldContent = content?.vizyData?.[blockId] || null;
+
+            if (!fieldContent) {
+                return null;
+            }
+
+            const namespaceKey = Object.keys(fieldContent)[0];
+
+            return this.mergeMatrixFieldContent(blockId, portalEl, fieldContent[namespaceKey]);
+        },
+
+        mergeMatrixFieldContent(blockId, portalEl, content) {
+            if (!content) {
+                return content;
+            }
+
+            if (!content.fields) {
+                content.fields = {};
+            }
+
+            portalEl.querySelectorAll('.matrix-field[id]').forEach((matrixFieldEl) => {
+                const postData = Garnish.getPostData(matrixFieldEl);
+                const expanded = Craft.expandPostArray(postData);
+                const blockContent = expanded?.vizyData?.[blockId];
+
+                if (!blockContent) {
+                    return;
+                }
+
+                const namespaceKey = Object.keys(blockContent)[0];
+                const fields = blockContent[namespaceKey]?.fields;
+
+                if (!fields) {
+                    return;
+                }
+
+                Object.keys(fields).forEach((handle) => {
+                    const fieldValue = fields[handle];
+
+                    if (fieldValue && typeof fieldValue === 'object' && fieldValue.entries) {
+                        content.fields[handle] = this.normalizeMatrixFieldValue(matrixFieldEl, fieldValue);
+                    }
+                });
+            });
+
+            return content;
+        },
+
+        normalizeMatrixFieldValue(matrixFieldEl, fieldValue) {
+            if (!fieldValue?.entries) {
+                return fieldValue;
+            }
+
+            const sortOrder = [];
+
+            matrixFieldEl.querySelectorAll('input[type="hidden"][name*="[sortOrder][]"]').forEach((input) => {
+                if (input.value) {
+                    sortOrder.push(input.value);
+                }
+            });
+
+            if (sortOrder.length) {
+                fieldValue.sortOrder = sortOrder;
+            }
+
+            return fieldValue;
+        },
+
+        syncJsonToDataStore() {
+            if (!this.editor) {
+                return;
+            }
+
+            const content = this.getDocJsonContent();
+
+            this.portals.forEach((portalEntry, blockId) => {
+                const nodeJson = content.find((node) => {
+                    return node.type === 'vizyBlock' && node.attrs?.id === blockId;
+                });
+
+                if (!nodeJson || !portalEntry?.el) {
+                    return;
+                }
+
+                const blockContent = this.getBlockFieldContentFromPortal(blockId, portalEntry.el);
+
+                if (!blockContent) {
+                    return;
+                }
+
+                nodeJson.attrs = {
+                    ...nodeJson.attrs,
+                    values: {
+                        ...(nodeJson.attrs.values || {}),
+                        content: blockContent,
+                        matrixAnchorUid: nodeJson.attrs.values?.matrixAnchorUid || null,
+                    },
+                };
+            });
+
+            this.json = content;
+
+            const $dataStore = this.$el.querySelector('[data-store]');
+
+            if ($dataStore) {
+                $dataStore.value = this.serializeValue(content);
+            }
         },
 
         getParsedBlockHtml(html, id) {

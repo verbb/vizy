@@ -1,19 +1,25 @@
 <?php
 namespace verbb\vizy\controllers;
 
-use verbb\vizy\Vizy;
 use verbb\vizy\helpers\Fields;
 use verbb\vizy\models\BlockType;
+use verbb\vizy\models\NodeCollection;
+use verbb\vizy\nodes\VizyBlock;
+use verbb\vizy\Vizy;
+use verbb\vizy\fields\VizyField;
 
 use Craft;
 use craft\base\Element;
 use craft\elements\Entry;
+use craft\fields\Matrix;
 use craft\helpers\ElementHelper;
 use craft\helpers\Json;
 use craft\helpers\StringHelper;
 use craft\models\FieldLayout;
 use craft\web\Controller;
 
+use yii\web\BadRequestHttpException;
+use yii\web\ForbiddenHttpException;
 use yii\web\Response;
 
 class FieldController extends Controller
@@ -49,12 +55,11 @@ class FieldController extends Controller
             ]);
         }
 
-        // Filter out Matrix, Super Table and Neo for now, we've got to figure something out...
+        // Filter out Super Table and Neo for now.
         // https://github.com/verbb/vizy/issues/314
         $availableCustomFields = [];
 
         $excludedFieldTypes = [
-            'craft\\fields\\Matrix',
             'verbb\\supertable\\fields\\SuperTableField',
             'benf\\neo\\Field',
         ];
@@ -90,15 +95,69 @@ class FieldController extends Controller
 
     public function actionCreateMatrixEntry()
     {
-        // Override `MatrixController::actionCreateEntry` to handle non-saved-element owners.
         $fieldId = $this->request->getRequiredBodyParam('fieldId');
         $entryTypeId = $this->request->getRequiredBodyParam('entryTypeId');
+        $this->request->getRequiredBodyParam('ownerId');
         $siteId = $this->request->getRequiredBodyParam('siteId');
         $namespace = $this->request->getRequiredBodyParam('namespace');
+        $staticEntries = $this->request->getBodyParam('staticEntries', false);
+        $vizyFieldId = (int)$this->request->getRequiredBodyParam('vizyFieldId');
+        $blockInstanceId = $this->_resolveBlockInstanceId();
+        $matrixAnchorUid = $this->request->getBodyParam('matrixAnchorUid');
 
         $field = Craft::$app->getFields()->getFieldById($fieldId);
+
+        if (!$field instanceof Matrix) {
+            throw new BadRequestHttpException("Invalid Matrix field ID: $fieldId");
+        }
+
+        $vizyField = Craft::$app->getFields()->getFieldById($vizyFieldId);
+
+        if (!$vizyField instanceof VizyField) {
+            throw new BadRequestHttpException("Invalid Vizy field ID: $vizyFieldId");
+        }
+
         $entryType = Craft::$app->getEntries()->getEntryTypeById($entryTypeId);
+
+        if (!$entryType) {
+            throw new BadRequestHttpException("Invalid entry type ID: $entryTypeId");
+        }
+
         $site = Craft::$app->getSites()->getSiteById($siteId, true);
+
+        if (!$site) {
+            throw new BadRequestHttpException("Invalid site ID: $siteId");
+        }
+
+        $user = static::currentUser();
+        $elementsService = Craft::$app->getElements();
+        $parentOwner = $this->_resolveParentOwner((int)$siteId);
+
+        if (!$parentOwner || !$elementsService->canSave($parentOwner, $user)) {
+            throw new ForbiddenHttpException('User not authorized to create this element.');
+        }
+
+        $blockType = $this->_resolveBlockType($vizyField, $blockInstanceId, $parentOwner);
+
+        if (!$blockType && ($blockTypeId = $this->request->getBodyParam('vizyBlockTypeId'))) {
+            $blockType = $vizyField->getBlockTypeById($blockTypeId);
+        }
+
+        if (!$blockType) {
+            throw new BadRequestHttpException('Unable to resolve Vizy block type for Matrix anchor.');
+        }
+
+        $anchor = Vizy::$plugin->getAnchors()->ensureAnchor(
+            $parentOwner,
+            $vizyField,
+            $blockInstanceId,
+            $blockType->getFieldLayout(),
+            $matrixAnchorUid,
+        );
+
+        if (!$anchor) {
+            return $this->asFailure(StringHelper::upperCaseFirst(Craft::t('vizy', 'Couldn’t create matrix anchor.')));
+        }
 
         $entry = Craft::createObject([
             'class' => Entry::class,
@@ -106,25 +165,104 @@ class FieldController extends Controller
             'uid' => StringHelper::UUID(),
             'typeId' => $entryType->id,
             'fieldId' => $fieldId,
+            'primaryOwner' => $anchor,
+            'owner' => $anchor,
             'slug' => ElementHelper::tempSlug(),
         ]);
 
         $entry->setScenario(Element::SCENARIO_ESSENTIALS);
+
+        if (!Craft::$app->getDrafts()->saveElementAsDraft($entry, $user->id, markAsSaved: false)) {
+            return $this->asFailure(StringHelper::upperCaseFirst(Craft::t('app', 'Couldn’t create {type}.', [
+                'type' => Entry::lowerDisplayName(),
+            ])));
+        }
 
         $view = $this->getView();
         $entries = [];
 
         $html = $view->namespaceInputs(fn() => $view->renderTemplate('_components/fieldtypes/Matrix/block.twig', [
             'name' => $field->handle,
-            'entryTypes' => $field->getEntryTypesForField($entries, null),
+            'entryTypes' => $field->getEntryTypesForField($entries, $anchor),
             'entry' => $entry,
             'isFresh' => true,
+            'static' => false,
+            'staticEntries' => $staticEntries,
         ]), $namespace);
 
         return $this->asJson([
             'blockHtml' => $html,
             'headHtml' => $view->getHeadHtml(),
             'bodyHtml' => $view->getBodyHtml(),
+            'matrixAnchorUid' => $anchor->uid,
         ]);
+    }
+
+    private function _resolveBlockType(VizyField $vizyField, string $blockInstanceId, Entry $parentOwner): ?BlockType
+    {
+        $value = $parentOwner->getFieldValue($vizyField->handle);
+
+        if (!$value instanceof NodeCollection) {
+            return null;
+        }
+
+        foreach ($value->query()->where(['type' => VizyBlock::$type])->all() as $block) {
+            if ($block instanceof VizyBlock && $block->getId() === $blockInstanceId) {
+                return $block->getBlockType();
+            }
+        }
+
+        return null;
+    }
+
+    private function _resolveParentOwner(int $siteId): ?Entry
+    {
+        $elementsService = Craft::$app->getElements();
+
+        if ($uid = $this->request->getBodyParam('parentOwnerUid')) {
+            $uid = trim($uid, '"');
+            $entry = $elementsService->getElementByUid($uid, Entry::class, $siteId);
+
+            if ($entry instanceof Entry) {
+                return $entry;
+            }
+        }
+
+        if ($draftId = $this->request->getBodyParam('parentDraftId')) {
+            $entry = Entry::find()
+                ->draftId($draftId)
+                ->siteId($siteId)
+                ->status(null)
+                ->one();
+
+            if ($entry instanceof Entry) {
+                return $entry;
+            }
+        }
+
+        if ($id = $this->request->getBodyParam('parentOwnerId')) {
+            $entry = $elementsService->getElementById((int)$id, Entry::class, $siteId);
+
+            if ($entry instanceof Entry) {
+                return $entry;
+            }
+        }
+
+        return null;
+    }
+
+    private function _resolveBlockInstanceId(): string
+    {
+        if ($blockInstanceId = $this->request->getBodyParam('blockInstanceId')) {
+            return $blockInstanceId;
+        }
+
+        if ($namespace = $this->request->getBodyParam('namespace')) {
+            if (preg_match('/vizyData\[([^\]]+)\]/', $namespace, $matches)) {
+                return $matches[1];
+            }
+        }
+
+        throw new BadRequestHttpException('Missing blockInstanceId.');
     }
 }

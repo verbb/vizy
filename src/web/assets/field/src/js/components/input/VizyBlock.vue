@@ -3,6 +3,9 @@
         class="vizyblock"
         contenteditable="false"
         :data-vizy-block="true"
+        :data-vizy-block-id="node.attrs.id"
+        :data-vizy-block-type-id="blockType.id"
+        :data-matrix-anchor-uid="node.attrs.values?.matrixAnchorUid || null"
         :data-type="blockType.handle"
         @copy.stop
         @paste.stop
@@ -294,6 +297,7 @@ export default {
                     this.bindPortalUpdate(newId);
                     this.queuePreviewRefresh();
                     this.setFirstActiveTab();
+                    this.registerMatrixOwnerContext();
                 }
             });
         },
@@ -314,6 +318,8 @@ export default {
                 this.vizyField.attachPortal(this.currentPortalId, mount);
                 this.queuePreviewRefresh();
                 this.bindPortalUpdate(this.currentPortalId);
+                this.registerMatrixOwnerContext();
+                window.setTimeout(() => { return this.registerMatrixOwnerContext(); }, 500);
             }
 
             const $template = this.$el.querySelector('#vizy-block-settings-template');
@@ -389,6 +395,12 @@ export default {
             };
 
             this.$events.on(this.portalEventName, this.portalUpdateHandler);
+            this.handlePortalUpdate();
+
+            this.$nextTick(() => {
+                this.registerMatrixOwnerContext();
+                window.setTimeout(() => { return this.registerMatrixOwnerContext(); }, 500);
+            });
         },
 
         unbindPortalUpdate() {
@@ -414,21 +426,30 @@ export default {
             // https://github.com/verbb/vizy/issues/333
             this.normalizeOrderedTableContent(portalEl, content);
 
-            const fieldContent = content?.vizyData?.[this.node.attrs.id] || null;
+            const blockContent = this.vizyField.getBlockFieldContentFromPortal(
+                this.node.attrs.id,
+                portalEl,
+                content,
+            );
 
-            if (!fieldContent) {
+            if (!blockContent) {
                 return;
             }
 
-            const namespaceKey = Object.keys(fieldContent)[0];
             const values = { ...(this.values || {}) };
 
-            values.content = fieldContent[namespaceKey];
+            values.content = blockContent;
+            values.matrixAnchorUid = this.node.attrs.values?.matrixAnchorUid || null;
 
             // eslint-disable-next-line vue/no-mutating-props
             this.node.attrs.values = values;
 
+            this.syncJsonToField();
             this.queuePreviewRefresh();
+        },
+
+        syncJsonToField() {
+            this.vizyField.syncJsonToDataStore();
         },
 
         normalizeOrderedTableContent(portalEl, content) {
@@ -544,6 +565,35 @@ export default {
 
             // Portal root is the persistent DOM you move around
             return mount.querySelector('[data-vizy-portal]') || null;
+        },
+
+        registerMatrixOwnerContext() {
+            Craft.Vizy = Craft.Vizy || {};
+            Craft.Vizy.matrixOwnerContexts = Craft.Vizy.matrixOwnerContexts || {};
+
+            const blockInstanceId = this.node.attrs.id;
+            const context = {
+                blockInstanceId,
+                vizyFieldId: this.vizyField.settings.fieldId || Craft.Vizy.vizyFieldId || null,
+                matrixAnchorUid: this.node.attrs.values?.matrixAnchorUid || null,
+                vizyBlockTypeId: this.blockType?.id || this.node.attrs.values?.type || null,
+            };
+
+            Craft.Vizy.matrixOwnerContexts[`block:${blockInstanceId}`] = context;
+
+            const portalRoot = this.getPortalRoot();
+
+            if (!portalRoot) {
+                return;
+            }
+
+            portalRoot.querySelectorAll('.matrix-field[id]').forEach((matrixField) => {
+                const matrixInput = matrixField.matrix || $(matrixField).data('matrix');
+
+                if (matrixInput?.settings?.ownerId) {
+                    Craft.Vizy.matrixOwnerContexts[matrixInput.settings.ownerId] = context;
+                }
+            });
         },
 
         queuePreviewRefresh() {

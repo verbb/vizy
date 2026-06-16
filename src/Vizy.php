@@ -4,6 +4,7 @@ namespace verbb\vizy;
 use verbb\vizy\base\PluginTrait;
 use verbb\vizy\base\Routes;
 use verbb\vizy\elements\Block as BlockElement;
+use verbb\vizy\elements\MatrixAnchor;
 use verbb\vizy\fields\VizyField;
 use verbb\vizy\gql\interfaces\VizyNodeInterface;
 use verbb\vizy\gql\interfaces\VizyBlockInterface;
@@ -14,11 +15,14 @@ use Craft;
 use craft\base\Plugin;
 use craft\elements\ContentBlock;
 use craft\elements\Entry;
+use craft\events\CreateFieldLayoutFormEvent;
 use craft\events\ModelEvent;
 use craft\events\RegisterComponentTypesEvent;
 use craft\events\RegisterGqlTypesEvent;
 use craft\events\SetEagerLoadedElementsEvent;
 use craft\helpers\UrlHelper;
+use craft\models\FieldLayout;
+use craft\services\Elements;
 use craft\services\Fields;
 use craft\services\Gql;
 use craft\services\ProjectConfig;
@@ -36,7 +40,7 @@ class Vizy extends Plugin
     // =========================================================================
 
     public bool $hasCpSettings = true;
-    public string $schemaVersion = '0.9.0';
+    public string $schemaVersion = '0.10.0';
 
 
     // Traits
@@ -56,6 +60,7 @@ class Vizy extends Plugin
         self::$plugin = $this;
 
         $this->_registerFieldTypes();
+        $this->_registerElementTypes();
         $this->_registerProjectConfigEventHandlers();
         $this->_registerGraphQl();
         $this->_registerEventHandlers();
@@ -90,6 +95,13 @@ class Vizy extends Plugin
         });
     }
 
+    private function _registerElementTypes(): void
+    {
+        Event::on(Elements::class, Elements::EVENT_REGISTER_ELEMENT_TYPES, function(RegisterComponentTypesEvent $event) {
+            $event->types[] = MatrixAnchor::class;
+        });
+    }
+
     private function _registerProjectConfigEventHandlers(): void
     {
         Craft::$app->getProjectConfig()
@@ -108,6 +120,29 @@ class Vizy extends Plugin
 
     private function _registerEventHandlers(): void
     {
+        // Nested fields inside Vizy blocks should never render as static/read-only.
+        Event::on(FieldLayout::class, FieldLayout::EVENT_CREATE_FORM, function(CreateFieldLayoutFormEvent $event) {
+            $element = $event->element;
+
+            if ($element instanceof BlockElement) {
+                $event->static = false;
+                return;
+            }
+
+            if ($element instanceof MatrixAnchor) {
+                $event->static = false;
+                return;
+            }
+
+            if ($element instanceof Entry && $element->getOwner() instanceof BlockElement) {
+                $event->static = false;
+            }
+
+            if ($element instanceof Entry && $element->getOwner() instanceof MatrixAnchor) {
+                $event->static = false;
+            }
+        });
+
         // Hijack requests to `actions/matrix/create-entry` to handle non-saved-element owners.
         Event::on(Controller::class, Controller::EVENT_BEFORE_ACTION, function(ActionEvent $event) {
             if ($event->action->id == 'create-entry' && $event->sender->id == 'matrix') {
@@ -127,6 +162,11 @@ class Vizy extends Plugin
             if ($contentBlock->getOwner() instanceof BlockElement) {
                 $event->isValid = false;
             }
+        });
+
+        Event::on(Entry::class, Entry::EVENT_BEFORE_DELETE, function(ModelEvent $event) {
+            $entry = $event->sender;
+            Vizy::$plugin->getAnchors()->deleteAnchorsForOwner($entry);
         });
 
         // Handle an issue with Matrix fields in Vizy blocks, that have relation fields that are also eager-loaded. More noticable in GQL.

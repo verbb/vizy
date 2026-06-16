@@ -442,6 +442,13 @@ class VizyField extends Field
         return parent::beforeElementSave($element, $isNew);
     }
 
+    public function afterElementSave(ElementInterface $element, bool $isNew): void
+    {
+        Vizy::$plugin->getAnchors()->gcOrphans($element, $this);
+
+        parent::afterElementSave($element, $isNew);
+    }
+
     public function getBlockTypeById($blockTypeId)
     {
         if (isset($this->_blockTypesById[$blockTypeId])) {
@@ -624,14 +631,15 @@ class VizyField extends Field
         Vizy::$plugin->getCache()->set($this->getCacheKey('recursiveFieldCount'), $this->_recursiveFieldCount);
 
         $settings = [
-            // The order of `blocks` and `blockGroups` is important here, to ensure that the blocks
-            // are rendered with content, where `blockGroups` is just the template for new blocks.
-            'blocks' => $this->_getBlocksForInput($value, $placeholderKey, $element),
+            // Render block group templates before existing blocks so shared field instances aren't
+            // left in a static state from existing block content when generating new block HTML.
             'blockGroups' => $this->_getBlockGroupsForInput($placeholderKey, $element),
+            'blocks' => $this->_getBlocksForInput($value, $placeholderKey, $element),
             'vizyConfig' => $this->_getVizyConfig(),
             'elementSiteId' => $site->id,
             'showAllUploaders' => $this->showUnpermittedFiles,
             'placeholderKey' => $placeholderKey,
+            'fieldId' => $this->id,
             'fieldHandle' => $this->handle,
             'isRoot' => true,
             'initialRows' => $this->initialRows,
@@ -690,6 +698,8 @@ class VizyField extends Field
         }
 
         $rawNodes = $value->getRawNodes();
+
+        $this->_registerMatrixOwnerContextJs($element);
 
         return $view->renderTemplate('vizy/field/input', [
             'id' => $id,
@@ -762,9 +772,151 @@ class VizyField extends Field
         return (string)$glued_string;
     }
 
-    private function getCacheKey($key): string
+    private function getCacheKey(string $key, ?ElementInterface $element = null): string
     {
-        return $this->id . '-' . $this->handle . '-' . $key;
+        $cacheKey = $this->id . '-' . $this->handle . '-' . $key;
+
+        if ($element) {
+            $cacheKey .= '-' . $this->_getElementCacheKeySuffix($element);
+        }
+
+        return $cacheKey;
+    }
+
+    private function _getElementCacheKeySuffix(ElementInterface $element): string
+    {
+        $parts = ['site-' . ($element->siteId ?? 'null')];
+
+        if ($element->id) {
+            $parts[] = 'id-' . $element->id;
+        } else {
+            $parts[] = 'uid-' . ($element->uid ?? 'new');
+        }
+
+        if ($element->getIsDraft()) {
+            $parts[] = 'draft-' . ($element->draftId ?? 'new');
+        }
+
+        return implode('-', $parts);
+    }
+
+    private function _registerMatrixOwnerContextJs(?ElementInterface $element): void
+    {
+        if (!$element) {
+            return;
+        }
+
+        $view = Craft::$app->getView();
+
+        $view->registerJsWithVars(fn($uid, $draftId, $id, $vizyFieldId) => <<<JS
+(function() {
+    Craft.Vizy = Craft.Vizy || {};
+    Craft.Vizy.parentOwnerContext = {
+        uid: $uid || null,
+        draftId: $draftId || null,
+        id: $id || null,
+    };
+    Craft.Vizy.vizyFieldId = $vizyFieldId || null;
+    Craft.Vizy.matrixOwnerContexts = Craft.Vizy.matrixOwnerContexts || {};
+
+    if (Craft.Vizy.__matrixCreateEntryPatched || typeof Craft.sendActionRequest !== 'function') {
+        return;
+    }
+
+    Craft.Vizy.__matrixCreateEntryPatched = true;
+
+    const sendActionRequest = Craft.sendActionRequest.bind(Craft);
+
+    Craft.sendActionRequest = function(method, action, config) {
+        config = config || {};
+
+        if (action === 'matrix/create-entry') {
+            const data = config.data || {};
+            const ownerElementType = data.ownerElementType || '';
+
+            if (ownerElementType.indexOf('verbb\\\\vizy\\\\elements\\\\Block') !== -1) {
+                const ctx = Craft.Vizy.parentOwnerContext || {};
+                const form = document.querySelector('form#main-form');
+                const parseBlockInstanceId = (namespace) => {
+                    if (!namespace) {
+                        return null;
+                    }
+
+                    const match = namespace.match(/vizyData\[([^\]]+)\]/);
+
+                    return match ? match[1] : null;
+                };
+                const blockInstanceId = parseBlockInstanceId(data.namespace);
+                const blockCtx = Craft.Vizy.matrixOwnerContexts[data.ownerId]
+                    || (blockInstanceId ? Craft.Vizy.matrixOwnerContexts['block:' + blockInstanceId] : null)
+                    || {};
+                const \$block = blockInstanceId
+                    ? document.querySelector('.vizyblock[data-vizy-block-id="' + blockInstanceId + '"]')
+                    : null;
+
+                config.data = Object.assign({}, data, {
+                    parentOwnerUid: ctx.uid || form?.querySelector('input[name="uid"]')?.value || null,
+                    parentDraftId: ctx.draftId || form?.querySelector('input[name="draftId"]')?.value || new URLSearchParams(window.location.search).get('draftId') || null,
+                    parentOwnerId: ctx.id || form?.querySelector('input[name="elementId"]')?.value || null,
+                    vizyFieldId: blockCtx.vizyFieldId || Craft.Vizy.vizyFieldId || null,
+                    blockInstanceId: blockInstanceId || blockCtx.blockInstanceId || \$block?.dataset?.vizyBlockId || null,
+                    matrixAnchorUid: blockCtx.matrixAnchorUid || \$block?.dataset?.matrixAnchorUid || null,
+                    vizyBlockTypeId: blockCtx.vizyBlockTypeId || \$block?.dataset?.vizyBlockTypeId || null,
+                });
+            }
+        }
+
+        return sendActionRequest(method, action, config);
+    };
+})();
+JS, [
+            $element->uid ?? null,
+            $element->draftId ?? null,
+            $element->id ?? null,
+            $this->id,
+        ]);
+    }
+
+    private function _registerMatrixBlockContextJs(string $blockInstanceId, int $ownerId, ?string $matrixAnchorUid = null, ?string $blockTypeId = null): void
+    {
+        $view = Craft::$app->getView();
+
+        $view->registerJsWithVars(fn($blockInstanceId, $ownerId, $vizyFieldId, $matrixAnchorUid, $blockTypeId) => <<<JS
+(function() {
+    Craft.Vizy = Craft.Vizy || {};
+    Craft.Vizy.matrixOwnerContexts = Craft.Vizy.matrixOwnerContexts || {};
+    Craft.Vizy.matrixOwnerContexts[$ownerId] = {
+        blockInstanceId: $blockInstanceId,
+        vizyFieldId: $vizyFieldId,
+        matrixAnchorUid: $matrixAnchorUid || null,
+        vizyBlockTypeId: $blockTypeId || null,
+    };
+    Craft.Vizy.matrixOwnerContexts['block:' + $blockInstanceId] = Craft.Vizy.matrixOwnerContexts[$ownerId];
+})();
+JS, [
+            $blockInstanceId,
+            $ownerId,
+            $this->id,
+            $matrixAnchorUid,
+            $blockTypeId,
+        ]);
+    }
+
+    private function _resetFieldLayoutFieldStatic(?FieldLayout $fieldLayout): void
+    {
+        if (!$fieldLayout) {
+            return;
+        }
+
+        foreach ($fieldLayout->getCustomFields() as $field) {
+            $field->static = false;
+
+            if ($field instanceof Matrix) {
+                foreach ($field->getEntryTypes() as $entryType) {
+                    $this->_resetFieldLayoutFieldStatic($entryType->getFieldLayout());
+                }
+            }
+        }
     }
 
     private function _isRootField(?ElementInterface $element = null): bool
@@ -841,7 +993,7 @@ class VizyField extends Field
         // Get from the cache, if we've already prepped this field's block groups.
         // The blocks HTML/JS is unique to this fields' ID and handle. Even if used multiple
         // times in an element, or nested, we only need to generate this once.
-        return Vizy::$plugin->getCache()->getOrSet($this->getCacheKey('blockGroups'), function() use ($placeholderKey, $element, $settings) {
+        return Vizy::$plugin->getCache()->getOrSet($this->getCacheKey('blockGroups', $element), function() use ($placeholderKey, $element, $settings) {
             $view = Craft::$app->getView();
 
             $data = $this->fieldData;
@@ -893,13 +1045,16 @@ class VizyField extends Field
                         foreach ($fieldLayout->getCustomFields() as $field) {
                             $field->setIsFresh(true);
                         }
+
+                        // Ensure nested fields like Matrix aren't left in a static state from a previous render.
+                        $this->_resetFieldLayoutFieldStatic($fieldLayout);
                     }
                     
                     // Disregard the namespace of parent fields, or even using `fields`. This keeps our field data separate to Craft.
                     // Also add a unique key to store data, to play nicely with slide-outs and their own namespace (that we don't use).
                     $view->setNamespace("vizyData[__VIZY_BLOCK_{$placeholderKey}__][{$placeholderKey}]");
 
-                    $form = $fieldLayout->createForm($blockElement);
+                    $form = $fieldLayout->createForm($blockElement, false);
                     $blockTypeArray['tabs'] = $form->getTabMenu();
                     
                     $fieldsHtml = $view->namespaceInputs($form->render());
@@ -973,19 +1128,30 @@ class VizyField extends Field
                                 }
                             }
                         }
+
+                        $this->_resetFieldLayoutFieldStatic($fieldLayout);
                     }
 
                     // Disregard the namespace of parent fields, or even using `fields`. This keeps our field data separate to Craft.
                     // Also add a unique key to store data, to play nicely with slide-outs and their own namespace (that we don't use).
                     $view->setNamespace("vizyData[__VIZY_BLOCK_{$placeholderKey}__][{$placeholderKey}]");
 
-                    $fieldsHtml = $view->namespaceInputs($fieldLayout->createForm($blockElement)->render());
+                    $fieldsHtml = $view->namespaceInputs($fieldLayout->createForm($blockElement, false)->render());
                     $footHtml = $view->clearJsBuffer(false);
                     $scriptHtml = $view->clearScriptBuffer();
 
                     $view->setNamespace($originalNamespace);
 
                     $footHtml = $this->_composeDeferredFootHtml($footHtml, $scriptHtml, $placeholderKey);
+
+                    if ($block->hasMatrixFields() && $blockElement->id) {
+                        $this->_registerMatrixBlockContextJs(
+                            $blockId,
+                            (int)$blockElement->id,
+                            $block->getMatrixAnchorUid(),
+                            $block->getBlockType()?->id,
+                        );
+                    }
 
                     $blocks[] = [
                         'id' => $blockId,

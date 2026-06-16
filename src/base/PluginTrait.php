@@ -2,6 +2,7 @@
 namespace verbb\vizy\base;
 
 use verbb\vizy\Vizy;
+use verbb\vizy\services\Anchors;
 use verbb\vizy\services\Cache;
 use verbb\vizy\services\Content;
 use verbb\vizy\services\Icons;
@@ -39,6 +40,7 @@ trait PluginTrait
 
         return [
             'components' => [
+                'anchors' => Anchors::class,
                 'cache' => Cache::class,
                 'content' => Content::class,
                 'icons' => Icons::class,
@@ -62,6 +64,11 @@ trait PluginTrait
 
     // Public Methods
     // =========================================================================
+
+    public function getAnchors(): Anchors
+    {
+        return $this->get('anchors');
+    }
 
     public function getCache(): Cache
     {

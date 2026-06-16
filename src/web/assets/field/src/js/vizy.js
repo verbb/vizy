@@ -157,22 +157,109 @@ Craft.Vizy.Settings = Garnish.Base.extend({
         mountSettingsRoot(root);
     },
 });
+const patchVizyMatrixCreateEntry = () => {
+    if (Craft.Vizy.__matrixCreateEntryPatched || typeof Craft.sendActionRequest !== 'function') {
+        return;
+    }
+
+    Craft.Vizy.__matrixCreateEntryPatched = true;
+
+    const sendActionRequest = Craft.sendActionRequest.bind(Craft);
+
+    Craft.sendActionRequest = (method, action, config = {}) => {
+        if (action === 'matrix/create-entry') {
+            const data = config.data ?? {};
+            const ownerElementType = data.ownerElementType ?? '';
+
+            if (ownerElementType.includes('verbb\\vizy\\elements\\Block')) {
+                const ctx = Craft.Vizy.parentOwnerContext || {};
+                const form = document.querySelector('form#main-form');
+                const parseBlockInstanceId = (namespace) => {
+                    if (!namespace) {
+                        return null;
+                    }
+
+                    const match = namespace.match(/vizyData\[([^\]]+)\]/);
+
+                    return match ? match[1] : null;
+                };
+                const blockInstanceId = parseBlockInstanceId(data.namespace);
+                const blockCtx = Craft.Vizy.matrixOwnerContexts?.[data.ownerId]
+                    || (blockInstanceId ? Craft.Vizy.matrixOwnerContexts?.[`block:${blockInstanceId}`] : null)
+                    || {};
+                const blockEl = blockInstanceId
+                    ? document.querySelector(`.vizyblock[data-vizy-block-id="${blockInstanceId}"]`)
+                    : null;
+
+                config.data = {
+                    ...data,
+                    parentOwnerUid: ctx.uid || form?.querySelector('input[name="uid"]')?.value || null,
+                    parentDraftId: ctx.draftId || form?.querySelector('input[name="draftId"]')?.value || new URLSearchParams(window.location.search).get('draftId') || null,
+                    parentOwnerId: ctx.id || form?.querySelector('input[name="elementId"]')?.value || null,
+                    vizyFieldId: blockCtx.vizyFieldId || Craft.Vizy.vizyFieldId || null,
+                    blockInstanceId: blockInstanceId || blockCtx.blockInstanceId || blockEl?.dataset?.vizyBlockId || null,
+                    matrixAnchorUid: blockCtx.matrixAnchorUid || blockEl?.dataset?.matrixAnchorUid || null,
+                    vizyBlockTypeId: blockCtx.vizyBlockTypeId || blockEl?.dataset?.vizyBlockTypeId || null,
+                };
+            }
+        }
+
+        return sendActionRequest(method, action, config);
+    };
+};
+
 $(document).ready(() => {
     Craft.Vizy.mountAll(document);
     Craft.Vizy.startAutoMountObserver();
+    patchVizyMatrixCreateEntry();
 
-    // We don't want to send the Vizy block data to the server, as the content is serialized ourselves with the field.
-    // We do this by changing the namespace of field content to `vizyData`, which is used in our Vizy field data JSON.
-    // This method hooks into the ElementEditor.js serialization
+    const patchVizyDataStoreInSerialized = (serialized) => {
+        document.querySelectorAll('[data-vizy-auto-mount="input"] [data-store], .vizy-input-component [data-store]').forEach((input) => {
+            if (!input.name) {
+                return;
+            }
+
+            const name = encodeURIComponent(input.name);
+            const value = encodeURIComponent(input.value ?? '');
+            const param = `${name}=${value}`;
+            const regex = new RegExp(`(^|&)${Craft.escapeRegex(name)}=[^&]*`);
+
+            if (regex.test(serialized)) {
+                serialized = serialized.replace(regex, `$1${param}`);
+            } else {
+                serialized += (serialized ? '&' : '') + param;
+            }
+        });
+
+        return serialized;
+    };
+
+    // Block portal fields live under `vizyData[...]`, outside Craft's tracked `fields[...]` namespace.
+    // Flush them into the Vizy JSON hidden input, patch that value into the serialized payload, then strip
+    // `vizyData` so Craft doesn't treat portal inputs as unsaved changes (draft/unload warnings).
+    // Note: ElementEditor calls jQuery.serialize() *before* the serializeForm event, so we must patch
+    // the serialized string after flushing — updating [data-store] alone is too late for that request.
     const $mainForm = $('form#main-form');
 
     if ($mainForm.length) {
+        const flushVizyPortalUpdates = () => {
+            (Craft.Vizy.flushPortalUpdates || []).forEach((flush) => {
+                flush();
+            });
+        };
+
         const elementEditor = $mainForm.data('elementEditor');
 
         if (elementEditor) {
             elementEditor.on('serializeForm', (e) => {
-                e.data.serialized = e.data.serialized.replace(/&vizyData[^&]*/g, '');
+                flushVizyPortalUpdates();
+                e.data.serialized = patchVizyDataStoreInSerialized(e.data.serialized);
+                e.data.serialized = e.data.serialized.replace(/(^|&)vizyData[^&]*/g, '');
             });
         }
+
+        $mainForm.on('submit', () => {
+            flushVizyPortalUpdates();
+        });
     }
 });

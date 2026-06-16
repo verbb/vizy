@@ -18,6 +18,7 @@ use craft\fields\ContentBlock as ContentBlockField;
 use craft\helpers\Html;
 use craft\helpers\Json;
 use craft\helpers\Template;
+use craft\models\FieldLayout;
 use craft\services\Elements;
 use craft\web\View;
 
@@ -124,6 +125,26 @@ class VizyBlock extends Node
         return $this->attrs['id'] ?? '';
     }
 
+    public function getMatrixAnchorUid(): ?string
+    {
+        return $this->attrs['values']['matrixAnchorUid'] ?? null;
+    }
+
+    public function setMatrixAnchorUid(?string $uid): void
+    {
+        if (!$uid) {
+            return;
+        }
+
+        $this->attrs['values']['matrixAnchorUid'] = $uid;
+        $this->rawNode['attrs']['values']['matrixAnchorUid'] = $uid;
+    }
+
+    public function hasMatrixFields(): bool
+    {
+        return Vizy::$plugin->getAnchors()->blockHasMatrixFields($this->getFieldLayout());
+    }
+
     public function getEnabled(): bool
     {
         return $this->attrs['enabled'] ?? true;
@@ -226,10 +247,6 @@ class VizyBlock extends Node
         // Create a fake element with the same fieldtype as our block
         $block = $this->getBlockElement($element);
 
-        // We require an ID on the block to have Matrix and other fields work, but that's going to cause issues when saving
-        // So, we reset it back to null here before saving the block data.
-        $block->id = null;
-
         // Trigger the before-save event (on the element service) to prep the element. Preparse requires this to work.
         Craft::$app->getElements()->trigger(Elements::EVENT_BEFORE_SAVE_ELEMENT, new ElementEvent([
             'element' => $block,
@@ -239,6 +256,57 @@ class VizyBlock extends Node
         if ($fieldLayout = $block->getFieldLayout()) {
             foreach ($fieldLayout->getCustomFields() as $field) {
                 $fieldValue = $block->getFieldValue($field->handle);
+
+                if ($field instanceof MatrixField) {
+                    $anchor = $this->_resolveMatrixAnchor($element, $fieldLayout);
+
+                    if (!$anchor) {
+                        continue;
+                    }
+
+                    $this->setMatrixAnchorUid($anchor->uid);
+                    $value['attrs']['values']['matrixAnchorUid'] = $anchor->uid;
+
+                    unset(
+                        $value['attrs']['values']['content']['fields'][$field->layoutElement->uid],
+                        $value['attrs']['values']['content']['fields'][$field->handle],
+                    );
+
+                    $content = $this->_getMatrixFieldContent($field->handle);
+
+                    if ($content === null || $content === '') {
+                        // Avoid wiping nested Matrix entries when client-side portal data
+                        // wasn't synced into the Vizy JSON before the request was sent.
+                        continue;
+                    }
+
+                    if (Matrix::isCraft5MatrixContent($content)) {
+                        $content = Matrix::ensureSortOrder($content);
+                        $fieldValue = $field->normalizeValueFromRequest($content, $anchor);
+                    } else {
+                        if (is_string($content) && Json::isJsonObject($content)) {
+                            $content = Json::decode($content);
+                        }
+
+                        $content = Matrix::sanitizeMatrixContent($field, $content);
+                        $fieldValue = $field->normalizeValue($content, $anchor);
+                    }
+
+                    Vizy::$plugin->getAnchors()->saveMatrixField($field, $anchor, $fieldValue, false);
+
+                    foreach ($fieldValue->all() as $matrixBlock) {
+                        if ($matrixFieldLayout = $matrixBlock->getFieldLayout()) {
+                            foreach ($matrixFieldLayout->getCustomFields() as $matrixBlockField) {
+                                try {
+                                    $matrixBlockField->afterElementSave($matrixBlock, true);
+                                } catch (Throwable $e) {
+                                }
+                            }
+                        }
+                    }
+
+                    continue;
+                }
 
                 // Ensure each field's content is serialized properly. Use the `layoutElementUid`
                 $serializedFieldValues = $field->serializeValue($fieldValue, $block);
@@ -270,7 +338,7 @@ class VizyBlock extends Node
                 $field->afterElementSave($block, true);
 
                 // Process all Matrix/Super Table fields and their blocks in the same manner.
-                if ($field instanceof MatrixField || $field instanceof SuperTable) {
+                if ($field instanceof SuperTable) {
                     foreach ($fieldValue->all() as $matrixBlock) {
                         if ($matrixFieldLayout = $matrixBlock->getFieldLayout()) {
                             foreach ($matrixFieldLayout->getCustomFields() as $matrixBlockField) {
@@ -303,6 +371,10 @@ class VizyBlock extends Node
             }
         }
 
+        if (!$block->getMatrixAnchor()) {
+            $block->id = null;
+        }
+
         return $value;
     }
 
@@ -333,8 +405,22 @@ class VizyBlock extends Node
 
                     try {
                         if ($field instanceof MatrixField) {
-                            // We need to record any Matrix fields in a Vizy block for special-handling
                             Vizy::$plugin->setNestedMatrixFields($field->handle);
+
+                            if ($this->getMatrixAnchorUid()) {
+                                // Persisted Vizy JSON omits matrix blobs once an anchor exists, but incoming
+                                // save requests still carry matrix POST data in attrs. Preserve it here so
+                                // serializeValue() can hand it off to the anchor. Output JSON is stripped there.
+                                if (is_string($fieldValue) && Json::isJsonObject($fieldValue)) {
+                                    $fieldContent[$field->handle] = Json::decode($fieldValue);
+                                } elseif (is_array($fieldValue) && $fieldValue !== []) {
+                                    $fieldContent[$field->handle] = $fieldValue;
+                                } else {
+                                    unset($fieldContent[$field->handle]);
+                                }
+
+                                continue;
+                            }
                         }
 
                         // Normalize nested Vizy field data
@@ -365,14 +451,15 @@ class VizyBlock extends Node
             // Keep owner/site context in sync for cached synthetic block elements.
             if ($element) {
                 $this->_blockElement->setOwner($element);
+                $this->_syncBlockElementAnchor($element);
             }
 
             return $this->_blockElement;
         }
 
         $block = new BlockElement();
-        $block->id = rand();
-        $block->setOwner($element ?: $this->getElement());
+        $parent = $element ?: $this->getElement();
+        $block->setOwner($parent);
 
         if ($fieldLayout = $this->getFieldLayout()) {
             $block->setFieldLayout($fieldLayout);
@@ -381,6 +468,8 @@ class VizyBlock extends Node
             $fieldValues = $this->attrs['values']['content']['fields'] ?? [];
             $block->setFieldValues($fieldValues);
         }
+
+        $this->_syncBlockElementAnchor($parent, $block);
 
         return $this->_blockElement = $block;
     }
@@ -405,10 +494,22 @@ class VizyBlock extends Node
         $content = $this->_getRawFieldContent($fieldHandle);
 
         if (Matrix::isMatrix($field)) {
+            $anchor = $this->_resolveMatrixAnchor($this->getElement(), $this->getFieldLayout());
+
+            if ($anchor) {
+                if ($content) {
+                    Matrix::migrateJsonToAnchor($field, $anchor, $content);
+                    unset($this->attrs['values']['content']['fields'][$fieldHandle]);
+                    $this->setMatrixAnchorUid($anchor->uid);
+                }
+
+                return $this->_normalizedFieldValues[$fieldHandle] = Matrix::nestedEntryQuery($field, $anchor);
+            }
+
             $content = Matrix::sanitizeMatrixContent($field, $content);
         }
 
-        return $this->_normalizedFieldValues[$fieldHandle] = $field->normalizeValue($content, $this->getElement());
+        return $this->_normalizedFieldValues[$fieldHandle] = $field->normalizeValue($content, $this->getBlockElement($this->getElement()));
     }
 
     protected function fieldByHandle(string $handle)
@@ -433,7 +534,103 @@ class VizyBlock extends Node
 
     private function _getRawFieldContent($handle)
     {
-        return $this->attrs['values']['content']['fields'][$handle] ?? null;
+        $fields = $this->attrs['values']['content']['fields'] ?? [];
+
+        if (array_key_exists($handle, $fields)) {
+            return $fields[$handle];
+        }
+
+        $field = $this->fieldByHandle($handle);
+
+        if ($field?->layoutElement?->uid && array_key_exists($field->layoutElement->uid, $fields)) {
+            return $fields[$field->layoutElement->uid];
+        }
+
+        return null;
+    }
+
+    private function _getMatrixFieldContent(string $handle): mixed
+    {
+        $content = $this->_getRawFieldContent($handle);
+
+        if ($content !== null && $content !== '') {
+            return $content;
+        }
+
+        $request = Craft::$app->getRequest();
+
+        if ($request->getIsConsoleRequest()) {
+            return null;
+        }
+
+        $vizyData = $request->getBodyParam('vizyData');
+
+        if (!is_array($vizyData) || !($blockId = $this->getId()) || !isset($vizyData[$blockId])) {
+            return null;
+        }
+
+        $blockData = $vizyData[$blockId];
+
+        if (!is_array($blockData)) {
+            return null;
+        }
+
+        $namespaceKey = array_key_first($blockData);
+        $fields = $blockData[$namespaceKey]['fields'] ?? null;
+
+        if (!is_array($fields)) {
+            return null;
+        }
+
+        if (array_key_exists($handle, $fields)) {
+            return $fields[$handle];
+        }
+
+        $field = $this->fieldByHandle($handle);
+
+        if ($field?->layoutElement?->uid && array_key_exists($field->layoutElement->uid, $fields)) {
+            return $fields[$field->layoutElement->uid];
+        }
+
+        return null;
+    }
+
+    private function _resolveMatrixAnchor(?ElementInterface $parent, ?FieldLayout $fieldLayout = null): ?\verbb\vizy\elements\MatrixAnchor
+    {
+        if (!$parent || !$parent->id || !$this->getId() || !$this->hasMatrixFields()) {
+            return null;
+        }
+
+        $fieldLayout ??= $this->getFieldLayout();
+
+        return Vizy::$plugin->getAnchors()->ensureAnchor(
+            $parent,
+            $this->getField(),
+            $this->getId(),
+            $fieldLayout,
+            $this->getMatrixAnchorUid(),
+        );
+    }
+
+    private function _syncBlockElementAnchor(?ElementInterface $parent, ?BlockElement $block = null): void
+    {
+        $block ??= $this->_blockElement;
+
+        if (!$block) {
+            return;
+        }
+
+        $anchor = $this->_resolveMatrixAnchor($parent);
+
+        if ($anchor) {
+            $block->setMatrixAnchor($anchor);
+            $block->id = $anchor->id;
+            $this->setMatrixAnchorUid($anchor->uid);
+
+            return;
+        }
+
+        $block->id = rand();
     }
 
 }
