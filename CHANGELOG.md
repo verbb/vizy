@@ -1,5 +1,10 @@
 # Changelog
 
+## 3.2.0 - 2026-06-20
+
+### Fixed
+- Fix Craft 5 Matrix-in-Vizy persistence via MatrixAnchor elements and portal-to-JSON save sync.
+
 ## 3.1.8 - 2026-05-30
 
 ### Fixed
