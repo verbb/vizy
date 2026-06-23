@@ -1,6 +1,7 @@
 <?php
 namespace verbb\vizy\services;
 
+use verbb\vizy\Vizy;
 use verbb\vizy\elements\MatrixAnchor;
 use verbb\vizy\fields\VizyField;
 use verbb\vizy\nodes\VizyBlock;
@@ -13,6 +14,8 @@ use craft\fields\Matrix;
 use craft\models\FieldLayout;
 
 use verbb\vizy\models\NodeCollection as VizyNodeCollection;
+
+use yii\db\IntegrityException;
 
 class Anchors extends Component
 {
@@ -71,31 +74,29 @@ class Anchors extends Component
         $anchor = $this->getAnchor($parentOwner, $vizyField, $blockInstanceId, $anchorUid);
 
         if ($anchor) {
-            if ($fieldLayout) {
-                $anchor->setFieldLayout($fieldLayout);
+            return $this->_applyFieldLayout($anchor, $fieldLayout);
+        }
+
+        $lockName = $this->_mutexLockName($parentOwner, $vizyField, $blockInstanceId);
+        $mutex = Craft::$app->getMutex();
+
+        if (!$mutex->acquire($lockName, 5)) {
+            $anchor = $this->getAnchor($parentOwner, $vizyField, $blockInstanceId, $anchorUid);
+
+            return $anchor ? $this->_applyFieldLayout($anchor, $fieldLayout) : null;
+        }
+
+        try {
+            $anchor = $this->getAnchor($parentOwner, $vizyField, $blockInstanceId, $anchorUid);
+
+            if ($anchor) {
+                return $this->_applyFieldLayout($anchor, $fieldLayout);
             }
 
-            return $anchor;
+            return $this->_createAnchor($parentOwner, $vizyField, $blockInstanceId, $fieldLayout, $anchorUid);
+        } finally {
+            $mutex->release($lockName);
         }
-
-        $anchor = new MatrixAnchor([
-            'vizyFieldId' => $vizyField->id,
-            'blockInstanceId' => $blockInstanceId,
-            'parentOwnerId' => (int)$parentOwner->getCanonicalId(),
-            'siteId' => $parentOwner->siteId,
-        ]);
-
-        if ($fieldLayout) {
-            $anchor->setFieldLayout($fieldLayout);
-        }
-
-        if (!Craft::$app->getElements()->saveElement($anchor)) {
-            Craft::error('Unable to save Vizy matrix anchor: ' . implode(', ', $anchor->getErrorSummary(true)), __METHOD__);
-
-            return null;
-        }
-
-        return $anchor;
     }
 
     public function saveMatrixField(
@@ -189,6 +190,71 @@ class Anchors extends Component
 
     // Private Methods
     // =========================================================================
+
+    private function _applyFieldLayout(MatrixAnchor $anchor, ?FieldLayout $fieldLayout): MatrixAnchor
+    {
+        if ($fieldLayout) {
+            $anchor->setFieldLayout($fieldLayout);
+        }
+
+        return $anchor;
+    }
+
+    private function _mutexLockName(
+        ElementInterface $parentOwner,
+        VizyField $vizyField,
+        string $blockInstanceId,
+    ): string {
+        return sprintf(
+            'vizy-matrix-anchor:%d:%d:%s',
+            (int)$parentOwner->getCanonicalId(),
+            $vizyField->id,
+            $blockInstanceId,
+        );
+    }
+
+    private function _createAnchor(
+        ElementInterface $parentOwner,
+        VizyField $vizyField,
+        string $blockInstanceId,
+        ?FieldLayout $fieldLayout,
+        ?string $anchorUid,
+    ): ?MatrixAnchor {
+        $anchor = new MatrixAnchor([
+            'vizyFieldId' => $vizyField->id,
+            'blockInstanceId' => $blockInstanceId,
+            'parentOwnerId' => (int)$parentOwner->getCanonicalId(),
+            'siteId' => $parentOwner->siteId,
+        ]);
+
+        if ($fieldLayout) {
+            $anchor->setFieldLayout($fieldLayout);
+        }
+
+        try {
+            if (Craft::$app->getElements()->saveElement($anchor)) {
+                return $anchor;
+            }
+        } catch (IntegrityException) {
+            $existing = $this->getAnchor($parentOwner, $vizyField, $blockInstanceId, $anchorUid);
+
+            if ($existing) {
+                return $this->_applyFieldLayout($existing, $fieldLayout);
+            }
+
+            throw;
+        }
+
+        $existing = $this->getAnchor($parentOwner, $vizyField, $blockInstanceId, $anchorUid);
+
+        if ($existing) {
+            return $this->_applyFieldLayout($existing, $fieldLayout);
+        }
+
+        Vizy::error('Unable to save Vizy matrix anchor: ' . implode(', ', $anchor->getErrorSummary(true)), __METHOD__);
+
+        return null;
+    }
 
     private function _collectBlockInstanceIds(ElementInterface $parentOwner, VizyField $vizyField): array
     {
