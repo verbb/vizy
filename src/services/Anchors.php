@@ -235,14 +235,14 @@ class Anchors extends Component
             if (Craft::$app->getElements()->saveElement($anchor)) {
                 return $anchor;
             }
-        } catch (IntegrityException) {
+        } catch (IntegrityException $e) {
             $existing = $this->getAnchor($parentOwner, $vizyField, $blockInstanceId, $anchorUid);
 
             if ($existing) {
                 return $this->_applyFieldLayout($existing, $fieldLayout);
             }
 
-            throw;
+            throw $e;
         }
 
         $existing = $this->getAnchor($parentOwner, $vizyField, $blockInstanceId, $anchorUid);
