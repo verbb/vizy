@@ -187,9 +187,81 @@ class Anchors extends Component
         return false;
     }
 
+    public function elementNeedsMatrixAnchorBackfill(ElementInterface $element, VizyField $vizyField): bool
+    {
+        $value = $element->getFieldValue($vizyField->handle);
+
+        if (!$value instanceof VizyNodeCollection) {
+            return false;
+        }
+
+        foreach ($value->query()->where(['type' => VizyBlock::$type])->all() as $block) {
+            if ($block instanceof VizyBlock && $this->blockNeedsMatrixAnchorBackfill($block, $element, $vizyField)) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    public function blockNeedsMatrixAnchorBackfill(
+        VizyBlock $block,
+        ElementInterface $parentOwner,
+        VizyField $vizyField,
+    ): bool {
+        if (!$block->hasMatrixFields() || !$parentOwner->id || !($blockInstanceId = $block->getId())) {
+            return false;
+        }
+
+        if ($this->_blockHasMatrixJsonContent($block)) {
+            return true;
+        }
+
+        return $this->getAnchor(
+            $parentOwner,
+            $vizyField,
+            $blockInstanceId,
+            $block->getMatrixAnchorUid(),
+        ) === null;
+    }
+
 
     // Private Methods
     // =========================================================================
+
+    private function _blockHasMatrixJsonContent(VizyBlock $block): bool
+    {
+        $fields = $block->attrs['values']['content']['fields'] ?? [];
+        $fieldLayout = $block->getFieldLayout();
+
+        if (!$fieldLayout) {
+            return false;
+        }
+
+        foreach ($fieldLayout->getCustomFields() as $field) {
+            if (!$field instanceof Matrix) {
+                continue;
+            }
+
+            $handle = $field->handle;
+            $uid = $field->layoutElement?->uid;
+
+            if (array_key_exists($handle, $fields) && $this->_matrixContentFilled($fields[$handle])) {
+                return true;
+            }
+
+            if ($uid && array_key_exists($uid, $fields) && $this->_matrixContentFilled($fields[$uid])) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private function _matrixContentFilled(mixed $content): bool
+    {
+        return $content !== null && $content !== '' && $content !== [];
+    }
 
     private function _applyFieldLayout(MatrixAnchor $anchor, ?FieldLayout $fieldLayout): MatrixAnchor
     {

@@ -258,7 +258,7 @@ class VizyBlock extends Node
                 $fieldValue = $block->getFieldValue($field->handle);
 
                 if ($field instanceof MatrixField) {
-                    $anchor = $this->_resolveMatrixAnchor($element, $fieldLayout);
+                    $anchor = $this->_resolveMatrixAnchor($element, $fieldLayout, true);
 
                     if (!$anchor) {
                         continue;
@@ -494,15 +494,20 @@ class VizyBlock extends Node
         $content = $this->_getRawFieldContent($fieldHandle);
 
         if (Matrix::isMatrix($field)) {
-            $anchor = $this->_resolveMatrixAnchor($this->getElement(), $this->getFieldLayout());
+            $anchor = $this->_resolveMatrixAnchor($this->getElement(), $this->getFieldLayout(), false);
+            $hasJsonContent = $content !== null && $content !== '' && $content !== [];
+
+            if ($anchor && !$hasJsonContent) {
+                return $this->_normalizedFieldValues[$fieldHandle] = Matrix::nestedEntryQuery($field, $anchor);
+            }
+
+            if ($hasJsonContent) {
+                $content = Matrix::sanitizeMatrixContent($field, $content);
+
+                return $this->_normalizedFieldValues[$fieldHandle] = $field->normalizeValue($content, $this->getBlockElement($this->getElement()));
+            }
 
             if ($anchor) {
-                if ($content) {
-                    Matrix::migrateJsonToAnchor($field, $anchor, $content);
-                    unset($this->attrs['values']['content']['fields'][$fieldHandle]);
-                    $this->setMatrixAnchorUid($anchor->uid);
-                }
-
                 return $this->_normalizedFieldValues[$fieldHandle] = Matrix::nestedEntryQuery($field, $anchor);
             }
 
@@ -595,20 +600,43 @@ class VizyBlock extends Node
         return null;
     }
 
-    private function _resolveMatrixAnchor(?ElementInterface $parent, ?FieldLayout $fieldLayout = null): ?\verbb\vizy\elements\MatrixAnchor
+    private function _canPersistMatrixAnchors(): bool
     {
+        $request = Craft::$app->getRequest();
+
+        return $request->getIsConsoleRequest() || $request->getIsCpRequest();
+    }
+
+    private function _resolveMatrixAnchor(
+        ?ElementInterface $parent,
+        ?FieldLayout $fieldLayout = null,
+        bool $create = false,
+    ): ?\verbb\vizy\elements\MatrixAnchor {
         if (!$parent || !$parent->id || !$this->getId() || !$this->hasMatrixFields()) {
             return null;
         }
 
-        $fieldLayout ??= $this->getFieldLayout();
+        $vizyField = $this->getField();
+        $blockInstanceId = $this->getId();
+        $anchorUid = $this->getMatrixAnchorUid();
 
-        return Vizy::$plugin->getAnchors()->ensureAnchor(
+        if ($create) {
+            $fieldLayout ??= $this->getFieldLayout();
+
+            return Vizy::$plugin->getAnchors()->ensureAnchor(
+                $parent,
+                $vizyField,
+                $blockInstanceId,
+                $fieldLayout,
+                $anchorUid,
+            );
+        }
+
+        return Vizy::$plugin->getAnchors()->getAnchor(
             $parent,
-            $this->getField(),
-            $this->getId(),
-            $fieldLayout,
-            $this->getMatrixAnchorUid(),
+            $vizyField,
+            $blockInstanceId,
+            $anchorUid,
         );
     }
 
@@ -620,7 +648,7 @@ class VizyBlock extends Node
             return;
         }
 
-        $anchor = $this->_resolveMatrixAnchor($parent);
+        $anchor = $this->_resolveMatrixAnchor($parent, null, $this->_canPersistMatrixAnchors());
 
         if ($anchor) {
             $block->setMatrixAnchor($anchor);

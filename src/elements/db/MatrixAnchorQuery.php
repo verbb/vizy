@@ -2,7 +2,6 @@
 namespace verbb\vizy\elements\db;
 
 use verbb\vizy\db\Table;
-use verbb\vizy\elements\MatrixAnchor;
 
 use craft\elements\db\ElementQuery;
 use craft\helpers\ArrayHelper;
@@ -23,20 +22,30 @@ class MatrixAnchorQuery extends ElementQuery
 
     public function populate($rows): array
     {
-        /** @var MatrixAnchor[] $elements */
         $elements = parent::populate($rows);
         $rowsById = ArrayHelper::index($rows, 'id');
 
-        foreach ($elements as $element) {
-            $row = $rowsById[$element->id] ?? null;
+        foreach ($elements as $key => $element) {
+            $id = is_array($element) ? ($element['id'] ?? null) : $element->id;
+            $row = $id !== null ? ($rowsById[$id] ?? null) : null;
 
             if (!$row) {
                 continue;
             }
 
-            $element->vizyFieldId = isset($row['vizyFieldId']) ? (int)$row['vizyFieldId'] : null;
-            $element->blockInstanceId = $row['blockInstanceId'] ?? null;
-            $element->parentOwnerId = isset($row['parentOwnerId']) ? (int)$row['parentOwnerId'] : null;
+            $vizyFieldId = isset($row['vizyFieldId']) ? (int)$row['vizyFieldId'] : null;
+            $blockInstanceId = $row['blockInstanceId'] ?? null;
+            $parentOwnerId = isset($row['parentOwnerId']) ? (int)$row['parentOwnerId'] : null;
+
+            if (is_array($element)) {
+                $elements[$key]['vizyFieldId'] = $vizyFieldId;
+                $elements[$key]['blockInstanceId'] = $blockInstanceId;
+                $elements[$key]['parentOwnerId'] = $parentOwnerId;
+            } else {
+                $element->vizyFieldId = $vizyFieldId;
+                $element->blockInstanceId = $blockInstanceId;
+                $element->parentOwnerId = $parentOwnerId;
+            }
         }
 
         return $elements;
