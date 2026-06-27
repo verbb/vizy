@@ -39,5 +39,12 @@
             "developers/node-collection",
             "developers/graphql"
         ]
+    },
+    {
+        "title": "Guides",
+        "collapsable": false,
+        "children": [
+            "guides/developers/index"
+        ]
     }
 ]
