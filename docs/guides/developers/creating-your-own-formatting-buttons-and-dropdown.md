@@ -16,10 +16,10 @@ With that in mind, let's use the following requirements as a goal for our guide.
 Fortunately, with the editor configuration (a JSON file to define what buttons and features the editor has), this is an easy task. Not only can you include or exclude the buttons Vizy provides, but you can define your own. These custom buttons are a quick way to extend existing nodes and marks with your own attributes.
 
 :::tip
-If you're looking for something more involved than this quick approach, have a look at the [Creating a custom Node from scratch](/craft-plugins/vizy/user-guides/creating-a-custom-node-from-scratch) guide on creating your own Vizy Plugin with custom buttons, Tiptap extensions and more. They're a lot more powerful than this method.
+If you're looking for something more involved than this quick approach, have a look at the [Creating a custom Node from scratch](/guides/developers/creating-a-custom-node-from-scratch) guide on creating your own Vizy Plugin with custom buttons, Tiptap extensions and more. They're a lot more powerful than this method.
 :::
 
-You can define your [editor config](/craft-plugins/vizy/docs/get-started/configuration#editor-configuration) by either providing a JSON file to your Vizy field, or adding the JSON inline in the Vizy field settings. Whatever method you use, let's start with the following:
+You can define your [editor config](/get-started/configuration#editor-configuration) by either providing a JSON file to your Vizy field, or adding the JSON inline in the Vizy field settings. Whatever method you use, let's start with the following:
 
 ```json
 {
@@ -56,7 +56,7 @@ You can define your [editor config](/craft-plugins/vizy/docs/get-started/configu
 
 You can see here that we're combining string values like `paragraph` and `italic` with objects that define our custom buttons. We can add buttons at the top-level, or within the formatting dropdown, so that part is up to you!
 
-While `svg` and `title` are self-explanatory, and define the visuals of the button, the `type` and `attrs` is where the magic happens. First, you'll need to pick an existing [Node](/craft-plugins/vizy/docs/developers/node) or [Mark](/craft-plugins/vizy/docs/developers/mark) to extend from. Note that these are different from the other buttons (e.g. `h1` is the name of the button, but `heading` is the Node which you want to use). Then `attrs` is where you can define any attributes you want to save against the content. These will be output as HTML attributes when outputting it on the front-end.
+While `svg` and `title` are self-explanatory, and define the visuals of the button, the `type` and `attrs` is where the magic happens. First, you'll need to pick an existing [Node](/developers/node) or [Mark](/developers/mark) to extend from. Note that these are different from the other buttons (e.g. `h1` is the name of the button, but `heading` is the Node which you want to use). Then `attrs` is where you can define any attributes you want to save against the content. These will be output as HTML attributes when outputting it on the front-end.
 
 Add the above to your editor config, and you should see a few new buttons in your editor. Go ahead and press these buttons on some text, and ... you probably won't see any change. But that's okay — if you look at the HTML source of the element, you'll see that the attributes _are_ getting applied, they just don't look any different to the regular content. For example, we might press the **Primary** button to apply our primary colour on the text.
 
@@ -110,7 +110,7 @@ Modify your editor config to include `editorStyle`:
 
 The `editorStyle` can contain CSS selectors that are applied just in the control panel. Rules are prefixed with `.vui-editor` so that they're scoped to Vizy, and don't mess around with anything else in the control panel.
 
-Now you should be able to visually recognise your custom content in the control panel for your editors. We'll leave you to style that however you like on your front-end! Anything defined in your `attrs` property will be applied as HTML attributes, but you can of course customise how nodes are [rendered](/craft-plugins/vizy/docs/template-guides/rendering-content) as well.
+Now you should be able to visually recognise your custom content in the control panel for your editors. We'll leave you to style that however you like on your front-end! Anything defined in your `attrs` property will be applied as HTML attributes, but you can of course customise how nodes are [rendered](/template-guides/rendering-content) as well.
 
 ### Review & Considerations
 This is a super-easy way to setup custom behaviour with just the editor config file. You don't need to know PHP or JS to make a Vizy Plugin, custom nodes, etc. However, we do recommend careful consideration when it comes to storing HTML attributes like classes against nodes for maintainability.
@@ -124,6 +124,6 @@ Let's also not forget that Vizy stores structured content unlike other editors t
 
 Instead of storing content that's tightly coupled to your specific front-end CSS, another approach is to store your custom items in a more structured way. So rather than instructing Vizy to store a `paragraph` node with a `text-primary-500` class, what about instructing Vizy to store a `primary` node — a custom node altogether?
 
-This approach is where [creating a custom Node](/craft-plugins/vizy/user-guides/creating-a-custom-node-from-scratch) can help you out. You can define a particular chunk of content as "primary", and how you present it is entirely up to you, for your specific site or front-end framework as that may evolve over time. This provides _structure_ to your content, without tying it to presentation.
+This approach is where [creating a custom Node](/guides/developers/creating-a-custom-node-from-scratch) can help you out. You can define a particular chunk of content as "primary", and how you present it is entirely up to you, for your specific site or front-end framework as that may evolve over time. This provides _structure_ to your content, without tying it to presentation.
 
-it's a little more work to setup a custom node, but our [user guide](/craft-plugins/vizy/user-guides/creating-a-custom-node-from-scratch) can walk you through things! We think the benefits do outweigh the time involved in creating it, and provides a more structured and maintainable content model in the long-run.
+it's a little more work to setup a custom node, but our [user guide](/guides/developers/creating-a-custom-node-from-scratch) can walk you through things! We think the benefits do outweigh the time involved in creating it, and provides a more structured and maintainable content model in the long-run.
