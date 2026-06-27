@@ -1,5 +1,14 @@
 # Changelog
 
+## 3.2.1 - 2026-06-27
+
+### Added
+- Add `vizy/anchors/backfill` console command to proactively migrate Matrix+Vizy content.
+
+### Fixed
+- Fix performance issues with Matrix Anchor handling.
+- Fix matrix anchor race condition in load-balanced environments.
+
 ## 3.2.0 - 2026-06-20
 
 ### Fixed
