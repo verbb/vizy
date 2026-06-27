@@ -143,7 +143,7 @@ class EmojiAsset extends AssetBundle
 For our asset bundle, we register any CSS or JS that we'll need for our plugin. These can be named whatever you like. We also ensure that this asset bundle is dependant on `CpAsset` and `VizyAsset` to ensure things are loaded correctly.
 
 #### Editor Config
-Before we dive into the JS code, let's add this newly-registered plugin to our [editor config](/vizy/docs/get-started/configuration#editor-configuration). This allows us to actually load the plugin on a Vizy field that uses this editor config.
+Before we dive into the JS code, let's add this newly-registered plugin to our [editor config](/get-started/configuration#editor-configuration). This allows us to actually load the plugin on a Vizy field that uses this editor config.
 
 ```
 // config/vizy/Custom.json
@@ -243,7 +243,7 @@ We then register this new node with `Craft.Vizy.Config.registerExtensions()` to 
 Finally, we need a button to be able to trigger our new extension! We can add a new button with `Craft.Vizy.Config.registerButtons()` which has an `action` to run the `addEmoji()` command defined in our node class. We're also using the `name` we've added to our `buttons` array in our editor config.
 
 :::tip
-Be sure to check out the [Extending Vizy](/craft-plugins/vizy/docs/template-guides/extending-vizy) docs for more detail on the available options.
+Be sure to check out the [Extending Vizy](/template-guides/extending-vizy) docs for more detail on the available options.
 :::
 
 With all those pieces in place, let's load up the Vizy field in an entry. You should see your new button in the toolbar, ready to get pressed. Go ahead, press it!

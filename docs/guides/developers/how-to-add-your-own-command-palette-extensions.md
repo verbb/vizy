@@ -6,7 +6,7 @@ The Command Palette provides quick and easy access for creating new nodes just b
 
 *Vizy's Command Palette to return those seconds back in your day*
 
-If you're creating a custom [mark](/craft-plugins/vizy/user-guides/creating-a-custom-mark-from-scratch) or [node](/craft-plugins/vizy/user-guides/creating-a-custom-node-from-scratch) you might like to add support for the Command Palette.
+If you're creating a custom [mark](/guides/developers/creating-a-custom-mark-from-scratch) or [node](/guides/developers/creating-a-custom-node-from-scratch) you might like to add support for the Command Palette.
 
 :::tip
 Note that not all nodes and marks are available in the Command Palette. This is to mostly not overwhelm users with choice, so be mindful on whether to include it.
@@ -32,7 +32,7 @@ Here, we're adding a "Font Color" command to the Command Palette.
 For the `commandInfo` you can either supply a `text` value or a `shortcut` value, if your node supports keyboard shortcuts. For the shortcut value, you can provide the keyboard shortcut exactly as you'd use it in your extension (e.g. `Mod-Alt-c` would render as `⌘` `⌥` `c` on a Mac).
 
 ### Managing commands
-Much like [buttons](/craft-plugins/vizy/user-guides/modifying-the-toolbar-buttons) you can modify or remove commands as required.
+Much like [buttons](/guides/developers/modifying-the-toolbar-buttons) you can modify or remove commands as required.
 
 ```js
 Craft.Vizy.Config.registerCommands((commands) => {

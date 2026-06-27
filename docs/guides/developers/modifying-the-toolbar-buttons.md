@@ -1,6 +1,6 @@
 # Modifying the toolbar buttons
 
-As a refresher, you can [register](/craft-plugins/vizy/user-guides/creating-a-custom-node-from-scratch) your own buttons using `Craft.Vizy.Config.registerButtons()`
+As a refresher, you can [register](/guides/developers/creating-a-custom-node-from-scratch) your own buttons using `Craft.Vizy.Config.registerButtons()`
 
 ```js
 document.addEventListener('onVizyConfigReady', (e) => {

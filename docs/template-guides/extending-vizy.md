@@ -2,7 +2,7 @@
 Vizy is powered by [Tiptap](https://tiptap.dev), which in turn is powered by [ProseMirror](https://prosemirror.net/docs/guide/). Vizy is a layer on top of Tiptap that provides the UI/UX unique to it. We provide an API to extend Vizy's features and functionality through **Vizy Plugins**. This includes adding buttons to the toolbar, command palette and other extensions.
 
 :::tip
-If you're looking for some deep-dive examples, we've got that covered in our [User Guides](/craft-plugins/vizy/docs/user-guides).
+If you're looking for some deep-dive examples, we've got that covered in our [User Guides](/guides/developers).
 :::
 
 ## Editor Config
@@ -18,7 +18,7 @@ Have a read through the below resources:
 - [Custom Extensions with Tiptap](https://tiptap.dev/guide/custom-extensions)
 - Sample [Nodes](https://tiptap.dev/api/nodes), [Marks](https://tiptap.dev/api/marks) and [Extensions](https://tiptap.dev/api/extensions)
 - [ProseMirror Guide](https://prosemirror.net/docs/guide/)
-- Check out our [User Guides](/craft-plugins/vizy/docs/user-guides) for specific real-world examples
+- Check out our [User Guides](/guides/developers) for specific real-world examples
 
 ## Vizy Plugin
 The anatomy of a Vizy Plugin consists of some PHP module code, and some JavaScript code to hook into Vizy/Tiptap/ProseMirror. You'll need to create an [`AssetBundle`](https://verbb.io/blog/everything-you-need-to-know-about-modules#asset-bundles) that refers to your JavaScript (and CSS file if required). We'll also need to register any [Node](docs:developers/node) or [Mark](docs:developers/mark) objects that we want to use.
@@ -307,4 +307,4 @@ class ExampleNode extends Node
 Refer to the [Mark](docs:developers/mark) and [Node](docs:developers/node) documentation for more details.
 
 ## User Guides
-We've also put together several user guides with full-featured examples. Read through the [User Guides](/craft-plugins/vizy/docs/user-guides) for more.
+We've also put together several user guides with full-featured examples. Read through the [User Guides](/guides/developers) for more.
