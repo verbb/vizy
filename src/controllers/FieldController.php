@@ -1,6 +1,7 @@
 <?php
 namespace verbb\vizy\controllers;
 
+use verbb\vizy\elements\MatrixAnchor;
 use verbb\vizy\helpers\Fields;
 use verbb\vizy\models\BlockType;
 use verbb\vizy\models\NodeCollection;
@@ -245,6 +246,19 @@ class FieldController extends Controller
 
             if ($entry instanceof Entry) {
                 return $entry;
+            }
+        }
+
+        // Fallback: MatrixInput sends the MatrixAnchor id as ownerId once the block has been saved.
+        if ($ownerId = $this->request->getBodyParam('ownerId')) {
+            $owner = $elementsService->getElementById((int)$ownerId, null, $siteId);
+
+            if ($owner instanceof MatrixAnchor && $owner->parentOwnerId) {
+                $entry = $elementsService->getElementById((int)$owner->parentOwnerId, Entry::class, $siteId);
+
+                if ($entry instanceof Entry) {
+                    return $entry;
+                }
             }
         }
 
