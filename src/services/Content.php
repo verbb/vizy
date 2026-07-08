@@ -31,15 +31,13 @@ class Content extends Component
 
     public function modifyFieldContent(string $fieldUid, string $fieldHandle, $callback, $db = null): void
     {
-        if ($db) {
-            $db = Craft::$app->getDb();
-        }
+        $db = $db ?: Craft::$app->getDb();
 
         if (!$this->vizyFields) {
             $this->vizyFields = (new Query())
                 ->from('{{%fields}}')
                 ->where(['type' => VizyField::class])
-                ->all();
+                ->all($db);
         }
 
         $matchedData = [];
@@ -54,9 +52,19 @@ class Content extends Component
                             $elementFieldUid = $element['fieldUid'] ?? null;
 
                             if ($elementFieldUid === $fieldUid) {
+                                // Craft 5 stores block field content keyed by the field-layout element UID.
+                                // Older content may still be keyed by the field handle or the field UID, so
+                                // collect every possible key to match against when locating the block content.
+                                $searchKeys = array_values(array_unique(array_filter([
+                                    $element['uid'] ?? null,
+                                    $fieldUid,
+                                    $fieldHandle,
+                                ])));
+
                                 $matchedData[] = [
                                     'vizyFieldUid' => $vizyField['uid'],
                                     'blockTypeId' => $blockType['id'],
+                                    'searchKeys' => $searchKeys,
                                 ];
                             }
                         }
@@ -71,7 +79,7 @@ class Content extends Component
                     // We have to use field instances, not just the field
                     foreach ($this->findFieldUsages($vizyField) as $fieldLayoutUid) {
                         // Find content rows for each field instance
-                        $sql = Craft::$app->getDb()->getQueryBuilder()->jsonExtract('content', [$fieldLayoutUid]);
+                        $sql = $db->getQueryBuilder()->jsonExtract('content', [$fieldLayoutUid]);
 
                         $rows = (new Query())
                             ->select(['content', 'id', 'elementId'])
@@ -81,7 +89,7 @@ class Content extends Component
                                 ['not', ['content' => null]],
                                 $sql . ' IS NOT NULL',
                             ])
-                            ->all();
+                            ->all($db);
 
                         foreach ($rows as $row) {
                             $elementContent = Json::decode($row['content']) ?? [];
@@ -93,11 +101,13 @@ class Content extends Component
                             // Find the field and block that matches our content for the field. We use flatten to handle
                             // nested Vizy content with ease with dot-notation get/set.
                             foreach (ArrayHelper::flatten($fieldContent) as $flatKey => $flatContent) {
-                                $searchKey = 'fields.' . $fieldHandle;
+                                foreach ($data['searchKeys'] as $searchKey) {
+                                    if (str_ends_with($flatKey, 'fields.' . $searchKey)) {
+                                        // Only fetch the preceding data, so `0.attrs.values` or `1.attrs.values.content.fields.vizy.0.attrs.values`
+                                        $blockPaths[] = substr($flatKey, 0, (strrpos($flatKey, 'content.fields') - 1));
 
-                                if (str_ends_with($flatKey, $searchKey)) {
-                                    // Only fetch the preceding data, so `0.attrs.values` or `1.attrs.values.content.fields.vizy.0.attrs.values`
-                                    $blockPaths[] = substr($flatKey, 0, (strrpos($flatKey, 'content.fields') - 1));
+                                        break;
+                                    }
                                 }
                             }
 
@@ -120,9 +130,12 @@ class Content extends Component
                             }
 
                             if ($modifiedContent) {
+                                // The inner Vizy field content is stored as a JSON-encoded string, but the outer
+                                // `content` column is a JSON column. Pass the decoded array (not a pre-encoded
+                                // string) so Craft encodes it once, otherwise the value is double-encoded.
                                 $elementContent[$fieldLayoutUid] = Json::encode($fieldContent);
 
-                                Db::update('{{%elements_sites}}', ['content' => Json::encode($elementContent)], ['id' => $row['id']]);
+                                Db::update('{{%elements_sites}}', ['content' => $elementContent], ['id' => $row['id']], db: $db);
                             }
                         }
                     }
