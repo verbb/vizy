@@ -1,5 +1,10 @@
 # Changelog
 
+## 2.1.32 - 2026-07-15
+
+### Added
+- Add guides to docs.
+
 ## 2.1.31 - 2026-05-10
 
 ### Fixed
