@@ -1,5 +1,14 @@
 # Changelog
 
+## 3.2.2 - 2026-07-15
+
+### Added
+- Add guides to docs.
+
+### Fixed
+- Fix migration handling for some Vizy Block fields like Hyper and Typed Link fields in Hyper.
+- Fix nested Matrix "+ New entry" 403 by resolving parent owner from MatrixAnchor ownerId.
+
 ## 3.2.1 - 2026-06-27
 
 ### Added
