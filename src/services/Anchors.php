@@ -2,6 +2,7 @@
 namespace verbb\vizy\services;
 
 use verbb\vizy\Vizy;
+use verbb\vizy\db\Table;
 use verbb\vizy\elements\MatrixAnchor;
 use verbb\vizy\fields\VizyField;
 use verbb\vizy\nodes\VizyBlock;
@@ -28,6 +29,10 @@ class Anchors extends Component
         string $blockInstanceId,
         ?string $anchorUid = null,
     ): ?MatrixAnchor {
+        if (!$this->_tableExists()) {
+            return null;
+        }
+
         $elementsService = Craft::$app->getElements();
         $siteId = $parentOwner->siteId;
 
@@ -67,7 +72,7 @@ class Anchors extends Component
         ?FieldLayout $fieldLayout = null,
         ?string $anchorUid = null,
     ): ?MatrixAnchor {
-        if (!$parentOwner->id) {
+        if (!$parentOwner->id || !$this->_tableExists()) {
             return null;
         }
 
@@ -129,7 +134,7 @@ class Anchors extends Component
 
     public function gcOrphans(ElementInterface $parentOwner, VizyField $vizyField): void
     {
-        if (!$parentOwner->id) {
+        if (!$parentOwner->id || !$this->_tableExists()) {
             return;
         }
 
@@ -155,7 +160,7 @@ class Anchors extends Component
 
     public function deleteAnchorsForOwner(ElementInterface $owner): void
     {
-        if (!$owner->id) {
+        if (!$owner->id || !$this->_tableExists()) {
             return;
         }
 
@@ -228,6 +233,11 @@ class Anchors extends Component
 
     // Private Methods
     // =========================================================================
+
+    private function _tableExists(): bool
+    {
+        return Craft::$app->getDb()->tableExists(Table::MATRIX_ANCHORS);
+    }
 
     private function _blockHasMatrixJsonContent(VizyBlock $block): bool
     {
