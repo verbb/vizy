@@ -8,6 +8,7 @@ use Craft;
 use craft\base\Element;
 use craft\base\ElementInterface;
 use craft\elements\User;
+use craft\helpers\ElementHelper;
 use craft\models\FieldLayout;
 
 class MatrixAnchor extends Element
@@ -100,7 +101,34 @@ class MatrixAnchor extends Element
             return null;
         }
 
-        return Craft::$app->getElements()->getElementById($this->parentOwnerId, null, $this->siteId);
+        $elementsService = Craft::$app->getElements();
+
+        if ($this->siteId) {
+            $parent = $elementsService->getElementById($this->parentOwnerId, null, $this->siteId);
+
+            if ($parent) {
+                return $parent;
+            }
+        }
+
+        // Fall back when the anchor exists on a site the parent doesn't (yet), or vice versa
+        return $elementsService->getElementById($this->parentOwnerId);
+    }
+
+    public function getSupportedSites(): array
+    {
+        $parentOwner = $this->getParentOwner();
+
+        if (!$parentOwner) {
+            return $this->siteId
+                ? [(int)$this->siteId]
+                : [Craft::$app->getSites()->getPrimarySite()->id];
+        }
+
+        return array_map(
+            static fn(array $siteInfo) => $siteInfo['siteId'],
+            ElementHelper::supportedSitesForElement($parentOwner),
+        );
     }
 
     public function canView(User $user): bool

@@ -48,13 +48,7 @@ class Anchors extends Component
             return null;
         }
 
-        $parentOwnerId = (int)$parentOwner->getCanonicalId();
-
-        $record = MatrixAnchorRecord::findOne([
-            'parentOwnerId' => $parentOwnerId,
-            'vizyFieldId' => $vizyField->id,
-            'blockInstanceId' => $blockInstanceId,
-        ]);
+        $record = $this->_findAnchorRecord($parentOwner, $vizyField, $blockInstanceId);
 
         if (!$record) {
             return null;
@@ -82,13 +76,33 @@ class Anchors extends Component
             return $this->_applyFieldLayout($anchor, $fieldLayout);
         }
 
+        // Record may exist without an elements_sites row for this site (narrower site coverage).
+        // Heal that site instead of inserting a duplicate (parentOwnerId, vizyFieldId, blockInstanceId).
+        $record = $this->_findAnchorRecord($parentOwner, $vizyField, $blockInstanceId);
+
+        if ($record) {
+            $anchor = $this->_ensureAnchorSite($record, $parentOwner, $fieldLayout);
+
+            if ($anchor) {
+                return $anchor;
+            }
+        }
+
         $lockName = $this->_mutexLockName($parentOwner, $vizyField, $blockInstanceId);
         $mutex = Craft::$app->getMutex();
 
         if (!$mutex->acquire($lockName, 5)) {
             $anchor = $this->getAnchor($parentOwner, $vizyField, $blockInstanceId, $anchorUid);
 
-            return $anchor ? $this->_applyFieldLayout($anchor, $fieldLayout) : null;
+            if ($anchor) {
+                return $this->_applyFieldLayout($anchor, $fieldLayout);
+            }
+
+            $record = $this->_findAnchorRecord($parentOwner, $vizyField, $blockInstanceId);
+
+            return $record
+                ? $this->_ensureAnchorSite($record, $parentOwner, $fieldLayout)
+                : null;
         }
 
         try {
@@ -96,6 +110,16 @@ class Anchors extends Component
 
             if ($anchor) {
                 return $this->_applyFieldLayout($anchor, $fieldLayout);
+            }
+
+            $record = $this->_findAnchorRecord($parentOwner, $vizyField, $blockInstanceId);
+
+            if ($record) {
+                $anchor = $this->_ensureAnchorSite($record, $parentOwner, $fieldLayout);
+
+                if ($anchor) {
+                    return $anchor;
+                }
             }
 
             return $this->_createAnchor($parentOwner, $vizyField, $blockInstanceId, $fieldLayout, $anchorUid);
@@ -149,9 +173,9 @@ class Anchors extends Component
 
         foreach ($records as $record) {
             if (!in_array($record->blockInstanceId, $blockInstanceIds, true)) {
-                $anchor = Craft::$app->getElements()->getElementById($record->id, MatrixAnchor::class, $parentOwner->siteId);
+                $anchor = $this->_getAnchorElement($record->id, $parentOwner->siteId);
 
-                if ($anchor instanceof MatrixAnchor) {
+                if ($anchor) {
                     $this->deleteAnchor($anchor);
                 }
             }
@@ -169,9 +193,9 @@ class Anchors extends Component
             ->all();
 
         foreach ($records as $record) {
-            $anchor = Craft::$app->getElements()->getElementById($record->id, MatrixAnchor::class, $owner->siteId);
+            $anchor = $this->_getAnchorElement($record->id, $owner->siteId);
 
-            if ($anchor instanceof MatrixAnchor) {
+            if ($anchor) {
                 $this->deleteAnchor($anchor);
             }
         }
@@ -295,6 +319,81 @@ class Anchors extends Component
         );
     }
 
+    private function _findAnchorRecord(
+        ElementInterface $parentOwner,
+        VizyField $vizyField,
+        string $blockInstanceId,
+    ): ?MatrixAnchorRecord {
+        return MatrixAnchorRecord::findOne([
+            'parentOwnerId' => (int)$parentOwner->getCanonicalId(),
+            'vizyFieldId' => $vizyField->id,
+            'blockInstanceId' => $blockInstanceId,
+        ]);
+    }
+
+    private function _getAnchorElement(int $id, ?int $siteId = null): ?MatrixAnchor
+    {
+        if ($siteId) {
+            $anchor = Craft::$app->getElements()->getElementById($id, MatrixAnchor::class, $siteId);
+
+            if ($anchor instanceof MatrixAnchor) {
+                return $anchor;
+            }
+        }
+
+        $anchor = MatrixAnchor::find()
+            ->id($id)
+            ->site('*')
+            ->status(null)
+            ->one();
+
+        return $anchor instanceof MatrixAnchor ? $anchor : null;
+    }
+
+    private function _ensureAnchorSite(
+        MatrixAnchorRecord $record,
+        ElementInterface $parentOwner,
+        ?FieldLayout $fieldLayout,
+    ): ?MatrixAnchor {
+        $elementsService = Craft::$app->getElements();
+        $siteId = $parentOwner->siteId;
+
+        $anchor = $elementsService->getElementById($record->id, MatrixAnchor::class, $siteId);
+
+        if ($anchor instanceof MatrixAnchor) {
+            return $this->_applyFieldLayout($anchor, $fieldLayout);
+        }
+
+        $source = $this->_getAnchorElement((int)$record->id);
+
+        if (!$source) {
+            return null;
+        }
+
+        // Keep ownership in sync so getSupportedSites() follows this parent
+        $source->parentOwnerId = (int)$parentOwner->getCanonicalId();
+
+        try {
+            $anchor = $elementsService->propagateElement($source, $siteId);
+        } catch (\Throwable $e) {
+            // Resave so Craft reconciles elements_sites against getSupportedSites() (owner sites).
+            if (!$elementsService->saveElement($source)) {
+                Vizy::error(
+                    'Unable to propagate Vizy matrix anchor to site ' . $siteId . ': ' . $e->getMessage(),
+                    __METHOD__,
+                );
+
+                return null;
+            }
+
+            $anchor = $elementsService->getElementById($record->id, MatrixAnchor::class, $siteId);
+        }
+
+        return $anchor instanceof MatrixAnchor
+            ? $this->_applyFieldLayout($anchor, $fieldLayout)
+            : null;
+    }
+
     private function _createAnchor(
         ElementInterface $parentOwner,
         VizyField $vizyField,
@@ -322,6 +421,16 @@ class Anchors extends Component
 
             if ($existing) {
                 return $this->_applyFieldLayout($existing, $fieldLayout);
+            }
+
+            $record = $this->_findAnchorRecord($parentOwner, $vizyField, $blockInstanceId);
+
+            if ($record) {
+                $existing = $this->_ensureAnchorSite($record, $parentOwner, $fieldLayout);
+
+                if ($existing) {
+                    return $existing;
+                }
             }
 
             throw $e;
