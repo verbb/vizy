@@ -11,6 +11,7 @@ use verbb\vizy\fields\VizyField;
 
 use Craft;
 use craft\base\Element;
+use craft\base\ElementInterface;
 use craft\elements\Entry;
 use craft\fields\Matrix;
 use craft\helpers\ElementHelper;
@@ -199,7 +200,7 @@ class FieldController extends Controller
         ]);
     }
 
-    private function _resolveBlockType(VizyField $vizyField, string $blockInstanceId, Entry $parentOwner): ?BlockType
+    private function _resolveBlockType(VizyField $vizyField, string $blockInstanceId, ElementInterface $parentOwner): ?BlockType
     {
         $value = $parentOwner->getFieldValue($vizyField->handle);
 
@@ -216,16 +217,26 @@ class FieldController extends Controller
         return null;
     }
 
-    private function _resolveParentOwner(int $siteId): ?Entry
+    private function _resolveParentOwner(int $siteId): ?ElementInterface
     {
         $elementsService = Craft::$app->getElements();
 
+        // Prefer uid/id first — when Vizy lives on a nested owner (Neo/Super Table),
+        // parentDraftId often belongs to the root entry and must not win.
         if ($uid = $this->request->getBodyParam('parentOwnerUid')) {
             $uid = trim($uid, '"');
-            $entry = $elementsService->getElementByUid($uid, Entry::class, $siteId);
+            $element = $elementsService->getElementByUid($uid, null, $siteId);
 
-            if ($entry instanceof Entry) {
-                return $entry;
+            if ($element instanceof ElementInterface) {
+                return $element;
+            }
+        }
+
+        if ($id = $this->request->getBodyParam('parentOwnerId')) {
+            $element = $elementsService->getElementById((int)$id, null, $siteId);
+
+            if ($element instanceof ElementInterface) {
+                return $element;
             }
         }
 
@@ -241,23 +252,15 @@ class FieldController extends Controller
             }
         }
 
-        if ($id = $this->request->getBodyParam('parentOwnerId')) {
-            $entry = $elementsService->getElementById((int)$id, Entry::class, $siteId);
-
-            if ($entry instanceof Entry) {
-                return $entry;
-            }
-        }
-
         // Fallback: MatrixInput sends the MatrixAnchor id as ownerId once the block has been saved.
         if ($ownerId = $this->request->getBodyParam('ownerId')) {
             $owner = $elementsService->getElementById((int)$ownerId, null, $siteId);
 
-            if ($owner instanceof MatrixAnchor && $owner->parentOwnerId) {
-                $entry = $elementsService->getElementById((int)$owner->parentOwnerId, Entry::class, $siteId);
+            if ($owner instanceof MatrixAnchor) {
+                $parent = $owner->getParentOwner();
 
-                if ($entry instanceof Entry) {
-                    return $entry;
+                if ($parent instanceof ElementInterface) {
+                    return $parent;
                 }
             }
         }

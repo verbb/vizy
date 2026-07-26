@@ -572,11 +572,20 @@ export default {
             Craft.Vizy.matrixOwnerContexts = Craft.Vizy.matrixOwnerContexts || {};
 
             const blockInstanceId = this.node.attrs.id;
+            const vizyFieldId = this.vizyField.settings.fieldId || Craft.Vizy.vizyFieldId || null;
+            const parentOwner = (Craft.Vizy.parentOwnerContextsByField && vizyFieldId
+                ? Craft.Vizy.parentOwnerContextsByField[vizyFieldId]
+                : null)
+                || Craft.Vizy.parentOwnerContext
+                || {};
             const context = {
                 blockInstanceId,
-                vizyFieldId: this.vizyField.settings.fieldId || Craft.Vizy.vizyFieldId || null,
+                vizyFieldId,
                 matrixAnchorUid: this.node.attrs.values?.matrixAnchorUid || null,
                 vizyBlockTypeId: this.blockType?.id || this.node.attrs.values?.type || null,
+                parentOwnerUid: parentOwner.uid || null,
+                parentDraftId: parentOwner.draftId || null,
+                parentOwnerId: parentOwner.id || null,
             };
 
             Craft.Vizy.matrixOwnerContexts[`block:${blockInstanceId}`] = context;

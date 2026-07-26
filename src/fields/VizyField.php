@@ -811,11 +811,14 @@ class VizyField extends Field
         $view->registerJsWithVars(fn($uid, $draftId, $id, $vizyFieldId) => <<<JS
 (function() {
     Craft.Vizy = Craft.Vizy || {};
-    Craft.Vizy.parentOwnerContext = {
+    const parentOwnerContext = {
         uid: $uid || null,
         draftId: $draftId || null,
         id: $id || null,
     };
+    Craft.Vizy.parentOwnerContext = parentOwnerContext;
+    Craft.Vizy.parentOwnerContextsByField = Craft.Vizy.parentOwnerContextsByField || {};
+    Craft.Vizy.parentOwnerContextsByField[$vizyFieldId] = parentOwnerContext;
     Craft.Vizy.vizyFieldId = $vizyFieldId || null;
     Craft.Vizy.matrixOwnerContexts = Craft.Vizy.matrixOwnerContexts || {};
 
@@ -835,7 +838,6 @@ class VizyField extends Field
             const ownerElementType = data.ownerElementType || '';
 
             if (ownerElementType.indexOf('verbb\\\\vizy\\\\elements\\\\Block') !== -1) {
-                const ctx = Craft.Vizy.parentOwnerContext || {};
                 const form = document.querySelector('form#main-form');
                 const parseBlockInstanceId = (namespace) => {
                     if (!namespace) {
@@ -850,6 +852,18 @@ class VizyField extends Field
                 const blockCtx = Craft.Vizy.matrixOwnerContexts[data.ownerId]
                     || (blockInstanceId ? Craft.Vizy.matrixOwnerContexts['block:' + blockInstanceId] : null)
                     || {};
+                const vizyFieldId = blockCtx.vizyFieldId || Craft.Vizy.vizyFieldId || null;
+                const ctx = blockCtx.parentOwnerUid || blockCtx.parentOwnerId
+                    ? {
+                        uid: blockCtx.parentOwnerUid || null,
+                        draftId: blockCtx.parentDraftId || null,
+                        id: blockCtx.parentOwnerId || null,
+                    }
+                    : (Craft.Vizy.parentOwnerContextsByField && vizyFieldId
+                        ? Craft.Vizy.parentOwnerContextsByField[vizyFieldId]
+                        : null)
+                    || Craft.Vizy.parentOwnerContext
+                    || {};
                 const \$block = blockInstanceId
                     ? document.querySelector('.vizyblock[data-vizy-block-id="' + blockInstanceId + '"]')
                     : null;
@@ -858,7 +872,7 @@ class VizyField extends Field
                     parentOwnerUid: ctx.uid || form?.querySelector('input[name="uid"]')?.value || null,
                     parentDraftId: ctx.draftId || form?.querySelector('input[name="draftId"]')?.value || new URLSearchParams(window.location.search).get('draftId') || null,
                     parentOwnerId: ctx.id || form?.querySelector('input[name="elementId"]')?.value || null,
-                    vizyFieldId: blockCtx.vizyFieldId || Craft.Vizy.vizyFieldId || null,
+                    vizyFieldId: vizyFieldId,
                     blockInstanceId: blockInstanceId || blockCtx.blockInstanceId || \$block?.dataset?.vizyBlockId || null,
                     matrixAnchorUid: blockCtx.matrixAnchorUid || \$block?.dataset?.matrixAnchorUid || null,
                     vizyBlockTypeId: blockCtx.vizyBlockTypeId || \$block?.dataset?.vizyBlockTypeId || null,
@@ -877,11 +891,26 @@ JS, [
         ]);
     }
 
-    private function _registerMatrixBlockContextJs(string $blockInstanceId, int $ownerId, ?string $matrixAnchorUid = null, ?string $blockTypeId = null): void
+    private function _registerMatrixBlockContextJs(
+        string $blockInstanceId,
+        int $ownerId,
+        ?string $matrixAnchorUid = null,
+        ?string $blockTypeId = null,
+        ?ElementInterface $parentOwner = null,
+    ): void
     {
         $view = Craft::$app->getView();
 
-        $view->registerJsWithVars(fn($blockInstanceId, $ownerId, $vizyFieldId, $matrixAnchorUid, $blockTypeId) => <<<JS
+        $view->registerJsWithVars(fn(
+            $blockInstanceId,
+            $ownerId,
+            $vizyFieldId,
+            $matrixAnchorUid,
+            $blockTypeId,
+            $parentOwnerUid,
+            $parentDraftId,
+            $parentOwnerId,
+        ) => <<<JS
 (function() {
     Craft.Vizy = Craft.Vizy || {};
     Craft.Vizy.matrixOwnerContexts = Craft.Vizy.matrixOwnerContexts || {};
@@ -890,6 +919,9 @@ JS, [
         vizyFieldId: $vizyFieldId,
         matrixAnchorUid: $matrixAnchorUid || null,
         vizyBlockTypeId: $blockTypeId || null,
+        parentOwnerUid: $parentOwnerUid || null,
+        parentDraftId: $parentDraftId || null,
+        parentOwnerId: $parentOwnerId || null,
     };
     Craft.Vizy.matrixOwnerContexts['block:' + $blockInstanceId] = Craft.Vizy.matrixOwnerContexts[$ownerId];
 })();
@@ -899,6 +931,9 @@ JS, [
             $this->id,
             $matrixAnchorUid,
             $blockTypeId,
+            $parentOwner->uid ?? null,
+            $parentOwner->draftId ?? null,
+            $parentOwner->id ?? null,
         ]);
     }
 
@@ -1150,6 +1185,7 @@ JS, [
                             (int)$blockElement->id,
                             $block->getMatrixAnchorUid(),
                             $block->getBlockType()?->id,
+                            $element,
                         );
                     }
 

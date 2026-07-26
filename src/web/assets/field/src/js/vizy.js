@@ -172,7 +172,6 @@ const patchVizyMatrixCreateEntry = () => {
             const ownerElementType = data.ownerElementType ?? '';
 
             if (ownerElementType.includes('verbb\\vizy\\elements\\Block')) {
-                const ctx = Craft.Vizy.parentOwnerContext || {};
                 const form = document.querySelector('form#main-form');
                 const parseBlockInstanceId = (namespace) => {
                     if (!namespace) {
@@ -187,6 +186,18 @@ const patchVizyMatrixCreateEntry = () => {
                 const blockCtx = Craft.Vizy.matrixOwnerContexts?.[data.ownerId]
                     || (blockInstanceId ? Craft.Vizy.matrixOwnerContexts?.[`block:${blockInstanceId}`] : null)
                     || {};
+                const vizyFieldId = blockCtx.vizyFieldId || Craft.Vizy.vizyFieldId || null;
+                const ctx = blockCtx.parentOwnerUid || blockCtx.parentOwnerId
+                    ? {
+                        uid: blockCtx.parentOwnerUid || null,
+                        draftId: blockCtx.parentDraftId || null,
+                        id: blockCtx.parentOwnerId || null,
+                    }
+                    : (Craft.Vizy.parentOwnerContextsByField && vizyFieldId
+                        ? Craft.Vizy.parentOwnerContextsByField[vizyFieldId]
+                        : null)
+                    || Craft.Vizy.parentOwnerContext
+                    || {};
                 const blockEl = blockInstanceId
                     ? document.querySelector(`.vizyblock[data-vizy-block-id="${blockInstanceId}"]`)
                     : null;
@@ -196,7 +207,7 @@ const patchVizyMatrixCreateEntry = () => {
                     parentOwnerUid: ctx.uid || form?.querySelector('input[name="uid"]')?.value || null,
                     parentDraftId: ctx.draftId || form?.querySelector('input[name="draftId"]')?.value || new URLSearchParams(window.location.search).get('draftId') || null,
                     parentOwnerId: ctx.id || form?.querySelector('input[name="elementId"]')?.value || null,
-                    vizyFieldId: blockCtx.vizyFieldId || Craft.Vizy.vizyFieldId || null,
+                    vizyFieldId,
                     blockInstanceId: blockInstanceId || blockCtx.blockInstanceId || blockEl?.dataset?.vizyBlockId || null,
                     matrixAnchorUid: blockCtx.matrixAnchorUid || blockEl?.dataset?.matrixAnchorUid || null,
                     vizyBlockTypeId: blockCtx.vizyBlockTypeId || blockEl?.dataset?.vizyBlockTypeId || null,
