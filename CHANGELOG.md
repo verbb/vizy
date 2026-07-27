@@ -1,5 +1,12 @@
 # Changelog
 
+## 3.2.3 - 2026-07-27
+
+### Fixed
+- Fix nested Matrix "+ New entry" 403 when the Vizy field sits inside a Neo (or other nested) block.
+- Fix MatrixAnchor duplicate-key IntegrityException on multi-site saves when the anchor is missing a site the owner covers. #373.
+- Fix Craft 5 upgrade migrations crashing when the `vizy_matrix_anchors` table hasn’t been created yet. #372.
+
 ## 3.2.2 - 2026-07-15
 
 ### Added
