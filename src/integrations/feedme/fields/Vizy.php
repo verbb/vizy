@@ -3,6 +3,7 @@ namespace verbb\vizy\integrations\feedme\fields;
 
 use verbb\vizy\fields\VizyField;
 
+use craft\helpers\Html;
 use craft\helpers\Json;
 
 use craft\feedme\base\Field;
@@ -46,6 +47,21 @@ class Vizy extends Field implements FieldInterface
 
         if (!$value) {
             $value = ['content' => ''];
+        }
+
+        // Non-string scalars (e.g. int from a JSON feed) are an unknown format to TipTap
+        if (is_scalar($value) && !is_string($value)) {
+            $value = (string)$value;
+        }
+
+        // TipTap treats any successful json_decode() as a document, including JSON
+        // scalars like `"quoted title"` or `2026`. Those are plain text — force HTML.
+        if (is_string($value) && $value !== '') {
+            $decoded = Json::decodeIfJson($value);
+
+            if ($decoded !== $value && !is_array($decoded)) {
+                $value = '<p>' . Html::encode($value) . '</p>';
+            }
         }
 
         $editor = new Editor([
