@@ -254,6 +254,11 @@
 - Fix content changes being detected for nested fields when there are none. In addition, Vizy fields only listen for changes to their content when interacted with.
 - Fix field layout designer in settings not serializing changes correctly.
 
+## 2.1.33 - 2026-08-10
+
+### Fixed
+- Fix Feed Me TypeError when Vizy field values are quoted plain text. #375.
+
 ## 2.1.32 - 2026-07-15
 
 ### Added
