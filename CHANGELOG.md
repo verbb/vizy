@@ -1,5 +1,10 @@
 # Changelog
 
+## 2.1.33 - 2026-08-10
+
+### Fixed
+- Fix Feed Me TypeError when Vizy field values are quoted plain text. #375.
+
 ## 2.1.32 - 2026-07-15
 
 ### Added
