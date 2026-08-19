@@ -132,7 +132,8 @@ class AnchorsController extends Controller
                 $element->resaving = true;
                 $element->setDirtyFields($dirtyHandles);
 
-                if ($elementsService->saveElement($element)) {
+                // Match craft resave/* defaults: keep dateUpdated, skip search-index jobs.
+                if ($elementsService->saveElement($element, true, true, false)) {
                     $saved++;
                     $this->stdout($this->verbose ? "    done\n" : "done\n", Console::FG_GREEN);
                 } else {
