@@ -266,13 +266,40 @@ class VizyBlock extends Node
                     }
 
                     $content = $this->_getMatrixFieldContent($field->handle);
+                    $portalExplicit = $this->_portalHasMatrixField($field->handle);
 
-                    if ($content === null || $content === '') {
-                        // Avoid wiping nested Matrix entries when client-side portal data
-                        // wasn't synced into the Vizy JSON before the request was sent.
-                        // Only stamp the anchor uid / strip JSON once we know the anchor
-                        // already owns nested content (already migrated).
-                        if ($this->_anchorHasNestedEntries($field, $anchor)) {
+                    // Empty Craft 5 `{entries:{},sortOrder:[]}` / `[]` must not wipe nested
+                    // entries unless the Matrix portal explicitly posted that empty payload
+                    // (user cleared every entry in the UI).
+                    if (Matrix::isEmptyMatrixContent($content)) {
+                        if ($portalExplicit) {
+                            try {
+                                $content = Matrix::isCraft5MatrixContent($content)
+                                    ? Matrix::ensureSortOrder($content)
+                                    : ['entries' => [], 'sortOrder' => []];
+                                $fieldValue = $field->normalizeValueFromRequest($content, $anchor);
+                                Vizy::$plugin->getAnchors()->saveMatrixField($field, $anchor, $fieldValue, false, true);
+                                $this->_stampMatrixAnchor($value, $field, $anchor);
+                            } catch (Throwable $e) {
+                                Vizy::error(sprintf(
+                                    'Vizy matrix clear failed for field `%s` on element #%s (anchor #%s); keeping prior nested content. %s',
+                                    $field->handle,
+                                    $element?->id,
+                                    $anchor->id,
+                                    $e->getMessage(),
+                                ), __METHOD__);
+
+                                throw $e;
+                            }
+
+                            continue;
+                        }
+
+                        // Portal miss / empty attrs — keep JSON unless already migrated.
+                        if (
+                            !$this->_rawMatrixContentFilled($field) &&
+                            $this->_anchorHasNestedEntries($field, $anchor)
+                        ) {
                             $this->_stampMatrixAnchor($value, $field, $anchor);
                         }
 
@@ -572,10 +599,58 @@ class VizyBlock extends Node
     {
         $content = $this->_getRawFieldContent($handle);
 
-        if ($content !== null && $content !== '') {
+        // Empty attrs (including `{entries:{},sortOrder:[]}`) must not hide portal data.
+        if (!Matrix::isEmptyMatrixContent($content)) {
             return $content;
         }
 
+        return $this->_getPortalMatrixFieldContent($handle);
+    }
+
+    private function _getPortalMatrixFieldContent(string $handle): mixed
+    {
+        $fields = $this->_portalBlockFields();
+
+        if ($fields === null) {
+            return null;
+        }
+
+        if (array_key_exists($handle, $fields)) {
+            return $fields[$handle];
+        }
+
+        $field = $this->fieldByHandle($handle);
+
+        if ($field?->layoutElement?->uid && array_key_exists($field->layoutElement->uid, $fields)) {
+            return $fields[$field->layoutElement->uid];
+        }
+
+        return null;
+    }
+
+    /**
+     * Whether vizyData explicitly includes this Matrix field (even if empty).
+     * Distinguishes intentional clears from portal misses.
+     */
+    private function _portalHasMatrixField(string $handle): bool
+    {
+        $fields = $this->_portalBlockFields();
+
+        if ($fields === null) {
+            return false;
+        }
+
+        if (array_key_exists($handle, $fields)) {
+            return true;
+        }
+
+        $field = $this->fieldByHandle($handle);
+
+        return (bool)($field?->layoutElement?->uid && array_key_exists($field->layoutElement->uid, $fields));
+    }
+
+    private function _portalBlockFields(): ?array
+    {
         $request = Craft::$app->getRequest();
 
         if ($request->getIsConsoleRequest()) {
@@ -597,21 +672,14 @@ class VizyBlock extends Node
         $namespaceKey = array_key_first($blockData);
         $fields = $blockData[$namespaceKey]['fields'] ?? null;
 
-        if (!is_array($fields)) {
-            return null;
-        }
+        return is_array($fields) ? $fields : null;
+    }
 
-        if (array_key_exists($handle, $fields)) {
-            return $fields[$handle];
-        }
+    private function _rawMatrixContentFilled(MatrixField $field): bool
+    {
+        $content = $this->_getRawFieldContent($field->handle);
 
-        $field = $this->fieldByHandle($handle);
-
-        if ($field?->layoutElement?->uid && array_key_exists($field->layoutElement->uid, $fields)) {
-            return $fields[$field->layoutElement->uid];
-        }
-
-        return null;
+        return !Matrix::isEmptyMatrixContent($content);
     }
 
     private function _canPersistMatrixAnchors(): bool
@@ -680,10 +748,13 @@ class VizyBlock extends Node
         $this->setMatrixAnchorUid($anchor->uid);
         $value['attrs']['values']['matrixAnchorUid'] = $anchor->uid;
 
-        unset(
-            $value['attrs']['values']['content']['fields'][$field->layoutElement->uid],
-            $value['attrs']['values']['content']['fields'][$field->handle],
-        );
+        $uid = $field->layoutElement?->uid;
+
+        if ($uid) {
+            unset($value['attrs']['values']['content']['fields'][$uid]);
+        }
+
+        unset($value['attrs']['values']['content']['fields'][$field->handle]);
     }
 
     private function _anchorHasNestedEntries(MatrixField $field, \verbb\vizy\elements\MatrixAnchor $anchor): bool

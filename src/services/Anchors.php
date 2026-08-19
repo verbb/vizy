@@ -137,18 +137,40 @@ class Anchors extends Component
         MatrixAnchor $anchor,
         mixed $fieldValue,
         bool $isNew,
+        bool $allowEmpty = false,
     ): void {
         if ($fieldLayout = $anchor->getFieldLayout()) {
             $anchor->setFieldLayout($fieldLayout);
         }
 
         $field = $this->_matrixFieldForAnchor($field, $anchor);
+        $expected = $this->_matrixValueCount($fieldValue);
+        $existing = $this->_anchorNestedCount($field, $anchor);
+
+        // Empty payloads are usually portal misses. Only wipe nested entries when the
+        // caller explicitly opts in (Matrix UI cleared every entry).
+        if ($expected === 0) {
+            if ($existing > 0 && !$allowEmpty) {
+                throw new \RuntimeException(sprintf(
+                    'Vizy matrix field `%s` refused empty save on anchor #%s (%d nested entries present).',
+                    $field->handle,
+                    $anchor->id,
+                    $existing,
+                ));
+            }
+
+            if ($existing === 0) {
+                return;
+            }
+        }
 
         $anchor->setFieldValue($field->handle, $fieldValue);
         $anchor->setDirtyFields([$field->handle]);
         $field->afterElementPropagate($anchor, $isNew);
 
-        $this->_assertMatrixFieldPersisted($field, $anchor, $fieldValue);
+        if ($expected > 0) {
+            $this->_assertMatrixFieldPersisted($field, $anchor, $expected);
+        }
     }
 
     public function deleteAnchor(MatrixAnchor $anchor): void
@@ -167,6 +189,15 @@ class Anchors extends Component
     public function gcOrphans(ElementInterface $parentOwner, VizyField $vizyField): void
     {
         if (!$parentOwner->id || !$this->_tableExists()) {
+            return;
+        }
+
+        // Anchors are keyed by canonical owner id. Draft/revision saves can carry a subset of
+        // Vizy blocks — GC against those would delete live nested Matrix content.
+        if (
+            (method_exists($parentOwner, 'getIsDraft') && $parentOwner->getIsDraft()) ||
+            (method_exists($parentOwner, 'getIsRevision') && $parentOwner->getIsRevision())
+        ) {
             return;
         }
 
@@ -577,15 +608,32 @@ class Anchors extends Component
         return $field;
     }
 
-    private function _assertMatrixFieldPersisted(Matrix $field, MatrixAnchor $anchor, mixed $fieldValue): void
+    private function _assertMatrixFieldPersisted(Matrix $field, MatrixAnchor $anchor, int $expected): void
     {
-        $expected = $this->_matrixValueCount($fieldValue);
-
-        if ($expected === 0) {
+        if ($expected <= 0) {
             return;
         }
 
-        $actual = Entry::find()
+        $actual = $this->_anchorNestedCount($field, $anchor);
+
+        if ($actual < $expected) {
+            throw new \RuntimeException(sprintf(
+                'Vizy matrix field `%s` failed to persist nested entries on anchor #%s (expected %d, found %d).',
+                $field->handle,
+                $anchor->id,
+                $expected,
+                $actual,
+            ));
+        }
+    }
+
+    private function _anchorNestedCount(Matrix $field, MatrixAnchor $anchor): int
+    {
+        if (!$anchor->id) {
+            return 0;
+        }
+
+        return (int)Entry::find()
             ->fieldId($field->id)
             ->ownerId($anchor->id)
             ->siteId($anchor->siteId)
@@ -593,16 +641,6 @@ class Anchors extends Component
             ->status(null)
             ->limit(null)
             ->count();
-
-        if ((int)$actual < $expected) {
-            throw new \RuntimeException(sprintf(
-                'Vizy matrix field `%s` failed to persist nested entries on anchor #%s (expected %d, found %d).',
-                $field->handle,
-                $anchor->id,
-                $expected,
-                (int)$actual,
-            ));
-        }
     }
 
     private function _matrixValueCount(mixed $fieldValue): int

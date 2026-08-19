@@ -53,6 +53,40 @@ class Matrix
         return is_array($content) && isset($content['entries']);
     }
 
+    /**
+     * Whether Matrix content is empty / a no-op payload (portal miss, cleared field, etc.).
+     */
+    public static function isEmptyMatrixContent(mixed $content): bool
+    {
+        if ($content === null || $content === '' || $content === []) {
+            return true;
+        }
+
+        if (!is_array($content)) {
+            return false;
+        }
+
+        if (self::isCraft5MatrixContent($content)) {
+            $entries = $content['entries'] ?? [];
+            $sortOrder = $content['sortOrder'] ?? [];
+
+            return (!is_array($entries) || $entries === []) && (!is_array($sortOrder) || $sortOrder === []);
+        }
+
+        // Legacy block map with no usable blocks
+        foreach ($content as $key => $block) {
+            if ($key === 'blocks' && is_array($block)) {
+                return $block === [];
+            }
+
+            if (is_array($block) && (($block['type'] ?? '') !== '' || ($block['fields'] ?? []) !== [])) {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
     public static function ensureSortOrder(array $content): array
     {
         if (!self::isCraft5MatrixContent($content)) {
@@ -106,12 +140,16 @@ class Matrix
 
     public static function migrateJsonToAnchor($field, MatrixAnchor $anchor, mixed $content): void
     {
-        if ($content === null || $content === '' || $content === []) {
+        if (self::isEmptyMatrixContent($content)) {
             return;
         }
 
         if (is_string($content) && Json::isJsonObject($content)) {
             $content = Json::decode($content);
+        }
+
+        if (self::isEmptyMatrixContent($content)) {
+            return;
         }
 
         if (self::isCraft5MatrixContent($content)) {
