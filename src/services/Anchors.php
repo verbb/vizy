@@ -11,6 +11,9 @@ use verbb\vizy\records\MatrixAnchor as MatrixAnchorRecord;
 use Craft;
 use craft\base\Component;
 use craft\base\ElementInterface;
+use craft\elements\db\EntryQuery;
+use craft\elements\ElementCollection;
+use craft\elements\Entry;
 use craft\errors\InvalidFieldException;
 use craft\fields\Matrix;
 use craft\models\FieldLayout;
@@ -139,9 +142,13 @@ class Anchors extends Component
             $anchor->setFieldLayout($fieldLayout);
         }
 
+        $field = $this->_matrixFieldForAnchor($field, $anchor);
+
         $anchor->setFieldValue($field->handle, $fieldValue);
         $anchor->setDirtyFields([$field->handle]);
         $field->afterElementPropagate($anchor, $isNew);
+
+        $this->_assertMatrixFieldPersisted($field, $anchor, $fieldValue);
     }
 
     public function deleteAnchor(MatrixAnchor $anchor): void
@@ -531,6 +538,94 @@ class Anchors extends Component
             // Field exists globally but isn’t on this element’s layout (common during backfill).
             return null;
         }
+    }
+
+    /**
+     * Returns a Matrix field instance suitable for NestedElementManager.
+     *
+     * Matrix is not multi-instance, so NestedElementManager::propagateRequired() reads
+     * `$this->field->layoutElement` directly. FieldLayout clones can carry a cached
+     * NestedElementManager that still points at the Fields-service singleton (no layoutElement),
+     * which fatals mid-save and rolls back nested entries.
+     */
+    private function _matrixFieldForAnchor(Matrix $field, MatrixAnchor $anchor): Matrix
+    {
+        $fieldLayout = $anchor->getFieldLayout();
+
+        if ($fieldLayout) {
+            foreach ($fieldLayout->getCustomFields() as $layoutField) {
+                if ($layoutField instanceof Matrix && (int)$layoutField->id === (int)$field->id) {
+                    $field = $layoutField;
+                    break;
+                }
+            }
+        }
+
+        if (!$field->layoutElement) {
+            throw new \RuntimeException(sprintf(
+                'Vizy matrix field `%s` is missing layoutElement; refusing to migrate JSON onto anchor #%s.',
+                $field->handle,
+                $anchor->id,
+            ));
+        }
+
+        // Drop any NestedElementManager cloned from the Fields-service singleton.
+        (function() {
+            unset($this->_entryManager);
+        })->call($field);
+
+        return $field;
+    }
+
+    private function _assertMatrixFieldPersisted(Matrix $field, MatrixAnchor $anchor, mixed $fieldValue): void
+    {
+        $expected = $this->_matrixValueCount($fieldValue);
+
+        if ($expected === 0) {
+            return;
+        }
+
+        $actual = Entry::find()
+            ->fieldId($field->id)
+            ->ownerId($anchor->id)
+            ->siteId($anchor->siteId)
+            ->drafts(null)
+            ->status(null)
+            ->limit(null)
+            ->count();
+
+        if ((int)$actual < $expected) {
+            throw new \RuntimeException(sprintf(
+                'Vizy matrix field `%s` failed to persist nested entries on anchor #%s (expected %d, found %d).',
+                $field->handle,
+                $anchor->id,
+                $expected,
+                (int)$actual,
+            ));
+        }
+    }
+
+    private function _matrixValueCount(mixed $fieldValue): int
+    {
+        if ($fieldValue instanceof ElementCollection) {
+            return $fieldValue->count();
+        }
+
+        if ($fieldValue instanceof EntryQuery) {
+            $cached = $fieldValue->getCachedResult();
+
+            if ($cached !== null) {
+                return count($cached);
+            }
+
+            return (int)$fieldValue->count();
+        }
+
+        if (is_array($fieldValue) || $fieldValue instanceof \Countable) {
+            return count($fieldValue);
+        }
+
+        return 0;
     }
 
     private function _collectBlockInstanceIds(ElementInterface $parentOwner, VizyField $vizyField): array
