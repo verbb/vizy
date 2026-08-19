@@ -7,6 +7,9 @@
 
 ### Fixed
 - Fix `vizy/anchors/backfill` throwing `InvalidFieldException` when a Vizy field isn’t present on an element’s field layout. #364
+- Fix `vizy/anchors/backfill` to resave like Craft’s `resave/*` commands (preserve `dateUpdated`, skip search-index updates). #364
+- Fix Matrix-in-Vizy content loss when migrating legacy JSON onto MatrixAnchor (`layoutElement` null during nested save). #364
+- Fix Matrix-in-Vizy saves to keep JSON until nested entries have successfully persisted on the anchor. #364
 
 ## 3.2.4 - 2026-08-10
 

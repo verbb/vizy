@@ -10,6 +10,7 @@ use verbb\vizy\helpers\Matrix;
 use Craft;
 use craft\base\ElementInterface;
 use craft\elements\ContentBlock;
+use craft\elements\Entry;
 use craft\errors\InvalidFieldException;
 use craft\events\ElementEvent;
 use craft\fields\BaseRelationField;
@@ -264,35 +265,48 @@ class VizyBlock extends Node
                         continue;
                     }
 
-                    $this->setMatrixAnchorUid($anchor->uid);
-                    $value['attrs']['values']['matrixAnchorUid'] = $anchor->uid;
-
-                    unset(
-                        $value['attrs']['values']['content']['fields'][$field->layoutElement->uid],
-                        $value['attrs']['values']['content']['fields'][$field->handle],
-                    );
-
                     $content = $this->_getMatrixFieldContent($field->handle);
 
                     if ($content === null || $content === '') {
                         // Avoid wiping nested Matrix entries when client-side portal data
                         // wasn't synced into the Vizy JSON before the request was sent.
+                        // Only stamp the anchor uid / strip JSON once we know the anchor
+                        // already owns nested content (already migrated).
+                        if ($this->_anchorHasNestedEntries($field, $anchor)) {
+                            $this->_stampMatrixAnchor($value, $field, $anchor);
+                        }
+
                         continue;
                     }
 
-                    if (Matrix::isCraft5MatrixContent($content)) {
-                        $content = Matrix::ensureSortOrder($content);
-                        $fieldValue = $field->normalizeValueFromRequest($content, $anchor);
-                    } else {
-                        if (is_string($content) && Json::isJsonObject($content)) {
-                            $content = Json::decode($content);
+                    try {
+                        if (Matrix::isCraft5MatrixContent($content)) {
+                            $content = Matrix::ensureSortOrder($content);
+                            $fieldValue = $field->normalizeValueFromRequest($content, $anchor);
+                        } else {
+                            if (is_string($content) && Json::isJsonObject($content)) {
+                                $content = Json::decode($content);
+                            }
+
+                            $content = Matrix::sanitizeMatrixContent($field, $content);
+                            $fieldValue = $field->normalizeValue($content, $anchor);
                         }
 
-                        $content = Matrix::sanitizeMatrixContent($field, $content);
-                        $fieldValue = $field->normalizeValue($content, $anchor);
-                    }
+                        Vizy::$plugin->getAnchors()->saveMatrixField($field, $anchor, $fieldValue, false);
 
-                    Vizy::$plugin->getAnchors()->saveMatrixField($field, $anchor, $fieldValue, false);
+                        // Only strip JSON after nested entries have verifiably persisted.
+                        $this->_stampMatrixAnchor($value, $field, $anchor);
+                    } catch (Throwable $e) {
+                        Vizy::error(sprintf(
+                            'Vizy matrix migration failed for field `%s` on element #%s (anchor #%s); keeping JSON content. %s',
+                            $field->handle,
+                            $element?->id,
+                            $anchor->id,
+                            $e->getMessage(),
+                        ), __METHOD__);
+
+                        throw $e;
+                    }
 
                     foreach ($fieldValue->all() as $matrixBlock) {
                         if ($matrixFieldLayout = $matrixBlock->getFieldLayout()) {
@@ -659,6 +673,32 @@ class VizyBlock extends Node
         }
 
         $block->id = rand();
+    }
+
+    private function _stampMatrixAnchor(array &$value, MatrixField $field, \verbb\vizy\elements\MatrixAnchor $anchor): void
+    {
+        $this->setMatrixAnchorUid($anchor->uid);
+        $value['attrs']['values']['matrixAnchorUid'] = $anchor->uid;
+
+        unset(
+            $value['attrs']['values']['content']['fields'][$field->layoutElement->uid],
+            $value['attrs']['values']['content']['fields'][$field->handle],
+        );
+    }
+
+    private function _anchorHasNestedEntries(MatrixField $field, \verbb\vizy\elements\MatrixAnchor $anchor): bool
+    {
+        if (!$anchor->id) {
+            return false;
+        }
+
+        return Entry::find()
+            ->fieldId($field->id)
+            ->ownerId($anchor->id)
+            ->siteId($anchor->siteId)
+            ->drafts(null)
+            ->status(null)
+            ->exists();
     }
 
 }
