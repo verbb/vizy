@@ -10,6 +10,8 @@
 - Fix `vizy/anchors/backfill` to resave like Craft’s `resave/*` commands (preserve `dateUpdated`, skip search-index updates). #364
 - Fix Matrix-in-Vizy content loss when migrating legacy JSON onto MatrixAnchor (`layoutElement` null during nested save). #364
 - Fix Matrix-in-Vizy saves to keep JSON until nested entries have successfully persisted on the anchor. #364
+- Fix MatrixAnchor GC deleting live nested content when a draft/revision save runs `gcOrphans`. #364
+- Fix empty Craft 5 Matrix payloads wiping nested Matrix-in-Vizy content during saves. #364
 
 ## 3.2.4 - 2026-08-10
 
