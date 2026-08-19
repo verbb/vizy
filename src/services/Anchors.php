@@ -16,6 +16,7 @@ use craft\elements\ElementCollection;
 use craft\elements\Entry;
 use craft\errors\InvalidFieldException;
 use craft\fields\Matrix;
+use craft\helpers\ElementHelper;
 use craft\models\FieldLayout;
 
 use verbb\vizy\models\NodeCollection as VizyNodeCollection;
@@ -201,7 +202,13 @@ class Anchors extends Component
             return;
         }
 
-        $blockInstanceIds = $this->_collectBlockInstanceIds($parentOwner, $vizyField);
+        // Propagated site saves see one site's Vizy value; block IDs differ for translated
+        // content. Only GC from the initiating save, using a union across all owner sites.
+        if (!empty($parentOwner->propagating)) {
+            return;
+        }
+
+        $blockInstanceIds = $this->_collectBlockInstanceIdsAcrossSites($parentOwner, $vizyField);
 
         $records = MatrixAnchorRecord::find()
             ->where([
@@ -600,9 +607,12 @@ class Anchors extends Component
             ));
         }
 
-        // Drop any NestedElementManager cloned from the Fields-service singleton.
+        // NestedElementManager may still point at the Fields-service singleton (no layoutElement).
+        // Rebind to this layout instance — do not unset `_entryManager` (Yii Component::__set).
         (function() {
-            unset($this->_entryManager);
+            if (isset($this->_entryManager)) {
+                $this->_entryManager->field = $this;
+            }
         })->call($field);
 
         return $field;
@@ -664,6 +674,38 @@ class Anchors extends Component
         }
 
         return 0;
+    }
+
+    private function _collectBlockInstanceIdsAcrossSites(ElementInterface $parentOwner, VizyField $vizyField): array
+    {
+        $ids = [];
+
+        foreach ($this->_collectBlockInstanceIds($parentOwner, $vizyField) as $id) {
+            $ids[$id] = true;
+        }
+
+        $elementsService = Craft::$app->getElements();
+        $elementId = (int)$parentOwner->getCanonicalId();
+
+        foreach (ElementHelper::supportedSitesForElement($parentOwner) as $siteInfo) {
+            $siteId = (int)$siteInfo['siteId'];
+
+            if ($siteId === (int)$parentOwner->siteId) {
+                continue;
+            }
+
+            $siteElement = $elementsService->getElementById($elementId, $parentOwner::class, $siteId);
+
+            if (!$siteElement) {
+                continue;
+            }
+
+            foreach ($this->_collectBlockInstanceIds($siteElement, $vizyField) as $id) {
+                $ids[$id] = true;
+            }
+        }
+
+        return array_keys($ids);
     }
 
     private function _collectBlockInstanceIds(ElementInterface $parentOwner, VizyField $vizyField): array

@@ -12,6 +12,8 @@
 - Fix Matrix-in-Vizy saves to keep JSON until nested entries have successfully persisted on the anchor. #364
 - Fix MatrixAnchor GC deleting live nested content when a draft/revision save runs `gcOrphans`. #364
 - Fix empty Craft 5 Matrix payloads wiping nested Matrix-in-Vizy content during saves. #364
+- Fix Matrix field NestedElementManager rebinding for layout-resolved fields (avoid `unset(_entryManager)` / Yii `__set`). #364
+- Fix MatrixAnchor GC deleting per-site Vizy blocks during multi-site propagation (union block IDs across owner sites). #373 #364
 
 ## 3.2.4 - 2026-08-10
 
