@@ -1,5 +1,13 @@
 # Changelog
 
+## Unreleased
+
+### Added
+- Add `--verbose`/`-v` and `--dry-run` to `vizy/anchors/backfill`, with field usage, nesting, and plugin context on failures. #364
+
+### Fixed
+- Fix `vizy/anchors/backfill` throwing `InvalidFieldException` when a Vizy field isn’t present on an element’s field layout. #364
+
 ## 3.2.4 - 2026-08-10
 
 ### Fixed

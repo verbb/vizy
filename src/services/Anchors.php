@@ -11,6 +11,7 @@ use verbb\vizy\records\MatrixAnchor as MatrixAnchorRecord;
 use Craft;
 use craft\base\Component;
 use craft\base\ElementInterface;
+use craft\errors\InvalidFieldException;
 use craft\fields\Matrix;
 use craft\models\FieldLayout;
 
@@ -218,19 +219,94 @@ class Anchors extends Component
 
     public function elementNeedsMatrixAnchorBackfill(ElementInterface $element, VizyField $vizyField): bool
     {
-        $value = $element->getFieldValue($vizyField->handle);
+        return $this->describeMatrixAnchorBackfill($element, $vizyField) !== [];
+    }
 
-        if (!$value instanceof VizyNodeCollection) {
-            return false;
+    /**
+     * @return string[]
+     */
+    public function getVizyHandlesNeedingMatrixAnchorBackfill(ElementInterface $element): array
+    {
+        return array_column($this->describeMatrixAnchorBackfill($element), 'handle');
+    }
+
+    /**
+     * @return array<int, array{
+     *     handle: string,
+     *     fieldId: int|null,
+     *     fieldName: string,
+     *     blocks: array<int, array{
+     *         id: string,
+     *         blockType: string,
+     *         reason: string,
+     *         matrixFields: string[],
+     *         matrixAnchorUid: string|null
+     *     }>
+     * }>
+     */
+    public function describeMatrixAnchorBackfill(ElementInterface $element, ?VizyField $vizyField = null): array
+    {
+        $layout = $element->getFieldLayout();
+
+        if (!$layout) {
+            return [];
         }
 
-        foreach ($value->query()->where(['type' => VizyBlock::$type])->all() as $block) {
-            if ($block instanceof VizyBlock && $this->blockNeedsMatrixAnchorBackfill($block, $element, $vizyField)) {
-                return true;
+        $reports = [];
+
+        foreach ($layout->getCustomFields() as $field) {
+            if (!$field instanceof VizyField) {
+                continue;
+            }
+
+            if ($vizyField && (int)$field->id !== (int)$vizyField->id) {
+                continue;
+            }
+
+            $value = $this->_getElementVizyValue($element, $field);
+
+            if (!$value instanceof VizyNodeCollection) {
+                continue;
+            }
+
+            $blocks = [];
+
+            foreach ($value->query()->where(['type' => VizyBlock::$type])->all() as $block) {
+                if (!$block instanceof VizyBlock || !$this->blockNeedsMatrixAnchorBackfill($block, $element, $field)) {
+                    continue;
+                }
+
+                $matrixFields = [];
+                $blockLayout = $block->getFieldLayout();
+
+                if ($blockLayout) {
+                    foreach ($blockLayout->getCustomFields() as $innerField) {
+                        if ($innerField instanceof Matrix) {
+                            $matrixFields[] = $innerField->handle;
+                        }
+                    }
+                }
+
+                $blocks[] = [
+                    'id' => (string)$block->getId(),
+                    'blockType' => $block->getHandle() ?: (string)($block->getBlockType()?->handle ?? ''),
+                    'reason' => $this->_blockHasMatrixJsonContent($block) ? 'json-matrix' : 'missing-anchor',
+                    'matrixFields' => $matrixFields,
+                    'matrixAnchorUid' => $block->getMatrixAnchorUid(),
+                ];
+            }
+
+            if ($blocks) {
+                $reports[] = [
+                    'handle' => $field->handle,
+                    'fieldId' => $field->id,
+                    'fieldName' => $field->name,
+                    'blocks' => $blocks,
+                ];
             }
         }
 
-        return false;
+        return $reports;
     }
 
     public function blockNeedsMatrixAnchorBackfill(
@@ -447,9 +523,19 @@ class Anchors extends Component
         return null;
     }
 
+    private function _getElementVizyValue(ElementInterface $element, VizyField $vizyField): mixed
+    {
+        try {
+            return $element->getFieldValue($vizyField->handle);
+        } catch (InvalidFieldException) {
+            // Field exists globally but isn’t on this element’s layout (common during backfill).
+            return null;
+        }
+    }
+
     private function _collectBlockInstanceIds(ElementInterface $parentOwner, VizyField $vizyField): array
     {
-        $value = $parentOwner->getFieldValue($vizyField->handle);
+        $value = $this->_getElementVizyValue($parentOwner, $vizyField);
 
         if (!$value instanceof VizyNodeCollection) {
             return [];
