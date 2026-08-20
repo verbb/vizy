@@ -14,6 +14,7 @@
 - Fix empty Craft 5 Matrix payloads wiping nested Matrix-in-Vizy content during saves. #364
 - Fix Matrix field NestedElementManager rebinding for layout-resolved fields (avoid `unset(_entryManager)` / Yii `__set`). #364
 - Fix MatrixAnchor GC deleting per-site Vizy blocks during multi-site propagation (union block IDs across owner sites). #373 #364
+- Fix Vizy-in-Vizy blocks rendering as empty/unparsed in the CP when nested inside outer Vizy block portals. #364
 
 ## 3.2.4 - 2026-08-10
 

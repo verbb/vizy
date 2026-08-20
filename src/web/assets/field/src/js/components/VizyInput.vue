@@ -136,6 +136,7 @@ export default {
             html: null,
             parentToolbarOffset: 0,
             portalLayerEl: null,
+            portalBin: null,
             portals: new Map(),
             portalScopeId: `vizy:${this.handle}:${Math.random().toString(36).slice(2, 10)}`,
             cachedFieldHtml: {},
@@ -231,11 +232,14 @@ export default {
     },
 
     mounted() {
-        // Setup the portal container to house our rendered field content
+        // Hidden in-DOM parking lot (legacy / debugging). Nested Vizy must not TipTap-mount here.
         this.portalLayerEl = document.createElement('div');
         this.portalLayerEl.className = 'vui-vizy-portals';
         this.portalLayerEl.style.display = 'none';
         this.$el.appendChild(this.portalLayerEl);
+
+        // Off-document bin so MutationObserver auto-mount cannot boot nested Vizy before attachPortal().
+        this.portalBin = document.createDocumentFragment();
 
         // Setup config for editor, from field config
         this.editor = new Editor({
@@ -421,8 +425,8 @@ export default {
                 entry = { el, observer: mo, jsAppended: false };
                 this.portals.set(blockId, entry);
 
-                // Keep it “parked” by default
-                this.portalLayerEl.appendChild(el);
+                // Park off-document. TipTap inside nested Vizy must only mount after attachPortal().
+                this.portalBin.appendChild(el);
             }
 
             return entry;
@@ -433,6 +437,11 @@ export default {
 
             // Move persistent DOM into this block’s visible mount point
             if (entry.el.parentNode !== mountEl) {
+                // Nested Vizy TipTap cannot survive a DOM move — unmount before relocating.
+                if (typeof Craft.Vizy?.unmountAll === 'function') {
+                    Craft.Vizy.unmountAll(entry.el);
+                }
+
                 mountEl.appendChild(entry.el);
             }
 
@@ -446,6 +455,13 @@ export default {
 
                 entry.jsAppended = true;
             }
+
+            // Mount nested Vizy (and other auto-mount roots) now that the portal is in place.
+            this.$nextTick(() => {
+                if (typeof Craft.Vizy?.mountAll === 'function') {
+                    Craft.Vizy.mountAll(entry.el);
+                }
+            });
         },
 
         detachPortal(blockId) {
@@ -455,8 +471,12 @@ export default {
                 return;
             }
 
-            if (entry.el.parentNode !== this.portalLayerEl) {
-                this.portalLayerEl.appendChild(entry.el);
+            if (entry.el.parentNode !== this.portalBin) {
+                if (typeof Craft.Vizy?.unmountAll === 'function') {
+                    Craft.Vizy.unmountAll(entry.el);
+                }
+
+                this.portalBin.appendChild(entry.el);
             }
         },
 

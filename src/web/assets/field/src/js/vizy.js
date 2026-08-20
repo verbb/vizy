@@ -32,6 +32,7 @@ document.dispatchEvent(new CustomEvent('onVizyConfigReady', {
 const VIZY_INPUT_SELECTOR = '[data-vizy-auto-mount="input"], .vizy-input-component';
 const VIZY_SETTINGS_SELECTOR = '[data-vizy-auto-mount="settings"], .vizy-configurator';
 const mountedRoots = new WeakSet();
+const mountedApps = new WeakMap();
 
 const parseJsonDataAttr = (root, attrName, fallback = null) => {
     const raw = root?.getAttribute(attrName);
@@ -47,8 +48,18 @@ const parseJsonDataAttr = (root, attrName, fallback = null) => {
     }
 };
 
+const isParkedVizyRoot = (root) => {
+    // Portals are parked off-document (DocumentFragment) or in a hidden layer.
+    // TipTap/ProseMirror must not mount there — moving the DOM after mount breaks nested Vizy.
+    if (!root || !root.isConnected) {
+        return true;
+    }
+
+    return Boolean(root.closest?.('.vui-vizy-portals'));
+};
+
 const mountInputRoot = (root) => {
-    if (!root || mountedRoots.has(root)) {
+    if (!root || mountedRoots.has(root) || isParkedVizyRoot(root)) {
         return;
     }
 
@@ -63,10 +74,26 @@ const mountInputRoot = (root) => {
 
     app.mount(root);
     mountedRoots.add(root);
+    mountedApps.set(root, app);
+};
+
+const unmountInputRoot = (root) => {
+    if (!root || !mountedRoots.has(root)) {
+        return;
+    }
+
+    const app = mountedApps.get(root);
+
+    if (app) {
+        app.unmount();
+        mountedApps.delete(root);
+    }
+
+    mountedRoots.delete(root);
 };
 
 const mountSettingsRoot = (root) => {
-    if (!root || mountedRoots.has(root)) {
+    if (!root || mountedRoots.has(root) || isParkedVizyRoot(root)) {
         return;
     }
 
@@ -88,6 +115,7 @@ const mountSettingsRoot = (root) => {
 
     app.mount(root);
     mountedRoots.add(root);
+    mountedApps.set(root, app);
 };
 
 const rootsForSelector = (scope, selector) => {
@@ -101,7 +129,9 @@ const rootsForSelector = (scope, selector) => {
         roots.push(scope);
     }
 
-    roots.push(...scope.querySelectorAll(selector));
+    if (scope.querySelectorAll) {
+        roots.push(...scope.querySelectorAll(selector));
+    }
 
     return roots;
 };
@@ -113,6 +143,16 @@ Craft.Vizy.mountAll = (scope = document) => {
 
     rootsForSelector(scope, VIZY_SETTINGS_SELECTOR).forEach((root) => {
         mountSettingsRoot(root);
+    });
+};
+
+Craft.Vizy.unmountAll = (scope = document) => {
+    rootsForSelector(scope, VIZY_INPUT_SELECTOR).forEach((root) => {
+        unmountInputRoot(root);
+    });
+
+    rootsForSelector(scope, VIZY_SETTINGS_SELECTOR).forEach((root) => {
+        unmountInputRoot(root);
     });
 };
 
