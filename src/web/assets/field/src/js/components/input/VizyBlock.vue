@@ -437,9 +437,27 @@ export default {
             }
 
             const values = { ...(this.values || {}) };
+            const existingFields = values.content?.fields || {};
+            const portalFields = blockContent.fields || {};
 
-            values.content = blockContent;
-            values.matrixAnchorUid = this.node.attrs.values?.matrixAnchorUid || null;
+            // Merge portal POST data onto existing field values. Fields that failed to render
+            // (missing plugin, etc.) won't be in the POST and must not wipe stored content —
+            // that falsely dirties ElementEditor on load. Also keep stored empty representations
+            // (`[]` / `"[]"`) when the portal only posts `""`.
+            values.content = {
+                ...blockContent,
+                fields: this.vizyField.mergePortalFieldValues(existingFields, portalFields),
+            };
+
+            // Only persist matrixAnchorUid when the block already has a real anchor (or had the key).
+            // Stamping `null` onto blocks that never had it changes the JSON and triggers "Edited".
+            const matrixAnchorUid = this.node.attrs.values?.matrixAnchorUid;
+
+            if (matrixAnchorUid) {
+                values.matrixAnchorUid = matrixAnchorUid;
+            } else if (!Object.prototype.hasOwnProperty.call(this.values || {}, 'matrixAnchorUid')) {
+                delete values.matrixAnchorUid;
+            }
 
             // eslint-disable-next-line vue/no-mutating-props
             this.node.attrs.values = values;

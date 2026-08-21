@@ -260,10 +260,6 @@ const patchVizyMatrixCreateEntry = () => {
 };
 
 $(document).ready(() => {
-    Craft.Vizy.mountAll(document);
-    Craft.Vizy.startAutoMountObserver();
-    patchVizyMatrixCreateEntry();
-
     const patchVizyDataStoreInSerialized = (serialized) => {
         document.querySelectorAll('[data-vizy-auto-mount="input"] [data-store], .vizy-input-component [data-store]').forEach((input) => {
             if (!input.name) {
@@ -290,16 +286,44 @@ $(document).ready(() => {
     // `vizyData` so Craft doesn't treat portal inputs as unsaved changes (draft/unload warnings).
     // Note: ElementEditor calls jQuery.serialize() *before* the serializeForm event, so we must patch
     // the serialized string after flushing — updating [data-store] alone is too late for that request.
+    //
+    // Portal attach/detach also moves named inputs under the form; pause ElementEditor only for that
+    // DOM surgery so FormObserver doesn't treat the move as a user edit. We do not rewrite Craft's
+    // initialSerializedValue / lastSerializedValue. Register quiet helpers *before* mountAll.
     const $mainForm = $('form#main-form');
 
     if ($mainForm.length) {
+        const getElementEditor = () => {
+            return $mainForm.data('elementEditor');
+        };
+
         const flushVizyPortalUpdates = () => {
             (Craft.Vizy.flushPortalUpdates || []).forEach((flush) => {
                 flush();
             });
         };
 
-        const elementEditor = $mainForm.data('elementEditor');
+        Craft.Vizy._eeQuietDepth = 0;
+
+        Craft.Vizy.beginElementEditorQuiet = () => {
+            const editor = getElementEditor();
+            Craft.Vizy._eeQuietDepth += 1;
+
+            if (Craft.Vizy._eeQuietDepth === 1 && editor && typeof editor.pause === 'function') {
+                editor.pause();
+            }
+        };
+
+        Craft.Vizy.endElementEditorQuiet = () => {
+            const editor = getElementEditor();
+            Craft.Vizy._eeQuietDepth = Math.max(0, Craft.Vizy._eeQuietDepth - 1);
+
+            if (Craft.Vizy._eeQuietDepth === 0 && editor && typeof editor.resume === 'function') {
+                editor.resume();
+            }
+        };
+
+        const elementEditor = getElementEditor();
 
         if (elementEditor) {
             elementEditor.on('serializeForm', (e) => {
@@ -313,4 +337,8 @@ $(document).ready(() => {
             flushVizyPortalUpdates();
         });
     }
+
+    Craft.Vizy.mountAll(document);
+    Craft.Vizy.startAutoMountObserver();
+    patchVizyMatrixCreateEntry();
 });

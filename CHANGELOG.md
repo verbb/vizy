@@ -7,6 +7,8 @@
 
 ### Fixed
 - Fix nested Vizy fields showing “Unable to parse block definition” after enough sibling instances on the same entry (recursive depth counter never decremented). #364
+- Fix ElementEditor detecting unsaved changes on load by not stamping `matrixAnchorUid: null` onto blocks that never had an anchor, and by not wiping stored block field values when a nested field fails to render in the portal (e.g. missing field type). #364
+- Fix ElementEditor autosaving a provisional draft on load when portal sync rewrote empty nested fields (`[]` / `"[]"` → `""`) and when portals attach (pause FormObserver only around portal DOM moves; strip `vizyData` from serializeForm). #364
 
 ## 3.2.5 - 2026-08-20
 

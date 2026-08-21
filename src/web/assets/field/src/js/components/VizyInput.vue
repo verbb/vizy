@@ -434,32 +434,46 @@ export default {
 
         attachPortal(blockId, mountEl) {
             const entry = this.ensurePortal(blockId);
+            const beginQuiet = Craft.Vizy?.beginElementEditorQuiet;
+            const endQuiet = Craft.Vizy?.endElementEditorQuiet;
 
-            // Move persistent DOM into this block’s visible mount point
-            if (entry.el.parentNode !== mountEl) {
-                // Nested Vizy TipTap cannot survive a DOM move — unmount before relocating.
-                if (typeof Craft.Vizy?.unmountAll === 'function') {
-                    Craft.Vizy.unmountAll(entry.el);
+            beginQuiet?.();
+
+            try {
+                // Move persistent DOM into this block’s visible mount point
+                if (entry.el.parentNode !== mountEl) {
+                    // Nested Vizy TipTap cannot survive a DOM move — unmount before relocating.
+                    if (typeof Craft.Vizy?.unmountAll === 'function') {
+                        Craft.Vizy.unmountAll(entry.el);
+                    }
+
+                    mountEl.appendChild(entry.el);
                 }
 
-                mountEl.appendChild(entry.el);
-            }
+                // Append JS once per blockId
+                if (!entry.jsAppended) {
+                    const js = this.getCachedFieldJs(blockId);
 
-            // Append JS once per blockId
-            if (!entry.jsAppended) {
-                const js = this.getCachedFieldJs(blockId);
+                    if (js) {
+                        Craft.appendBodyHtml(js);
+                    }
 
-                if (js) {
-                    Craft.appendBodyHtml(js);
+                    entry.jsAppended = true;
                 }
-
-                entry.jsAppended = true;
+            } catch (error) {
+                endQuiet?.();
+                throw error;
             }
 
             // Mount nested Vizy (and other auto-mount roots) now that the portal is in place.
+            // Keep FormObserver paused until mount completes — it also injects named inputs.
             this.$nextTick(() => {
-                if (typeof Craft.Vizy?.mountAll === 'function') {
-                    Craft.Vizy.mountAll(entry.el);
+                try {
+                    if (typeof Craft.Vizy?.mountAll === 'function') {
+                        Craft.Vizy.mountAll(entry.el);
+                    }
+                } finally {
+                    endQuiet?.();
                 }
             });
         },
@@ -471,12 +485,21 @@ export default {
                 return;
             }
 
-            if (entry.el.parentNode !== this.portalBin) {
-                if (typeof Craft.Vizy?.unmountAll === 'function') {
-                    Craft.Vizy.unmountAll(entry.el);
-                }
+            const beginQuiet = Craft.Vizy?.beginElementEditorQuiet;
+            const endQuiet = Craft.Vizy?.endElementEditorQuiet;
 
-                this.portalBin.appendChild(entry.el);
+            beginQuiet?.();
+
+            try {
+                if (entry.el.parentNode !== this.portalBin) {
+                    if (typeof Craft.Vizy?.unmountAll === 'function') {
+                        Craft.Vizy.unmountAll(entry.el);
+                    }
+
+                    this.portalBin.appendChild(entry.el);
+                }
+            } finally {
+                endQuiet?.();
             }
         },
 
@@ -735,6 +758,48 @@ export default {
             return fieldValue;
         },
 
+        // Portal POST often represents empty nested Vizy / complex fields as `""` while stored JSON
+        // uses `[]` / `"[]"`. Overwriting that on load falsely dirties ElementEditor.
+        isEmptyFieldValue(value) {
+            if (value == null || value === '') {
+                return true;
+            }
+
+            if (value === '[]' || value === '{}') {
+                return true;
+            }
+
+            if (Array.isArray(value) && value.length === 0) {
+                return true;
+            }
+
+            if (typeof value === 'object' && !Array.isArray(value) && Object.keys(value).length === 0) {
+                return true;
+            }
+
+            return false;
+        },
+
+        mergePortalFieldValues(existingFields = {}, portalFields = {}) {
+            const merged = { ...existingFields };
+
+            Object.keys(portalFields).forEach((handle) => {
+                const portalValue = portalFields[handle];
+
+                if (
+                    Object.prototype.hasOwnProperty.call(existingFields, handle) &&
+                    this.isEmptyFieldValue(portalValue) &&
+                    this.isEmptyFieldValue(existingFields[handle])
+                ) {
+                    return;
+                }
+
+                merged[handle] = portalValue;
+            });
+
+            return merged;
+        },
+
         syncJsonToDataStore() {
             if (!this.editor) {
                 return;
@@ -757,13 +822,26 @@ export default {
                     return;
                 }
 
+                const existingValues = nodeJson.attrs.values || {};
+                const existingFields = existingValues.content?.fields || {};
+                const portalFields = blockContent.fields || {};
+                const nextValues = {
+                    ...existingValues,
+                    content: {
+                        ...blockContent,
+                        fields: this.mergePortalFieldValues(existingFields, portalFields),
+                    },
+                };
+
+                if (existingValues.matrixAnchorUid) {
+                    nextValues.matrixAnchorUid = existingValues.matrixAnchorUid;
+                } else if (!Object.prototype.hasOwnProperty.call(existingValues, 'matrixAnchorUid')) {
+                    delete nextValues.matrixAnchorUid;
+                }
+
                 nodeJson.attrs = {
                     ...nodeJson.attrs,
-                    values: {
-                        ...(nodeJson.attrs.values || {}),
-                        content: blockContent,
-                        matrixAnchorUid: nodeJson.attrs.values?.matrixAnchorUid || null,
-                    },
+                    values: nextValues,
                 };
             });
 
