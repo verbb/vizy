@@ -1,5 +1,13 @@
 # Changelog
 
+## Unreleased
+
+### Added
+- Log info when Vizy skips or discards block definitions (nesting depth limit, missing field layout), so CP “Unable to parse block definition” cases are visible in `storage/logs`. #364
+
+### Fixed
+- Fix nested Vizy fields showing “Unable to parse block definition” after enough sibling instances on the same entry (recursive depth counter never decremented). #364
+
 ## 3.2.5 - 2026-08-20
 
 ### Added

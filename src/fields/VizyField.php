@@ -624,94 +624,100 @@ class VizyField extends Field
             return StringHelper::randomString(10);
         });
 
-        // Because we can recursively nest Vizy fields, this can turn into an infinite loop if we're not careful. We limit to 10
-        // nested instances, so ensure we keep a count of how many identical fields we're implementing.
-        $this->_recursiveFieldCount = Vizy::$plugin->getCache()->get($this->getCacheKey('recursiveFieldCount'));
+        // Limit recursive nesting *depth* for the same field (Vizy-in-Vizy), not sibling instances.
+        // The counter must be decremented when this render finishes, otherwise every nested copy on
+        // the page burns the limit and later instances get empty `blockGroups` ("Unable to parse…").
+        $this->_recursiveFieldCount = (int)Vizy::$plugin->getCache()->get($this->getCacheKey('recursiveFieldCount'));
         $this->_recursiveFieldCount += 1;
         Vizy::$plugin->getCache()->set($this->getCacheKey('recursiveFieldCount'), $this->_recursiveFieldCount);
 
-        $settings = [
-            // Render block group templates before existing blocks so shared field instances aren't
-            // left in a static state from existing block content when generating new block HTML.
-            'blockGroups' => $this->_getBlockGroupsForInput($placeholderKey, $element),
-            'blocks' => $this->_getBlocksForInput($value, $placeholderKey, $element),
-            'vizyConfig' => $this->_getVizyConfig(),
-            'elementSiteId' => $site->id,
-            'showAllUploaders' => $this->showUnpermittedFiles,
-            'placeholderKey' => $placeholderKey,
-            'fieldId' => $this->id,
-            'fieldHandle' => $this->handle,
-            'isRoot' => true,
-            'initialRows' => $this->initialRows,
-            'minBlocks' => $this->minBlocks,
-            'maxBlocks' => $this->maxBlocks,
-            'pasteAsPlainText' => $this->pasteAsPlainText,
-            'blockTypeBehaviour' => $this->blockTypeBehaviour,
-            'editorMode' => $this->editorMode,
-            'linkSettings' => $this->linkSettings,
-            'plugins' => self::$_registeredPlugins,
-        ];
+        try {
+            $settings = [
+                // Render block group templates before existing blocks so shared field instances aren't
+                // left in a static state from existing block content when generating new block HTML.
+                'blockGroups' => $this->_getBlockGroupsForInput($placeholderKey, $element),
+                'blocks' => $this->_getBlocksForInput($value, $placeholderKey, $element),
+                'vizyConfig' => $this->_getVizyConfig(),
+                'elementSiteId' => $site->id,
+                'showAllUploaders' => $this->showUnpermittedFiles,
+                'placeholderKey' => $placeholderKey,
+                'fieldId' => $this->id,
+                'fieldHandle' => $this->handle,
+                'isRoot' => true,
+                'initialRows' => $this->initialRows,
+                'minBlocks' => $this->minBlocks,
+                'maxBlocks' => $this->maxBlocks,
+                'pasteAsPlainText' => $this->pasteAsPlainText,
+                'blockTypeBehaviour' => $this->blockTypeBehaviour,
+                'editorMode' => $this->editorMode,
+                'linkSettings' => $this->linkSettings,
+                'plugins' => self::$_registeredPlugins,
+            ];
 
-        // Set Asset setting
-        if (!empty($this->defaultTransform) && $transform = Craft::$app->getImageTransforms()->getTransformByUid($this->defaultTransform)) {
-            $settings['defaultTransform'] = $transform->handle;
-        }
-
-        $settings['defaultSource'] = $this->defaultUploadLocationSource;
-
-        foreach ($this->getBlockTypes() as $blockType) {
-            if ($blockType->minBlocks) {
-                $settings['minBlockTypeBlocks'][$blockType->id] = $blockType->minBlocks;
+            // Set Asset setting
+            if (!empty($this->defaultTransform) && $transform = Craft::$app->getImageTransforms()->getTransformByUid($this->defaultTransform)) {
+                $settings['defaultTransform'] = $transform->handle;
             }
 
-            if ($blockType->maxBlocks) {
-                $settings['maxBlockTypeBlocks'][$blockType->id] = $blockType->maxBlocks;
+            $settings['defaultSource'] = $this->defaultUploadLocationSource;
+
+            foreach ($this->getBlockTypes() as $blockType) {
+                if ($blockType->minBlocks) {
+                    $settings['minBlockTypeBlocks'][$blockType->id] = $blockType->minBlocks;
+                }
+
+                if ($blockType->maxBlocks) {
+                    $settings['maxBlockTypeBlocks'][$blockType->id] = $blockType->maxBlocks;
+                }
             }
-        }
 
-        // Only include some options if we need them - for performance
-        $buttons = $settings['vizyConfig']['buttons'] ?? [];
+            // Only include some options if we need them - for performance
+            $buttons = $settings['vizyConfig']['buttons'] ?? [];
 
-        if (in_array('link', $buttons) || in_array('image', $buttons)) {
-            $settings['linkOptions'] = $this->_getLinkOptions($element);
-            $settings['volumes'] = $this->_assetSources();
-            $settings['transforms'] = $this->_transforms();
+            if (in_array('link', $buttons) || in_array('image', $buttons)) {
+                $settings['linkOptions'] = $this->_getLinkOptions($element);
+                $settings['volumes'] = $this->_assetSources();
+                $settings['transforms'] = $this->_transforms();
 
-            $settings['allSiteOptions'][] = ['label' => Craft::t('vizy', 'Link to the current site'), 'value' => ''];
-            
-            foreach (Craft::$app->getSites()->getAllSites(false) as $site) {
-                $settings['allSiteOptions'][] = ['label' => $site->name, 'value' => $site->id];
+                $settings['allSiteOptions'][] = ['label' => Craft::t('vizy', 'Link to the current site'), 'value' => ''];
+                
+                foreach (Craft::$app->getSites()->getAllSites(false) as $site) {
+                    $settings['allSiteOptions'][] = ['label' => $site->name, 'value' => $site->id];
+                }
             }
-        }
 
-        // Register Vizy assets; roots are mounted automatically by vizy.js.
-        Plugin::registerAsset('field/src/js/vizy.js');
+            // Register Vizy assets; roots are mounted automatically by vizy.js.
+            Plugin::registerAsset('field/src/js/vizy.js');
 
-        // Let the field know if this is the root field for nested fields
-        $settings['isRoot'] = $this->_isRootField($element);
+            // Let the field know if this is the root field for nested fields
+            $settings['isRoot'] = $this->_isRootField($element);
 
-        // Register any third-party plugins
-        if (isset($settings['vizyConfig']['plugins'])) {
-            foreach ($settings['vizyConfig']['plugins'] as $pluginKey) {
-                static::registerPlugin($pluginKey);
+            // Register any third-party plugins
+            if (isset($settings['vizyConfig']['plugins'])) {
+                foreach ($settings['vizyConfig']['plugins'] as $pluginKey) {
+                    static::registerPlugin($pluginKey);
+                }
             }
+
+            $rawNodes = $value->getRawNodes();
+
+            $this->_registerMatrixOwnerContextJs($element);
+
+            return $view->renderTemplate('vizy/field/input', [
+                'id' => $id,
+                'name' => $this->handle,
+                'field' => $this,
+                'element' => $element,
+                'isDebug' => Plugin::isDebug(),
+
+                // Prevent nested JSON content from being escaped, and don't encode special characters
+                'value' => Json::encode($rawNodes, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE),
+                'settings' => Json::encode($settings, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE),
+            ]);
+        } finally {
+            $this->_recursiveFieldCount = max(0, $this->_recursiveFieldCount - 1);
+            Vizy::$plugin->getCache()->set($this->getCacheKey('recursiveFieldCount'), $this->_recursiveFieldCount);
         }
-
-        $rawNodes = $value->getRawNodes();
-
-        $this->_registerMatrixOwnerContextJs($element);
-
-        return $view->renderTemplate('vizy/field/input', [
-            'id' => $id,
-            'name' => $this->handle,
-            'field' => $this,
-            'element' => $element,
-            'isDebug' => Plugin::isDebug(),
-
-            // Prevent nested JSON content from being escaped, and don't encode special characters
-            'value' => Json::encode($rawNodes, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE),
-            'settings' => Json::encode($settings, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE),
-        ]);
     }
 
     protected function searchKeywords(mixed $value, ElementInterface $element): string
@@ -798,6 +804,31 @@ class VizyField extends Field
         }
 
         return implode('-', $parts);
+    }
+
+    private function _describeOwnerForLog(?ElementInterface $element): string
+    {
+        if (!$element) {
+            return 'none';
+        }
+
+        $parts = [get_class($element)];
+
+        if ($element->id) {
+            $parts[] = '#' . $element->id;
+        } elseif ($element->uid) {
+            $parts[] = 'uid:' . $element->uid;
+        }
+
+        if (isset($element->title) && $element->title) {
+            $parts[] = '"' . $element->title . '"';
+        }
+
+        if ($element->siteId) {
+            $parts[] = 'site:' . $element->siteId;
+        }
+
+        return implode(' ', $parts);
     }
 
     private function _registerMatrixOwnerContextJs(?ElementInterface $element): void
@@ -1033,8 +1064,17 @@ JS, [
 
             $data = $this->fieldData;
 
-            // As we can nested the same field recursively, we'll hit infinite loop errors at some point, so stop loading blocks at 10 levels.
+            // Stop generating block templates past the configured nesting depth for this field.
+            // (Counter is depth, not sibling instance count — see inputHtml().)
             if ($this->_recursiveFieldCount > $settings->recursiveFieldCount) {
+                Vizy::info('Vizy field “{handle}” (#{id}) skipped block definitions at nesting depth {depth} (limit {limit}). Nested blocks may show “Unable to parse block definition.” Raise `recursiveFieldCount` in Vizy settings if intentional nesting is deeper. Owner: {owner}.', [
+                    'handle' => $this->handle,
+                    'id' => $this->id,
+                    'depth' => $this->_recursiveFieldCount,
+                    'limit' => $settings->recursiveFieldCount,
+                    'owner' => $this->_describeOwnerForLog($element),
+                ]);
+
                 return [];
             }
 
@@ -1054,6 +1094,14 @@ JS, [
                     $fieldLayout = $blockType->getFieldLayout();
 
                     if (!$fieldLayout) {
+                        Vizy::info('Vizy field “{handle}” (#{id}) discarded block type “{name}” ({typeId}) — field layout could not be loaded. Nested content using this type will show “Unable to parse block definition.” Owner: {owner}.', [
+                            'handle' => $this->handle,
+                            'id' => $this->id,
+                            'name' => $blockTypeData['name'] ?? $blockTypeData['handle'] ?? '(unknown)',
+                            'typeId' => $blockTypeData['id'] ?? '(unknown)',
+                            'owner' => $this->_describeOwnerForLog($element),
+                        ]);
+
                         // Discard the blocktype
                         unset($data[$groupKey]['blockTypes'][$blockTypeKey]);
 
@@ -1136,6 +1184,14 @@ JS, [
                     $fieldLayout = $block->getFieldLayout();
 
                     if (!$fieldLayout) {
+                        Vizy::info('Vizy field “{handle}” (#{id}) could not load field layout for existing block “{blockId}” (type {typeId}). It may show “Unable to parse block definition.” Owner: {owner}.', [
+                            'handle' => $this->handle,
+                            'id' => $this->id,
+                            'blockId' => $blockId,
+                            'typeId' => $block->attrs['values']['type'] ?? '(unknown)',
+                            'owner' => $this->_describeOwnerForLog($element),
+                        ]);
+
                         continue;
                     }
 
