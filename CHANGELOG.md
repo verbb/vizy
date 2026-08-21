@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 3.2.5 - 2026-08-20
 
 ### Added
 - Add `--verbose`/`-v` and `--dry-run` to `vizy/anchors/backfill`, with field usage, nesting, and plugin context on failures. #364
