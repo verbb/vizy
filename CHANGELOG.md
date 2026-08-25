@@ -3,9 +3,12 @@
 ## Unreleased
 
 ### Added
+- Add `--site` to `vizy/anchors/backfill` for multi-site targeting. #364
 - Log info when Vizy skips or discards block definitions (nesting depth limit, missing field layout), so CP “Unable to parse block definition” cases are visible in `storage/logs`. #364
 
 ### Fixed
+- Fix MatrixAnchor FK failures when Matrix lives inside nested Vizy (synthetic Block `rand()` ids were used as `parentOwnerId`). #364
+- Fix `vizy/anchors/backfill --elementId=` finding 0 rows on multi-site installs (use `site('*')` unless `--site=` is set). #364
 - Fix nested Vizy fields showing “Unable to parse block definition” after enough sibling instances on the same entry (recursive depth counter never decremented). #364
 - Fix ElementEditor detecting unsaved changes on load by not stamping `matrixAnchorUid: null` onto blocks that never had an anchor, and by not wiping stored block field values when a nested field fails to render in the portal (e.g. missing field type). #364
 - Fix ElementEditor autosaving a provisional draft on load when portal sync rewrote empty nested fields (`[]` / `"[]"` → `""`) and when portals attach (pause FormObserver only around portal DOM moves; strip `vizyData` from serializeForm). #364

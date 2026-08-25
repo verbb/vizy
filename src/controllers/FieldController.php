@@ -139,6 +139,8 @@ class FieldController extends Controller
             throw new ForbiddenHttpException('User not authorized to create this element.');
         }
 
+        $parentOwner = Vizy::$plugin->getAnchors()->resolvePersistableParentOwner($parentOwner);
+
         $blockType = $this->_resolveBlockType($vizyField, $blockInstanceId, $parentOwner);
 
         if (!$blockType && ($blockTypeId = $this->request->getBodyParam('vizyBlockTypeId'))) {

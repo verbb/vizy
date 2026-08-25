@@ -837,6 +837,7 @@ class VizyField extends Field
             return;
         }
 
+        $parentOwner = Vizy::$plugin->getAnchors()->resolvePersistableParentOwner($element);
         $view = Craft::$app->getView();
 
         $view->registerJsWithVars(fn($uid, $draftId, $id, $vizyFieldId) => <<<JS
@@ -915,9 +916,9 @@ class VizyField extends Field
     };
 })();
 JS, [
-            $element->uid ?? null,
-            $element->draftId ?? null,
-            $element->id ?? null,
+            $parentOwner->uid ?? null,
+            $parentOwner->draftId ?? null,
+            $parentOwner->id ?? null,
             $this->id,
         ]);
     }
@@ -930,6 +931,10 @@ JS, [
         ?ElementInterface $parentOwner = null,
     ): void
     {
+        if ($parentOwner) {
+            $parentOwner = Vizy::$plugin->getAnchors()->resolvePersistableParentOwner($parentOwner);
+        }
+
         $view = Craft::$app->getView();
 
         $view->registerJsWithVars(fn(
