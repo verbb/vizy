@@ -27,6 +27,7 @@ class AnchorsController extends Controller
     // =========================================================================
 
     public ?int $elementId = null;
+    public ?string $site = null;
     public ?int $limit = null;
     public int $batchSize = 100;
     public bool $verbose = false;
@@ -42,6 +43,7 @@ class AnchorsController extends Controller
     {
         $options = parent::options($actionID);
         $options[] = 'elementId';
+        $options[] = 'site';
         $options[] = 'limit';
         $options[] = 'batchSize';
         $options[] = 'verbose';
@@ -79,6 +81,13 @@ class AnchorsController extends Controller
             ->status(null)
             ->drafts(null)
             ->trashed(false);
+
+        if ($this->site) {
+            $query->site($this->site);
+        } elseif ($this->elementId) {
+            // Multi-site: element may not exist on the primary site.
+            $query->site('*');
+        }
 
         if ($this->elementId) {
             $query->id($this->elementId);
