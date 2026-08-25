@@ -3,6 +3,7 @@ namespace verbb\vizy\services;
 
 use verbb\vizy\Vizy;
 use verbb\vizy\db\Table;
+use verbb\vizy\elements\Block as BlockElement;
 use verbb\vizy\elements\MatrixAnchor;
 use verbb\vizy\fields\VizyField;
 use verbb\vizy\nodes\VizyBlock;
@@ -11,6 +12,7 @@ use verbb\vizy\records\MatrixAnchor as MatrixAnchorRecord;
 use Craft;
 use craft\base\Component;
 use craft\base\ElementInterface;
+use craft\db\Query;
 use craft\elements\db\EntryQuery;
 use craft\elements\ElementCollection;
 use craft\elements\Entry;
@@ -37,6 +39,8 @@ class Anchors extends Component
         if (!$this->_tableExists()) {
             return null;
         }
+
+        $parentOwner = $this->resolvePersistableParentOwner($parentOwner);
 
         $elementsService = Craft::$app->getElements();
         $siteId = $parentOwner->siteId;
@@ -71,7 +75,20 @@ class Anchors extends Component
         ?FieldLayout $fieldLayout = null,
         ?string $anchorUid = null,
     ): ?MatrixAnchor {
+        $parentOwner = $this->resolvePersistableParentOwner($parentOwner);
+
         if (!$parentOwner->id || !$this->_tableExists()) {
+            return null;
+        }
+
+        if (!$this->_parentOwnerExistsInElements($parentOwner)) {
+            Vizy::error(sprintf(
+                'Refusing to create Vizy matrix anchor for field #%s block `%s`: parent owner #%s is not a persisted element.',
+                $vizyField->id,
+                $blockInstanceId,
+                (int)$parentOwner->getCanonicalId(),
+            ), __METHOD__);
+
             return null;
         }
 
@@ -375,6 +392,26 @@ class Anchors extends Component
         ) === null;
     }
 
+    /**
+     * Nested Vizy fields normalize against a synthetic Block element (`id = rand()`),
+     * which is never stored in `elements`. Matrix anchors must parent to a real owner
+     * (entry, Matrix block, etc.) or the FK on `vizy_matrix_anchors.parentOwnerId` fails.
+     */
+    public function resolvePersistableParentOwner(ElementInterface $parentOwner): ElementInterface
+    {
+        while ($parentOwner instanceof BlockElement) {
+            $owner = $parentOwner->getOwner();
+
+            if (!$owner instanceof ElementInterface) {
+                break;
+            }
+
+            $parentOwner = $owner;
+        }
+
+        return $parentOwner;
+    }
+
 
     // Private Methods
     // =========================================================================
@@ -416,6 +453,20 @@ class Anchors extends Component
     private function _matrixContentFilled(mixed $content): bool
     {
         return $content !== null && $content !== '' && $content !== [];
+    }
+
+    private function _parentOwnerExistsInElements(ElementInterface $parentOwner): bool
+    {
+        $id = (int)$parentOwner->getCanonicalId();
+
+        if (!$id) {
+            return false;
+        }
+
+        return (new Query())
+            ->from(['{{%elements}}'])
+            ->where(['id' => $id])
+            ->exists();
     }
 
     private function _applyFieldLayout(MatrixAnchor $anchor, ?FieldLayout $fieldLayout): MatrixAnchor
