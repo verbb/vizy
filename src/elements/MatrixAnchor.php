@@ -75,6 +75,7 @@ class MatrixAnchor extends Element
     public ?int $parentOwnerId = null;
 
     private ?FieldLayout $_fieldLayout = null;
+    private ?ElementInterface $_parentOwner = null;
 
 
     // Public Methods
@@ -97,6 +98,12 @@ class MatrixAnchor extends Element
 
     public function getParentOwner(): ?ElementInterface
     {
+        // Prefer the in-memory owner element being saved. A freshly-loaded canonical won't know about
+        // site enablement that only exists on the element currently being saved (e.g. "custom" propagation).
+        if ($this->_parentOwner && (!$this->parentOwnerId || (int)$this->_parentOwner->getCanonicalId() === (int)$this->parentOwnerId)) {
+            return $this->_parentOwner;
+        }
+
         if (!$this->parentOwnerId) {
             return null;
         }
@@ -115,6 +122,11 @@ class MatrixAnchor extends Element
         return $elementsService->getElementById($this->parentOwnerId);
     }
 
+    public function setParentOwner(?ElementInterface $parentOwner): void
+    {
+        $this->_parentOwner = $parentOwner;
+    }
+
     public function getSupportedSites(): array
     {
         $parentOwner = $this->getParentOwner();
@@ -125,10 +137,18 @@ class MatrixAnchor extends Element
                 : [Craft::$app->getSites()->getPrimarySite()->id];
         }
 
-        return array_map(
-            static fn(array $siteInfo) => $siteInfo['siteId'],
-            ElementHelper::supportedSitesForElement($parentOwner),
+        // Include unpropagated sites — the anchor should support every site its owner can live on,
+        // otherwise saving the anchor for a site the owner is only just being enabled for will fail.
+        $siteIds = array_map(
+            static fn(array $siteInfo) => (int)$siteInfo['siteId'],
+            ElementHelper::supportedSitesForElement($parentOwner, true),
         );
+
+        if ($this->siteId && !in_array((int)$this->siteId, $siteIds, true)) {
+            $siteIds[] = (int)$this->siteId;
+        }
+
+        return $siteIds;
     }
 
     public function canView(User $user): bool

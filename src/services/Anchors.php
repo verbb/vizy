@@ -95,7 +95,7 @@ class Anchors extends Component
         $anchor = $this->getAnchor($parentOwner, $vizyField, $blockInstanceId, $anchorUid);
 
         if ($anchor) {
-            return $this->_applyFieldLayout($anchor, $fieldLayout);
+            return $this->_applyFieldLayout($anchor, $fieldLayout, $parentOwner);
         }
 
         // Record may exist without an elements_sites row for this site (narrower site coverage).
@@ -117,7 +117,7 @@ class Anchors extends Component
             $anchor = $this->getAnchor($parentOwner, $vizyField, $blockInstanceId, $anchorUid);
 
             if ($anchor) {
-                return $this->_applyFieldLayout($anchor, $fieldLayout);
+                return $this->_applyFieldLayout($anchor, $fieldLayout, $parentOwner);
             }
 
             $record = $this->_findAnchorRecord($parentOwner, $vizyField, $blockInstanceId);
@@ -131,7 +131,7 @@ class Anchors extends Component
             $anchor = $this->getAnchor($parentOwner, $vizyField, $blockInstanceId, $anchorUid);
 
             if ($anchor) {
-                return $this->_applyFieldLayout($anchor, $fieldLayout);
+                return $this->_applyFieldLayout($anchor, $fieldLayout, $parentOwner);
             }
 
             $record = $this->_findAnchorRecord($parentOwner, $vizyField, $blockInstanceId);
@@ -469,10 +469,14 @@ class Anchors extends Component
             ->exists();
     }
 
-    private function _applyFieldLayout(MatrixAnchor $anchor, ?FieldLayout $fieldLayout): MatrixAnchor
+    private function _applyFieldLayout(MatrixAnchor $anchor, ?FieldLayout $fieldLayout, ?ElementInterface $parentOwner = null): MatrixAnchor
     {
         if ($fieldLayout) {
             $anchor->setFieldLayout($fieldLayout);
+        }
+
+        if ($parentOwner) {
+            $anchor->setParentOwner($parentOwner);
         }
 
         return $anchor;
@@ -533,7 +537,7 @@ class Anchors extends Component
         $anchor = $elementsService->getElementById($record->id, MatrixAnchor::class, $siteId);
 
         if ($anchor instanceof MatrixAnchor) {
-            return $this->_applyFieldLayout($anchor, $fieldLayout);
+            return $this->_applyFieldLayout($anchor, $fieldLayout, $parentOwner);
         }
 
         $source = $this->_getAnchorElement((int)$record->id);
@@ -544,6 +548,7 @@ class Anchors extends Component
 
         // Keep ownership in sync so getSupportedSites() follows this parent
         $source->parentOwnerId = (int)$parentOwner->getCanonicalId();
+        $source->setParentOwner($parentOwner);
 
         try {
             $anchor = $elementsService->propagateElement($source, $siteId);
@@ -562,7 +567,7 @@ class Anchors extends Component
         }
 
         return $anchor instanceof MatrixAnchor
-            ? $this->_applyFieldLayout($anchor, $fieldLayout)
+            ? $this->_applyFieldLayout($anchor, $fieldLayout, $parentOwner)
             : null;
     }
 
@@ -580,6 +585,8 @@ class Anchors extends Component
             'siteId' => $parentOwner->siteId,
         ]);
 
+        $anchor->setParentOwner($parentOwner);
+
         if ($fieldLayout) {
             $anchor->setFieldLayout($fieldLayout);
         }
@@ -592,7 +599,7 @@ class Anchors extends Component
             $existing = $this->getAnchor($parentOwner, $vizyField, $blockInstanceId, $anchorUid);
 
             if ($existing) {
-                return $this->_applyFieldLayout($existing, $fieldLayout);
+                return $this->_applyFieldLayout($existing, $fieldLayout, $parentOwner);
             }
 
             $record = $this->_findAnchorRecord($parentOwner, $vizyField, $blockInstanceId);
@@ -611,7 +618,7 @@ class Anchors extends Component
         $existing = $this->getAnchor($parentOwner, $vizyField, $blockInstanceId, $anchorUid);
 
         if ($existing) {
-            return $this->_applyFieldLayout($existing, $fieldLayout);
+            return $this->_applyFieldLayout($existing, $fieldLayout, $parentOwner);
         }
 
         Vizy::error('Unable to save Vizy matrix anchor: ' . implode(', ', $anchor->getErrorSummary(true)), __METHOD__);
