@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 3.2.6 - 2026-08-29
 
 ### Added
 - Add `--site` to `vizy/anchors/backfill` for multi-site targeting. #364
