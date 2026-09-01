@@ -62,7 +62,8 @@ class AnchorsController extends Controller
     /**
      * Creates matrix anchors for Vizy blocks that still rely on JSON matrix content.
      *
-     * Use --verbose for per-element owner/field context, and --dry-run to inspect without saving.
+     * Defaults to all sites (`site('*')`). Pass `--site=` to target one. Use `--verbose`
+     * for per-element owner/field context, and `--dry-run` to inspect without saving.
      */
     public function actionBackfill(): int
     {
@@ -82,11 +83,14 @@ class AnchorsController extends Controller
             ->drafts(null)
             ->trashed(false);
 
+        // Always scope sites explicitly: Craft defaults to the primary site, which silently
+        // skips per-site Vizy JSON that only exists on non-primary sites.
         if ($this->site) {
             $query->site($this->site);
-        } elseif ($this->elementId) {
-            // Multi-site: element may not exist on the primary site.
+            $siteLabel = $this->site;
+        } else {
             $query->site('*');
+            $siteLabel = '* (all sites)';
         }
 
         if ($this->elementId) {
@@ -106,6 +110,7 @@ class AnchorsController extends Controller
         $position = 0;
 
         $verb = $this->dryRun ? 'Inspecting' : 'Checking';
+        $this->stdout("Site scope: $siteLabel\n");
         $this->stdout("$verb $total elements for Vizy matrix anchor migration...\n\n");
 
         foreach ($query->each($this->batchSize) as $element) {

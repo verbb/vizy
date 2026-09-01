@@ -1,5 +1,10 @@
 # Changelog
 
+## Unreleased
+
+### Fixed
+- Fix `vizy/anchors/backfill` only inspecting the primary site on a full sweep (default to `site('*')`, and print the site scope so a dry-run “0 to save” can’t be read as all sites clean). #364
+
 ## 3.2.6 - 2026-08-29
 
 ### Added
