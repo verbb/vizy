@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 3.2.7 - 2026-09-04
 
 ### Added
 - Include global sets (and Neo blocks when Neo is installed) in `vizy/anchors/backfill`, not only entries. #364
