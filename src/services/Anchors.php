@@ -19,6 +19,7 @@ use craft\elements\Entry;
 use craft\errors\InvalidFieldException;
 use craft\fields\Matrix;
 use craft\helpers\ElementHelper;
+use craft\helpers\Json;
 use craft\models\FieldLayout;
 
 use verbb\vizy\models\NodeCollection as VizyNodeCollection;
@@ -302,7 +303,9 @@ class Anchors extends Component
      *         blockType: string,
      *         reason: string,
      *         matrixFields: string[],
-     *         matrixAnchorUid: string|null
+     *         matrixAnchorUid: string|null,
+     *         path?: string,
+     *         vizyFieldHandle?: string
      *     }>
      * }>
      */
@@ -331,32 +334,9 @@ class Anchors extends Component
                 continue;
             }
 
-            $blocks = [];
-
-            foreach ($value->query()->where(['type' => VizyBlock::$type])->all() as $block) {
-                if (!$block instanceof VizyBlock || !$this->blockNeedsMatrixAnchorBackfill($block, $element, $field)) {
-                    continue;
-                }
-
-                $matrixFields = [];
-                $blockLayout = $block->getFieldLayout();
-
-                if ($blockLayout) {
-                    foreach ($blockLayout->getCustomFields() as $innerField) {
-                        if ($innerField instanceof Matrix) {
-                            $matrixFields[] = $innerField->handle;
-                        }
-                    }
-                }
-
-                $blocks[] = [
-                    'id' => (string)$block->getId(),
-                    'blockType' => $block->getHandle() ?: (string)($block->getBlockType()?->handle ?? ''),
-                    'reason' => $this->_blockHasMatrixJsonContent($block) ? 'json-matrix' : 'missing-anchor',
-                    'matrixFields' => $matrixFields,
-                    'matrixAnchorUid' => $block->getMatrixAnchorUid(),
-                ];
-            }
+            // Walk nested Vizy-in-Vizy too — Matrix only on an inner field still requires
+            // dirtying/saving the top-level Vizy handle so serializeValue can recurse.
+            $blocks = $this->_describeBlocksNeedingBackfill($value, $element, $field);
 
             if ($blocks) {
                 $reports[] = [
@@ -419,6 +399,137 @@ class Anchors extends Component
     private function _tableExists(): bool
     {
         return Craft::$app->getDb()->tableExists(Table::MATRIX_ANCHORS);
+    }
+
+    /**
+     * @return array<int, array{
+     *     id: string,
+     *     blockType: string,
+     *     reason: string,
+     *     matrixFields: string[],
+     *     matrixAnchorUid: string|null,
+     *     path?: string,
+     *     vizyFieldHandle?: string
+     * }>
+     */
+    private function _describeBlocksNeedingBackfill(
+        VizyNodeCollection $value,
+        ElementInterface $parentOwner,
+        VizyField $vizyField,
+        string $path = '',
+    ): array {
+        $blocks = [];
+
+        foreach ($value->query()->where(['type' => VizyBlock::$type])->all() as $block) {
+            if (!$block instanceof VizyBlock) {
+                continue;
+            }
+
+            $blockType = $block->getHandle() ?: (string)($block->getBlockType()?->handle ?? '');
+            $blockPath = $path !== '' ? "$path > $blockType" : $blockType;
+
+            if ($this->blockNeedsMatrixAnchorBackfill($block, $parentOwner, $vizyField)) {
+                $matrixFields = [];
+                $blockLayout = $block->getFieldLayout();
+
+                if ($blockLayout) {
+                    foreach ($blockLayout->getCustomFields() as $innerField) {
+                        if ($innerField instanceof Matrix) {
+                            $matrixFields[] = $innerField->handle;
+                        }
+                    }
+                }
+
+                $blocks[] = [
+                    'id' => (string)$block->getId(),
+                    'blockType' => $blockType,
+                    'reason' => $this->_blockHasMatrixJsonContent($block) ? 'json-matrix' : 'missing-anchor',
+                    'matrixFields' => $matrixFields,
+                    'matrixAnchorUid' => $block->getMatrixAnchorUid(),
+                    'path' => $blockPath,
+                    'vizyFieldHandle' => $vizyField->handle,
+                ];
+            }
+
+            $nestedBlocks = $this->_describeNestedVizyBackfill($block, $parentOwner, $blockPath);
+
+            if ($nestedBlocks) {
+                array_push($blocks, ...$nestedBlocks);
+            }
+        }
+
+        return $blocks;
+    }
+
+    /**
+     * @return array<int, array{
+     *     id: string,
+     *     blockType: string,
+     *     reason: string,
+     *     matrixFields: string[],
+     *     matrixAnchorUid: string|null,
+     *     path?: string,
+     *     vizyFieldHandle?: string
+     * }>
+     */
+    private function _describeNestedVizyBackfill(
+        VizyBlock $block,
+        ElementInterface $parentOwner,
+        string $path,
+    ): array {
+        $blockLayout = $block->getFieldLayout();
+
+        if (!$blockLayout) {
+            return [];
+        }
+
+        $fieldsContent = $block->attrs['values']['content']['fields'] ?? [];
+        $blocks = [];
+
+        foreach ($blockLayout->getCustomFields() as $innerField) {
+            if (!$innerField instanceof VizyField) {
+                continue;
+            }
+
+            $nestedRaw = $fieldsContent[$innerField->handle] ?? null;
+            $uid = $innerField->layoutElement?->uid;
+
+            if (($nestedRaw === null || $nestedRaw === '' || $nestedRaw === []) && $uid) {
+                $nestedRaw = $fieldsContent[$uid] ?? null;
+            }
+
+            if ($nestedRaw === null || $nestedRaw === '' || $nestedRaw === []) {
+                continue;
+            }
+
+            if (is_string($nestedRaw)) {
+                $nestedRaw = Json::decodeIfJson($nestedRaw);
+            }
+
+            if (!is_array($nestedRaw)) {
+                continue;
+            }
+
+            $nestedValue = $innerField->normalizeValue($nestedRaw, $parentOwner);
+
+            if (!$nestedValue instanceof VizyNodeCollection) {
+                continue;
+            }
+
+            $nestedPath = "$path.`{$innerField->handle}`";
+            $nestedBlocks = $this->_describeBlocksNeedingBackfill(
+                $nestedValue,
+                $parentOwner,
+                $innerField,
+                $nestedPath,
+            );
+
+            if ($nestedBlocks) {
+                array_push($blocks, ...$nestedBlocks);
+            }
+        }
+
+        return $blocks;
     }
 
     private function _blockHasMatrixJsonContent(VizyBlock $block): bool

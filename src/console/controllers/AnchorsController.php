@@ -10,7 +10,9 @@ use craft\base\ElementInterface;
 use craft\base\FieldInterface;
 use craft\base\NestedElementInterface;
 use craft\console\Controller;
+use craft\elements\db\ElementQueryInterface;
 use craft\elements\Entry;
+use craft\elements\GlobalSet;
 use craft\errors\InvalidFieldException;
 use craft\helpers\Console;
 use craft\models\Section;
@@ -32,6 +34,7 @@ class AnchorsController extends Controller
     public int $batchSize = 100;
     public bool $verbose = false;
     public bool $dryRun = false;
+    public bool $drafts = false;
 
     private array $_pluginOrigins = [];
 
@@ -48,6 +51,7 @@ class AnchorsController extends Controller
         $options[] = 'batchSize';
         $options[] = 'verbose';
         $options[] = 'dryRun';
+        $options[] = 'drafts';
 
         return $options;
     }
@@ -62,8 +66,11 @@ class AnchorsController extends Controller
     /**
      * Creates matrix anchors for Vizy blocks that still rely on JSON matrix content.
      *
-     * Defaults to all sites (`site('*')`). Pass `--site=` to target one. Use `--verbose`
-     * for per-element owner/field context, and `--dry-run` to inspect without saving.
+     * Defaults to all sites (`site('*')`) and live elements only. Pass `--site=` to target
+     * one site, `--drafts` to include drafts (usually unsafe — anchors are canonical-keyed),
+     * `--verbose` for per-element context, and `--dry-run` to inspect without saving.
+     *
+     * Counts are per site-element row (not unique element IDs). `--limit` applies the same way.
      */
     public function actionBackfill(): int
     {
@@ -77,102 +84,78 @@ class AnchorsController extends Controller
 
         $this->_printEnvironment();
         $this->_printVizyFieldInventory($vizyFields);
+        $this->_printBackfillScopeWarnings();
 
-        $query = Entry::find()
-            ->status(null)
-            ->drafts(null)
-            ->trashed(false);
-
-        // Always scope sites explicitly: Craft defaults to the primary site, which silently
-        // skips per-site Vizy JSON that only exists on non-primary sites.
-        if ($this->site) {
-            $query->site($this->site);
-            $siteLabel = $this->site;
-        } else {
-            $query->site('*');
-            $siteLabel = '* (all sites)';
-        }
-
-        if ($this->elementId) {
-            $query->id($this->elementId);
-        }
+        $siteLabel = $this->site ?: '* (all sites)';
+        $this->stdout("Site scope: $siteLabel\n");
+        $this->stdout('Drafts: ' . ($this->drafts ? 'included (--drafts)' : 'excluded (default)') . "\n");
+        $this->stdout("Counts are per site-element row (not unique element IDs).\n");
 
         if ($this->limit) {
-            $query->limit($this->limit);
+            $this->stdout("Limit: {$this->limit} site-element row(s).\n", Console::FG_YELLOW);
         }
 
-        $total = (clone $query)->count();
-        $elementsService = Craft::$app->getElements();
-        $anchors = Vizy::$plugin->getAnchors();
+        $this->stdout("\n");
+
         $saved = 0;
         $skipped = 0;
         $failed = 0;
         $position = 0;
 
-        $verb = $this->dryRun ? 'Inspecting' : 'Checking';
-        $this->stdout("Site scope: $siteLabel\n");
-        $this->stdout("$verb $total elements for Vizy matrix anchor migration...\n\n");
+        $queries = $this->_backfillQueries();
+        $total = 0;
 
-        foreach ($query->each($this->batchSize) as $element) {
-            $position++;
-            $started = false;
+        foreach ($queries as $query) {
+            $total += (int)(clone $query)->count();
+        }
 
-            try {
-                $reports = $anchors->describeMatrixAnchorBackfill($element);
-                $dirtyHandles = array_column($reports, 'handle');
+        if ($this->limit) {
+            $total = min($total, $this->limit);
+        }
 
-                if (!$dirtyHandles) {
-                    $skipped++;
-                    continue;
-                }
+        if ($total === 0) {
+            $this->stdout("No elements matched the backfill query.\n");
 
-                $action = $this->dryRun ? 'Would save' : 'Saving';
-                $this->stdout("  [$position/$total] $action {$element->id} ... ");
-                $started = true;
+            return ExitCode::OK;
+        }
 
-                if ($this->verbose || $this->dryRun) {
-                    $this->stdout("\n");
-                    $this->_printIndented($this->_elementContext($element), 4);
-                    $this->_printBackfillReport($reports, 4);
-                }
-
-                if ($this->dryRun) {
-                    $saved++;
-                    $this->stdout("    skipped write (--dry-run)\n", Console::FG_YELLOW);
-                    continue;
-                }
-
-                $element->setScenario(Element::SCENARIO_ESSENTIALS);
-                $element->resaving = true;
-                $element->setDirtyFields($dirtyHandles);
-
-                // Match craft resave/* defaults: keep dateUpdated, skip search-index jobs.
-                if ($elementsService->saveElement($element, true, true, false)) {
-                    $saved++;
-                    $this->stdout($this->verbose ? "    done\n" : "done\n", Console::FG_GREEN);
-                } else {
-                    $failed++;
-                    $this->stdout($this->verbose ? "    failed\n" : "failed\n", Console::FG_RED);
-                    $this->_printIndented($this->_elementContext($element), 4, Console::FG_RED);
-
-                    foreach ($element->getErrorSummary(true) as $error) {
-                        $this->stdout("    - $error\n", Console::FG_RED);
-                    }
-                }
-            } catch (Throwable $e) {
-                $failed++;
-
-                if (!$started) {
-                    $this->stdout("  [$position/$total] Saving {$element->id} ... ");
-                }
-
-                $this->stdout("error\n", Console::FG_RED);
-                $this->_printFailureContext($element, $e);
+        foreach ($queries as $label => $query) {
+            if ($this->limit && $position >= $this->limit) {
+                break;
             }
+
+            // Re-apply remaining limit so --limit is global across element types/sites.
+            if ($this->limit) {
+                $query->limit($this->limit - $position);
+            }
+
+            $queryTotal = (int)(clone $query)->count();
+
+            if (!$queryTotal) {
+                continue;
+            }
+
+            $verb = $this->dryRun ? 'Inspecting' : 'Checking';
+            $this->stdout("$verb $queryTotal $label site-element row(s)...\n");
+
+            foreach ($query->each($this->batchSize) as $element) {
+                if ($this->limit && $position >= $this->limit) {
+                    break 2;
+                }
+
+                $position++;
+                $result = $this->_backfillElement($element, $position, $total);
+
+                $saved += $result['saved'];
+                $skipped += $result['skipped'];
+                $failed += $result['failed'];
+            }
+
+            $this->stdout("\n");
         }
 
         $savedLabel = $this->dryRun ? 'Would save' : 'Saved';
-        $this->stdout("\n$savedLabel: $saved, Skipped: $skipped, Failed: $failed\n");
+        $this->stdout("$savedLabel: $saved, Skipped: $skipped, Failed: $failed (site-element rows)\n");
 
         if ($failed) {
             $this->stdout("Re-run with --verbose for owner/layout context, or --dry-run to inspect without saving.\n", Console::FG_YELLOW);
@@ -184,6 +167,136 @@ class AnchorsController extends Controller
 
     // Private Methods
     // =========================================================================
+
+    /**
+     * @return array<string, ElementQueryInterface>
+     */
+    private function _backfillQueries(): array
+    {
+        $queries = [
+            'entry' => $this->_configureBackfillQuery(Entry::find()),
+            'global set' => $this->_configureBackfillQuery(GlobalSet::find()),
+        ];
+
+        if (class_exists(\benf\neo\elements\Block::class)) {
+            $queries['neo block'] = $this->_configureBackfillQuery(\benf\neo\elements\Block::find());
+        }
+
+        return $queries;
+    }
+
+    private function _configureBackfillQuery(ElementQueryInterface $query): ElementQueryInterface
+    {
+        $query
+            ->status(null)
+            ->trashed(false);
+
+        // Drafts share MatrixAnchors keyed by canonical owner id — migrating draft JSON can
+        // overwrite live nested Matrix content. Opt in only with --drafts.
+        if (method_exists($query, 'drafts')) {
+            $query->drafts($this->drafts ? null : false);
+        }
+
+        // Always scope sites explicitly: Craft defaults to the primary site, which silently
+        // skips per-site Vizy JSON that only exists on non-primary sites.
+        if ($this->site) {
+            $query->site($this->site);
+        } else {
+            $query->site('*');
+        }
+
+        if ($this->elementId) {
+            $query->id($this->elementId);
+        }
+
+        return $query;
+    }
+
+    /**
+     * @return array{saved: int, skipped: int, failed: int}
+     */
+    private function _backfillElement(ElementInterface $element, int $position, int $total): array
+    {
+        $anchors = Vizy::$plugin->getAnchors();
+        $elementsService = Craft::$app->getElements();
+
+        try {
+            $reports = $anchors->describeMatrixAnchorBackfill($element);
+            $dirtyHandles = array_column($reports, 'handle');
+
+            if (!$dirtyHandles) {
+                return ['saved' => 0, 'skipped' => 1, 'failed' => 0];
+            }
+
+            $action = $this->dryRun ? 'Would save' : 'Saving';
+            $this->stdout("  [$position/$total] $action {$element->id} ... ");
+
+            if ($this->verbose || $this->dryRun) {
+                $this->stdout("\n");
+                $this->_printIndented($this->_elementContext($element), 4);
+                $this->_printBackfillReport($reports, 4);
+            }
+
+            if ($this->dryRun) {
+                $this->stdout("    skipped write (--dry-run)\n", Console::FG_YELLOW);
+
+                return ['saved' => 1, 'skipped' => 0, 'failed' => 0];
+            }
+
+            $element->setScenario(Element::SCENARIO_ESSENTIALS);
+            $element->resaving = true;
+            $element->setDirtyFields($dirtyHandles);
+
+            // propagate=false: we already iterate site('*') (or a chosen --site). Cascading
+            // propagate would re-save other sites concurrently with this sweep.
+            // updateSearchIndex=false: match craft resave/* defaults (dateUpdated preserved via resaving).
+            if ($elementsService->saveElement($element, true, false, false)) {
+                $this->stdout($this->verbose ? "    done\n" : "done\n", Console::FG_GREEN);
+
+                return ['saved' => 1, 'skipped' => 0, 'failed' => 0];
+            }
+
+            $this->stdout($this->verbose ? "    failed\n" : "failed\n", Console::FG_RED);
+            $this->_printIndented($this->_elementContext($element), 4, Console::FG_RED);
+
+            foreach ($element->getErrorSummary(true) as $error) {
+                $this->stdout("    - $error\n", Console::FG_RED);
+            }
+
+            return ['saved' => 0, 'skipped' => 0, 'failed' => 1];
+        } catch (Throwable $e) {
+            $this->stdout("  [$position/$total] Saving {$element->id} ... ");
+            $this->stdout("error\n", Console::FG_RED);
+            $this->_printFailureContext($element, $e);
+
+            return ['saved' => 0, 'skipped' => 0, 'failed' => 1];
+        }
+    }
+
+    private function _printBackfillScopeWarnings(): void
+    {
+        $siteCount = count(Craft::$app->getSites()->getAllSites());
+
+        if ($siteCount > 1 && $this->site) {
+            $this->stdout(
+                "Note: --site={$this->site} only inspects that site. Other sites need a separate run or omit --site.\n",
+                Console::FG_YELLOW,
+            );
+        }
+
+        if ($this->drafts) {
+            $this->stdout(
+                "Warning: --drafts included. Matrix anchors are keyed by canonical owner id — draft JSON can overwrite live nested Matrix content.\n",
+                Console::FG_YELLOW,
+            );
+        }
+
+        if (class_exists(\benf\neo\elements\Block::class)) {
+            $this->stdout("Neo detected: neo blocks are included in this sweep.\n");
+        }
+
+        $this->stdout("\n");
+    }
 
     private function _printEnvironment(): void
     {
@@ -201,6 +314,10 @@ class AnchorsController extends Controller
         if ($related) {
             $this->stdout('Related plugins: ' . implode(', ', $related) . "\n");
         }
+
+        $sites = Craft::$app->getSites()->getAllSites();
+        $siteList = array_map(static fn($site) => $site->handle . ($site->primary ? '*' : ''), $sites);
+        $this->stdout('Sites (' . count($sites) . '): ' . implode(', ', $siteList) . "\n");
 
         $this->stdout("\n");
     }
@@ -499,13 +616,21 @@ class AnchorsController extends Controller
             ));
 
             foreach ($report['blocks'] as $block) {
+                $path = $block['path'] ?? '';
+                $nestedField = $block['vizyFieldHandle'] ?? null;
+                $nestedNote = ($nestedField && $nestedField !== $report['handle'])
+                    ? " nested vizy `{$nestedField}`"
+                    : '';
+
                 $this->stdout(str_repeat(' ', $indent + 2) . sprintf(
-                    "block `%s` (%s): %s%s%s\n",
+                    "block `%s` (%s)%s: %s%s%s%s\n",
                     $block['blockType'] ?: 'unknown',
                     $block['id'] ?: 'no-id',
+                    $path && $path !== ($block['blockType'] ?? '') ? " @ $path" : '',
                     $block['reason'],
                     $block['matrixFields'] ? ' matrix fields: `' . implode('`, `', $block['matrixFields']) . '`' : '',
                     $block['matrixAnchorUid'] ? ' anchor uid: ' . $block['matrixAnchorUid'] : '',
+                    $nestedNote,
                 ));
             }
         }

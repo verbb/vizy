@@ -34,10 +34,21 @@
         "verbb/base": "^3.0.0",
         "yii2mod/yii2-array-query": "^1.4"
     },
+    "require-dev": {
+        "phpunit/phpunit": "^10.5"
+    },
     "autoload": {
         "psr-4": {
             "verbb\\vizy\\": "src/"
         }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "verbb\\vizy\\tests\\": "tests/"
+        }
+    },
+    "scripts": {
+        "test": "phpunit"
     },
     "extra": {
         "name": "Vizy",

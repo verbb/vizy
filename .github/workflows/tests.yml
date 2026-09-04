@@ -1,0 +1,22 @@
+name: Tests
+
+on:
+  push:
+    branches: [craft-5, craft-4, craft-3]
+  pull_request:
+
+jobs:
+  invariants:
+    name: Backfill invariants
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          coverage: none
+          tools: phpunit:10.5
+
+      - name: Run source-invariant tests
+        run: phpunit --bootstrap tests/bootstrap.php tests/AnchorsBackfillInvariantsTest.php

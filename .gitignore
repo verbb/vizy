@@ -5,6 +5,7 @@
 
 # COMPOSER
 /vendor
+.phpunit.cache
 
 # BUILD FILES
 /bower_components/*

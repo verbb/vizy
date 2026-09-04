@@ -2,8 +2,17 @@
 
 ## Unreleased
 
+### Added
+- Include global sets (and Neo blocks when Neo is installed) in `vizy/anchors/backfill`, not only entries. #364
+- Add `--drafts` to `vizy/anchors/backfill` (off by default — drafts share canonical MatrixAnchors). #364
+- Print site list, site scope, draft mode, and site-row count semantics from `vizy/anchors/backfill`. #364
+- Detect Matrix-in-nested-Vizy during `vizy/anchors/backfill` so Vizy-in-Vizy Matrix JSON is not silently skipped. #364
+- Add PHPUnit source-invariant tests for backfill multi-site / draft / propagate regressions (`composer test`).
+
 ### Fixed
 - Fix `vizy/anchors/backfill` only inspecting the primary site on a full sweep (default to `site('*')`, and print the site scope so a dry-run “0 to save” can’t be read as all sites clean). #364
+- Fix `vizy/anchors/backfill` including drafts by default (could overwrite live nested Matrix via shared canonical anchors). #364
+- Fix `vizy/anchors/backfill` propagating while already sweeping `site('*')` (save with `propagate=false`). #364
 
 ## 3.2.6 - 2026-08-29
 
