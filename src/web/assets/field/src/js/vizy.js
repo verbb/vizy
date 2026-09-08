@@ -287,9 +287,11 @@ $(document).ready(() => {
     // Note: ElementEditor calls jQuery.serialize() *before* the serializeForm event, so we must patch
     // the serialized string after flushing — updating [data-store] alone is too late for that request.
     //
-    // Portal attach/detach also moves named inputs under the form; pause ElementEditor only for that
-    // DOM surgery so FormObserver doesn't treat the move as a user edit. We do not rewrite Craft's
-    // initialSerializedValue / lastSerializedValue. Register quiet helpers *before* mountAll.
+    // Portal attach/detach moves named inputs under the form; pause ElementEditor for that DOM surgery
+    // and for initial portal hydration. Combo / Vizy-in-Vizy mounts nested editors *after* top-level
+    // fields, so hydration quiet is form-scoped and debounced: any new VizyInput mount or settle
+    // bumps the timer; only then acceptHydratedFormState() rebases ElementEditor + FormObserver.
+    // Register quiet helpers *before* mountAll.
     const $mainForm = $('form#main-form');
 
     if ($mainForm.length) {
@@ -304,6 +306,11 @@ $(document).ready(() => {
         };
 
         Craft.Vizy._eeQuietDepth = 0;
+        Craft.Vizy._hydrationHoldActive = false;
+        Craft.Vizy._hydrationTimer = null;
+        Craft.Vizy._pendingHydrationAccept = false;
+        // Quiet long enough for Matrix / nested Vizy mounts that start after the parent field.
+        Craft.Vizy._hydrationSettleMs = 1000;
 
         Craft.Vizy.beginElementEditorQuiet = () => {
             const editor = getElementEditor();
@@ -318,9 +325,82 @@ $(document).ready(() => {
             const editor = getElementEditor();
             Craft.Vizy._eeQuietDepth = Math.max(0, Craft.Vizy._eeQuietDepth - 1);
 
-            if (Craft.Vizy._eeQuietDepth === 0 && editor && typeof editor.resume === 'function') {
-                editor.resume();
+            if (Craft.Vizy._eeQuietDepth === 0 && editor) {
+                // Accept only when fully unmuted so late portal attach quiet can't resume first.
+                if (Craft.Vizy._pendingHydrationAccept) {
+                    Craft.Vizy.acceptHydratedFormState();
+                    Craft.Vizy._pendingHydrationAccept = false;
+                }
+
+                if (typeof editor.resume === 'function') {
+                    editor.resume();
+                }
             }
+        };
+
+        // Call while FormObserver is still paused (hydration quiet). Flushes portals into [data-store],
+        // then treats that settled payload as the editor baseline — no provisional draft on load.
+        Craft.Vizy.acceptHydratedFormState = () => {
+            const editor = getElementEditor();
+
+            if (!editor || typeof editor.serializeForm !== 'function') {
+                return;
+            }
+
+            const serialized = editor.serializeForm(true);
+            editor.$container.data('initialSerializedValue', serialized);
+            editor.lastSerializedValue = serialized;
+
+            const { formObserver } = editor;
+
+            // FormObserver tracks raw jQuery.serialize() (includes vizyData.*). Reset that baseline too
+            // so resume() → checkForm() does not immediately callback into ElementEditor.
+            if (formObserver && typeof formObserver._serialize === 'function') {
+                formObserver._serialize();
+            }
+        };
+
+        const releaseHydrationHold = () => {
+            Craft.Vizy._hydrationTimer = null;
+
+            // Final flush so every Vizy [data-store] matches portals before we rebaseline.
+            flushVizyPortalUpdates();
+
+            Craft.Vizy._pendingHydrationAccept = true;
+
+            if (!Craft.Vizy._hydrationHoldActive) {
+                if (Craft.Vizy._eeQuietDepth === 0) {
+                    Craft.Vizy.acceptHydratedFormState();
+                    Craft.Vizy._pendingHydrationAccept = false;
+                }
+
+                return;
+            }
+
+            Craft.Vizy._hydrationHoldActive = false;
+            Craft.Vizy.endElementEditorQuiet();
+        };
+
+        // One form-level quiet for all VizyInput instances (top-level + nested). Each mount/settle
+        // resets the debounce so combo nested Vizy cannot release quiet before inner editors exist.
+        Craft.Vizy.beginHydrationQuiet = () => {
+            if (!Craft.Vizy._hydrationHoldActive) {
+                Craft.Vizy._hydrationHoldActive = true;
+                Craft.Vizy.beginElementEditorQuiet();
+            }
+
+            Craft.Vizy.bumpHydrationQuiet();
+        };
+
+        Craft.Vizy.bumpHydrationQuiet = () => {
+            if (Craft.Vizy._hydrationTimer) {
+                window.clearTimeout(Craft.Vizy._hydrationTimer);
+            }
+
+            Craft.Vizy._hydrationTimer = window.setTimeout(
+                releaseHydrationHold,
+                Craft.Vizy._hydrationSettleMs,
+            );
         };
 
         const elementEditor = getElementEditor();

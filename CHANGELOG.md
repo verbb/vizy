@@ -1,5 +1,10 @@
 # Changelog
 
+## Unreleased
+
+### Fixed
+- Fix ElementEditor autosaving provisional drafts on load in some cases.
+
 ## 3.2.7 - 2026-09-04
 
 ### Added

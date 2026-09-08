@@ -232,6 +232,10 @@ export default {
     },
 
     mounted() {
+        // Form-level quiet (debounced): nested Vizy-in-Vizy mounts after the parent, so per-field
+        // 1s timers were releasing FormObserver too early on combo entries.
+        Craft.Vizy.beginHydrationQuiet?.();
+
         // Hidden in-DOM parking lot (legacy / debugging). Nested Vizy must not TipTap-mount here.
         this.portalLayerEl = document.createElement('div');
         this.portalLayerEl.className = 'vui-vizy-portals';
@@ -343,12 +347,6 @@ export default {
             // Let the component know we're finished rendering, and to start updating changes
             this.rendered = true;
 
-            // Once the field has settled, take a snapshot of the value for the field. This helps us compare if anything
-            // has changed, which it often does as jQuery kicks in, or Vue for other fields in Vizy blocks.
-            setTimeout(() => {
-                this.initValue = this.clone(this.json);
-            }, 1000);
-
             Craft.Vizy.flushPortalUpdates = Craft.Vizy.flushPortalUpdates || [];
             this._flushPortalUpdates = () => {
                 for (const blockId of this.portals.keys()) {
@@ -358,6 +356,14 @@ export default {
                 this.syncJsonToDataStore();
             };
             Craft.Vizy.flushPortalUpdates.push(this._flushPortalUpdates);
+
+            // Local portal settle, then bump form-level debounce. Settle runs before the mount
+            // debounce window so release never rebases ahead of the first syncJsonToDataStore.
+            setTimeout(() => {
+                this.syncJsonToDataStore();
+                this.initValue = this.clone(this.json);
+                Craft.Vizy.bumpHydrationQuiet?.();
+            }, 500);
 
         });
 
@@ -850,7 +856,12 @@ export default {
             const $dataStore = this.$el.querySelector('[data-store]');
 
             if ($dataStore) {
-                $dataStore.value = this.serializeValue(content);
+                const next = this.serializeValue(content);
+
+                // Avoid spurious FormObserver "value" mutations when flush is a no-op
+                if ($dataStore.value !== next) {
+                    $dataStore.value = next;
+                }
             }
         },
 
