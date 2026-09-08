@@ -173,7 +173,22 @@ class VizyBlock extends Node
 
     public function isEmpty(): bool
     {
+        // Matrix-in-Vizy content is migrated onto MatrixAnchor and stripped from JSON
+        // (`content.fields` empty + matrixAnchorUid). Treat that as non-empty so Craft
+        // doesn't skip persisting the field on new-for-site saves (e.g. entry duplicates). #376
+        if ($this->getMatrixAnchorUid()) {
+            return false;
+        }
+
         $content = $this->attrs['values']['content']['fields'] ?? [];
+
+        if ($this->hasMatrixFields()) {
+            foreach ($content as $value) {
+                if (!Matrix::isEmptyMatrixContent($value)) {
+                    return false;
+                }
+            }
+        }
 
         return !array_filter(array_values($content));
     }

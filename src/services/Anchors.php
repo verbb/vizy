@@ -28,6 +28,12 @@ use yii\db\IntegrityException;
 
 class Anchors extends Component
 {
+    // Properties
+    // =========================================================================
+
+    private bool $_duplicatingAnchorContent = false;
+
+
     // Public Methods
     // =========================================================================
 
@@ -45,11 +51,14 @@ class Anchors extends Component
 
         $elementsService = Craft::$app->getElements();
         $siteId = $parentOwner->siteId;
+        $canonicalOwnerId = (int)$parentOwner->getCanonicalId();
 
         if ($anchorUid) {
             $anchor = $elementsService->getElementByUid($anchorUid, MatrixAnchor::class, $siteId);
 
-            if ($anchor instanceof MatrixAnchor) {
+            // Never return another element's MatrixAnchor — duplicated Vizy JSON keeps the
+            // source matrixAnchorUid until we create a new anchor for this owner (#376).
+            if ($anchor instanceof MatrixAnchor && (int)$anchor->parentOwnerId === $canonicalOwnerId) {
                 return $anchor;
             }
         }
@@ -88,10 +97,15 @@ class Anchors extends Component
                 $vizyField->id,
                 $blockInstanceId,
                 (int)$parentOwner->getCanonicalId(),
-            ), __METHOD__);
+            ));
 
             return null;
         }
+
+        // When duplicating an element, the cloned Vizy JSON still points at the source's
+        // MatrixAnchor UID. Capture that source so we can deep-copy nested Matrix content
+        // onto a new anchor for this owner (#376).
+        $sourceAnchorForCopy = $this->_sourceAnchorForDuplicateCopy($parentOwner, $anchorUid);
 
         $anchor = $this->getAnchor($parentOwner, $vizyField, $blockInstanceId, $anchorUid);
 
@@ -145,7 +159,13 @@ class Anchors extends Component
                 }
             }
 
-            return $this->_createAnchor($parentOwner, $vizyField, $blockInstanceId, $fieldLayout, $anchorUid);
+            $anchor = $this->_createAnchor($parentOwner, $vizyField, $blockInstanceId, $fieldLayout, $anchorUid);
+
+            if ($anchor && $sourceAnchorForCopy) {
+                $this->_duplicateAnchorNestedContent($sourceAnchorForCopy, $anchor, $fieldLayout);
+            }
+
+            return $anchor;
         } finally {
             $mutex->release($lockName);
         }
@@ -606,6 +626,138 @@ class Anchors extends Component
         );
     }
 
+    /**
+     * Whether this element is an independent duplicate (entry Duplicate / Save as a new entry),
+     * not a draft or revision of an existing element. Matches NestedElementManager rules so
+     * drafts keep sharing canonical MatrixAnchors.
+     */
+    private function _isIndependentDuplicate(ElementInterface $element): bool
+    {
+        if (!$element->duplicateOf instanceof ElementInterface) {
+            return false;
+        }
+
+        if (method_exists($element, 'getIsRevision') && $element->getIsRevision()) {
+            return false;
+        }
+
+        // Drafts of published elements share canonical anchors; unpublished drafts from
+        // "Save as a new entry" need their own copy.
+        if (
+            method_exists($element, 'getIsDraft') &&
+            $element->getIsDraft() &&
+            !(method_exists($element, 'getIsUnpublishedDraft') && $element->getIsUnpublishedDraft())
+        ) {
+            return false;
+        }
+
+        return true;
+    }
+
+    /**
+     * Resolves a MatrixAnchor referenced by UID that belongs to the element we're duplicating from.
+     */
+    private function _sourceAnchorForDuplicateCopy(
+        ElementInterface $parentOwner,
+        ?string $anchorUid,
+    ): ?MatrixAnchor {
+        if (!$anchorUid || $this->_duplicatingAnchorContent || !$this->_isIndependentDuplicate($parentOwner)) {
+            return null;
+        }
+
+        $sourceOwner = $parentOwner->duplicateOf;
+        $anchor = Craft::$app->getElements()->getElementByUid(
+            $anchorUid,
+            MatrixAnchor::class,
+            $parentOwner->siteId,
+        );
+
+        if (!$anchor instanceof MatrixAnchor) {
+            return null;
+        }
+
+        // Only copy when the UID still points at the source owner's anchor (cloned Vizy JSON).
+        if ((int)$anchor->parentOwnerId !== (int)$sourceOwner->getCanonicalId()) {
+            return null;
+        }
+
+        // Already ours (shouldn't happen for independent duplicates with a new canonical id).
+        if ((int)$anchor->parentOwnerId === (int)$parentOwner->getCanonicalId()) {
+            return null;
+        }
+
+        return $anchor;
+    }
+
+    /**
+     * Deep-copies nested Matrix entries from a source MatrixAnchor onto a newly created one,
+     * using Craft's NestedElementManager duplicate path (via Matrix::afterElementPropagate).
+     */
+    private function _duplicateAnchorNestedContent(
+        MatrixAnchor $source,
+        MatrixAnchor $target,
+        ?FieldLayout $fieldLayout,
+    ): void {
+        if ($this->_duplicatingAnchorContent || !$source->id || !$target->id) {
+            return;
+        }
+
+        $fieldLayout ??= $source->getFieldLayout() ?? $target->getFieldLayout();
+
+        if (!$fieldLayout || !$this->blockHasMatrixFields($fieldLayout)) {
+            return;
+        }
+
+        // Already populated (e.g. concurrent ensureAnchor) — don't duplicate twice.
+        if ($this->_layoutHasNestedEntries($fieldLayout, $target)) {
+            return;
+        }
+
+        $this->_duplicatingAnchorContent = true;
+        $previousDuplicateOf = $target->duplicateOf;
+
+        try {
+            $source->setFieldLayout($fieldLayout);
+            $target->setFieldLayout($fieldLayout);
+            $target->duplicateOf = $source;
+
+            foreach ($fieldLayout->getCustomFields() as $field) {
+                if (!$field instanceof Matrix) {
+                    continue;
+                }
+
+                try {
+                    $field = $this->_matrixFieldForAnchor($field, $target);
+                    $field->afterElementPropagate($target, true);
+                } catch (\Throwable $e) {
+                    Vizy::error(sprintf(
+                        'Failed to duplicate Vizy matrix field `%s` from anchor #%s to #%s: %s',
+                        $field->handle,
+                        $source->id,
+                        $target->id,
+                        $e->getMessage(),
+                    ));
+
+                    throw $e;
+                }
+            }
+        } finally {
+            $target->duplicateOf = $previousDuplicateOf;
+            $this->_duplicatingAnchorContent = false;
+        }
+    }
+
+    private function _layoutHasNestedEntries(FieldLayout $fieldLayout, MatrixAnchor $anchor): bool
+    {
+        foreach ($fieldLayout->getCustomFields() as $field) {
+            if ($field instanceof Matrix && $this->_anchorNestedCount($field, $anchor) > 0) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
     private function _findAnchorRecord(
         ElementInterface $parentOwner,
         VizyField $vizyField,
@@ -668,7 +820,6 @@ class Anchors extends Component
             if (!$elementsService->saveElement($source)) {
                 Vizy::error(
                     'Unable to propagate Vizy matrix anchor to site ' . $siteId . ': ' . $e->getMessage(),
-                    __METHOD__,
                 );
 
                 return null;
@@ -732,7 +883,7 @@ class Anchors extends Component
             return $this->_applyFieldLayout($existing, $fieldLayout, $parentOwner);
         }
 
-        Vizy::error('Unable to save Vizy matrix anchor: ' . implode(', ', $anchor->getErrorSummary(true)), __METHOD__);
+        Vizy::error('Unable to save Vizy matrix anchor: ' . implode(', ', $anchor->getErrorSummary(true)));
 
         return null;
     }
