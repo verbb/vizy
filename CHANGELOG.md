@@ -3,8 +3,7 @@
 ## Unreleased
 
 ### Fixed
-- Fix ElementEditor autosaving provisional drafts on load in some cases.
-- Fix duplicating an entry sharing (and overwriting) Matrix-in-Vizy content via the same `MatrixAnchor` — clones now get their own anchors with deep-copied nested entries. Also treat MatrixAnchor-backed Vizy blocks as non-empty so Craft persists them on new-for-site saves. #376
+- Fix ElementEditor autosaving provisional drafts on load for Matrix-in-Vizy, kitchen-sink, and combo/Vizy-in-Vizy entries (form-level debounced FormObserver quiet, then rebaseline after all portal→JSON settles).
 
 ## 3.2.7 - 2026-09-04
 
