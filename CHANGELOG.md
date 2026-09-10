@@ -3,6 +3,7 @@
 ## Unreleased
 
 ### Fixed
+- Fix entry saves failing with MySQL foreign key errors when Vizy blocks contain fields that persist to FK-backed content tables (e.g. Typed Link Field). #377
 - Fix ElementEditor autosaving provisional drafts on load for Matrix-in-Vizy, kitchen-sink, and combo/Vizy-in-Vizy entries (form-level debounced FormObserver quiet, then rebaseline after all portal→JSON settles).
 
 ## 3.2.7 - 2026-09-04

@@ -391,7 +391,19 @@ class VizyBlock extends Node
 
                 // Ensure we call each field's `afterElementSave` method. This would be auto-done
                 // if a VizyBlock node was an element, and we were saving that.
-                $field->afterElementSave($block, true);
+                //
+                // Synthetic Block elements use `rand()` ids that aren't rows in `elements`.
+                // Fields with FK-backed content tables (e.g. Typed Link / ForeignField) will
+                // fail inserting against that id. Vizy JSON from serializeValue above remains
+                // the source of truth — same tradeoff as Super Table nested fields below. #377
+                try {
+                    $field->afterElementSave($block, true);
+                } catch (Throwable $e) {
+                    // When a MatrixAnchor is attached, `$block->id` is a real element — rethrow.
+                    if ($block->getMatrixAnchor()) {
+                        throw $e;
+                    }
+                }
 
                 // Process all Matrix/Super Table fields and their blocks in the same manner.
                 if ($field instanceof SuperTable) {
