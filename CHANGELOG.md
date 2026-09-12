@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 3.2.8 - 2026-09-13
 
 ### Fixed
 - Fix entry saves failing with MySQL foreign key errors when Vizy blocks contain fields that persist to FK-backed content tables (e.g. Typed Link Field). #377
