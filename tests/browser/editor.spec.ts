@@ -246,6 +246,8 @@ for (const secondFails of [false, true]) {
             tabLabels: ['Content', 'Details'],
         };
         await mount(page, document, { initialFieldLayouts: [layout] });
+        // The isolated page needs Craft's pane visibility utility for this check.
+        await page.addStyleTag({ content: '.flex-fields.hidden { display: none !important; }' });
         await page.evaluate(({ content, manifest, layout, secondFails }) => {
             const second = window.document.createElement('vizy-editor');
             second.id = 'second';
