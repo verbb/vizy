@@ -40,7 +40,7 @@ class VizyBlockInterface extends VizyNodeInterface
                     throw new InvalidArgumentException('VizyBlockInterface requires a Block GqlNode source.');
                 }
 
-                return GqlHelpers::resolveNodeTypeName($node);
+                return GqlEntityRegistry::prefixTypeName(GqlHelpers::resolveNodeTypeName($node));
             },
         ]));
 

@@ -41,7 +41,7 @@ class VizyMarkInterface extends BaseInterfaceType
                     throw new InvalidArgumentException('VizyMarkInterface requires a GqlMark source.');
                 }
 
-                return GqlHelpers::resolveMarkTypeName($mark);
+                return GqlEntityRegistry::prefixTypeName(GqlHelpers::resolveMarkTypeName($mark));
             },
         ]));
 

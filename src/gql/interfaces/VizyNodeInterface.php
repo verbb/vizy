@@ -42,7 +42,7 @@ class VizyNodeInterface extends BaseInterfaceType
                     throw new InvalidArgumentException('VizyNodeInterface requires a GqlNode source.');
                 }
 
-                return GqlHelpers::resolveNodeTypeName($node);
+                return GqlEntityRegistry::prefixTypeName(GqlHelpers::resolveNodeTypeName($node));
             },
         ]));
 

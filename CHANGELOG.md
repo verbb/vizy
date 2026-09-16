@@ -19,6 +19,7 @@
   access; image transforms remain preview-oriented.
 
 ### Fixed
+- Fixed GraphQL node, block, and mark queries failing when Craft’s GraphQL type prefix is configured.
 - Fixed image Insert and Update doing nothing after choosing a Size or Transform.
 - Fixed Enabled Link Settings being ignored by link dialogs, including missing Title, Classes, and Site controls.
 - Fixed fallback element links ignoring current-site and fixed-site choices.
