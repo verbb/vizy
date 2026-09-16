@@ -188,6 +188,50 @@ async function mount(
     await expect(page.locator('.ProseMirror')).toBeVisible();
 }
 
+test('honors Initial Rows independently for root and Hosted editors', async ({ page }) => {
+    await mount(page, { type: 'doc', attrs: { schemaVersion: 2 }, content: [] }, {
+        manifest: { ...editorManifest, field: { ...editorManifest.field, initialRows: 20 } },
+    });
+    for (const css of manifest['field/src/ts/vizy.ts'].css ?? []) {
+        await page.addStyleTag({ url: `${HARNESS_URL}${css}` });
+    }
+    const heights = await page.evaluate(async (baseManifest) => {
+        const root = document.querySelector('vizy-editor') as any;
+        const measure = (element: any) => {
+            const style = getComputedStyle(element.editor.view.dom);
+            return Number.parseFloat(style.minHeight) / Number.parseFloat(style.lineHeight);
+        };
+        const rootRows = measure(root);
+        const hostedRows = [];
+        const hostedHeights = [];
+        for (const rows of [1, 0, undefined]) {
+            const nested = document.createElement('vizy-editor') as any;
+            nested.id = `rows-${rows ?? 'default'}`;
+            nested.dataset.vizyHosted = '';
+            nested.innerHTML = '<input data-vizy-document type="hidden">';
+            root.querySelector('.vizy-editor-surface').append(nested);
+            (window as any).Craft.Vizy.bootstrapEditor(nested.id, {
+                document: { type: 'doc', attrs: { schemaVersion: 2 }, content: [] },
+                manifest: { ...baseManifest, field: { ...baseManifest.field, initialRows: rows } },
+                editorContextToken: 'hosted-rows',
+                hosted: { depth: 1, entryFieldUid: 'field', parentFieldUid: 'field', blockUid: 'rows', placementUid: nested.id },
+            });
+            await new Promise<void>((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve())));
+            hostedRows.push(measure(nested));
+            hostedHeights.push(nested.editor.view.dom.getBoundingClientRect().height / Number.parseFloat(getComputedStyle(nested.editor.view.dom).lineHeight));
+        }
+        root.editor.commands.setContent({ type: 'doc', content: Array.from({ length: 40 }, () => ({ type: 'paragraph', content: [{ type: 'text', text: 'Growing content' }] })) });
+        return { rootRows, hostedRows, hostedHeights, grew: root.editor.view.dom.getBoundingClientRect().height > Number.parseFloat(getComputedStyle(root.editor.view.dom).minHeight) };
+    }, editorManifest);
+    expect(heights.rootRows).toBeCloseTo(20);
+    expect(heights.hostedRows[0]).toBeCloseTo(1);
+    expect(heights.hostedRows[1]).toBe(0);
+    expect(heights.hostedRows[2]).toBeCloseTo(7);
+    expect(heights.hostedHeights[0]).toBeLessThan(2);
+    expect(heights.hostedHeights[1]).toBeLessThan(2);
+    expect(heights.grew).toBe(true);
+});
+
 for (const pasteAsPlainText of [false, true]) {
     test(`respects Plain Text Paste ${pasteAsPlainText}`, async ({ page }) => {
         await mount(page, { type: 'doc', attrs: { schemaVersion: 2 }, content: [] }, {

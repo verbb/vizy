@@ -116,6 +116,7 @@ final class EditorManifests extends Component
             'minBlocks' => $field->minBlocks,
             'maxBlocks' => $field->maxBlocks,
             'pasteAsPlainText' => $field->pasteAsPlainText,
+            'initialRows' => $field->initialRows,
             // Opt-in: Delete is already explicit in the Block menu; prompt is not default.
             'confirmBlockDeletion' => (bool)$field->confirmBlockDeletion,
             // Project default for consecutive same-type nesting.

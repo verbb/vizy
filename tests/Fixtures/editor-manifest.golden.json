@@ -1,7 +1,7 @@
 {
     "uid": "<request-local-uuid>",
-    "revision": "1:1dd8725ece008d3f4a211f81636f0ff5386e9319833929d9643599fbaae92faa",
-    "hash": "1dd8725ece008d3f4a211f81636f0ff5386e9319833929d9643599fbaae92faa",
+    "revision": "1:1e20fb22384025f342d832efc470b7aacdbf2688ebba107e711b4a91f83d6fe1",
+    "hash": "1e20fb22384025f342d832efc470b7aacdbf2688ebba107e711b4a91f83d6fe1",
     "manifestVersion": 1,
     "registryRevision": "2b27076d016672d373b6a95308d8472199a5aca2c5f1401e13d38bcec9c8d35e",
     "editorConfig": {
@@ -9,7 +9,7 @@
         "revision": "1:6da0b016e1ad8080e5554bea35f1241db7d136b281d5402699fb46958f0c17fe",
         "hash": "6da0b016e1ad8080e5554bea35f1241db7d136b281d5402699fb46958f0c17fe"
     },
-    "schemaRevision": "44223fdf2917ca8f805a86aaedce5ca85c1b473e2c2efc816f17708797761d7f",
+    "schemaRevision": "50f83d8052772951b272da855d4b90b1d9a214ffd45345b1ac8be02048b96d79",
     "enabledNodes": [
         "bulletList",
         "doc",
@@ -56,6 +56,7 @@
         "minBlocks": null,
         "maxBlocks": null,
         "pasteAsPlainText": false,
+        "initialRows": 7,
         "confirmBlockDeletion": false,
         "sameBlockTypeMaxDepth": 3
     },

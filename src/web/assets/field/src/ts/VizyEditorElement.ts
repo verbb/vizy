@@ -569,6 +569,12 @@ export class VizyEditorElement extends HTMLElement {
         this.#embedBubble = document.createElement('vizy-embed-bubble');
         const surface = document.createElement('div');
         surface.className = 'vizy-editor-surface';
+        const initialRows = manifest.field.initialRows;
+        surface.style.setProperty('--vizy-initial-rows', String(
+            typeof initialRows === 'number' && Number.isFinite(initialRows)
+                ? Math.max(0, Math.floor(initialRows))
+                : 7,
+        ));
         this.#mount.append(this.#toolbar, surface);
         // Selection bubble portals via pk-popup on first sync — do not park it
         // under the editor body (that forced absolute coords + clipping).

@@ -5,7 +5,7 @@
 vizy-editor {
     display: block;
     position: relative;
-    min-height: 8rem;
+    min-height: 0;
 
     /* Panel palette, resolved once here and inherited by every rule below and
        through each component's shadow boundary.
@@ -162,7 +162,7 @@ vizy-editor:not(:has(.vizy-editor-shell)) {
     --vizy-gutter-add-hover-border: color-mix(in srgb, var(--vizy-focus) 88%, #000);
     --vizy-gutter-add-hover-color: var(--pk-color-white, #fff);
 
-    min-height: 8rem;
+    min-height: 0;
     /* Frame border is on .vizy-editor-body — surface is fill only. */
     border: 0;
     border-radius: 0 0 var(--vizy-radius) var(--vizy-radius);
@@ -173,7 +173,7 @@ vizy-editor:not(:has(.vizy-editor-shell)) {
 .vizy-editor-surface .ProseMirror {
     flex: 1 1 auto;
     width: 100%;
-    min-height: 6rem;
+    min-height: calc(var(--vizy-initial-rows, 7) * 1.6em);
     outline: none;
     color: var(--text-color, #3f4d5a);
     line-height: 1.6;
