@@ -640,6 +640,23 @@ test('selection, keyboard Escape, and opaque malformed rejection stay harness-sa
     expect(outcome.rejection).toMatchObject({ code: expect.any(String) });
 });
 
+test('Block menu Move down changes sibling order and Move up restores it', async ({ page }) => {
+    await mount(page, {
+        type: 'doc',
+        attrs: { schemaVersion: 2 },
+        content: [leafBlock('a'), leafBlock('b')],
+    });
+    const block = page.locator('vizy-block[data-block-uid="a"]');
+    const order = () => page.locator('.ProseMirror > vizy-block').evaluateAll((blocks) =>
+        blocks.map((node) => node.getAttribute('data-block-uid')));
+    await block.locator('[part="menu-trigger"]').click();
+    await block.locator('pk-dropdown-item[value="moveDown"]').click();
+    await expect.poll(order).toEqual(['b', 'a']);
+    await block.locator('[part="menu-trigger"]').click();
+    await block.locator('pk-dropdown-item[value="moveUp"]').click();
+    await expect.poll(order).toEqual(['a', 'b']);
+});
+
 test('collapse reopen and reorder preserve the same field-host DOM until removal disposes once', async ({ page }) => {
     await mount(page, {
         type: 'doc',

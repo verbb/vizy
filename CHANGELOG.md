@@ -20,6 +20,7 @@
 
 ### Fixed
 - Fixed required Vizy fields accepting blank paragraphs as content.
+- Fixed the Block menu’s Move down action leaving the Block in its original position.
 - Fixed Matrix content in Blocks remaining active or orphaned when deleting non-entry elements.
 - Fixed Matrix content in Blocks being lost when restoring deleted entries or cancelling entry deletion, and orphaned Matrix content remaining after permanent deletion.
 - Fixed Block fields failing to load when deeply nested Vizy fields contain tables or other structured rich text.

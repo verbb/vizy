@@ -161,6 +161,26 @@ describe('block drag helpers', () => {
         expect(findBlockPosition(editor, 'b')).toBeLessThan(findBlockPosition(editor, 'a')!);
     });
 
+    it('moves a block down past its next sibling and back up without changing either payload', () => {
+        const { editor } = createHarness();
+        const original = editor.getJSON().content!;
+        expect(moveBlockByOffset(editor, 'a', 1)).toBe(true);
+        expect(editor.getJSON().content).toEqual([original[1], original[0]]);
+        expect(moveBlockByOffset(editor, 'a', 1)).toBe(false);
+        expect(moveBlockByOffset(editor, 'a', -1)).toBe(true);
+        expect(editor.getJSON().content).toEqual(original);
+    });
+
+    it('moves down past the full size of a following prose node', () => {
+        const { editor } = createHarness();
+        const block = editor.getJSON().content![0];
+        const prose = { type: 'paragraph', content: [{ type: 'text', text: 'Following paragraph' }] };
+        editor.commands.setContent({ type: 'doc', content: [block, prose] });
+        const original = editor.getJSON().content!;
+        expect(moveBlockByOffset(editor, 'a', 1)).toBe(true);
+        expect(editor.getJSON().content).toEqual([original[1], original[0]]);
+    });
+
     it('header activate selects that Block node (not nested text)', () => {
         const { editor } = createHarness();
         const pos = findBlockPosition(editor, 'a');

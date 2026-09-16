@@ -184,9 +184,11 @@ export function moveBlockByOffset(editor: Editor, blockUid: string, direction: -
     const index = $pos.index();
     const targetIndex = index + direction;
     if (targetIndex < 0 || targetIndex >= parent.childCount) return false;
+    // Map the far side of the sibling through deletion, so moving down
+    // inserts after that sibling rather than back at the source position.
     const targetPos = direction < 0
         ? found.pos - parent.child(index - 1).nodeSize
-        : found.pos + found.node.nodeSize;
+        : found.pos + found.node.nodeSize + parent.child(index + 1).nodeSize;
     const slice = new Slice(Fragment.from(found.node), 0, 0);
     let tr = editor.state.tr.delete(found.pos, found.pos + found.node.nodeSize);
     const mapped = tr.mapping.map(targetPos);
