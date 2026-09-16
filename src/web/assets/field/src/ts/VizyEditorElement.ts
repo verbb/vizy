@@ -40,7 +40,7 @@ import {
     VizyEmbedBubbleElement,
 } from './semantic/embed-bubble';
 import { hydrateImagePreviews } from './semantic/image-preview-cache';
-import './semantic/link-dialog';
+import { setEditorLinkSettings } from './semantic/link-dialog';
 import './semantic/image-dialog';
 import './semantic/url-node-dialog';
 import { NodeSelection } from '@tiptap/pm/state';
@@ -673,6 +673,7 @@ export class VizyEditorElement extends HTMLElement {
             },
         });
         this.#editor = editor;
+        setEditorLinkSettings(editor, manifest.field.linkSettings);
         if (this.#toolbar) this.#toolbar.editor = editor;
         if (this.#bubble) this.#bubble.editor = editor;
         if (this.#linkBubble) this.#linkBubble.editor = editor;

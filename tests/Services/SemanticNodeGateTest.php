@@ -2,6 +2,20 @@
 use verbb\vizy\document\DocumentParser;
 use verbb\vizy\document\InvalidDocumentException;
 
+it('resolves picker fallback references using the selected or current site', function() {
+    [$siteA, $siteB] = \Tests\Support\Fixtures\VizyFixtureFactory::ensureSites(2);
+    $field = \Tests\Support\Fixtures\VizyFixtureFactory::vizyField();
+    $section = \Tests\Support\Fixtures\VizyFixtureFactory::multisiteSection($field, 1, [$siteA, $siteB]);
+    $entryA = \Tests\Support\Fixtures\VizyFixtureFactory::entryOnSite($section, $field, $siteA, 'Link site fixture', \Tests\Support\Fixtures\VizyFixtureFactory::paragraphDocument());
+    $entryB = \craft\elements\Entry::find()->id($entryA->id)->siteId($siteB->id)->status(null)->one();
+    expect($entryB)->not->toBeNull()->and($entryA->getUrl())->not->toBe($entryB->getUrl());
+    $base = ['type' => 'url', 'value' => $entryA->getUrl() . '#entry:' . $entryA->id, 'siteMode' => 'current'];
+    expect(\verbb\vizy\marks\Link::resolveHref($base, $siteA->id))->toBe($entryA->getUrl())
+        ->and(\verbb\vizy\marks\Link::resolveHref($base, $siteB->id))->toBe($entryB->getUrl())
+        ->and(\verbb\vizy\marks\Link::resolveHref([...$base, 'siteMode' => 'fixed', 'siteUid' => $siteA->uid], $siteB->id))->toBe($entryA->getUrl())
+        ->and(\verbb\vizy\marks\Link::resolveHref([...$base, 'value' => $base['value'] . '@' . $siteB->id], $siteA->id))->toBe($entryB->getUrl());
+});
+
 it('accepts semantic link marks without href', function() {
     $parser = new DocumentParser();
     $document = [

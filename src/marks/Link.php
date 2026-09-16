@@ -120,7 +120,9 @@ class Link extends Mark
                     'email' => str_starts_with(strtolower($value), 'mailto:') ? $value : 'mailto:' . $value,
                     'tel' => str_starts_with(strtolower($value), 'tel:') ? $value : 'tel:' . $value,
                     'sms' => str_starts_with(strtolower($value), 'sms:') ? $value : 'sms:' . $value,
-                    default => $value,
+                    default => preg_match('/(?:#|%23)(?:entry|asset|category):\d+(?:@\d+)?$/', $value)
+                        ? Vizy::$plugin->getRefTags()->parse($value, $siteId)
+                        : $value,
                 };
             } elseif (is_string($targetUid) && $targetUid !== '') {
                 $elementType = match ($kind) {

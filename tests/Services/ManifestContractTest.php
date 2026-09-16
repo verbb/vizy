@@ -2,6 +2,17 @@
 
 use Tests\Support\ManifestContractFixture;
 
+it('transports Enabled Link Settings and invalidates cached field manifests', function() {
+    $field = new \verbb\vizy\fields\VizyField(['uid' => \craft\helpers\StringHelper::UUID(), 'handle' => 'linkPolicy']);
+    $service = \verbb\vizy\Vizy::$plugin->getEditorManifests();
+    $enabled = $service->build($field);
+    $field->linkSettings = [];
+    $disabled = $service->build($field);
+    expect($enabled['field']['linkSettings'])->toBe(['text', 'newWindow', 'site', 'title', 'classes'])
+        ->and($disabled['field']['linkSettings'])->toBe([])
+        ->and($disabled['hash'])->not->toBe($enabled['hash']);
+});
+
 it('transports the plain-text paste policy and invalidates cached manifests when it changes', function() {
     $field = new \verbb\vizy\fields\VizyField(['uid' => \craft\helpers\StringHelper::UUID(), 'handle' => 'pastePolicy']);
     $service = \verbb\vizy\Vizy::$plugin->getEditorManifests();

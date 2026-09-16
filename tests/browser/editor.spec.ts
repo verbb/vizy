@@ -188,6 +188,133 @@ async function mount(
     await expect(page.locator('.ProseMirror')).toBeVisible();
 }
 
+test('applies each editor’s Enabled Link Settings and preserves hidden attributes', async ({ page }) => {
+    const linkManifest = {
+        ...editorManifest,
+        enabledMarks: [...editorManifest.enabledMarks, 'link'],
+        modules: [...editorManifest.modules, 'vizy/core/mark/link'],
+        field: { ...editorManifest.field, linkSettings: [] },
+    };
+    await mount(page, { type: 'doc', attrs: { schemaVersion: 2 }, content: [{ type: 'paragraph', content: [{ type: 'text', text: 'Original text' }] }] }, { manifest: linkManifest });
+    await page.evaluate(async () => {
+        const editor = (document.querySelector('vizy-toolbar') as any).editor;
+        editor.commands.selectAll();
+        editor.commands.setSemanticLink({ type: 'url', value: 'https://example.com', title: 'Original title', class: 'original-class', newWindow: true });
+        const dialog = document.createElement('vizy-link-dialog') as any;
+        document.body.append(dialog);
+        await dialog.openForEditor(editor, { url: 'https://example.com', text: 'Original text', openInNewTab: true, semantic: editor.getAttributes('link'), from: 1, to: 14 });
+    });
+    const dialog = page.locator('vizy-link-dialog');
+    await expect(dialog.locator('.link-dialog__text-input')).toHaveCount(0);
+    await expect(dialog.locator('pk-checkbox')).toHaveCount(0);
+    await expect(dialog.locator('.link-dialog__title-input')).toHaveCount(0);
+    await expect(dialog.locator('.link-dialog__classes-input')).toHaveCount(0);
+    await dialog.locator('.link-dialog__url-input input').fill('https://example.com/changed');
+    await dialog.locator('.link-dialog__submit').click();
+    const hidden = await page.evaluate(() => {
+        const editor = (document.querySelector('vizy-toolbar') as any).editor;
+        return { text: editor.getText(), attrs: editor.getAttributes('link') };
+    });
+    expect(hidden.text).toBe('Original text');
+    expect(hidden.attrs).toMatchObject({ value: 'https://example.com/changed', title: 'Original title', class: 'original-class', newWindow: true });
+    await expect(dialog.getByRole('dialog')).not.toBeVisible();
+    await page.evaluate(async ({ manifest }) => {
+        const nested = document.createElement('vizy-editor');
+        nested.id = 'nested-links';
+        nested.innerHTML = '<input data-vizy-document type="hidden" name="fields[nestedLinks]">';
+        document.querySelector('.vizy-editor-surface')!.append(nested);
+        (window as any).Craft.Vizy.bootstrapEditor(nested.id, {
+            editorContextToken: 'nested',
+            document: { type: 'doc', attrs: { schemaVersion: 2 }, content: [{ type: 'paragraph', content: [{ type: 'text', text: 'Nested text' }] }] },
+            manifest: { ...manifest, field: { ...manifest.field, linkSettings: ['text', 'title', 'classes', 'newWindow', 'site'] } },
+        });
+    }, { manifest: linkManifest });
+    await expect(page.locator('#nested-links .ProseMirror')).toBeVisible();
+    await page.evaluate(async () => {
+        const editor = (document.querySelector('#nested-links vizy-toolbar') as any).editor;
+        editor.commands.selectAll();
+        await (document.querySelector('vizy-link-dialog') as any).openForEditor(editor, { url: 'https://example.com/nested', text: 'Nested text', openInNewTab: false, from: 1, to: 12 });
+    });
+    await expect(dialog.locator('.link-dialog__text-input')).toHaveCount(1);
+    await expect(dialog.locator('pk-checkbox')).toHaveCount(1);
+    await dialog.locator('.link-dialog__title-input input').fill('Nested title');
+    await dialog.locator('.link-dialog__classes-input input').fill('button primary');
+    await expect(dialog.locator('.link-dialog__site')).toHaveCount(0);
+    await dialog.locator('.link-dialog__submit').click();
+    const nestedAttrs = await page.evaluate(() => (document.querySelector('#nested-links vizy-toolbar') as any).editor.getAttributes('link'));
+    expect(nestedAttrs).toMatchObject({ title: 'Nested title', class: 'button primary', newWindow: false });
+    await expect(dialog.getByRole('dialog')).not.toBeVisible();
+    await page.evaluate(async () => {
+        const editor = (document.querySelector('#editor') as any).editor;
+        editor.commands.selectAll();
+        editor.commands.setSemanticLink({ type: 'entry', targetUid: '33333333-3333-4333-8333-333333333333', siteMode: 'fixed', siteUid: '22222222-2222-4222-8222-222222222222', title: 'Retained', newWindow: true });
+        await (document.querySelector('vizy-link-dialog') as any).openForEditor(editor, {
+            url: '#vizy-link:entry:33333333-3333-4333-8333-333333333333', text: 'Original text', openInNewTab: true, semantic: editor.getAttributes('link'), from: 1, to: 14,
+        });
+    });
+    await expect(dialog.locator('.link-dialog__title-input')).toHaveCount(0);
+    await expect(dialog.locator('.link-dialog__site')).toHaveCount(0);
+    await dialog.locator('.link-dialog__submit').click();
+    const retained = await page.evaluate(() => (document.querySelector('#editor') as any).editor.getAttributes('link'));
+    expect(retained).toMatchObject({ type: 'entry', siteMode: 'fixed', siteUid: '22222222-2222-4222-8222-222222222222', title: 'Retained', newWindow: true });
+});
+
+test('applies Enabled Link Settings Site to semantic and fallback element links', async ({ page }) => {
+    const sites = [
+        { id: 1, uid: '11111111-1111-4111-8111-111111111111', name: 'Site A' },
+        { id: 2, uid: '22222222-2222-4222-8222-222222222222', name: 'Site B' },
+    ];
+    await mount(page, { type: 'doc', attrs: { schemaVersion: 2 }, content: [{ type: 'paragraph', content: [{ type: 'text', text: 'Linked text' }] }] }, {
+        manifest: { ...editorManifest, enabledMarks: ['link'], modules: [...editorManifest.modules, 'vizy/core/mark/link'], field: { ...editorManifest.field, linkSettings: ['site'] } },
+    });
+    await page.evaluate((sites) => { (window as any).Craft.sites = sites; }, sites);
+    for (const fallback of [false, true]) {
+        await page.evaluate(async ({ fallback, sites }) => {
+            const editor = (document.querySelector('vizy-editor') as any).editor;
+            editor.commands.selectAll();
+            editor.commands.setSemanticLink({
+                type: fallback ? 'url' : 'entry',
+                targetUid: fallback ? null : '33333333-3333-4333-8333-333333333333',
+                value: fallback ? 'https://example.com/b#entry:123@2' : null,
+                siteMode: fallback ? 'current' : 'fixed', siteUid: fallback ? null : sites[1].uid,
+                title: 'Keep hidden title', class: 'keep-class', newWindow: true,
+            });
+            const dialog = (document.querySelector('vizy-link-dialog') ?? document.body.appendChild(document.createElement('vizy-link-dialog'))) as any;
+            await dialog.openForEditor(editor, {
+                url: fallback ? 'https://example.com/b#entry:123@2' : '#vizy-link:entry:33333333-3333-4333-8333-333333333333',
+                text: 'Linked text', openInNewTab: true, semantic: editor.getAttributes('link'), from: 1, to: 12,
+            });
+        }, { fallback, sites });
+        const dialog = page.locator('vizy-link-dialog');
+        const select = dialog.locator('.link-dialog__site');
+        await expect.poll(() => select.evaluate((el: any) => el.value)).toBe(sites[1].uid);
+        await select.click();
+        await select.getByRole('option', { name: 'Link to the current site', exact: true }).click();
+        await dialog.locator('.link-dialog__submit').click();
+        await expect(dialog.getByRole('dialog')).not.toBeVisible();
+        const attrs = await page.evaluate(() => (document.querySelector('vizy-editor') as any).editor.getAttributes('link'));
+        expect(attrs).toMatchObject({ siteMode: 'current', siteUid: null, title: 'Keep hidden title', class: 'keep-class', newWindow: true });
+        if (fallback) expect(attrs.value).toBe('https://example.com/b#entry:123');
+        await page.evaluate(async () => {
+            const editor = (document.querySelector('vizy-editor') as any).editor;
+            await (document.querySelector('vizy-link-dialog') as any).openForEditor(editor, {
+                url: editor.getAttributes('link').value ?? '#vizy-link:entry:33333333-3333-4333-8333-333333333333',
+                text: 'Linked text', openInNewTab: true, semantic: editor.getAttributes('link'), from: 1, to: 12,
+            });
+        });
+        await select.getByRole('button', { name: 'Link to the current site', exact: true }).press('Enter');
+        await expect(select.getByRole('option', { name: 'Link to the current site', exact: true })).toBeFocused();
+        await page.keyboard.type('Site A');
+        await expect(select.getByRole('option', { name: 'Site A', exact: true })).toBeFocused();
+        await page.keyboard.press('Enter');
+        await expect.poll(() => select.evaluate((el: any) => el.value)).toBe(sites[0].uid);
+        await dialog.locator('.link-dialog__submit').click();
+        await expect(dialog.getByRole('dialog')).not.toBeVisible();
+        const fixed = await page.evaluate(() => (document.querySelector('vizy-editor') as any).editor.getAttributes('link'));
+        expect(fixed).toMatchObject({ siteMode: 'fixed', siteUid: sites[0].uid });
+    }
+});
+
 test('honors Initial Rows independently for root and Hosted editors', async ({ page }) => {
     await mount(page, { type: 'doc', attrs: { schemaVersion: 2 }, content: [] }, {
         manifest: { ...editorManifest, field: { ...editorManifest.field, initialRows: 20 } },
