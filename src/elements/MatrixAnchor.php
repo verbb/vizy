@@ -10,6 +10,10 @@ use craft\base\ElementInterface;
 use craft\elements\User;
 use craft\models\FieldLayout;
 
+/**
+ * Ownership records survive soft deletion so the same anchor can be restored.
+ * The element foreign key removes them when the anchor is permanently deleted.
+ */
 class MatrixAnchor extends Element
 {
     // Static Methods
@@ -138,17 +142,6 @@ class MatrixAnchor extends Element
         }
 
         parent::afterSave($isNew);
-    }
-
-    public function afterDelete(): void
-    {
-        $record = MatrixAnchorRecord::findOne($this->id);
-
-        if ($record) {
-            $record->delete();
-        }
-
-        parent::afterDelete();
     }
 
     public function beforeSave(bool $isNew): bool

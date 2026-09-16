@@ -19,6 +19,7 @@
   access; image transforms remain preview-oriented.
 
 ### Fixed
+- Fixed Matrix content in Blocks being lost when restoring deleted entries or cancelling entry deletion, and orphaned Matrix content remaining after permanent deletion.
 - Fixed Block fields failing to load when deeply nested Vizy fields contain tables or other structured rich text.
 - Fixed autosave updates moving the text cursor and disrupting undo history.
 - Fixed unsaved Block field values being lost during copy, cut, and undo, or appearing already saved.

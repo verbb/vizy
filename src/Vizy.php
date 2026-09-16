@@ -240,7 +240,11 @@ class Vizy extends Plugin
 
         Event::on(Entry::class, Entry::EVENT_BEFORE_DELETE, function(ModelEvent $event) {
             $entry = $event->sender;
-            Vizy::$plugin->getAnchors()->deleteAnchorsForOwner($entry);
+            Vizy::$plugin->getAnchors()->prepareOwnerDeletion($entry);
+        });
+
+        Event::on(Entry::class, Entry::EVENT_AFTER_RESTORE, function(Event $event) {
+            Vizy::$plugin->getAnchors()->restoreAnchorsForOwner($event->sender);
         });
 
         // Handle an issue with Matrix fields in Vizy blocks, that have relation fields that are also eager-loaded. More noticable in GQL.

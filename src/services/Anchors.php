@@ -12,11 +12,17 @@ use verbb\vizy\records\MatrixAnchor as MatrixAnchorRecord;
 
 use Craft;
 use craft\base\Component;
+use craft\base\Element;
 use craft\base\ElementInterface;
+use craft\db\Query;
+use craft\db\Table;
 use craft\fields\Matrix;
 use craft\models\FieldLayout;
 
+use yii\base\Event;
 use yii\db\IntegrityException;
+
+use RuntimeException;
 
 class Anchors extends Component
 {
@@ -162,17 +168,20 @@ class Anchors extends Component
         $this->saveMatrixField($field, $target, $value, false);
     }
 
-    public function deleteAnchor(MatrixAnchor $anchor): void
+    public function deleteAnchor(MatrixAnchor $anchor, bool $hardDelete = false): void
     {
-        if ($fieldLayout = $anchor->getFieldLayout()) {
-            foreach ($fieldLayout->getCustomFields() as $field) {
-                if ($field instanceof Matrix) {
-                    $field->beforeElementDelete($anchor);
-                }
+        $anchor->hardDelete = $hardDelete;
+        // Loaded anchors have no persisted FieldLayout. Discover the fields from
+        // their actual children so cleanup also works after schema removal.
+        foreach ($this->_matrixFieldsForAnchor($anchor) as $field) {
+            if (!$field->beforeElementDelete($anchor)) {
+                throw new RuntimeException('Unable to delete the Vizy Matrix field content.');
             }
         }
 
-        Craft::$app->getElements()->deleteElement($anchor);
+        if (!Craft::$app->getElements()->deleteElement($anchor, $hardDelete)) {
+            throw new RuntimeException('Unable to delete the Vizy Matrix anchor.');
+        }
     }
 
     public function gcOrphans(ElementInterface $parentOwner, VizyField $vizyField): void
@@ -204,21 +213,60 @@ class Anchors extends Component
         }
     }
 
-    public function deleteAnchorsForOwner(ElementInterface $owner): void
+    public function prepareOwnerDeletion(ElementInterface $owner): void
     {
         if (!$owner->id) {
             return;
         }
 
-        $records = MatrixAnchorRecord::find()
-            ->where(['parentOwnerId' => $owner->id])
+        // Capture before a hard delete cascades the ownership rows, but wait for
+        // the successful deletion event inside Craft's transaction to mutate.
+        // A cancelled deletion must leave both anchors and children untouched.
+        $query = MatrixAnchor::find();
+        $query->parentOwnerId = $owner->id;
+        $anchors = $query
+            ->site('*')
+            ->unique()
+            ->status(null)
+            ->trashed(null)
             ->all();
+        $handler = [$this, 'handleOwnerDeleted'];
+        $owner->off(Element::EVENT_AFTER_DELETE, $handler);
+        if ($anchors !== []) {
+            $owner->on(Element::EVENT_AFTER_DELETE, $handler, $anchors);
+        }
+    }
 
-        foreach ($records as $record) {
-            $anchor = Craft::$app->getElements()->getElementById($record->id, MatrixAnchor::class, $owner->siteId);
+    public function handleOwnerDeleted(Event $event): void
+    {
+        $owner = $event->sender;
+        $owner->off(Element::EVENT_AFTER_DELETE, [$this, __FUNCTION__]);
+        foreach ($event->data as $anchor) {
+            if (!$owner->hardDelete && $anchor->trashed) {
+                continue;
+            }
+            $anchor->deletedWithOwner = true;
+            $this->deleteAnchor($anchor, $owner->hardDelete);
+        }
+    }
 
-            if ($anchor instanceof MatrixAnchor) {
-                $this->deleteAnchor($anchor);
+    public function restoreAnchorsForOwner(ElementInterface $owner): void
+    {
+        $query = MatrixAnchor::find();
+        $query->parentOwnerId = $owner->id;
+        $anchors = $query
+            ->site('*')
+            ->unique()
+            ->status(null)
+            ->trashed(true)
+            ->andWhere(['elements.deletedWithOwner' => true])
+            ->all();
+        foreach ($anchors as $anchor) {
+            if (!Craft::$app->getElements()->restoreElement($anchor)) {
+                throw new RuntimeException('Unable to restore the Vizy Matrix anchor.');
+            }
+            foreach ($this->_matrixFieldsForAnchor($anchor) as $field) {
+                $field->afterElementRestore($anchor);
             }
         }
     }
@@ -280,6 +328,24 @@ class Anchors extends Component
 
     // Private Methods
     // =========================================================================
+
+    private function _matrixFieldsForAnchor(MatrixAnchor $anchor): array
+    {
+        $fieldIds = (new Query())
+            ->select('fieldId')
+            ->distinct()
+            ->from(Table::ENTRIES)
+            ->where(['primaryOwnerId' => $anchor->id])
+            ->column();
+        $fields = [];
+        foreach ($fieldIds as $fieldId) {
+            $field = Craft::$app->getFields()->getFieldById($fieldId);
+            if ($field instanceof Matrix) {
+                $fields[] = $field;
+            }
+        }
+        return $fields;
+    }
 
     private function _blockHasMatrixJsonContent(VizyBlock $block): bool
     {
