@@ -188,6 +188,39 @@ async function mount(
     await expect(page.locator('.ProseMirror')).toBeVisible();
 }
 
+for (const pasteAsPlainText of [false, true]) {
+    test(`respects Plain Text Paste ${pasteAsPlainText}`, async ({ page }) => {
+        await mount(page, { type: 'doc', attrs: { schemaVersion: 2 }, content: [] }, {
+            manifest: { ...editorManifest, field: { ...editorManifest.field, pasteAsPlainText } },
+        });
+        for (const htmlOnly of [false, true]) {
+            const result = await page.evaluate((htmlOnly) => {
+                const editor = (document.querySelector('vizy-editor') as any).editor;
+                editor.commands.clearContent();
+                editor.commands.focus('end');
+                const data = new DataTransfer();
+                data.setData('text/html', '<p><strong>Clipboard</strong></p><p><em>Second</em></p>');
+                if (!htmlOnly) data.setData('text/plain', 'Clipboard\nSecond');
+                const event = new ClipboardEvent('paste', { bubbles: true, cancelable: true });
+                // Firefox does not copy supplied clipboardData from event init.
+                Object.defineProperty(event, 'clipboardData', { value: data });
+                editor.view.dom.dispatchEvent(event);
+                const marks: string[] = [];
+                editor.state.doc.descendants((node: any) => node.marks.forEach((mark: any) => marks.push(mark.type.name)));
+                const text = editor.getText();
+                editor.commands.undo();
+                const undone = editor.getText();
+                editor.commands.redo();
+                return { text, marks, undone, redone: editor.getText() };
+            }, htmlOnly);
+            expect(result.text).toBe('Clipboard\n\nSecond');
+            expect(result.marks).toEqual(pasteAsPlainText ? [] : ['bold', 'italic']);
+            expect(result.undone).toBe('');
+            expect(result.redone).toBe(result.text);
+        }
+    });
+}
+
 test('owns one EditorView and direct light-DOM NodeViews', async ({ page }) => {
     await mount(page, {
         type: 'doc',

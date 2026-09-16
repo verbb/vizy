@@ -44,6 +44,7 @@ import './semantic/link-dialog';
 import './semantic/image-dialog';
 import './semantic/url-node-dialog';
 import { NodeSelection } from '@tiptap/pm/state';
+import { DOMParser as ProseMirrorDOMParser } from '@tiptap/pm/model';
 import { rewriteCraftSerializedForm } from './serialize-form-capture';
 import {
     EDITOR_FIELD_HAS_FOCUS_ATTR,
@@ -630,6 +631,26 @@ export class VizyEditorElement extends HTMLElement {
             element: surface,
             extensions: createEditorExtensions(manifest, services),
             content: { type: 'doc', attrs: { schemaVersion: 2 }, content: [] },
+            editorProps: {
+                handleDOMEvents: {
+                    paste(view, event) {
+                        if (!manifest.field.pasteAsPlainText || !event.clipboardData) return false;
+                        let text = event.clipboardData.getData('text/plain');
+                        const html = event.clipboardData.getData('text/html');
+                        if (!text && !html) return false;
+                        if (!text) {
+                            const body = new DOMParser().parseFromString(html, 'text/html').body;
+                            const slice = ProseMirrorDOMParser.fromSchema(view.state.schema).parseSlice(body);
+                            text = slice.content.textBetween(0, slice.content.size, '\n\n', '\n');
+                        }
+                        event.preventDefault();
+                        // Use ProseMirror's plain-text path so paragraph breaks,
+                        // current typing marks and paste/history hooks still apply.
+                        view.pasteText(text, event);
+                        return true;
+                    },
+                },
+            },
             onTransaction: ({ transaction }) => {
                 if (!transaction.docChanged) return;
                 if (!this.#reconciling) this.#revision += 1;

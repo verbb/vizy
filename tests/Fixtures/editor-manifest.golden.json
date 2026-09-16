@@ -1,7 +1,7 @@
 {
     "uid": "<request-local-uuid>",
-    "revision": "1:94d6f9b8d9eea847756f767147bf0520b08dad158897ebb9cd33c94bec633935",
-    "hash": "94d6f9b8d9eea847756f767147bf0520b08dad158897ebb9cd33c94bec633935",
+    "revision": "1:1dd8725ece008d3f4a211f81636f0ff5386e9319833929d9643599fbaae92faa",
+    "hash": "1dd8725ece008d3f4a211f81636f0ff5386e9319833929d9643599fbaae92faa",
     "manifestVersion": 1,
     "registryRevision": "2b27076d016672d373b6a95308d8472199a5aca2c5f1401e13d38bcec9c8d35e",
     "editorConfig": {
@@ -9,7 +9,7 @@
         "revision": "1:6da0b016e1ad8080e5554bea35f1241db7d136b281d5402699fb46958f0c17fe",
         "hash": "6da0b016e1ad8080e5554bea35f1241db7d136b281d5402699fb46958f0c17fe"
     },
-    "schemaRevision": "89819e000c1a3746749536147db98738100c023f056b2020bfbc0c26a6c65547",
+    "schemaRevision": "44223fdf2917ca8f805a86aaedce5ca85c1b473e2c2efc816f17708797761d7f",
     "enabledNodes": [
         "bulletList",
         "doc",
@@ -55,6 +55,7 @@
         "insertableBlockTypeUids": [],
         "minBlocks": null,
         "maxBlocks": null,
+        "pasteAsPlainText": false,
         "confirmBlockDeletion": false,
         "sameBlockTypeMaxDepth": 3
     },

@@ -121,6 +121,7 @@ export interface EditorManifest {
         insertableBlockTypeUids: string[];
         minBlocks: number | null;
         maxBlocks: number | null;
+        pasteAsPlainText?: boolean;
         /**
          * When true, Block ⋯ → Delete prompts before removing. Optional for
          * older manifests — missing means false (no prompt).
