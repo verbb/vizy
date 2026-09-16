@@ -87,6 +87,31 @@ function assetPlacementDocument(array $context, int $assetId, string $blockUid):
     ], $context['owner'], $context['field']);
 }
 
+it('recovers a legacy upload batch only when its field has one unambiguous placement', function() {
+    AssetSpikeFixture::ensureAdminUser();
+    $context = assetUploadTestContext('LegacyPlacement');
+    $asset = AssetSpikeFixture::createTempAsset('legacy-placement.txt', 'Legacy placement');
+    $document = assetPlacementDocument($context, $asset->id, 'legacy-placement-block');
+    $context['owner']->setFieldValue($context['field']->handle, $document);
+    $uploads = Vizy::$plugin->getAssetUploads();
+    $uploads->setMoveAssetHandlerForTesting(static fn(): bool => false);
+    try {
+        \Tests\Support\WebControllerHarness::withWebRequest([], 'elements/save', function() use ($context) {
+            expect(Craft::$app->getElements()->saveElement($context['owner'], true, false))->toBeTrue();
+        });
+        $result = $uploads->resultForOwner($context['owner'], $context['field']);
+        $batch = \verbb\vizy\records\AssetUploadBatch::findOne($result['batchId']);
+        $batch->ownerPlacementUid = null;
+        expect($batch->save(false))->toBeTrue();
+        expect($uploads->resultForDocument($document)['batchId'])->toBe((int)$batch->id);
+        $uploads->setMoveAssetHandlerForTesting(null);
+        expect($uploads->retryBatch((int)$batch->id)['status'])->toBe('complete')
+            ->and(AssetSpikeFixture::isTempAsset(Craft::$app->getAssets()->getAssetById($asset->id)))->toBeFalse();
+    } finally {
+        $uploads->resetRequestStateForTesting();
+    }
+});
+
 it('finalizes the exact canonical Assets placement snapshot durably with public Craft APIs', function() {
     $assetField = AssetSpikeFixture::assetsField('{id}');
     CustomFieldBehavior::$fieldHandles[$assetField->handle] = true;

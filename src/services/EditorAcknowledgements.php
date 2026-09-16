@@ -4,6 +4,7 @@ namespace verbb\vizy\services;
 use verbb\vizy\Vizy;
 use verbb\vizy\document\VizyDocument;
 use verbb\vizy\fields\VizyField;
+use verbb\vizy\helpers\FieldPlacements;
 use verbb\vizy\records\AssetUploadBatch;
 
 use Craft;
@@ -141,7 +142,7 @@ final class EditorAcknowledgements extends Component
             throw new RuntimeException('invalidRetryToken');
         }
         $batch = AssetUploadBatch::findOne((int)($payload['batchId'] ?? 0));
-        foreach (['ownerType', 'ownerId', 'siteId', 'derivativeKey', 'fieldUid', 'snapshotHash', 'workFingerprint'] as $key) {
+        foreach (['ownerType', 'ownerId', 'siteId', 'derivativeKey', 'fieldUid', 'ownerPlacementUid', 'snapshotHash', 'workFingerprint'] as $key) {
             if (!$batch || (string)$batch->{$key} !== (string)($payload[$key] ?? null)) {
                 throw new RuntimeException('staleRetryToken');
             }
@@ -190,6 +191,7 @@ final class EditorAcknowledgements extends Component
             'siteId' => (int)$batch->siteId,
             'derivativeKey' => $batch->derivativeKey,
             'fieldUid' => $batch->fieldUid,
+            'ownerPlacementUid' => $batch->ownerPlacementUid,
             'snapshotHash' => $batch->snapshotHash,
             'workFingerprint' => $batch->workFingerprint,
             'editorId' => (string)($metadata['editorId'] ?? ''),
@@ -210,6 +212,8 @@ final class EditorAcknowledgements extends Component
         return ($context['ownerClass'] ?? null) === $owner::class
             && (int)($context['siteId'] ?? 0) === (int)$owner->siteId
             && ($context['fieldUid'] ?? null) === $field->uid
+            && ($context['ownerLayoutUid'] ?? null) === $owner->getFieldLayout()?->uid
+            && ($context['ownerPlacementUid'] ?? null) === FieldPlacements::uid($owner, $field)
             && (
                 ((int)($context['ownerId'] ?? 0) > 0 && (int)$context['ownerId'] === (int)$owner->id)
                 || (($context['ownerUid'] ?? null) && $context['ownerUid'] === $owner->uid)

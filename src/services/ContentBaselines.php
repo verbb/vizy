@@ -3,6 +3,7 @@ namespace verbb\vizy\services;
 
 use verbb\vizy\document\VizyDocument;
 use verbb\vizy\fields\VizyField;
+use verbb\vizy\helpers\FieldPlacements;
 
 use craft\base\Component;
 use craft\base\ElementInterface;
@@ -64,13 +65,8 @@ final class ContentBaselines extends Component
             return null;
         }
 
-        $placementUids = [];
-        foreach ($owner->getFieldLayout()?->getCustomFieldElements() ?? [] as $placement) {
-            if ($placement->getField()->uid === $field->uid && is_string($placement->uid)) {
-                $placementUids[] = $placement->uid;
-            }
-        }
-        if (count($placementUids) !== 1) {
+        $placementUid = FieldPlacements::uid($owner, $field);
+        if ($placementUid === null) {
             return $this->documents[$key] = null;
         }
 
@@ -85,14 +81,14 @@ final class ContentBaselines extends Component
 
         try {
             $content = is_string($content) ? Json::decode($content) : $content;
-            if (!is_array($content) || !array_key_exists($placementUids[0], $content)) {
+            if (!is_array($content) || !array_key_exists($placementUid, $content)) {
                 return $this->documents[$key] = null;
             }
             // Persisted DB state, not a posted hidden value, is the sole trust
             // source for preserving disabled or removed capabilities.
             return $this->documents[$key] = \verbb\vizy\Vizy::$plugin
                 ->getDocuments()
-                ->normalizeValue($content[$placementUids[0]], $owner, $field);
+                ->normalizeValue($content[$placementUid], $owner, $field);
         } catch (Throwable) {
             return $this->documents[$key] = null;
         }
@@ -121,6 +117,7 @@ final class ContentBaselines extends Component
             return null;
         }
 
-        return implode(':', [$owner::class, $ownerId, $siteId, $field->uid]);
+        $placementUid = FieldPlacements::uid($owner, $field);
+        return $placementUid === null ? null : implode(':', [$owner::class, $ownerId, $siteId, $field->uid, $placementUid]);
     }
 }

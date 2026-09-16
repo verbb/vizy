@@ -3,6 +3,7 @@ namespace verbb\vizy\controllers;
 
 use verbb\vizy\Vizy;
 use verbb\vizy\fields\VizyField;
+use verbb\vizy\helpers\FieldPlacements;
 
 use Craft;
 use craft\web\Controller;
@@ -37,7 +38,7 @@ final class FinalizationController extends Controller
         if (!$owner || !$user || !Craft::$app->getElements()->canSave($owner, $user)) {
             throw new ForbiddenHttpException('forbidden');
         }
-        $field = Craft::$app->getFields()->getFieldByUid((string)$payload['fieldUid']);
+        $field = FieldPlacements::field($owner, (string)$payload['fieldUid'], $payload['ownerPlacementUid'] ?? null);
         if (!$field instanceof VizyField) {
             throw new ForbiddenHttpException('staleField');
         }

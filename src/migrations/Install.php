@@ -119,6 +119,7 @@ class Install extends Migration
             'derivativeKey' => $this->string()->notNull(),
             'fieldUid' => $this->uid()->notNull(),
             'workJson' => $this->mediumText()->notNull(),
+            'ownerPlacementUid' => $this->uid()->null()->defaultValue(null),
             'status' => $this->string(16)->notNull()->defaultValue('pending'),
             'attempts' => $this->integer()->notNull()->defaultValue(0),
             'lastError' => $this->text(),
@@ -127,7 +128,7 @@ class Install extends Migration
             'uid' => $this->uid(),
         ]);
         $this->createIndex(null, Table::ASSET_UPLOAD_BATCHES, [
-            'snapshotHash', 'workFingerprint', 'ownerType', 'ownerId', 'siteId', 'derivativeKey', 'fieldUid',
+            'snapshotHash', 'workFingerprint', 'ownerType', 'ownerId', 'siteId', 'derivativeKey', 'fieldUid', 'ownerPlacementUid',
         ], true);
         $this->createIndex(null, Table::ASSET_UPLOAD_BATCHES, ['status'], false);
     }

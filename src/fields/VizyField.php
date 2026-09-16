@@ -12,6 +12,7 @@ use verbb\vizy\gql\types\VizyDocumentType;
 use verbb\vizy\helpers\FieldImageOptions;
 use verbb\vizy\helpers\FieldImagePreviews;
 use verbb\vizy\helpers\FieldLinkOptions;
+use verbb\vizy\helpers\FieldPlacements;
 use verbb\vizy\models\BlockType;
 use verbb\vizy\services\BlockTypes;
 use verbb\vizy\services\HostedVizy;
@@ -900,13 +901,7 @@ class VizyField extends Field
 
         $owner = $block->getOwner();
         $parentField = $block->getField();
-        $placementUid = null;
-        foreach ($block->getFieldLayout()?->getCustomFieldElements() ?? [] as $placement) {
-            if ($placement->getField()?->uid === $this->uid) {
-                $placementUid = $placement->uid;
-                break;
-            }
-        }
+        $placementUid = FieldPlacements::uid($block, $this);
         if ($placementUid === null) {
             return Html::tag('p', Craft::t('vizy', 'Hosted Vizy field is missing its FieldLayout placement.'), [
                 'class' => 'error',
@@ -916,7 +911,7 @@ class VizyField extends Field
         // Auth root = Entry-placed Vizy. Immediate parent may be another hosted
         // Vizy (Nested 2 → Nested 3); that field is not on the Entry layout.
         $entryFieldUid = HostedVizy::entryFieldUid() ?? $parentField->uid;
-        $entryField = Craft::$app->getFields()->getFieldByUid($entryFieldUid);
+        $entryField = FieldPlacements::field($owner, $entryFieldUid, HostedVizy::entryPlacementUid());
         if (!$entryField instanceof VizyField) {
             $entryField = $parentField;
         }

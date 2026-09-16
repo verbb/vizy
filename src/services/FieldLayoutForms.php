@@ -256,11 +256,13 @@ final class FieldLayoutForms extends Component
         // Each hosted field appends its own placement before issuing a context.
         $previousDepth = HostedVizy::renderingDepth();
         $previousEntryFieldUid = HostedVizy::entryFieldUid();
+        $previousEntryPlacementUid = HostedVizy::entryPlacementUid();
         $previousPath = HostedVizy::renderingPath();
         HostedVizy::setRenderingPath($context['hostedPath'] ?? []);
         HostedVizy::setRenderingDepth((int)($context['hostedDepth'] ?? 0));
         $entryFieldUid = (string)($context['entryFieldUid'] ?? $context['fieldUid'] ?? '');
         HostedVizy::setEntryFieldUid($entryFieldUid !== '' ? $entryFieldUid : null);
+        HostedVizy::setEntryPlacementUid($context['ownerPlacementUid'] ?? null);
         try {
             try {
                 $html = $view->namespaceInputs(
@@ -280,6 +282,7 @@ final class FieldLayoutForms extends Component
         } finally {
             HostedVizy::setRenderingDepth($previousDepth);
             HostedVizy::setEntryFieldUid($previousEntryFieldUid);
+            HostedVizy::setEntryPlacementUid($previousEntryPlacementUid);
             HostedVizy::setRenderingPath($previousPath);
             $initialBodyHtml = !$captureAssets
                 ? $this->_captureInitialBodyHtml($view)

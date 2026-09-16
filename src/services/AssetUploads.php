@@ -5,6 +5,7 @@ use verbb\vizy\Vizy;
 use verbb\vizy\db\Table;
 use verbb\vizy\document\VizyDocument;
 use verbb\vizy\fields\VizyField;
+use verbb\vizy\helpers\FieldPlacements;
 use verbb\vizy\records\AssetUploadBatch;
 
 use Craft;
@@ -144,7 +145,7 @@ final class AssetUploads extends Component
             'derivativeKey' => $this->_derivativeKey($owner),
             'fieldUid' => $field->uid,
             'snapshotHash' => hash('sha256', Vizy::$plugin->getDocuments()->serializeValue($document)),
-        ])->orderBy(['id' => SORT_DESC])->one();
+        ])->andWhere($this->_placementCondition($owner, $field))->orderBy(['id' => SORT_DESC])->one();
         if (!$batch) {
             return null;
         }
@@ -174,7 +175,7 @@ final class AssetUploads extends Component
             'ownerId' => $owner->id,
             'siteId' => $owner->siteId,
             'fieldUid' => $field->uid,
-        ])->orderBy(['id' => SORT_DESC])->all());
+        ])->andWhere($this->_placementCondition($owner, $field))->orderBy(['id' => SORT_DESC])->all());
     }
 
 
@@ -206,6 +207,7 @@ final class AssetUploads extends Component
             'siteId' => $owner->siteId,
             'derivativeKey' => $this->_derivativeKey($owner),
             'fieldUid' => $field->uid,
+            'ownerPlacementUid' => FieldPlacements::uid($owner, $field),
         ];
         $now = Db::prepareDateForDb(DateTimeHelper::now());
         Db::upsert(Table::ASSET_UPLOAD_BATCHES, [
@@ -522,7 +524,7 @@ final class AssetUploads extends Component
         if (!$owner) {
             throw new RuntimeException("Asset upload batch {$batch->id} owner is unavailable.");
         }
-        $field = Craft::$app->getFields()->getFieldByUid((string)$batch->fieldUid);
+        $field = FieldPlacements::field($owner, (string)$batch->fieldUid, $batch->ownerPlacementUid);
         if (!$field instanceof VizyField) {
             throw new RuntimeException("Asset upload batch {$batch->id} Vizy field is unavailable.");
         }
@@ -637,7 +639,16 @@ final class AssetUploads extends Component
             (string)$owner->siteId,
             $this->_derivativeKey($owner),
             (string)$field->uid,
+            FieldPlacements::uid($owner, $field) ?? $field->handle,
         ]);
+    }
+
+    private function _placementCondition(ElementInterface $owner, VizyField $field): array
+    {
+        $condition = ['ownerPlacementUid' => FieldPlacements::uid($owner, $field)];
+        return FieldPlacements::field($owner, $field->uid, null) !== null
+            ? ['or', $condition, ['ownerPlacementUid' => null]]
+            : $condition;
     }
 
     private function _derivativeKey(ElementInterface $owner): string

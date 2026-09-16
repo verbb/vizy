@@ -40,6 +40,16 @@ final class HostedVizy extends Component
         self::$entryFieldUid = $uid !== null && $uid !== '' ? $uid : null;
     }
 
+    public static function entryPlacementUid(): ?string
+    {
+        return self::$entryPlacementUid;
+    }
+
+    public static function setEntryPlacementUid(?string $uid): void
+    {
+        self::$entryPlacementUid = $uid;
+    }
+
     public static function renderingPath(): array
     {
         return self::$renderingPath;
@@ -80,5 +90,6 @@ final class HostedVizy extends Component
 
     private static int $renderingDepth = 0;
     private static ?string $entryFieldUid = null;
+    private static ?string $entryPlacementUid = null;
     private static array $renderingPath = [];
 }

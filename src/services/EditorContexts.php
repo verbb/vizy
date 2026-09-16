@@ -2,6 +2,7 @@
 namespace verbb\vizy\services;
 
 use verbb\vizy\fields\VizyField;
+use verbb\vizy\helpers\FieldPlacements;
 
 use Craft;
 use craft\base\Component;
@@ -18,7 +19,8 @@ final class EditorContexts extends Component
     // =========================================================================
 
     private const PURPOSE = 'vizy-editor-context';
-    private const VERSION = 3;
+    // Earlier tokens could identify the first of several same-field placements.
+    private const VERSION = 4;
 
 
     // Public Methods
@@ -97,13 +99,7 @@ final class EditorContexts extends Component
         ?array $hosted,
     ): array {
         $layout = $owner->getFieldLayout();
-        $placementUid = null;
-        foreach ($layout?->getCustomFieldElements() ?? [] as $placement) {
-            if ($placement->getField()->uid === $placementField->uid) {
-                $placementUid = $placement->uid;
-                break;
-            }
-        }
+        $placementUid = FieldPlacements::uid($owner, $placementField);
         $payload = [
             'version' => self::VERSION,
             'purpose' => self::PURPOSE,

@@ -3,6 +3,7 @@ namespace verbb\vizy\controllers;
 
 use verbb\vizy\Vizy;
 use verbb\vizy\fields\VizyField;
+use verbb\vizy\helpers\FieldPlacements;
 use verbb\vizy\services\HostedVizy;
 
 use Craft;
@@ -141,8 +142,8 @@ final class FieldLayoutController extends Controller
         if (!$user || !Craft::$app->getElements()->canSave($owner, $user)) {
             throw new ForbiddenHttpException('forbidden');
         }
-        $field = Craft::$app->getFields()->getFieldByUid((string)$context['fieldUid']);
-        if (!$field instanceof VizyField || !$this->_ownerHasPlacement($owner, $field, $context)) {
+        $field = $this->_placedField($owner, $context);
+        if (!$field) {
             return null;
         }
         return [$context, $owner, $field];
@@ -209,56 +210,46 @@ final class FieldLayoutController extends Controller
         return $owner;
     }
 
-    private function _ownerHasPlacement(ElementInterface $owner, VizyField $field, array $context): bool
+    private function _placedField(ElementInterface $owner, array $context): ?VizyField
     {
         $layout = $owner->getFieldLayout();
         if (($context['ownerLayoutUid'] ?? null) !== $layout?->uid) {
-            return false;
+            return null;
         }
 
-        $authFieldUid = $context['entryFieldUid'] ?? $field->uid;
-
-        $placed = false;
-        foreach ($layout?->getCustomFieldElements() ?? [] as $placement) {
-            if (
-                $placement->uid === ($context['ownerPlacementUid'] ?? null)
-                && $placement->getField()->uid === $authFieldUid
-            ) {
-                $placed = true;
-                break;
-            }
-        }
-        if (!$placed) {
-            return false;
+        $authFieldUid = $context['entryFieldUid'] ?? $context['fieldUid'];
+        $placementUid = $context['ownerPlacementUid'] ?? null;
+        $field = $placementUid === null ? null : FieldPlacements::field($owner, $authFieldUid, $placementUid);
+        if (!$field) {
+            return null;
         }
 
         if (isset($context['entryFieldUid'])) {
-            return $this->_hostedPathExists($context, $authFieldUid, $field->uid);
+            return $this->_hostedField($context, $field, $context['fieldUid']);
         }
 
-        return true;
+        return $field;
     }
 
-    private function _hostedPathExists(array $context, string $rootFieldUid, string $renderFieldUid): bool
+    private function _hostedField(array $context, VizyField $parent, string $renderFieldUid): ?VizyField
     {
         $path = $context['hostedPath'] ?? null;
         $depth = (int)($context['hostedDepth'] ?? 0);
         if (!is_array($path) || !array_is_list($path) || !HostedVizy::allowsDepth($depth) || count($path) !== $depth) {
-            return false;
+            return null;
         }
 
         // Follow the original placements, not any alternative route to the same
         // field. This works for unsaved Blocks without trusting their content.
-        $parent = Craft::$app->getFields()->getFieldByUid($rootFieldUid);
         foreach ($path as $index => $step) {
             if (!is_array($step) || !$parent instanceof VizyField) {
-                return false;
+                return null;
             }
             $typeUid = (string)($step['blockTypeUid'] ?? '');
             $type = Vizy::$plugin->getBlockTypes()->getBlockTypeByUid($typeUid);
             $layout = $type?->getFieldLayout();
             if (!$type || !$parent->allowsBlockTypeUid($typeUid) || !$layout || $layout->uid !== ($step['layoutUid'] ?? null)) {
-                return false;
+                return null;
             }
             $nested = null;
             foreach ($layout->getCustomFieldElements() as $placement) {
@@ -268,17 +259,17 @@ final class FieldLayoutController extends Controller
                 }
             }
             if (!$nested instanceof VizyField) {
-                return false;
+                return null;
             }
             if ($index === $depth - 1 && (
                 $parent->uid !== ($context['parentFieldUid'] ?? null)
                 || $step['placementUid'] !== ($context['hostedPlacementUid'] ?? null)
             )) {
-                return false;
+                return null;
             }
             $parent = $nested;
         }
-        return $parent->uid === $renderFieldUid;
+        return $parent->uid === $renderFieldUid ? $parent : null;
     }
 
     private function _conflict(string $code, array $extra = []): Response
