@@ -58,7 +58,6 @@ export function openImageAssetSelector(
         throw new Error('Craft element selector is not available in this environment.');
     }
 
-    const volumes = config.volumes ?? [];
     // Pass full transform objects — Craft builds `data-transform="{handle}"` + label.
     const transforms = (config.transforms ?? []).filter((t) => t.handle && t.name);
     const defaultTransform = config.defaultTransform ?? '';
@@ -66,7 +65,7 @@ export function openImageAssetSelector(
     craft.createElementSelectorModal('craft\\elements\\Asset', {
         storageKey: `${config.linkSelectorStorageKeyPrefix ?? 'VizyInput'}.ChooseImage`,
         multiSelect: false,
-        sources: volumes.length ? volumes : undefined,
+        sources: config.volumes,
         defaultSource: config.defaultSource ?? undefined,
         criteria: {
             siteId: config.elementSiteId,

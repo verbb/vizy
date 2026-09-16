@@ -1,4 +1,6 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
+import type { Editor } from '@tiptap/core';
+import { openImageAssetSelector } from '../../src/web/assets/field/src/ts/semantic/image-ui';
 import { attrsFromImageDialog, IMAGE_SIZE_OPTIONS } from '../../src/web/assets/field/src/ts/semantic/image-apply';
 import {
     rememberImagePreview,
@@ -9,6 +11,22 @@ import {
 const ASSET_UID = 'bda97141-65e6-48f6-84df-bf39f66034da';
 
 describe('image authoring apply', () => {
+    it.each([
+        { label: 'empty', volumes: [] },
+        { label: 'restricted', volumes: ['volume:allowed'] },
+        { label: 'default', volumes: undefined },
+    ])('preserves the configured Craft image sources: $label', ({ volumes }) => {
+        const previous = window.Craft;
+        const createElementSelectorModal = vi.fn();
+        window.Craft = { ...previous, createElementSelectorModal };
+        try {
+            openImageAssetSelector({} as Editor, { volumes });
+            expect(createElementSelectorModal).toHaveBeenCalledWith('craft\\elements\\Asset', expect.objectContaining({ sources: volumes }));
+        } finally {
+            window.Craft = previous;
+        }
+    });
+
     it('maps dialog fields to semantic image attrs with optional link', () => {
         const attrs = attrsFromImageDialog({
             assetUid: ASSET_UID,

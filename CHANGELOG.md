@@ -19,6 +19,7 @@
   access; image transforms remain preview-oriented.
 
 ### Fixed
+- Fixed an empty Available Volumes selection showing all available image sources.
 - Fixed repeated placements of the same Vizy field mixing editor save responses, rejecting unchanged content, and sharing upload recovery state.
 - Fixed failed file uploads being hidden after saving or reopening content, with an upload retry that preserves unsaved edits.
 - Fixed required Vizy fields accepting blank paragraphs as content.
