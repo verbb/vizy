@@ -60,9 +60,12 @@ function matrixAnchorLifecycleFixture(bool $categoryOwner = false): array
         ])]);
         $group = new CategoryGroup(['name' => 'Lifecycle categories ' . $suffix, 'handle' => 'lifecycleCategories' . $suffix]);
         $group->setFieldLayout($ownerLayout);
-        $group->setSiteSettings([new CategoryGroup_SiteSettings([
-            'siteId' => Craft::$app->getSites()->getPrimarySite()->id, 'hasUrls' => false,
-        ])]);
+        $group->setSiteSettings(array_map(
+            static fn($site) => new CategoryGroup_SiteSettings([
+                'siteId' => $site->id, 'hasUrls' => false,
+            ]),
+            Craft::$app->getSites()->getAllSites(),
+        ));
         expect(Craft::$app->getCategories()->saveGroup($group))->toBeTrue();
         $owner = new Category(['groupId' => $group->id, 'title' => 'Anchor lifecycle ' . $suffix]);
         expect(Craft::$app->getElements()->saveElement($owner))->toBeTrue();
