@@ -19,6 +19,7 @@
   access; image transforms remain preview-oriented.
 
 ### Fixed
+- Fixed Block fields failing to load when deeply nested Vizy fields contain tables or other structured rich text.
 - Fixed autosave updates moving the text cursor and disrupting undo history.
 - Fixed unsaved Block field values being lost during copy, cut, and undo, or appearing already saved.
 - Fixed undoing a Block deletion leaving its fields detached from the editor.

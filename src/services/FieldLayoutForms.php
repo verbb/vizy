@@ -125,7 +125,9 @@ final class FieldLayoutForms extends Component
             || !is_string($attrs['blockTypeUid'] ?? null)
             || !is_bool($attrs['enabled'] ?? null)
             || !is_array($attrs['fieldSlots'] ?? null)
-            || $this->_depth($blockJson) > 32
+            // Blocks are leaves; Hosted documents live in fieldSlots. Their
+            // ordinary rich text must not count against a separate form limit.
+            || (isset($blockJson['content']) && $blockJson['content'] !== [])
         ) {
             return $this->_fail('invalidBlock');
         }
@@ -455,21 +457,6 @@ final class FieldLayoutForms extends Component
 
         // Dropdown, Date, Table, Money, third-party pure fields, …
         return 'craft.generic';
-    }
-
-    private function _depth(mixed $value, int $depth = 0): int
-    {
-        if (!is_array($value)) {
-            return $depth;
-        }
-        $max = $depth;
-        foreach ($value as $item) {
-            $max = max($max, $this->_depth($item, $depth + 1));
-            if ($max > 32) {
-                break;
-            }
-        }
-        return $max;
     }
 
     private function _stableJson(mixed $value): string

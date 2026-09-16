@@ -687,7 +687,7 @@ it('requires current CP access even when a signed context owner remains editable
 });
 
 /** Build real nested layouts, then obtain contexts from the actual HTML producer. */
-function lifetimeHostedFixture(): array
+function lifetimeHostedFixture(array $deepContent = []): array
 {
     $fixture = fieldLayoutSecurityFixture('HostedLifetime');
     $fields = [$fixture['field']];
@@ -731,7 +731,10 @@ function lifetimeHostedFixture(): array
         $block['attrs']['blockUid'] = StringHelper::UUID();
         $block['attrs']['blockTypeUid'] = $types[$depth]->uid;
         $block['attrs']['fieldSlots'] = $slots;
-        $document = ['type' => 'doc', 'attrs' => ['schemaVersion' => 2], 'content' => [$block]];
+        $document = ['type' => 'doc', 'attrs' => ['schemaVersion' => 2], 'content' => [
+            $block,
+            ...($document === null ? $deepContent : []),
+        ]];
     }
     $fixture['block'] = $document['content'][0];
     $response = WebControllerHarness::renderFieldLayout(fieldLayoutRequest($fixture));
@@ -754,6 +757,47 @@ function lifetimeHostedFixture(): array
         ->and(\verbb\vizy\services\HostedVizy::renderingPath())->toBe([]);
     return [...$fixture, ...compact('fields', 'types', 'placements', 'bootstraps')];
 }
+
+it('renders structured rich text at the supported five-level Hosted depth', function(bool $nestedLists) {
+    $content = ['type' => 'table', 'content' => [[
+        'type' => 'tableRow', 'content' => [[
+            'type' => 'tableCell', 'content' => [[
+                'type' => 'paragraph', 'content' => [[
+                    'type' => 'text', 'text' => 'Deep table content', 'marks' => [['type' => 'bold']],
+                ]],
+            ]],
+        ]],
+    ]]];
+    if ($nestedLists) {
+        // Still below the editor's node-depth limit, but beyond 64 JSON containers
+        // once Hosted envelopes and ordinary list items are included.
+        for ($depth = 0; $depth < 8; $depth++) {
+            $content = ['type' => 'bulletList', 'content' => [[
+                'type' => 'listItem', 'content' => [['type' => 'paragraph'], $content],
+            ]]];
+        }
+    }
+    $fixture = lifetimeHostedFixture([$content]);
+    expect($fixture['bootstraps'][5]['document']['content'][1])->toBe($content);
+
+    $document = ['type' => 'doc', 'attrs' => ['schemaVersion' => 2], 'content' => [$fixture['block']]];
+    $fixture['owner']->setFieldValue($fixture['field']->handle, $document);
+    expect(Craft::$app->getElements()->saveElement($fixture['owner']))->toBeTrue();
+    $owner = Entry::find()->id($fixture['owner']->id)->status(null)->one();
+    $saved = $owner->getFieldValue($fixture['field']->handle)->toArray();
+    $initial = Vizy::$plugin->getFieldLayoutForms()->renderInitial(
+        $fixture['context'], $owner, $fixture['field'], $saved['content'][0], ['kind' => 'root'],
+    );
+    expect($initial['ok'])->toBeTrue(Json::encode($initial))
+        ->and($initial['data']['html'])->toContain('Deep table content');
+    $request = fieldLayoutRequest($fixture, ['block' => $saved['content'][0]]);
+    $response = WebControllerHarness::renderFieldLayoutBatch([
+        'editorContextToken' => $fixture['context']['token'], 'items' => [$request],
+    ]);
+    expect($response->getStatusCode())->toBe(200)
+        ->and($response->data['results'][0]['ok'])->toBeTrue(Json::encode($response->data))
+        ->and($response->data['results'][0]['html'])->toContain('Deep table content');
+})->with([false, true]);
 
 it('reauthorizes the entire original hosted ancestry through depth five', function(string $change) {
     $fixture = lifetimeHostedFixture();

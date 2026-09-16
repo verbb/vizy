@@ -295,7 +295,9 @@ final class FieldLayoutController extends Controller
     private function _rawBodyObject(): ?object
     {
         try {
-            $body = json_decode($this->request->getRawBody(), false, 64, JSON_THROW_ON_ERROR);
+            // Use the same JSON boundary as persisted documents. Hosted fields
+            // and their rich text add containers without adding editor levels.
+            $body = json_decode($this->request->getRawBody(), false, 512, JSON_THROW_ON_ERROR);
         } catch (Throwable) {
             return null;
         }
