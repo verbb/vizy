@@ -14,7 +14,7 @@ Custom fields inside Vizy blocks do not have an independently persisted block el
 
 GraphQL’s document `raw`, node and mark `raw` and `attrs`, and block `rawFieldValues` expose stored data without filtering it by individual embedded-field permissions. Access follows the enclosing Vizy field’s schema access. Only grant that access to clients allowed to read the complete document; choosing typed fields in one query does not prevent an authorised client from requesting raw fields in another.
 
-Use typed fields and rendered HTML when building your frontend’s output. GraphQL does not provide mutations, and custom node types are exposed through unknown-node and raw data fields rather than generated typed fragments. The [GraphQL guide](docs:developers/graphql) shows the supported queries.
+Use typed fields and rendered HTML when building your frontend’s output. Registered custom nodes have generated types, such as `VizyEmoji` for an `emoji` node, with the common node interface fields. Nodes without an installed extension definition use the unknown-node fallback. GraphQL does not provide mutations. The [GraphQL guide](docs:developers/graphql) shows the supported queries.
 
 ## Image Transforms
 

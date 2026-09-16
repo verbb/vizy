@@ -113,10 +113,10 @@ blocks(where: { handle: "textBlock", enabled: true }) {
 | `nodes(where, limit, orderBy)` | `[VizyNodeInterface!]!` | Ordered root nodes, with enabled blocks and prose included by default. |
 | `blocks(where, limit, orderBy)` | `[VizyBlockInterface!]!` | Blocks in the outer node tree, including layouts. Query nested Vizy fields separately. |
 | `block(uid: ID!)` | `VizyBlockInterface` | One block by its canonical instance UID, or null when not found. |
-| `raw` | `ArrayType!` | The full document as structured JSON. |
+| `raw` | `ArrayType!` | The full document as a JSON-encoded string. |
 | `renderedHtml` | `String!` | Document HTML produced by the renderer. |
 
-`nodes` and `blocks` accept `where: ArrayType`, `limit: Int`, and `orderBy: String`. `where` accepts inline JSON-shaped object and list literals. A `!` marks a non-null value; square brackets mark a list. `ArrayType` is a JSON scalar, so it has no nested GraphQL selection.
+`nodes` and `blocks` accept `where: ArrayType`, `limit: Int`, and `orderBy: String`. `where` accepts inline JSON-shaped object and list literals. A `!` marks a non-null value; square brackets mark a list. `ArrayType` has no nested GraphQL selection. Its output is a JSON-encoded string: decode `raw`, `attrs`, and `rawFieldValues` values in your client before accessing their properties, for example with `JSON.parse()` in JavaScript.
 
 Before granting schema access, read [GraphQL Data Access](docs:feature-tour/limitations#graphql-data-access). For public image URLs, see [Image Transforms](docs:feature-tour/limitations#image-transforms).
 
@@ -129,7 +129,7 @@ Every prose, layout, block, and unknown node implements this interface. Select t
 | Field | Type | Description |
 | --- | --- | --- |
 | `type` | `String!` | The TipTap node type name. |
-| `attrs` | `ArrayType` | Node attributes as structured JSON. |
+| `attrs` | `ArrayType` | Node attributes as a JSON-encoded string. |
 | `marks` | `[VizyMarkInterface!]!` | Formatting marks applied to the node, usually a text node. |
 | `children` | `[VizyNodeInterface!]!` | Ordered child nodes. Blocks return an empty list; query their nested Vizy fields separately. |
 | `text` | `String` | Text content, or concatenated descendant text for containers. |
@@ -146,7 +146,7 @@ Every formatting mark implements this interface:
 | Field | Type | Description |
 | --- | --- | --- |
 | `type` | `String!` | The TipTap mark type name. |
-| `attrs` | `ArrayType` | Mark attributes as structured JSON. |
+| `attrs` | `ArrayType` | Mark attributes as a JSON-encoded string. |
 | `raw` | `ArrayType!` | The mark’s canonical JSON. |
 | `isUnknown` | `Boolean!` | Whether the mark type has no installed extension definition. |
 
