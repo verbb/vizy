@@ -401,11 +401,9 @@ export class VizyEditorElement extends HTMLElement {
 
     /** Mirrors a host record's status onto its Block header. */
     #syncFieldLayoutState(blockUid: string): void {
-        const element = this.querySelector<VizyBlockElement>(
-            `vizy-block[data-block-uid="${CSS.escape(blockUid)}"]`,
-        );
-        if (!element) return;
         const record = this.#hosts.get(blockUid);
+        const element = record?.root.closest<VizyBlockElement>('vizy-block');
+        if (!element) return;
         const status = record?.status;
         element.fieldLayoutState = status === 'mounted'
             ? 'mounted'

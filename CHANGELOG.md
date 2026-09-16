@@ -22,6 +22,7 @@
 - Fixed required Vizy fields accepting blank paragraphs as content.
 - Fixed the Block menu’s Move down action leaving the Block in its original position.
 - Fixed structured custom field values losing their keys when edited inside Blocks.
+- Fixed Block field tabs and loading errors appearing on the wrong editor when the same content is open more than once.
 - Fixed Matrix content in Blocks remaining active or orphaned when deleting non-entry elements.
 - Fixed Matrix content in Blocks being lost when restoring deleted entries or cancelling entry deletion, and orphaned Matrix content remaining after permanent deletion.
 - Fixed Block fields failing to load when deeply nested Vizy fields contain tables or other structured rich text.

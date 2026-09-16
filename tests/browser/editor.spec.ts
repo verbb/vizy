@@ -235,6 +235,45 @@ test('adopts an initial FieldLayout before paint without a request or dirty stat
     expect(await page.evaluate(() => (document.querySelector('vizy-editor') as any).isDirty)).toBe(false);
 });
 
+for (const secondFails of [false, true]) {
+    test(`isolates same-UID Block tabs and ${secondFails ? 'failure' : 'mount'} state between editors`, async ({ page }) => {
+        const document = { type: 'doc', attrs: { schemaVersion: 2 }, content: [leafBlock('shared')] };
+        const layout = {
+            requestId: '', documentRevision: 0, blockHash: 'server-trusted',
+            blockUid: 'shared', blockTypeUid: 'type', fieldLayoutUid: 'layout', fieldLayoutHash: 'hash',
+            hostNamespace: 'vizyHost[first]', headHtml: '', bodyHtml: '', fields: [],
+            html: '<div class="flex-fields">First pane</div><div class="flex-fields">Second pane</div>',
+            tabLabels: ['Content', 'Details'],
+        };
+        await mount(page, document, { initialFieldLayouts: [layout] });
+        await page.evaluate(({ content, manifest, layout, secondFails }) => {
+            const second = window.document.createElement('vizy-editor');
+            second.id = 'second';
+            second.innerHTML = '<input data-vizy-document type="hidden" name="fields[second]">';
+            window.document.querySelector('form')!.append(second);
+            (window as any).Craft.Vizy.bootstrapEditor('second', {
+                document: content, manifest, editorContextToken: 'second',
+                initialFieldLayouts: [secondFails
+                    ? { ok: false, blockUid: 'shared', error: 'renderFailed', message: 'Second editor layout failed.' }
+                    : { ...layout, hostNamespace: 'vizyHost[second]', tabLabels: ['Summary', 'Settings'] }],
+            });
+        }, { content: document, manifest: editorManifest, layout, secondFails });
+        const first = page.locator('#editor vizy-block');
+        const second = page.locator('#second vizy-block');
+        await expect(second).toHaveAttribute('field-layout', secondFails ? 'error' : 'mounted');
+        await expect(first).toHaveAttribute('field-layout', 'mounted');
+        await expect(first.getByRole('tab', { name: 'Details', exact: true })).toBeVisible();
+        if (secondFails) {
+            await expect(second).toContainText('Second editor layout failed.');
+        } else {
+            await second.getByRole('tab', { name: 'Settings', exact: true }).click();
+            await expect(second.locator('.flex-fields').nth(1)).toBeVisible();
+            await expect(first.locator('.flex-fields').nth(0)).toBeVisible();
+            await expect(first.locator('.flex-fields').nth(1)).toBeHidden();
+        }
+    });
+}
+
 test('unchanged widgets preserve accepted canonical values while edits, reversions and capture retries persist', async ({ page }) => {
     await mount(page, {
         type: 'doc', attrs: { schemaVersion: 2 }, content: [leafBlock('normalized', { relation: [1], text: 'Original' })],

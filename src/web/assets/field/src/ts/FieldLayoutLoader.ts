@@ -576,9 +576,8 @@ export class FieldLayoutLoader {
      * Single-tab layouts leave the UI empty (Hyper-style).
      */
     #syncBlockTabs(record: FieldHostRecord, response: FieldLayoutResponse): void {
-        const block = document.querySelector<VizyBlockElement>(
-            `vizy-block[data-block-uid="${CSS.escape(record.blockUid)}"]`,
-        );
+        // The same persisted Block can appear in multiple open editors.
+        const block = record.root.closest<VizyBlockElement>('vizy-block');
         const labels = response.tabLabels ?? [];
         if (block) {
             block.layoutTabLabels = labels;
@@ -589,9 +588,7 @@ export class FieldLayoutLoader {
     }
 
     #syncBlockError(record: FieldHostRecord): void {
-        const block = document.querySelector<VizyBlockElement>(
-            `vizy-block[data-block-uid="${CSS.escape(record.blockUid)}"]`,
-        );
+        const block = record.root.closest<VizyBlockElement>('vizy-block');
         if (!block) return;
         block.fieldLayoutState = 'error';
         block.fieldLayoutError = record.errorMessage;
