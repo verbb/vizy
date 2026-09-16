@@ -3,6 +3,8 @@ namespace verbb\vizy\document;
 
 use verbb\vizy\Vizy;
 
+use craft\helpers\StringHelper;
+
 use Twig\Markup;
 
 /**
@@ -45,7 +47,26 @@ final class VizyContent
 
     public function isEmpty(): bool
     {
-        return $this->nodes === [];
+        // Editors can submit several blank paragraphs before persistence trims
+        // them. Required validation and template reads must agree before saving.
+        foreach ($this->nodes as $node) {
+            if (($node['type'] ?? null) !== 'paragraph') {
+                return false;
+            }
+
+            foreach ($node['content'] ?? [] as $child) {
+                if (($child['type'] ?? null) === 'hardBreak') {
+                    continue;
+                }
+
+                // Preserve inline atoms and unknown extension nodes as content.
+                if (($child['type'] ?? null) !== 'text' || StringHelper::trim($child['text'] ?? '') !== '') {
+                    return false;
+                }
+            }
+        }
+
+        return true;
     }
 
     public function blocks(bool $recursive = true, ?bool $enabled = true): array
