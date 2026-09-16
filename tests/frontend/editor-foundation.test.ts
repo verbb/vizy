@@ -207,6 +207,25 @@ describe('typed field adapters', () => {
         expect(getFieldAdapter('craft.generic').read(root)).toEqual(['a', 'c']);
     });
 
+    it('preserves singleton structured values after removing the field namespace', () => {
+        const root = document.createElement('div');
+        root.innerHTML = '<input name="vizyHost[n][b][fields][fields][choice][value]" value="kept">';
+        expect(getFieldAdapter('craft.generic').read(root)).toEqual({ value: 'kept' });
+
+        root.innerHTML = '<input name="vizyHost[n][b][fields][fields][coordinates][latitude][value]" value="0">';
+        expect(getFieldAdapter('craft.generic').read(root)).toEqual({ latitude: { value: '0' } });
+
+        // A field or value key named fields must not be mistaken for a namespace.
+        root.innerHTML = '<input name="vizyHost[n][b][fields][fields][fields][fields][value]" value="kept">';
+        expect(getFieldAdapter('craft.generic').read(root)).toEqual({ fields: { value: 'kept' } });
+
+        root.innerHTML = '<input name="fields[choice][value]" value="kept">';
+        expect(getFieldAdapter('craft.generic').read(root)).toEqual({ value: 'kept' });
+
+        root.innerHTML = '<input name="vizyHost[n][b][fields][fields][matrix][entries][new1][enabled]" value="1">';
+        expect(getFieldAdapter('craft.matrix').read(root)).toEqual({ entries: { new1: { enabled: '1' } } });
+    });
+
     it('parses Craft JSON field textareas into structured values', () => {
         const root = document.createElement('div');
         root.innerHTML = '<textarea name="fields[jsonField]">{"test":"www"}</textarea>';

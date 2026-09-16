@@ -190,7 +190,7 @@ export function readGenericFieldValue(root: HTMLElement): JsonValue {
     if (!entries.length) return null;
 
     const tree = buildBracketTree(entries);
-    return unwrapSingleFieldValue(tree);
+    return unwrapSingleFieldValue(tree, entries[0]!.name);
 }
 
 function buildBracketTree(entries: Array<{ name: string; value: string }>): JsonValue {
@@ -271,16 +271,19 @@ function assignPath(target: Record<string, unknown>, path: string[], value: stri
 }
 
 /**
- * A field wrapper only contains one field's inputs. Walk through singleton
- * namespace prefixes (vizyHost → nonce → blockUid → fields → handle) until the
- * posted field value remains.
+ * Remove only the known form namespace and field handle. The field value
+ * itself may contain singleton objects, which must retain their keys.
  */
-function unwrapSingleFieldValue(value: JsonValue): JsonValue {
+function unwrapSingleFieldValue(value: JsonValue, inputName: string): JsonValue {
+    const path = parseBracketPath(inputName);
+    // FieldLayoutForms wraps Craft's fields[handle] in its own Vizy namespace.
+    const depth = path[0] === 'vizyHost' && path[3] === 'fields' && path[4] === 'fields'
+        ? 6
+        : path[0] === 'fields' ? 2 : 1;
     let current: unknown = value;
-    while (current && typeof current === 'object' && !Array.isArray(current)) {
-        const keys = Object.keys(current);
-        if (keys.length !== 1) break;
-        current = (current as Record<string, unknown>)[keys[0]!];
+    for (const key of path.slice(0, depth)) {
+        if (!current || typeof current !== 'object') return null;
+        current = (current as Record<string, unknown>)[key];
     }
     return (current ?? null) as JsonValue;
 }
