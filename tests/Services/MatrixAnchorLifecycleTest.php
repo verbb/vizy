@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use craft\behaviors\CustomFieldBehavior;
+use craft\elements\Category;
 use craft\elements\Entry;
 use craft\fieldlayoutelements\CustomField;
 use craft\fields\Matrix;
@@ -10,6 +11,8 @@ use craft\fields\PlainText;
 use craft\helpers\ProjectConfig;
 use craft\helpers\StringHelper;
 use craft\models\EntryType;
+use craft\models\CategoryGroup;
+use craft\models\CategoryGroup_SiteSettings;
 use craft\models\FieldLayout;
 use craft\models\FieldLayoutTab;
 use Tests\Support\Fixtures\VizyFixtureFactory;
@@ -21,7 +24,7 @@ use verbb\vizy\Vizy;
 use yii\base\ModelEvent;
 use yii\base\Event;
 
-function matrixAnchorLifecycleFixture(): array
+function matrixAnchorLifecycleFixture(bool $categoryOwner = false): array
 {
     $suffix = StringHelper::randomString(8);
     $plain = new PlainText(['name' => 'Row text', 'handle' => 'lifecycleText' . $suffix]);
@@ -50,7 +53,22 @@ function matrixAnchorLifecycleFixture(): array
     $field->blockTypePickerGroups = [['name' => 'Content', 'blockTypeUids' => [$type->uid]]];
     expect(Craft::$app->getFields()->saveField($field))->toBeTrue();
     Craft::$app->getFields()->refreshFields();
-    $owner = VizyFixtureFactory::entry('Anchor lifecycle ' . $suffix);
+    if ($categoryOwner) {
+        $ownerLayout = new FieldLayout(['type' => Category::class]);
+        $ownerLayout->setTabs([new FieldLayoutTab([
+            'layout' => $ownerLayout, 'name' => 'Content', 'elements' => [new CustomField($field)],
+        ])]);
+        $group = new CategoryGroup(['name' => 'Lifecycle categories ' . $suffix, 'handle' => 'lifecycleCategories' . $suffix]);
+        $group->setFieldLayout($ownerLayout);
+        $group->setSiteSettings([new CategoryGroup_SiteSettings([
+            'siteId' => Craft::$app->getSites()->getPrimarySite()->id, 'hasUrls' => false,
+        ])]);
+        expect(Craft::$app->getCategories()->saveGroup($group))->toBeTrue();
+        $owner = new Category(['groupId' => $group->id, 'title' => 'Anchor lifecycle ' . $suffix]);
+        expect(Craft::$app->getElements()->saveElement($owner))->toBeTrue();
+    } else {
+        $owner = VizyFixtureFactory::entry('Anchor lifecycle ' . $suffix);
+    }
     foreach ($owner->getFieldLayout()->getCustomFieldElements() as $element) {
         if ($element->getField()->uid === $field->uid) {
             $element->getField()->blockTypePickerGroups = $field->blockTypePickerGroups;
@@ -150,3 +168,30 @@ it('does not restore Matrix rows that were independently trashed', function() {
         ->and(Entry::find()->id($row->id)->status(null)->exists())->toBeFalse()
         ->and(Entry::find()->id($row->id)->status(null)->trashed(true)->exists())->toBeTrue();
 });
+
+it('trashes and restores Matrix rows with a category owner', function() {
+    extract(matrixAnchorLifecycleFixture(true));
+    $elements = Craft::$app->getElements();
+    expect($elements->deleteElement($owner))->toBeTrue();
+    $rowVisibleInTrash = Entry::find()->id($row->id)->status(null)->exists();
+    expect($elements->restoreElement($owner))->toBeTrue();
+    $restored = Vizy::$plugin->getAnchors()->getAnchor($owner, $field, $blockUid, $anchor->uid);
+    expect($restored)->toBeInstanceOf(MatrixAnchor::class);
+    $restored->setFieldLayout($layout);
+    $rows = $restored->getFieldValue($matrix->handle)->all();
+    expect($rowVisibleInTrash)->toBeFalse()
+        ->and($rows)->toHaveCount(1)
+        ->and($rows[0]->id)->toBe($row->id)
+        ->and($rows[0]->getFieldValue($plain->handle))->toBe('Matrix survives restoration');
+});
+
+it('removes Matrix anchors and rows when a category is permanently deleted', function(bool $trashFirst) {
+    extract(matrixAnchorLifecycleFixture(true));
+    $elements = Craft::$app->getElements();
+    if ($trashFirst) {
+        expect($elements->deleteElement($owner))->toBeTrue();
+    }
+    expect($elements->deleteElement($owner, true))->toBeTrue();
+    $remaining = (new \craft\db\Query())->from('{{%elements}}')->where(['id' => [$anchor->id, $row->id]])->count();
+    expect((int)$remaining)->toBe(0);
+})->with([false, true]);

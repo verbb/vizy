@@ -14,6 +14,7 @@ use verbb\vizy\services\BlockTypes;
 use verbb\vizy\services\EditorConfigs;
 
 use Craft;
+use craft\base\Element;
 use craft\base\Plugin;
 use craft\elements\ContentBlock;
 use craft\elements\Entry;
@@ -238,12 +239,11 @@ class Vizy extends Plugin
             }
         });
 
-        Event::on(Entry::class, Entry::EVENT_BEFORE_DELETE, function(ModelEvent $event) {
-            $entry = $event->sender;
-            Vizy::$plugin->getAnchors()->prepareOwnerDeletion($entry);
+        Event::on(Element::class, Element::EVENT_BEFORE_DELETE, function(ModelEvent $event) {
+            Vizy::$plugin->getAnchors()->prepareOwnerDeletion($event->sender);
         });
 
-        Event::on(Entry::class, Entry::EVENT_AFTER_RESTORE, function(Event $event) {
+        Event::on(Element::class, Element::EVENT_AFTER_RESTORE, function(Event $event) {
             Vizy::$plugin->getAnchors()->restoreAnchorsForOwner($event->sender);
         });
 
