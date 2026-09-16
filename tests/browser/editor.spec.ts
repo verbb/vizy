@@ -1016,7 +1016,7 @@ test('stored embed content cannot create executable CP markup', async ({ page })
 });
 
 // Exercise normal documents beyond private clipboard byte, node, and width limits.
-test('large rich-text document edits stay within a responsive transaction budget', async ({ page }, testInfo) => {
+test('large rich-text document edits stay within a responsive transaction budget', { tag: '@performance' }, async ({ page }, testInfo) => {
     await mount(page, {
         type: 'doc', attrs: { schemaVersion: 2 }, content: Array.from({ length: 4000 }, (_, index) => ({
             type: 'paragraph', content: [{ type: 'text', text: `Paragraph ${index} with rich text.` }],

@@ -77,6 +77,8 @@ asset metadata privacy, and dedicated relation, Matrix and draft journeys. It ho
 do not run the PHP suite concurrently against that same DDEV project. The seeded
 accounts and public web entry point are only for this owned test application.
 
+The harness runs tests tagged `@performance` in separate browser projects after the functional tests, with one engine at a time. This keeps other test workers from distorting wall-clock budgets while retaining parallel functional coverage. To repeat a timing check in isolation, use `npm run test:browser -- --project=firefox-performance --no-deps --repeat-each=3`; avoid running other test workloads alongside it.
+
 CI runs the complete ordinary PHP suite (including slow and performance groups),
 frontend contracts, all three harness browsers, and the real Craft browser lane.
 The explicit `perf-large` and `migrate-plugins` groups remain separate workloads;
