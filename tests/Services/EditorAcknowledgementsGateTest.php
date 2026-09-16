@@ -419,3 +419,39 @@ it('acknowledges the first provisional draft created from a canonical editor con
         ->and($result['vizy']['results'][0]['requestKind'])->toBe('autosave')
         ->and($result['vizy']['results'][0]['canonicalDocument']['content'][0]['content'][0]['text'])->toBe('Autosaved current text');
 });
+
+
+it('reopens a failed upload with a retry token for the current saved document only', function() {
+    $context = acknowledgementAssetDocument('Reopen');
+    Vizy::$plugin->getAssetUploads()->setMoveAssetHandlerForTesting(static fn(): bool => false);
+    WebControllerHarness::withWebRequest([], 'elements/save', function() use ($context) {
+        expect(Craft::$app->getElements()->saveElement($context['owner'], false))->toBeTrue();
+    });
+    Vizy::$plugin->getAssetUploads()->resetRequestStateForTesting();
+    $owner = Entry::find()->id($context['owner']->id)->status(null)->one();
+    $value = $owner->getFieldValue($context['field']->handle);
+    $readBootstrap = function($document) use ($context, $owner) {
+        return WebControllerHarness::withWebRequest([], 'entries/edit-entry', function() use ($context, $owner, $document) {
+            $html = $context['field']->getInputHtml($document, $owner);
+            preg_match('/<template\b[^>]*data-vizy-bootstrap[^>]*>(.*?)<\/template>/s', $html, $matches);
+            return Json::decode($matches[1]);
+        });
+    };
+    $bootstrap = $readBootstrap($value);
+    expect($bootstrap['finalization']['finalizationStatus'] ?? null)->toBe('failed')
+        ->and($bootstrap['finalization']['retryToken'] ?? null)->toBeString()->not->toBe('');
+    $payload = Vizy::$plugin->getEditorAcknowledgements()->verifyRetryToken($bootstrap['finalization']['retryToken']);
+    expect($payload['ownerId'])->toBe((int)$owner->id);
+
+    // A stale batch must not label unrelated replacement content as failed.
+    $changed = $context['field']->normalizeValue(VizyFixtureFactory::paragraphDocument('Replacement'), $owner);
+    expect($readBootstrap($changed)['finalization']['finalizationStatus'])->toBe('complete');
+
+    Vizy::$plugin->getAssetUploads()->setMoveAssetHandlerForTesting(null);
+    $before = $owner->dateUpdated->format('c');
+    $response = WebControllerHarness::retryFinalization(['retryToken' => $bootstrap['finalization']['retryToken']]);
+    expect($response->data['finalizationStatus'])->toBe('complete')
+        ->and(AssetSpikeFixture::isTempAsset(Craft::$app->getAssets()->getAssetById($context['temp']->id)))->toBeFalse()
+        ->and(Entry::find()->id($owner->id)->status(null)->one()->dateUpdated->format('c'))->toBe($before)
+        ->and($readBootstrap($value)['finalization']['finalizationStatus'])->toBe('complete');
+});

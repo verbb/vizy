@@ -336,6 +336,14 @@ it('reports draft work as pending and revisions as explicitly non-finalizable', 
         ->and($revisionResult['status'])->toBe('nonFinalizable')
         ->and($revisionResult['deferredReason'])->toBe('revisionAssetsNeverFinalize')
         ->and(AssetSpikeFixture::isTempAsset(Craft::$app->getAssets()->getAssetById($temp->id)))->toBeTrue();
+
+    $bootstrapStatus = Vizy::$plugin->getEditorAcknowledgements()->initialFinalization(
+        assetPlacementDocument($draftContext, (int)$temp->id, 'draft-block'),
+        'deferred-draft-editor',
+    );
+    expect($bootstrapStatus['finalizationStatus'])->toBe('pending')
+        ->and($bootstrapStatus['finalizationDeferredReason'])->toBe('draftDeferredUntilCanonicalPublish')
+        ->and($bootstrapStatus['retryToken'])->toBeNull();
 });
 
 it('fails semantic Image finalization closed and ignores malicious JSON destinations', function() {

@@ -19,6 +19,7 @@
   access; image transforms remain preview-oriented.
 
 ### Fixed
+- Fixed failed file uploads being hidden after saving or reopening content, with an upload retry that preserves unsaved edits.
 - Fixed required Vizy fields accepting blank paragraphs as content.
 - Fixed the Block menu’s Move down action leaving the Block in its original position.
 - Fixed structured custom field values losing their keys when edited inside Blocks.

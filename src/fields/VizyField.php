@@ -845,6 +845,7 @@ class VizyField extends Field
             'document' => $document,
             'manifest' => $manifest,
             'editorContextToken' => $context['token'],
+            'finalization' => Vizy::$plugin->getEditorAcknowledgements()->initialFinalization($value, $editorId),
             // Real FieldLayout forms for Blocks already in the document arrive with
             // the CP response. The browser adopts them before first paint; later
             // Blocks retain the request-driven viewport path.

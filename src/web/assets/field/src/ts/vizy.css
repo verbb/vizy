@@ -38,6 +38,19 @@ vizy-editor:not(:has(.vizy-editor-shell)) {
     background: var(--white, #fff);
 }
 
+.vizy-upload-status:not([hidden]) {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--pk-space-2, 0.5rem);
+    padding: var(--pk-space-3, 0.75rem);
+    margin-bottom: var(--pk-space-2, 0.5rem);
+    border: 1px solid var(--vizy-border);
+    border-radius: var(--vizy-radius);
+    background: var(--vizy-panel);
+    color: var(--vizy-text);
+}
+
 /* Boot failure — replaces a blank frame when the editor module or initialize() throws. */
 .vizy-field-boot-failure {
     box-sizing: border-box;

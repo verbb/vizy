@@ -93,6 +93,7 @@ async function mount(
         /** Default true — Blocks with FieldLayouts must not inject failure chrome into ProseMirror queries. */
         layoutSuccess?: boolean;
         initialFieldLayouts?: unknown[];
+        finalization?: unknown;
         manifest?: typeof editorManifest;
     } = {},
 ) {
@@ -170,17 +171,19 @@ async function mount(
     // `vizy.ts` publishes the queue before its failure-isolated editor-runtime
     // import resolves. Wait for the real custom element, not just the queue API.
     await expect.poll(() => page.evaluate(() => Boolean(customElements.get('vizy-editor')))).toBe(true);
-    await page.evaluate(({ document, manifest, initialFieldLayouts }) => {
+    await page.evaluate(({ document, manifest, initialFieldLayouts, finalization }) => {
         (window as any).Craft.Vizy.bootstrapEditor('editor', {
             document,
             manifest,
             editorContextToken: 'test',
             initialFieldLayouts,
+            finalization,
         });
     }, {
         document,
         manifest: options.manifest ?? editorManifest,
         initialFieldLayouts: options.initialFieldLayouts,
+        finalization: options.finalization,
     });
     await expect(page.locator('.ProseMirror')).toBeVisible();
 }
@@ -370,6 +373,83 @@ test('renders unsupported content as payload-free fixed UI', async ({ page }) =>
     await expect(placeholder).not.toHaveAttribute('data-raw');
     await expect(page.locator('.ProseMirror')).not.toContainText('RAW_SENTINEL');
     expect(await page.evaluate(() => (window as any).bad)).toBeUndefined();
+});
+
+test('reopened upload failures can retry without resaving or replacing new edits', async ({ page }) => {
+    await mount(page, {
+        type: 'doc', attrs: { schemaVersion: 2 },
+        content: [{ type: 'paragraph', content: [{ type: 'text', text: 'Saved text' }] }],
+    }, { finalization: { finalizationStatus: 'failed', finalizationErrors: [{ message: 'Private server path' }], retryToken: 'retry-token' } });
+    const notice = page.locator('[data-vizy-upload-status]');
+    await expect(notice).toContainText('Some files could not be uploaded');
+    await expect(notice).not.toContainText('Private server path');
+    expect(await page.locator('vizy-editor').evaluate((element: any) => element.fullySaved)).toBe(false);
+    await page.locator('.ProseMirror p').fill('Unsaved next edit');
+    await page.evaluate(() => {
+        (window as any).__retryCalls = [];
+        (window as any).Craft.sendActionRequest = async (method: string, action: string, config: any) => {
+            (window as any).__retryCalls.push({ method, action, data: config.data });
+            return { data: { success: true, finalizationStatus: 'complete', retryToken: null,
+                canonicalDocument: { type: 'doc', attrs: { schemaVersion: 2 }, content: [] } } };
+        };
+    });
+    await page.getByRole('button', { name: 'Retry uploads', exact: true }).click();
+    await expect(notice).toContainText('Uploads completed');
+    await expect(page.locator('.ProseMirror p')).toHaveText('Unsaved next edit');
+    expect(await page.evaluate(() => (window as any).__retryCalls)).toEqual([
+        { method: 'POST', action: 'vizy/finalization/retry', data: { retryToken: 'retry-token' } },
+    ]);
+    expect(await page.locator('vizy-editor').evaluate((element: any) => ({dirty: element.isDirty, status: element.finalizationState.status})))
+        .toEqual({ dirty: true, status: 'complete' });
+    // Craft can detach and later remount the same field element.
+    await page.locator('vizy-editor').evaluate(async (element: any) => {
+        const parent = element.parentElement;
+        element.remove();
+        await new Promise((resolve) => setTimeout(resolve, 10));
+        parent.append(element);
+    });
+    await expect.poll(() => page.locator('vizy-editor').evaluate((element: any) => element.editor !== null)).toBe(true);
+    expect(await page.locator('vizy-editor').evaluate((element: any) => element.finalizationState.status)).toBe('complete');
+});
+
+test('upload retries recover from request failures and ignore results superseded by a save', async ({ page }) => {
+    await mount(page, { type: 'doc', content: [{ type: 'paragraph', content: [{ type: 'text', text: 'Saved' }] }] }, {
+        finalization: { finalizationStatus: 'failed', retryToken: 'original-token' },
+    });
+    await page.evaluate(() => {
+        (window as any).Craft.sendActionRequest = async () => { throw new Error('Network unavailable'); };
+    });
+    const retry = page.getByRole('button', { name: 'Retry uploads', exact: true });
+    await retry.focus();
+    await page.keyboard.press('Enter');
+    await expect(page.locator('[data-vizy-upload-status]')).toBeFocused();
+    await expect(retry).toBeEnabled();
+    await expect(page.locator('[data-vizy-upload-status]')).toContainText('Some files could not be uploaded');
+
+    await page.evaluate(() => {
+        (window as any).Craft.sendActionRequest = () => new Promise((resolve) => { (window as any).__finishRetry = resolve; });
+    });
+    await retry.click();
+    await expect(retry).toBeDisabled();
+    await page.evaluate(() => {
+        const element = document.querySelector('vizy-editor') as any;
+        const metadata = element.beginSubmission();
+        element.acceptServerResult({ requestKind: 'save', submittedClientRevision: metadata.clientRevision,
+            canonicalDocument: element.editor.getJSON(), success: true,
+            finalizationStatus: 'failed', retryToken: 'new-token' }, metadata.generation);
+        (window as any).__finishRetry({ data: { success: true, finalizationStatus: 'complete', retryToken: null } });
+    });
+    await expect(retry).toBeEnabled();
+    expect(await page.locator('vizy-editor').evaluate((element: any) => element.finalizationState))
+        .toMatchObject({ status: 'failed', retryToken: 'new-token' });
+});
+
+test('draft uploads explain publication deferral without offering a retry', async ({ page }) => {
+    await mount(page, { type: 'doc', content: [] }, {
+        finalization: { finalizationStatus: 'pending', finalizationDeferredReason: 'draftDeferredUntilCanonicalPublish', retryToken: null },
+    });
+    await expect(page.locator('[data-vizy-upload-status]')).toContainText('Files will finish uploading when you publish this draft');
+    await expect(page.getByRole('button', { name: 'Retry uploads' })).toHaveCount(0);
 });
 
 test('tracks persisted content separately from finalization and ignores stale generations', async ({ page }) => {

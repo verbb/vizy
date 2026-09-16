@@ -43,6 +43,11 @@ class VizyAsset extends AssetBundle
 
             $view->registerTranslations('vizy', [
                 'Link to the current site',
+                'Uploads completed.',
+                'Some files could not be uploaded. Your content is saved. Retry the uploads or contact your administrator.',
+                'Files will finish uploading when you publish this draft.',
+                'Your content is saved, but file uploads are still pending.',
+                'Retry uploads',
             ]);
         }
     }

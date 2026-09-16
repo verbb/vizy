@@ -128,6 +128,36 @@ final class AssetUploads extends Component
         return $this->results[$this->_scopeKey($owner, $field)] ?? null;
     }
 
+    public function resultForDocument(VizyDocument $document): ?array
+    {
+        $owner = $document->owner();
+        $field = $document->field();
+        if (!$owner?->id || !$owner->siteId || !$field?->uid || $owner->getIsRevision()) {
+            return null;
+        }
+
+        // Historical failures must not describe replacement or unsaved content.
+        $batch = AssetUploadBatch::find()->where([
+            'ownerType' => $owner::class,
+            'ownerId' => $owner->id,
+            'siteId' => $owner->siteId,
+            'derivativeKey' => $this->_derivativeKey($owner),
+            'fieldUid' => $field->uid,
+            'snapshotHash' => hash('sha256', Vizy::$plugin->getDocuments()->serializeValue($document)),
+        ])->orderBy(['id' => SORT_DESC])->one();
+        if (!$batch) {
+            return null;
+        }
+
+        return $this->_result(
+            (string)$batch->status,
+            (int)$batch->id,
+            (int)$batch->attempts,
+            $batch->status === 'failed' && $batch->lastError ? [(string)$batch->lastError] : [],
+            $batch->status === 'pending' ? $batch->lastError : null,
+        );
+    }
+
     public function statusForOwner(ElementInterface $owner, VizyField $field): array
     {
         if (!$owner->id || !$owner->siteId || !$field->uid) {

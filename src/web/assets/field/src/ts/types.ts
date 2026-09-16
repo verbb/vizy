@@ -265,10 +265,18 @@ export type VizyBootstrapLinkOption = {
     criteria?: Record<string, unknown>;
 };
 
+export interface FinalizationResult {
+    finalizationStatus: 'complete' | 'pending' | 'failed';
+    finalizationErrors?: readonly { code?: string; message?: string }[];
+    finalizationDeferredReason?: string | null;
+    retryToken?: string | null;
+}
+
 export interface EditorBootstrap {
     document: CanonicalNode;
     manifest: EditorManifest;
     editorContextToken: string;
+    finalization?: FinalizationResult;
     /** Real server-rendered FieldLayout forms for Blocks already in the document. */
     initialFieldLayouts?: InitialFieldLayoutEntry[];
     /**

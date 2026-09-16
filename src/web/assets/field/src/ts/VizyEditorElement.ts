@@ -14,7 +14,8 @@ import { registerLayoutInsertion } from './layout/insertion';
 import { resolveLayoutPresets } from './layout/presets';
 import type { InsertionRegistry } from './insertion/types';
 import { InsertionOverlay } from './insertion/overlay';
-import type { CanonicalNode, EditorBootstrap, EditorManifest, JsonValue } from './types';
+import type { CanonicalNode, EditorBootstrap, EditorManifest, FinalizationResult, JsonValue } from './types';
+import '@verbb/plugin-kit-web/components/button/pk-button.js';
 import type { ToolbarUiActionDetail } from './toolbar/VizyToolbarElement';
 import { refreshBlockSummaries } from './blocks/summary-sync';
 import { selectLayoutTab } from './layout-tabs';
@@ -53,15 +54,12 @@ import { playBlockInsertAnimation } from './blocks/block-insert-animation';
 import { duplicateBlock } from './blocks/actions';
 import { paintFieldBootFailure } from './field-boot-failure';
 
-type FinalizationStatus = 'complete' | 'pending' | 'failed';
-export interface ServerDocumentResult {
+type FinalizationStatus = FinalizationResult['finalizationStatus'];
+export interface ServerDocumentResult extends FinalizationResult {
     requestKind: 'save' | 'autosave' | 'livePreview' | 'validation';
     submittedClientRevision: number;
     canonicalDocument: CanonicalNode;
     success: boolean;
-    finalizationStatus: FinalizationStatus;
-    finalizationErrors?: readonly { code?: string; message?: string }[];
-    retryToken?: string | null;
 }
 type SubmissionMetadata = {
     editorId: string;
@@ -122,6 +120,11 @@ export class VizyEditorElement extends HTMLElement {
     #finalizationStatus: FinalizationStatus = 'complete';
     #finalizationErrors: readonly { code?: string; message?: string }[] = [];
     #retryToken: string | null = null;
+    #finalizationDeferredReason: string | null = null;
+    #finalizationVersion = 0;
+    #uploadNotice: HTMLDivElement | null = null;
+    #retryingUploads = false;
+    #showUploadSuccess = false;
     #generation = 0;
     #submissions = new Map<number, { revision: number; canonical: string }>();
     #reconciling = false;
@@ -270,9 +273,7 @@ export class VizyEditorElement extends HTMLElement {
         ) return;
         if (result.requestKind === 'livePreview') return;
         if (!result.success) return;
-        this.#finalizationStatus = result.finalizationStatus;
-        this.#finalizationErrors = result.finalizationErrors ?? [];
-        this.#retryToken = result.retryToken ?? null;
+        this.#acceptFinalization(result);
         // The accepted server document is the content persistence fact. Reuse
         // UID-keyed hosts while adapting any normalization back into TipTap.
         if (result.submittedClientRevision === this.#revision) {
@@ -311,6 +312,9 @@ export class VizyEditorElement extends HTMLElement {
     }
 
     #teardown(): void {
+        this.#finalizationVersion++;
+        this.#uploadNotice = null;
+        this.#retryingUploads = false;
         for (const dispose of this.#disposals.splice(0)) dispose();
         this.#hosts.destroy();
         this.#ui.clear();
@@ -330,6 +334,80 @@ export class VizyEditorElement extends HTMLElement {
         this.#imageBubble = null;
         this.#embedBubble = null;
         this.querySelector('.vizy-editor-shell')?.remove();
+    }
+
+    #acceptFinalization(result: FinalizationResult): void {
+        this.#showUploadSuccess = this.#finalizationStatus !== 'complete' && result.finalizationStatus === 'complete';
+        this.#finalizationVersion++;
+        this.#retryingUploads = false;
+        this.#finalizationStatus = result.finalizationStatus;
+        this.#finalizationErrors = result.finalizationErrors ?? [];
+        this.#finalizationDeferredReason = result.finalizationDeferredReason ?? null;
+        this.#retryToken = result.retryToken ?? null;
+        if (this.#bootstrap) {
+            this.#bootstrap.finalization = {
+                finalizationStatus: this.#finalizationStatus,
+                finalizationErrors: this.#finalizationErrors,
+                finalizationDeferredReason: this.#finalizationDeferredReason,
+                retryToken: this.#retryToken,
+            };
+        }
+        this.#renderUploadStatus();
+    }
+
+    #renderUploadStatus(): void {
+        const notice = this.#uploadNotice;
+        if (!notice) return;
+        notice.hidden = this.#finalizationStatus === 'complete' && !this.#showUploadSuccess;
+        const t = (message: string) => window.Craft?.t?.('vizy', message) ?? message;
+        const message = document.createElement('span');
+        if (this.#finalizationStatus === 'complete') {
+            message.textContent = t('Uploads completed.');
+        } else if (this.#finalizationStatus === 'failed') {
+            message.textContent = t('Some files could not be uploaded. Your content is saved. Retry the uploads or contact your administrator.');
+        } else if (this.#finalizationDeferredReason === 'draftDeferredUntilCanonicalPublish') {
+            message.textContent = t('Files will finish uploading when you publish this draft.');
+        } else {
+            message.textContent = t('Your content is saved, but file uploads are still pending.');
+        }
+        notice.replaceChildren(message);
+        if (this.#retryToken && this.#finalizationStatus !== 'complete') {
+            const button = document.createElement('pk-button');
+            button.type = 'button';
+            button.size = 'sm';
+            button.textContent = t('Retry uploads');
+            button.ariaLabel = t('Retry uploads');
+            button.loading = this.#retryingUploads;
+            button.disabled = this.#retryingUploads;
+            button.addEventListener('click', () => { void this.#retryUploads(); });
+            notice.append(button);
+        }
+    }
+
+    async #retryUploads(): Promise<void> {
+        const token = this.#retryToken;
+        if (!token || this.#retryingUploads) return;
+        const version = this.#finalizationVersion;
+        this.#retryingUploads = true;
+        this.#renderUploadStatus();
+        try {
+            const response = await window.Craft?.sendActionRequest?.<FinalizationResult & { success: boolean }>(
+                'POST', 'vizy/finalization/retry', { data: { retryToken: token } },
+            );
+            if (!response?.data.success || !['complete', 'pending', 'failed'].includes(response.data.finalizationStatus)) {
+                throw new Error('uploadRetryFailed');
+            }
+            if (version !== this.#finalizationVersion || this.#destroyed) return;
+            // A retry acknowledges only the uploaded files. In particular, its
+            // saved snapshot must never replace edits made since the owner save.
+            this.#acceptFinalization(response.data);
+        } catch {
+            if (version !== this.#finalizationVersion || this.#destroyed) return;
+            this.#retryingUploads = false;
+            this.#finalizationStatus = 'failed';
+            this.#renderUploadStatus();
+        }
+        this.#uploadNotice?.focus({ preventScroll: true });
     }
 
     /**
@@ -495,8 +573,14 @@ export class VizyEditorElement extends HTMLElement {
         // under the editor body (that forced absolute coords + clipping).
         const shell = document.createElement('div');
         shell.className = 'vizy-editor-shell';
-        shell.append(this.#mount);
+        this.#uploadNotice = document.createElement('div');
+        this.#uploadNotice.className = 'vizy-upload-status';
+        this.#uploadNotice.dataset.vizyUploadStatus = '';
+        this.#uploadNotice.setAttribute('role', 'status');
+        this.#uploadNotice.tabIndex = -1;
+        shell.append(this.#uploadNotice, this.#mount);
         this.prepend(shell);
+        this.#acceptFinalization(this.#bootstrap.finalization ?? { finalizationStatus: 'complete' });
         let editor!: Editor;
         let insertion!: InsertionRegistry;
         const editorId = this.id || `vizy-editor-${manifest.field.fieldUid}`;

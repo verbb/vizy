@@ -45,6 +45,14 @@ final class EditorAcknowledgements extends Component
         $this->accepted = [];
     }
 
+    public function initialFinalization(VizyDocument $document, string $editorId): array
+    {
+        return $this->_finalization(
+            Vizy::$plugin->getAssetUploads()->resultForDocument($document) ?? ['status' => 'complete'],
+            ['editorId' => $editorId, 'generation' => 0, 'clientRevision' => 0],
+        );
+    }
+
     public function collect(ElementInterface $owner, VizyField $field, VizyDocument $document): void
     {
         $request = Craft::$app->getRequest();
@@ -103,12 +111,6 @@ final class EditorAcknowledgements extends Component
             $metadata = $item['metadata'];
             $assetResult = Vizy::$plugin->getAssetUploads()->resultForOwner($item['owner'], $item['field'])
                 ?? ['status' => 'complete', 'batchId' => null, 'errors' => [], 'deferredReason' => null];
-            $status = in_array($assetResult['status'] ?? null, ['complete', 'pending', 'failed'], true)
-                ? $assetResult['status']
-                : 'complete';
-            $retryToken = in_array($status, ['pending', 'failed'], true) && !empty($assetResult['batchId'])
-                ? $this->_issueRetryToken((int)$assetResult['batchId'], $metadata)
-                : null;
             $results[] = [
                 'editorId' => (string)($metadata['editorId'] ?? ''),
                 'generation' => $metadata['generation'],
@@ -116,12 +118,7 @@ final class EditorAcknowledgements extends Component
                 'submittedClientRevision' => $metadata['clientRevision'],
                 'canonicalDocument' => $item['document']->toArray(),
                 'success' => true,
-                'finalizationStatus' => $status,
-                'finalizationErrors' => array_map(
-                    static fn(string $message): array => ['code' => 'assetFinalization', 'message' => $message],
-                    $assetResult['errors'] ?? [],
-                ),
-                'retryToken' => $retryToken,
+                ...$this->_finalization($assetResult, $metadata),
             ];
         }
         $response->data['vizy'] = ['results' => $results];
@@ -155,6 +152,28 @@ final class EditorAcknowledgements extends Component
 
     // Private Methods
     // =========================================================================
+
+    private function _finalization(array $result, array $metadata): array
+    {
+        $status = in_array($result['status'] ?? null, ['complete', 'pending', 'failed'], true)
+            ? $result['status']
+            : 'complete';
+        $deferredReason = $result['deferredReason'] ?? null;
+        $retryable = in_array($status, ['pending', 'failed'], true)
+            && !in_array($deferredReason, ['draftDeferredUntilCanonicalPublish', 'livePreviewDeferred'], true);
+
+        return [
+            'finalizationStatus' => $status,
+            'finalizationErrors' => array_map(
+                static fn(string $message): array => ['code' => 'assetFinalization', 'message' => $message],
+                $result['errors'] ?? [],
+            ),
+            'finalizationDeferredReason' => $deferredReason,
+            'retryToken' => $retryable && !empty($result['batchId'])
+                ? $this->_issueRetryToken((int)$result['batchId'], $metadata)
+                : null,
+        ];
+    }
 
     private function _issueRetryToken(int $batchId, array $metadata): string
     {

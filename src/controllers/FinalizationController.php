@@ -57,6 +57,7 @@ final class FinalizationController extends Controller
             'canonicalDocument' => $document->toArray(),
             'success' => true,
             'finalizationStatus' => $result['status'],
+            'finalizationDeferredReason' => $result['deferredReason'] ?? null,
             'finalizationErrors' => array_map(
                 static fn(string $message): array => ['code' => 'assetFinalization', 'message' => $message],
                 $result['errors'] ?? [],
