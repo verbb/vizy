@@ -7,4 +7,8 @@ abstract class Table
     // =========================================================================
 
     public const MATRIX_ANCHORS = '{{%vizy_matrix_anchors}}';
+    public const BLOCK_TYPES = '{{%vizy_blocktypes}}';
+    public const ASSET_UPLOAD_BATCHES = '{{%vizy_asset_upload_batches}}';
+    public const OWNER_MIGRATIONS = '{{%vizy_owner_migrations}}';
+    public const SCHEMA_PROMOTIONS = '{{%vizy_schema_promotions}}';
 }

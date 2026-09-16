@@ -1,0 +1,851 @@
+/*
+ * Editor Config settings. Plugin Kit tokens style lightswitches / tooltips /
+ * checkbox-select; the toolbar dropdown *preview* below mirrors `pk-dropdown-menu`
+ * `size="sm"` panel UI (live authoring uses the real component — this surface
+ * is an editable roster: toggle off, drag reorder, stay open).
+ */
+
+.vizy-editor-config {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+.vizy-editor-config-tabs {
+    display: flex;
+    gap: 8px;
+    border-bottom: 1px solid rgba(96, 125, 159, 0.2);
+    margin-bottom: 4px;
+}
+
+.vizy-editor-config-tabs button {
+    border: 0;
+    background: transparent;
+    padding: 8px 12px;
+    margin-bottom: -1px;
+    border-bottom: 2px solid transparent;
+    cursor: pointer;
+    font: inherit;
+    color: #596673;
+}
+
+.vizy-editor-config-tabs button.active {
+    color: #0d99f2;
+    border-bottom-color: #0d99f2;
+    font-weight: 600;
+}
+
+.vizy-editor-config-panel {
+    display: grid;
+    gap: 20px;
+}
+
+.vizy-editor-config-section h3 {
+    margin: 0 0 8px;
+}
+
+.vizy-editor-config-section .instructions {
+    margin: 0 0 12px;
+    color: #596673;
+}
+
+/*
+ * Content schema: the advanced half of the screen, folded away.
+ *
+ * A native `<details>` rather than a scripted panel. It is the one disclosure on this screen,
+ * the state it holds is "is it open", and the element already answers to a click, to Enter and
+ * to a screen reader without any of that being written here. What *is* written here is the open
+ * state surviving a re-render — see `#schemaOpen`, which exists because ticking a box inside
+ * rebuilds the panel.
+ */
+.vizy-editor-config-schema {
+    border-top: 1px solid rgba(96, 125, 159, 0.2);
+    padding-top: 16px;
+}
+
+/*
+ * The summary is the section's heading, so it is weighted like one. `list-style: none` plus the
+ * WebKit pseudo-element covers both spellings of "remove the native marker"; the chevron is
+ * drawn below so it can be positioned and rotated.
+ */
+.vizy-editor-config-schema > summary {
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+    list-style: none;
+    cursor: pointer;
+}
+
+.vizy-editor-config-schema > summary::-webkit-details-marker {
+    display: none;
+}
+
+.vizy-editor-config-schema-title {
+    font-weight: 600;
+}
+
+.vizy-editor-config-schema-title::before {
+    content: '';
+    display: inline-block;
+    width: 6px;
+    height: 6px;
+    margin-right: 8px;
+    border-right: 1.5px solid currentColor;
+    border-bottom: 1.5px solid currentColor;
+    border-radius: 1px;
+    /* Points right when closed, down when open, as a disclosure does everywhere. */
+    transform: translateY(-2px) rotate(-45deg);
+    opacity: 0.6;
+}
+
+.vizy-editor-config-schema[open] .vizy-editor-config-schema-title::before {
+    transform: translateY(-2px) rotate(45deg);
+}
+
+/*
+ * The count, which is why this section is a fold rather than another tab: a schema that has
+ * been narrowed says so without being opened, so "why is that button not offered" is
+ * answerable from the closed state.
+ */
+.vizy-editor-config-schema-count {
+    font-size: 12px;
+    color: #596673;
+}
+
+.vizy-editor-config-schema > .instructions {
+    margin-top: 12px;
+}
+
+/*
+ * The Content schema section is a set of `pk-checkbox-select`s, which lay out their own options in
+ * their own default stacked arrangement. The grid of hand-rolled checkbox labels that used
+ * to live here is gone with them, and so is the gap override that went with laying them
+ * out horizontally.
+ */
+pk-checkbox-select {
+    display: block;
+}
+
+/*
+ * One well holding both halves of the builder: available items and the live
+ * toolbar preview. White rather than a tinted tray — the border + headings
+ * already separate the halves, and a wash competed with the toolbar strip.
+ */
+.vizy-editor-config-builder {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    /*
+     * Held in a custom property because the preview half has to cancel the bottom
+     * padding exactly, to reach the edge of the panel and be faded out there. Two
+     * separate literals drifted apart the first time this was retuned.
+     */
+    --vizy-builder-padding: 16px;
+    --vizy-builder-bg: #fff;
+    gap: var(--vizy-builder-padding);
+    border: 1px solid rgba(96, 125, 159, 0.25);
+    border-radius: 4px;
+    background: var(--vizy-builder-bg);
+    padding: var(--vizy-builder-padding);
+    /*
+     * Deliberately not clipped. It was, to keep the editor stub inside the panel, but the stub
+     * never actually escaped — `.is-preview` cancels the bottom padding exactly, so it ends at the
+     * padding edge and the gradient below fades it there. The clip was insurance, and it cost the
+     * open menu, which has to be free to hang past this edge rather than push the panel taller and
+     * shift the page — see `.vizy-editor-config-menu`.
+     */
+}
+
+/*
+ * Fades the bottom of the panel back to its own colour, so the editor stub's side
+ * rules trail off instead of stopping at a hard edge. This is what makes a 32px
+ * stub read as "an editor continues below" rather than "a box that got cut".
+ * Copied in spirit from Craft's CKEditor toolbar builder, which does the same.
+ */
+.vizy-editor-config-builder::after {
+    content: '';
+    position: absolute;
+    right: 0;
+    bottom: 0;
+    left: 0;
+    height: 26px;
+    background: linear-gradient(to bottom, transparent, var(--vizy-builder-bg));
+    /* Decoration sitting over the drop zone; it must never absorb a drop. */
+    pointer-events: none;
+}
+
+.vizy-editor-config-available,
+.vizy-editor-config-active {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 4px;
+    /* One 32px row plus the strip's padding, so an empty list keeps a button's height. */
+    min-height: 40px;
+    /*
+     * No cursor of its own, deliberately. It carried `grab` for a while to stop the flicker
+     * described on `.vizy-control::after`, which worked and was a lie: the empty tail of a
+     * half-filled row offered to be picked up, and there is nothing there to pick up. The
+     * buttons now claim the gaps themselves, so the flicker is gone without the tray having to
+     * claim anything.
+     */
+}
+
+.vizy-editor-config-available {
+    align-content: flex-start;
+}
+
+/*
+ * Nothing marks the groups of the palette's sequence — marks, then Link, then the two list types,
+ * and so on. The grouping is expressed by what sits next to what, which `PALETTE_ORDER` arranges,
+ * and one evenly spaced row is what it should look like. A 12px gap between each was tried and
+ * turned a hint into a set of dividers, competing with `separator` a few squares along, which is
+ * genuinely drawn as a vertical rule.
+ */
+
+/*
+ * A titled half of the builder. Now that the available items and the toolbar items
+ * are drawn identically — the fading that used to separate them read as "disabled"
+ * — a heading is what says which is which. CKEditor leaves both halves unlabelled
+ * and relies on the editor frame alone to imply it.
+ */
+.vizy-editor-config-group {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+/* The section headings own their spacing here, via the group's gap. */
+.vizy-editor-config-group .vizy-editor-config-subhead {
+    margin-bottom: 0;
+}
+
+/*
+ * The preview half runs off the bottom of the panel: it absorbs the panel's own
+ * bottom padding so the editor's body stub can reach the edge and be faded out
+ * there by the panel gradient.
+ */
+.vizy-editor-config-group.is-preview {
+    margin-bottom: calc(var(--vizy-builder-padding) * -1);
+}
+
+/* Toolbar and the body stub beneath it, stacked into one editor. */
+.vizy-editor-config-editor {
+    /* The open menu's containing block, so it can overlay the stub instead of displacing it. */
+    position: relative;
+    display: flex;
+    flex-direction: column;
+}
+
+/*
+ * The active list is not a list of chips — it *is* the toolbar preview, so it
+ * carries the same appearance the editor renders (see `control-appearance.ts`). Raised
+ * above the body stub, the way a real editor's toolbar sits over its content.
+ */
+.vizy-editor-config-active {
+    position: relative;
+    z-index: 1;
+    padding: 4px 6px;
+    border: 1px solid var(--pk-input-border-color, var(--pk-color-slate-400, #607d9f66));
+    border-radius: var(--pk-input-border-radius, 3px) var(--pk-input-border-radius, 3px) 0 0;
+    background: #fff;
+    box-shadow: 0 2px 3px #31315d13;
+}
+
+/*
+ * The selected dropdown, open under the trigger it belongs to.
+ *
+ * Panel + row metrics match Plugin Kit `pk-dropdown-menu` `size="sm"` (see
+ * `@verbb/plugin-kit-web` dropdown-menu-size tokens). Builder-only: grab cursor,
+ * is-off strikethrough, is-slot dashed rule, absolute placement via `#alignMenu`.
+ *
+ * Overlaid, as a real menu is: out of the flow, so opening one neither grows the
+ * tinted panel nor shifts everything below it down the page.
+ */
+.vizy-editor-config-menu {
+    position: absolute;
+    z-index: 2;
+    box-sizing: border-box;
+    display: flex;
+    flex-direction: column;
+    width: max-content;
+    min-width: 8rem;
+    max-height: 300px;
+    overflow: auto;
+    margin: 0;
+    padding: 4px 0;
+    border: 0;
+    border-radius: var(--pk-radius-md, 6px);
+    background: var(--pk-color-white, #fff);
+    box-shadow: var(--pk-shadow-popup, 0 4px 16px rgb(31 41 51 / 14%));
+    color: var(--text-color, var(--pk-color-gray-700, #3f4d5a));
+    /* size=sm item tokens */
+    --pk-dropdown-item-padding-block: 4px;
+    --pk-dropdown-item-padding-inline: 10px;
+    --pk-dropdown-item-gap: 0.4375rem;
+    --pk-dropdown-item-font-size: 13px;
+    --pk-dropdown-item-line-height: 1.5;
+    --pk-dropdown-item-icon-size: 12px;
+    cursor: grab;
+}
+
+.vizy-editor-config-menu-item {
+    box-sizing: border-box;
+    display: flex;
+    align-items: center;
+    gap: var(--pk-dropdown-item-gap);
+    width: 100%;
+    margin: 0;
+    padding: var(--pk-dropdown-item-padding-block) var(--pk-dropdown-item-padding-inline);
+    border: 0;
+    background: transparent;
+    color: inherit;
+    font: inherit;
+    font-size: var(--pk-dropdown-item-font-size);
+    line-height: var(--pk-dropdown-item-line-height);
+    text-align: left;
+    white-space: nowrap;
+    cursor: grab;
+    touch-action: none;
+    user-select: none;
+    -webkit-user-drag: none;
+    outline: none;
+}
+
+.vizy-editor-config-menu-item:hover {
+    background: var(--pk-color-slate-100, #607d9f1a);
+}
+
+.vizy-editor-config-menu-item:active {
+    cursor: grabbing;
+}
+
+/* Decorations only: a press has to land on the row itself for the drag sensor to see it. */
+.vizy-editor-config-menu-item > * {
+    pointer-events: none;
+}
+
+.vizy-editor-config-menu-icon {
+    display: inline-flex;
+    flex: 0 0 auto;
+    width: var(--pk-dropdown-item-icon-size);
+    height: var(--pk-dropdown-item-icon-size);
+    align-items: center;
+    justify-content: center;
+    color: inherit;
+}
+
+.vizy-editor-config-menu-icon svg {
+    width: 1em;
+    height: 1em;
+    fill: currentColor;
+}
+
+/*
+ * Preview typography — same tokens as live VizyToolbarElement `.preview-label`.
+ * Keyed off data-preview so Heading 2 reads larger than Heading 3 in the roster.
+ */
+.vizy-editor-config-menu-item .preview-label[data-preview^='heading'] {
+    font-weight: 400;
+    color: #212529;
+    line-height: 1.2;
+    text-transform: none;
+}
+.vizy-editor-config-menu-item .preview-label[data-preview='heading1'] { font-size: 22px; letter-spacing: -0.02em; }
+.vizy-editor-config-menu-item .preview-label[data-preview='heading2'] { font-size: 20px; }
+.vizy-editor-config-menu-item .preview-label[data-preview='heading3'] { font-size: 18px; }
+.vizy-editor-config-menu-item .preview-label[data-preview='heading4'] { font-size: 16px; }
+.vizy-editor-config-menu-item .preview-label[data-preview='heading5'] { font-size: 14px; }
+.vizy-editor-config-menu-item .preview-label[data-preview='heading6'] { font-size: 13px; }
+.vizy-editor-config-menu-item .preview-label[data-preview='blockquote'] {
+    font-style: italic;
+    color: var(--pk-color-gray-550, #596673);
+    border-left: 3px solid var(--pk-color-gray-200, #cdd8e4);
+    padding-left: 8px;
+}
+.vizy-editor-config-menu-item .preview-label[data-preview='codeBlock'] {
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    font-size: 13px;
+}
+
+/*
+ * A member switched off in this dropdown.
+ *
+ * Struck rather than faded, because a fade already means something else here —
+ * "allowed nowhere in this config" — and these are two different facts.
+ */
+.vizy-editor-config-menu-item.is-off .preview-label {
+    text-decoration: line-through;
+}
+
+.vizy-editor-config-menu-item.is-off {
+    color: var(--pk-color-gray-350, #8b96a2);
+}
+
+/*
+ * Said when the schema has vetoed every last member, so the menu is not silently
+ * an empty white box.
+ */
+.vizy-editor-config-menu-empty {
+    margin: 0;
+    padding: var(--pk-dropdown-item-padding-block) var(--pk-dropdown-item-padding-inline);
+    color: var(--pk-color-gray-350, #8b96a2);
+    font-size: 12px;
+    font-style: italic;
+}
+
+/*
+ * The reserved landing place while a row is being dragged — menu answer to
+ * `.vizy-control.is-slot`. A dashed rule across the row it would occupy.
+ */
+.vizy-editor-config-menu-item.is-slot {
+    position: relative;
+    color: transparent;
+}
+
+.vizy-editor-config-menu-item.is-slot::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    right: var(--pk-dropdown-item-padding-inline);
+    left: var(--pk-dropdown-item-padding-inline);
+    border-top: 2px dashed rgba(96, 125, 159, 0.6);
+}
+
+/*
+ * A slice of editor body. It carries only the side rules — no bottom edge — so the
+ * lines continue down out of the toolbar and are faded out by the panel gradient.
+ * Purely presentational; the wrapper above it is what accepts drops.
+ */
+.vizy-editor-config-canvas {
+    min-height: 32px;
+    border: 1px solid var(--pk-input-border-color, var(--pk-color-slate-400, #607d9f66));
+    border-top: none;
+    border-bottom: none;
+    background: var(--pk-input-bg, #fbfcfe);
+}
+
+/* The Bubble Menu floats over content, so it previews as a compact popover. */
+/*
+ * The dropdown whose menu is open, and nothing else — a plain button draws nothing when it is
+ * clicked. So a mark in the strip means one thing, rather than sometimes "this is open" and
+ * sometimes "this is where Delete will land", which the focus ring says anyway. See `#select`.
+ */
+.vizy-control.is-selected {
+    background: rgba(96, 125, 159, 0.25);
+    box-shadow: inset 0 0 0 1px rgba(96, 125, 159, 0.5);
+}
+
+.vizy-editor-config-active.is-bubble {
+    align-self: flex-start;
+    flex-wrap: nowrap;
+    min-height: 0;
+    padding: 2px 4px;
+    border-radius: 6px;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
+}
+
+/*
+ * Keeps an emptied list visible, and says why it is empty.
+ *
+ * No horizontal padding: it stands in for the row of buttons, so it starts where the
+ * first button would have, flush with the heading above it. A 6px indent left it looking
+ * like it belonged to something further in.
+ */
+.vizy-editor-config-empty {
+    display: flex;
+    align-items: center;
+    min-height: 32px;
+    color: #8b96a2;
+    font-size: 12px;
+    font-style: italic;
+}
+
+/*
+ * "Drag items here" stops being true the moment an item is hovering over the strip
+ * waiting to be dropped: the reserved slot is already showing where it will land, and
+ * an instruction sitting next to it just crowds the answer.
+ */
+.vizy-editor-config-active:has(.vizy-control.is-slot) .vizy-editor-config-empty {
+    display: none;
+}
+
+/*
+ * The 32×32 box and 16px glyph match `control-appearance.ts` deliberately, so the preview
+ * and the real toolbar agree. Change one and you must change the other — they are
+ * separate bundles, so nothing enforces it but the tests. Dropdown triggers keep
+ * height 32 and widen via `.has-menu` for the chevron.
+ *
+ * A tinted fill and no *visible* border, as in Craft's CKEditor toolbar builder: an
+ * outline around every item turned a toolbar into a grid of boxes, which is not what a
+ * toolbar looks like. The tint alone says "this is a thing you can pick up", and it
+ * reads as one row of controls rather than many.
+ *
+ * The border is nonetheless there, transparent, and `box-sizing` with it. The reserved
+ * slot is a *dashed border* on one of these buttons, and if only that state carried a
+ * border it would be the only item whose edge sat a pixel or two off everything else —
+ * visible as a jog in the row precisely when you are trying to judge a landing
+ * position. Every item reserving the same space means the slot cannot be misaligned by
+ * construction, however thick its dashes are drawn.
+ */
+.vizy-control {
+    box-sizing: border-box;
+    /* For the hit area below, which is the only thing positioned against this box. */
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    padding: 0;
+    margin: 0;
+    border: 1px solid transparent;
+    border-radius: 3px;
+    background: rgba(96, 125, 159, 0.1);
+    color: #1c2e36;
+    font: inherit;
+    font-size: 16px;
+    line-height: 1;
+    cursor: grab;
+    /* Pointer sensors need this or the browser claims the gesture for scrolling. */
+    touch-action: none;
+    /*
+     * Stop the browser claiming the gesture for itself: a press-and-move on a
+     * button containing an SVG can otherwise begin a native element drag or a text
+     * selection, either of which swallows the pointer stream the drag depends on.
+     */
+    user-select: none;
+    -webkit-user-drag: none;
+}
+
+/*
+ * Each button claims half the gap on every side, so a row of them has no dead space in it.
+ *
+ * This is a cursor fix before it is a targeting one. Every button says `grab` and the 4px between
+ * them said `auto`, so a pointer moving along a row of nineteen squares changed the cursor
+ * thirty-eight times — and a hand not quite still over a gap changed it continuously. Chrome
+ * showed it worst; Firefox hit-tests the boundary differently and only twitched, which is the
+ * sort of difference that says the cause is the boundary rather than the styling either side.
+ *
+ * The tray used to answer for this by carrying `grab` itself, which covered the gaps and the
+ * empty tail of a half-filled row along with them — offering to pick up a piece of background.
+ * Closing the gaps for real was never an option either: that spacing is what keeps nineteen icons
+ * legible. So the space stays and the buttons own it. 2px from either side meets exactly in the
+ * middle of a 4px gap, with nothing left over and no overlap to make a drop ambiguous.
+ *
+ * Costs no layout and moves nothing, being out of flow, so `getBoundingClientRect` still reports
+ * the 32×32 box the drop boundaries are measured against. A pseudo-element is not an event target
+ * either — a press here reports the button, which is what the drag sensor and `#dismiss` read.
+ */
+.vizy-control::after {
+    content: '';
+    position: absolute;
+    /* Half the tray's 4px `gap`, plus the 1px transparent border this is measured from. */
+    inset: -3px;
+}
+
+/*
+ * The button is the only thing that may receive pointer events; everything inside
+ * it is decoration. Without this a press lands on the glyph — an `SVGPathElement`,
+ * not an `HTMLElement` — and the drag never starts at all, because the sensor does
+ * not recognise the target as one of its draggables. Since the glyph covers the
+ * middle of the button, that is exactly where a real pointer aims, so dragging
+ * appeared broken while clicking still worked (a click bubbles; the drag does not).
+ */
+.vizy-control > * {
+    pointer-events: none;
+}
+
+.vizy-control svg {
+    display: block;
+    width: 1em;
+    height: 1em;
+    fill: currentColor;
+    overflow: visible;
+}
+
+/*
+ * A text stand-in for a glyph, as the heading levels use. Mirrors `.vizy-control .abbr` in
+ * `control-appearance.ts`: sized down from the icon so two characters sit in the square.
+ */
+.vizy-control-abbr {
+    font-size: 13px;
+    font-weight: 600;
+    letter-spacing: -0.01em;
+}
+
+/* Controls with neither a glyph nor a stand-in widen to show their label instead. */
+.vizy-control.is-text {
+    width: auto;
+    padding: 0 8px;
+    font-size: 12px;
+}
+
+/*
+ * A dropdown, previewed as one — and Add Block, which opens a palette. Mirrors
+ * `.vizy-control.has-menu` in the field's own `control-appearance.ts`: the chevron
+ * is what says the control opens rather than applies, and it has to say the
+ * same thing in both places or the preview stops being one.
+ */
+.vizy-control.has-menu {
+    width: auto;
+    min-width: 32px;
+    gap: 4px;
+    padding: 0 6px;
+}
+
+/*
+ * The two reasons a button in this panel will not render in the editor.
+ *
+ * `is-unavailable`: its capability is not allowed by this config, which a toolbar is now
+ * permitted to contain — a fact about the Capabilities section above, not about the button.
+ * `is-pending`: it is a Vizy 3 control Vizy has not built the editing for yet (HTML source,
+ * Iframe, Media embed), placeable so a migrated toolbar can be stated in full.
+ *
+ * Faded rather than removed, and deliberately not the "disabled" treatment — either is still
+ * a live item you can drag and reorder. One fade for both, too: they are told apart in the
+ * accessible name, and a second visual language for a second flavour of absence would make
+ * the row harder to read for no gain.
+ */
+.vizy-control.is-unavailable,
+.vizy-control.is-pending {
+    opacity: 0.4;
+}
+
+/* Kept in step with `.vizy-control.has-menu .chevron` in the field's `control-appearance.ts`. */
+.vizy-control-chevron {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex: 0 0 auto;
+    opacity: 0.6;
+}
+
+.vizy-control-chevron svg {
+    display: block;
+    width: 0.625em;
+    height: 0.625em;
+    fill: currentColor;
+    overflow: visible;
+}
+
+.vizy-control:hover,
+.vizy-control:focus-visible {
+    background: var(--pk-color-gray-100, #e4edf6);
+}
+
+.vizy-control:active {
+    cursor: grabbing;
+}
+
+/*
+ * Available items look exactly like toolbar items, deliberately. Fading them read
+ * as "disabled" rather than "not in use yet", and they are the same buttons — which
+ * side of the panel an item is on is what its position already says. The section
+ * headings carry that distinction instead.
+ */
+
+/*
+ * A separator previews as the rule it draws in the real toolbar, but it keeps the
+ * same fill as every other control: it is an item you pick up and put down, and one
+ * gap in a row of filled buttons read as a missing item rather than a separator.
+ * Narrower than a button, though still far wider than the 1px line, because a rule
+ * is a hopeless drag target.
+ */
+.vizy-control.is-separator {
+    width: 28px;
+}
+
+.vizy-control.is-separator::before {
+    content: '';
+    width: 1px;
+    height: 22px;
+    background: rgba(96, 125, 159, 0.5);
+}
+
+/*
+ * Nothing restates the carried button's box, and nothing should need to. dnd-kit
+ * drives it from `--dnd-width` / `--dnd-height`, which it takes from measuring the
+ * source button — and now that an overlay keeps that button in the flow for the
+ * whole drag, those measurements are its natural size rather than the `0` it used
+ * to read off an element it had just torn out.
+ */
+
+/*
+ * The button drawn under the cursor: white rather than tinted, on a hairline ring
+ * and a shadow, as Craft's CKEditor builder does with its drag helper. It is the
+ * one item that should not look like it is sitting in a list.
+ *
+ * This is our own copy of the button, handed to dnd-kit as its overlay so that it
+ * positions this instead of tearing the real one out of the flow — see
+ * `#mountOverlay` for why that matters to the offset.
+ */
+.vizy-control.is-drag-helper {
+    z-index: 1;
+    background: #fff;
+    color: #1c2e36;
+    cursor: grabbing;
+    box-shadow:
+        0 0 0 1px rgba(31, 41, 51, 0.15),
+        0 4px 12px -2px rgba(31, 41, 51, 0.3);
+}
+
+/*
+ * The offset that carries this clear of the cursor is set inline by `#mountOverlay`,
+ * not here: it has to cancel out wherever within the button the drag was started, so
+ * it is only knowable at that moment.
+ */
+
+/*
+ * The reserved slot: a copy of the button being dragged, hollowed out into a dashed
+ * outline. It marks where the item will land, and the buttons either side of it have
+ * made room by simply being pushed along.
+ *
+ * A copy rather than the button itself, because the button may need to stay where it
+ * is: a separator can be added to a toolbar any number of times, so picking one up
+ * has to leave its palette button in place *and* open a slot in the strip. See
+ * `#reserveSlot`.
+ *
+ * Drawn on a pseudo-element rather than on the button's own border, which is the part
+ * that has to stay this way. A fixed-width control absorbs a thicker border under
+ * `border-box`, but an auto-width one — a dropdown, or any control wide enough to show
+ * its label — sizes to its content *plus* its border, so a 2px edge made the slot 2px
+ * wider than the item it stands for. Every button after it then shifted by that much the
+ * moment the slot appeared or moved, which is the jump: visible only on dropdowns,
+ * because they are the only items whose width is content-driven.
+ *
+ * Weight and colour do different jobs, and it took both to get right. 2px is what makes
+ * the dashes legible; the tint is what keeps them quiet. At the same 0.6 the buttons'
+ * fill uses for its glyphs, a 2px dashed edge was the darkest thing in the strip — the
+ * gap shouted while the actual buttons murmured. Lightened until it reads as an absence
+ * with an edge rather than an object in its own right.
+ */
+.vizy-control.is-slot {
+    position: relative;
+    /* Just the dashed edge — a fill made it read as another button in the strip. */
+    background: transparent;
+    box-shadow: none;
+    /* A copy of a button, so it inherits a grab cursor it cannot honour. */
+    cursor: default;
+}
+
+/*
+ * The dashes themselves, laid over the box the button already reserves so they cost no
+ * layout. Inset by the transparent 1px border every control carries, so the edge sits
+ * exactly where a real button's border would.
+ */
+.vizy-control.is-slot::after {
+    content: '';
+    position: absolute;
+    inset: -1px;
+    border: 2px dashed rgba(96, 125, 159, 0.35);
+    border-radius: 3px;
+    pointer-events: none;
+}
+
+.vizy-control.is-slot > *,
+.vizy-control.is-slot::before {
+    visibility: hidden;
+}
+
+/*
+ * The button a drag was started from, once it has been picked up: still in the row, but
+ * no longer taking up any of it, so the row closes as though the item had already left.
+ * `#liftSource` applies this, and skips it for the separator — which is inexhaustible,
+ * so its palette button stays exactly where it is.
+ *
+ * Only made invisible here; `#liftSource` collapses the space it occupies with a
+ * negative margin. Both halves of that are deliberate, and the alternatives are traps:
+ *
+ * - `display: none` would leave it unmeasurable, and dnd-kit sizes the carried copy by
+ *   measuring this element — a `0` there collapses the button under the cursor. Worse,
+ *   the size feeds its "keep the grab point under the pointer" correction, so toggling
+ *   between measurable and not would jerk the copy sideways by half a button at the
+ *   exact moment the pointer crossed into the toolbar.
+ * - `position: absolute` looks like the obvious way to take it out of flow, but the
+ *   static position of an absolutely positioned child of a *flex* container resolves to
+ *   the container's content-box start, not to where the item was sitting. dnd-kit then
+ *   anchors the copy to the front of the list — measured as 211px adrift.
+ *
+ * A negative margin moves only the following siblings, leaving this element's own size
+ * and position exactly as dnd-kit measured them.
+ */
+.vizy-control.is-lifted {
+    visibility: hidden;
+}
+
+/*
+ * End-of-list filler. Takes up the rest of the row so the strip keeps its shape,
+ * and is what the reserved slot is inserted in front of when an item is headed past
+ * the last button.
+ *
+ * `order: 1` pins it visually last as a backstop. Should anything ever end up after
+ * it in the DOM, the slot would otherwise be drawn hard against the right-hand edge
+ * instead of directly after the last button — the correct outcome shown in the wrong
+ * place.
+ */
+.vizy-editor-config-tail {
+    flex: 1 1 auto;
+    order: 1;
+    align-self: stretch;
+    min-width: 24px;
+    min-height: 32px;
+}
+
+/*
+ * Neither area is highlighted during a drag. The slot opening up where the item
+ * will land already says where it is going, and outlining the toolbar on top of
+ * that just made the panel flicker on every pick-up.
+ */
+
+/* Suppress hover repaints on the items shifting out of the way mid-drag. */
+.vizy-editor-config-builder.is-sorting .vizy-control:hover {
+    background: rgba(96, 125, 159, 0.1);
+}
+
+.vizy-editor-config-strip-label {
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: #596673;
+    margin-bottom: 8px;
+}
+
+/*
+ * `pk-code-editor` brings its own monospace font, sizing and gutter, so all that is
+ * needed here is for it to fill the width.
+ */
+.vizy-editor-config-advanced pk-code-editor {
+    display: block;
+    width: 100%;
+}
+
+.vizy-editor-config-error {
+    color: #cf1124;
+    margin-top: 8px;
+}
+
+/*
+ * Spacing only. This is a `pk-field`, which lays out its own label, instructions and
+ * control, so any layout imposed from here would fight the component's shadow DOM.
+ */
+.vizy-editor-config-toggle {
+    display: block;
+    margin-bottom: 12px;
+}
+
+/* Sub-headings inside a section, e.g. splitting blocks from inline formatting. */
+.vizy-editor-config-subhead {
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: #596673;
+    margin-bottom: 8px;
+}
+
+pk-checkbox-select + .vizy-editor-config-subhead {
+    margin-top: 20px;
+}
+

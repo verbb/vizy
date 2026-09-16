@@ -3,9 +3,10 @@ namespace verbb\vizy\gql\types\generators;
 
 use verbb\vizy\Vizy;
 use verbb\vizy\fields\VizyField;
+use verbb\vizy\gql\GqlHelpers;
 use verbb\vizy\gql\interfaces\VizyBlockInterface;
 use verbb\vizy\gql\types\VizyBlockType;
-use verbb\vizy\nodes\VizyBlock;
+use verbb\vizy\models\BlockType;
 
 use Craft;
 use craft\gql\base\Generator;
@@ -15,21 +16,20 @@ use craft\gql\GqlEntityRegistry;
 
 class VizyBlockTypeGenerator extends Generator implements GeneratorInterface, SingleGeneratorInterface
 {
-    // Public Methods
+    // Static Methods
     // =========================================================================
 
     public static function generateTypes(mixed $context = null): array
     {
         if ($context instanceof VizyField) {
-            $vizyBlockTypes = $context->getBlockTypes();
+            $blockTypes = $context->getAllowedBlockTypes();
         } else {
-            $vizyBlockTypes = Vizy::$plugin->getService()->getAllBlockTypes();
+            $blockTypes = Vizy::$plugin->getBlockTypes()->getAllBlockTypes();
         }
 
         $gqlTypes = [];
-
-        foreach ($vizyBlockTypes as $vizyBlockType) {
-            $type = static::generateType($vizyBlockType);
+        foreach ($blockTypes as $blockType) {
+            $type = static::generateType($blockType);
             $gqlTypes[$type->name] = $type;
         }
 
@@ -38,27 +38,27 @@ class VizyBlockTypeGenerator extends Generator implements GeneratorInterface, Si
 
     public static function generateType(mixed $context): mixed
     {
-        $typeName = VizyBlock::gqlTypeNameByContext($context);
+                $typeName = GqlHelpers::blockTypeName($context);
 
-        if (!($entity = GqlEntityRegistry::getEntity($typeName))) {
-            $contentFieldGqlTypes = $context->getFieldLayout() ? self::getContentFields($context->getFieldLayout()) : [];
-            $blockTypeFields = Craft::$app->getGql()->prepareFieldDefinitions(array_merge(VizyBlockInterface::getFieldDefinitions(), $contentFieldGqlTypes), $typeName);
-
-            // Generate a type for each block type
-            $entity = GqlEntityRegistry::getEntity($typeName);
-
-            if (!$entity) {
-                $entity = new VizyBlockType([
-                    'name' => $typeName,
-                    'fields' => function() use ($blockTypeFields) {
-                        return $blockTypeFields;
-                    },
-                ]);
-
-                $entity = GqlEntityRegistry::getEntity($typeName) ?: GqlEntityRegistry::createEntity($typeName, $entity);
-            }
+        if ($entity = GqlEntityRegistry::getEntity($typeName)) {
+            return $entity;
         }
 
-        return $entity;
+        $layout = $context->getFieldLayout();
+        $contentFields = $layout ? self::getContentFields($layout) : [];
+
+        // Nested Vizy field placements recurse to the same structural document type.
+        foreach ($contentFields as $handle => $gqlType) {
+            // getContentGqlType on VizyField already returns VizyDocument — leave as-is.
+            unset($handle, $gqlType);
+        }
+
+        $fields = array_merge(VizyBlockInterface::getFieldDefinitions(), $contentFields);
+        $prepared = Craft::$app->getGql()->prepareFieldDefinitions($fields, $typeName);
+
+        return GqlEntityRegistry::createEntity($typeName, new VizyBlockType([
+            'name' => $typeName,
+            'fields' => static fn() => $prepared,
+        ]));
     }
 }

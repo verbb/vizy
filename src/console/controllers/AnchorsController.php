@@ -1,8 +1,8 @@
 <?php
 namespace verbb\vizy\console\controllers;
 
-use verbb\vizy\fields\VizyField;
 use verbb\vizy\Vizy;
+use verbb\vizy\fields\VizyField;
 
 use Craft;
 use craft\console\Controller;

@@ -1,0 +1,46 @@
+{% extends 'vizy/_layouts/settings' %}
+
+{% set selectedTab = 'block-types' %}
+{% set title = 'Block Types' | t('vizy') %}
+
+{% block actionButton %}
+    <a href="{{ url('vizy/settings/block-types/new') }}" class="btn submit add icon">{{ 'New Block Type' | t('vizy') }}</a>
+{% endblock %}
+
+{# Overrides the CP `content` block (not `blockContent`) so the table runs to the
+   pane edges, as the Icon Picker index does. #}
+{% block content %}
+    <div id="block-types-vue-admin-table"></div>
+{% endblock %}
+
+{% set tableData = [] %}
+{% for blockType in blockTypes %}
+    {% set tableData = tableData | merge([{
+        id: blockType.uid,
+        title: blockType.name | t('vizy'),
+        url: url('vizy/settings/block-types/' ~ blockType.uid),
+        name: blockType.name | t('vizy') | e,
+        handle: blockType.handle,
+    }]) %}
+{% endfor %}
+
+{% js %}
+
+var columns = [
+    { name: '__slot:title', title: Craft.t('app', 'Name') },
+    { name: '__slot:handle', title: Craft.t('app', 'Handle') },
+];
+
+new Craft.VueAdminTable({
+    columns: columns,
+    container: '#block-types-vue-admin-table',
+    emptyMessage: Craft.t('vizy', 'No Block Types exist yet.'),
+    tableData: {{ tableData | json_encode | raw }},
+
+    {% if craft.app.config.general.allowAdminChanges %}
+        deleteAction: 'vizy/block-types/delete',
+        confirmDeleteMessage: Craft.t('vizy', 'Are you sure you want to delete “{name}”? Blocks already created with it will no longer resolve.'),
+    {% endif %}
+});
+
+{% endjs %}

@@ -1,0 +1,24 @@
+{# Defined here rather than passed in, so every controller rendering a settings
+   screen gets the same sidebar without having to supply it. #}
+{% set settingsNavItems = {
+    'general': { title: 'General Settings' | t('vizy') },
+    'block-types': { title: 'Block Types' | t('vizy') },
+    'editor-configs': { title: 'Editor Configs' | t('vizy') },
+} %}
+
+<nav class="vizy-settings-tabs">
+    <ul>
+        {% for handle, item in settingsNavItems %}
+            {% set itemUrl = handle == 'general'
+                ? url('vizy/settings')
+                : url('vizy/settings/' ~ handle)
+            %}
+
+            <li>
+                <a href="{{ itemUrl }}"{% if selectedTab == handle %} class="sel"{% endif %}>
+                    {{ item.title }}
+                </a>
+            </li>
+        {% endfor %}
+    </ul>
+</nav>

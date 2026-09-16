@@ -18,6 +18,6 @@ composer require verbb/vizy && php craft plugin/install vizy
 ```
 
 ## Licensing
-You can try Vizy in a development environment for as long as you like. Once your site goes live, you are required to purchase a license for the plugin.
+You can try Vizy in a development environment for as long as you like. Once your site goes live, you are required to purchase a licence for the plugin.
 
 For more information, see [Craft's Commercial Plugin Licensing](https://craftcms.com/docs/4.x/plugins.html#commercial-plugin-licensing).

@@ -1,0 +1,51 @@
+{% extends 'vizy/_layouts/settings' %}
+
+{% set selectedTab = 'editor-configs' %}
+{% set title = 'Editor Configs' | t('vizy') %}
+
+{% block actionButton %}
+    <a href="{{ url('vizy/settings/editor-configs/new') }}" class="btn submit add icon">{{ 'New Editor Config' | t('vizy') }}</a>
+{% endblock %}
+
+{# Overrides the CP `content` block (not `blockContent`) so the table runs to the
+   pane edges, as the Icon Picker index does. #}
+{% block content %}
+    <div id="editor-configs-vue-admin-table"></div>
+{% endblock %}
+
+{% set tableData = [] %}
+{% for id, config in configs %}
+    {% set isFile = (config.source ?? null) == 'file' %}
+    {% set tableData = tableData | merge([{
+        id: id,
+        title: config.label,
+        url: url('vizy/settings/editor-configs/' ~ id),
+        name: config.label | e,
+        handle: id,
+        source: isFile
+            ? ('File' | t('vizy'))
+            : ('Project Config' | t('vizy')),
+        _showDelete: not isFile and id != 'standard',
+    }]) %}
+{% endfor %}
+
+{% js %}
+
+var columns = [
+    { name: '__slot:title', title: Craft.t('app', 'Label') },
+    { name: '__slot:handle', title: Craft.t('app', 'ID') },
+    { name: 'source', title: Craft.t('vizy', 'Source') },
+];
+
+new Craft.VueAdminTable({
+    columns: columns,
+    container: '#editor-configs-vue-admin-table',
+    emptyMessage: Craft.t('vizy', 'No Editor Configs exist yet.'),
+    tableData: {{ tableData | json_encode | raw }},
+
+    {% if craft.app.config.general.allowAdminChanges %}
+        deleteAction: 'vizy/editor-configs/delete',
+    {% endif %}
+});
+
+{% endjs %}

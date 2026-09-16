@@ -1,12 +1,13 @@
 <?php
 namespace verbb\vizy\helpers;
 
-use verbb\vizy\elements\MatrixAnchor;
 use verbb\vizy\Vizy;
+use verbb\vizy\elements\MatrixAnchor;
 
-use craft\elements\Entry;
 use craft\elements\db\EntryQuery;
+use craft\elements\Entry;
 use craft\helpers\Json;
+use craft\helpers\StringHelper;
 
 class Matrix
 {
@@ -40,9 +41,9 @@ class Matrix
 
         // Handle legacy blocks, which are structured differently
         if (isset($content['blocks'])) {
-            $content['blocks'] = self::filterContent($content['blocks'], $entryTypes, $blockFields);
+            $content['blocks'] = self::_filterContent($content['blocks'], $entryTypes, $blockFields);
         } else {
-            $content = self::filterContent($content, $entryTypes, $blockFields);
+            $content = self::_filterContent($content, $entryTypes, $blockFields);
         }
 
         return $content;
@@ -76,6 +77,71 @@ class Matrix
         $content['sortOrder'] = $sortOrder;
 
         return $content;
+    }
+
+    /**
+     * Clone a Matrix serialize payload so a copy can land on a new MatrixAnchor
+     * without re-parenting the source entries (fresh UIDs, no element ids).
+     */
+    public static function payloadForIndependentCopy(mixed $content): mixed
+    {
+        if ($content === null || $content === '' || $content === []) {
+            return $content;
+        }
+
+        if (is_string($content) && Json::isJsonObject($content)) {
+            $content = Json::decode($content);
+        }
+
+        if (!is_array($content)) {
+            return $content;
+        }
+
+        if (self::isCraft5MatrixContent($content)) {
+            $entries = is_array($content['entries'] ?? null) ? $content['entries'] : [];
+            $nextEntries = [];
+            $uidMap = [];
+            foreach ($entries as $entryKey => $entry) {
+                if (!is_array($entry)) {
+                    continue;
+                }
+                $newUid = StringHelper::UUID();
+                $uidMap[(string)$entryKey] = $newUid;
+                if (str_starts_with((string)$entryKey, 'uid:')) {
+                    $uidMap[substr((string)$entryKey, 4)] = $newUid;
+                }
+                unset($entry['id'], $entry['ownerId'], $entry['canonicalId']);
+                $entry['uid'] = $newUid;
+                // Craft request keys prefer bare UIDs; keep values id-less for create.
+                $nextEntries[$newUid] = $entry;
+            }
+            $sortOrder = [];
+            foreach (is_array($content['sortOrder'] ?? null) ? $content['sortOrder'] : [] as $item) {
+                $key = (string)$item;
+                $sortOrder[] = $uidMap[$key] ?? $uidMap['uid:' . $key] ?? StringHelper::UUID();
+            }
+            if ($sortOrder === [] && $nextEntries !== []) {
+                $sortOrder = array_keys($nextEntries);
+            }
+
+            return [
+                'entries' => $nextEntries,
+                'sortOrder' => $sortOrder,
+            ];
+        }
+
+        $next = [];
+        foreach ($content as $blockKey => $block) {
+            if (!is_array($block)) {
+                continue;
+            }
+            $newUid = StringHelper::UUID();
+            unset($block['id'], $block['ownerId']);
+            $block['uid'] = $newUid;
+            $next[$newUid] = $block;
+        }
+
+        return $next;
     }
 
     public static function isMatrix($field): bool
@@ -124,7 +190,7 @@ class Matrix
         Vizy::$plugin->getAnchors()->saveMatrixField($field, $anchor, $fieldValue, true);
     }
 
-    private static function filterContent($content, $entryTypes, $blockFields)
+    private static function _filterContent(mixed $content, mixed $entryTypes, mixed $blockFields): mixed
     {
         foreach ($content as $blockKey => $block) {
             if (!is_array($block)) {

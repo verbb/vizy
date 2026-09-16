@@ -1,0 +1,75 @@
+[
+    {
+        "name": "empty-object",
+        "block": {
+            "type": "vizyBlock",
+            "attrs": {
+                "fieldSlots": {},
+                "enabled": true,
+                "blockTypeUid": "type",
+                "blockUid": "block"
+            }
+        },
+        "canonicalJson": "{\"attrs\":{\"blockTypeUid\":\"type\",\"blockUid\":\"block\",\"enabled\":true,\"fieldSlots\":{}},\"type\":\"vizyBlock\"}",
+        "sha256": "0b0e4b27e6187345573e4d014964a0f9bd6829f6d62ca4023a754939e5030b8b"
+    },
+    {
+        "name": "empty-array",
+        "block": {
+            "type": "vizyBlock",
+            "attrs": {
+                "fieldSlots": [],
+                "enabled": true,
+                "blockTypeUid": "type",
+                "blockUid": "block"
+            }
+        },
+        "canonicalJson": "{\"attrs\":{\"blockTypeUid\":\"type\",\"blockUid\":\"block\",\"enabled\":true,\"fieldSlots\":[]},\"type\":\"vizyBlock\"}",
+        "sha256": "f31895a6e9f56b1893414d49a9d5fdd9b4b8c03f768c8571c20d15ecf5f014fa"
+    },
+    {
+        "name": "nested-order",
+        "block": {
+            "type": "vizyBlock",
+            "attrs": {
+                "fieldSlots": {
+                    "z": {
+                        "b": 2,
+                        "a": 1
+                    },
+                    "a": [
+                        3,
+                        2,
+                        1
+                    ]
+                },
+                "enabled": true,
+                "blockTypeUid": "type",
+                "blockUid": "block"
+            }
+        },
+        "canonicalJson": "{\"attrs\":{\"blockTypeUid\":\"type\",\"blockUid\":\"block\",\"enabled\":true,\"fieldSlots\":{\"a\":[3,2,1],\"z\":{\"a\":1,\"b\":2}}},\"type\":\"vizyBlock\"}",
+        "sha256": "96f605b61348792237f09c8f065e03853466c2d5f4989d3c977c9e850b5972e4"
+    },
+    {
+        "name": "unicode-and-key-order",
+        "block": {
+            "type": "vizyBlock",
+            "attrs": {
+                "fieldSlots": {
+                    "z": "日本語 😀 / café",
+                    "A": "upper",
+                    "a": "lower",
+                    "é": "accent",
+                    "10": "ten",
+                    "2": "two"
+                },
+                "enabled": true,
+                "blockTypeUid": "type",
+                "blockUid": "block"
+            }
+        },
+        "canonicalJson": "{\"attrs\":{\"blockTypeUid\":\"type\",\"blockUid\":\"block\",\"enabled\":true,\"fieldSlots\":{\"10\":\"ten\",\"2\":\"two\",\"A\":\"upper\",\"a\":\"lower\",\"z\":\"日本語 😀 / café\",\"é\":\"accent\"}},\"type\":\"vizyBlock\"}",
+        "sha256": "6e3b1bc51b1f0e7dbede5ac71f8128406a62c6593c4780866099af903be2dac5"
+    }
+]

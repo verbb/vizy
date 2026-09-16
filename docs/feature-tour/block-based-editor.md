@@ -1,62 +1,50 @@
-# Block Based Editor
-A big part of what makes Vizy special is how content is stored. Unlike many WYSIWYG fields, which store the raw HTML in the database, Vizy instead stores your content as JSON. This provides amazing flexibility and control when it comes to outputting the content of a Vizy field in your templates. 
+# Block-Based Editor
 
-For example, consider the following paragraph of content:
+Vizy stores your field’s content as structured JSON. This lets you render the whole field as HTML, select particular pieces, or give your frontend the document data to interpret. For example, you can display an article normally and also read its headings to build a contents list.
 
-```
-“The name [gin](https://en.wikipedia.org/wiki/Gin) is a shortened form of the older English word genever.”
-```
+## Understanding a Document
 
-Let's compare how [Redactor](https://plugins.craftcms.com/redactor) and Vizy store this content to illustrate the differences and what they mean for developers.
+A **document** contains a list of **nodes**, such as paragraphs, headings, and images. Nodes can contain other nodes: a paragraph contains text, while a list contains list items. A **mark** adds formatting or a link to part of the text.
 
-## Redactor
-Redactor stores this content in raw HTML, converting the link to HTML and including the paragraph tag.
-
-```html
-<p>The name <a href="https://en.wikipedia.org/wiki/Gin" target="_blank" rel="noreferrer noopener">gin</a> is a shortened form of the older English word genever.</p>
-```
-
-Whilst this is not inherently bad or incorrect, if we wanted to add custom classes to the `<p>` or `<a>` tags, it would be difficult to do. This is a particularly common scenario when using utility-first CSS frameworks like [Tailwind](https://tailwindcss.com/).
-
-## Vizy
-Vizy on the other hand stores the resulting content as a JSON structure.
+Suppose an editor writes “Read our guide” and links “guide” to an external page. Its document has the following shape:
 
 ```json
-[
-    {
-        "type": "paragraph",
-        "attrs": {
-            "textAlign": "left"
-        },
-        "content": [
-            {
-                "type": "text",
-                "text": "The name "
-            },
-            {
-                "type": "text",
-                "marks": [
-                    {
-                        "type": "link",
-                        "attrs": {
-                            "href": "https://en.wikipedia.org/wiki/Gin",
-                            "target": "_blank"
+{
+    "type": "doc",
+    "attrs": { "schemaVersion": 2 },
+    "content": [
+        {
+            "type": "paragraph",
+            "content": [
+                { "type": "text", "text": "Read our " },
+                {
+                    "type": "text",
+                    "text": "guide",
+                    "marks": [
+                        {
+                            "type": "link",
+                            "attrs": {
+                                "type": "url",
+                                "value": "https://example.com/guide",
+                                "newWindow": false
+                            }
                         }
-                    }
-                ],
-                "text": "gin"
-            },
-            {
-                "type": "text",
-                "text": " is a shortened form of the older English word genever."
-            }
-        ]
-    }
-]
+                    ]
+                }
+            ]
+        }
+    ]
+}
 ```
 
-Whilst this is a **lot** more content compared to the simple HTML Redactor generates, it stores the same content in a much more structured fashion. From this, we can iterate over the properties to have complete control over how to render this content.
+The paragraph keeps its text and link together. The link stores its destination as data; Vizy resolves that data into an HTML link when rendering. Saved nodes can also contain attributes for their other settings.
 
-Vizy also provides many shortcuts to help with rendering your content. You can even provide templates for how Nodes and Marks are rendered to save you time from project to project.
+## Using the Structure
 
-Continue reading the [Rendering Content](docs:template-guides/rendering-content) guide.
+In an entry template, call `{{ entry.vizyField.render() }}`, replacing `vizyField` with your field’s handle—the name used to access the field in code. The example above produces a paragraph containing a link:
+
+```html
+<p>Read our <a href="https://example.com/guide">guide</a></p>
+```
+
+You can use [Querying Nodes](docs:template-guides/querying-nodes) to read particular root nodes, or [Modify Nodes](docs:template-guides/modify-nodes) to change the generated HTML. Structured Vizy blocks use [Block Type Templates](docs:template-guides/block-type-templates) to render their Craft fields.

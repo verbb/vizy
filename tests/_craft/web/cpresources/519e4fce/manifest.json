@@ -1,0 +1,20 @@
+{
+  "field/src/ts/vizy.ts": {
+    "file": "assets/vizy-IxMs92Rk.js",
+    "name": "vizy",
+    "src": "field/src/ts/vizy.ts",
+    "isEntry": true,
+    "css": [
+      "assets/vizy-oOgLJLw6.css"
+    ]
+  },
+  "fieldsettings/src/ts/field-settings.ts": {
+    "file": "assets/field-settings-FpBm2ULs.js",
+    "name": "field-settings",
+    "src": "fieldsettings/src/ts/field-settings.ts",
+    "isEntry": true,
+    "css": [
+      "assets/field-settings-BTlm5tkc.css"
+    ]
+  }
+}

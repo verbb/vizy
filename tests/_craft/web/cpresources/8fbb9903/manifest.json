@@ -1,0 +1,48 @@
+{
+  "_floating-ui.dom-DKtI2HLf.js": {
+    "file": "assets/floating-ui.dom-DKtI2HLf.js",
+    "name": "floating-ui.dom"
+  },
+  "editorconfigsettings/src/ts/editor-config-settings.ts": {
+    "file": "assets/editor-config-settings-CmDLwKRq.js",
+    "name": "editor-config-settings",
+    "src": "editorconfigsettings/src/ts/editor-config-settings.ts",
+    "isEntry": true,
+    "css": [
+      "assets/editor-config-settings-BTwPrqpw.css"
+    ]
+  },
+  "field/src/ts/vizy.ts": {
+    "file": "assets/vizy-DD4NZ8M0.js",
+    "name": "vizy",
+    "src": "field/src/ts/vizy.ts",
+    "isEntry": true,
+    "imports": [
+      "_floating-ui.dom-DKtI2HLf.js"
+    ],
+    "css": [
+      "assets/vizy-D1OenylS.css"
+    ]
+  },
+  "fieldsettings/src/ts/field-settings.ts": {
+    "file": "assets/field-settings-BiWKxnZt.js",
+    "name": "field-settings",
+    "src": "fieldsettings/src/ts/field-settings.ts",
+    "isEntry": true,
+    "imports": [
+      "_floating-ui.dom-DKtI2HLf.js"
+    ],
+    "css": [
+      "assets/field-settings-Dmj-2le_.css"
+    ]
+  },
+  "iconpicker/src/ts/icon-picker.ts": {
+    "file": "assets/icon-picker-DGb9J_pQ.js",
+    "name": "icon-picker",
+    "src": "iconpicker/src/ts/icon-picker.ts",
+    "isEntry": true,
+    "css": [
+      "assets/icon-picker-2g6Pub1R.css"
+    ]
+  }
+}

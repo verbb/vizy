@@ -1,9 +1,10 @@
 <?php
 namespace verbb\vizy\records;
 
+use verbb\vizy\db\Table;
+
 use craft\db\ActiveRecord;
 use craft\records\Element;
-use verbb\vizy\db\Table;
 
 use yii\db\ActiveQueryInterface;
 

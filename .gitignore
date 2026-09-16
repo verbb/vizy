@@ -6,6 +6,11 @@
 # COMPOSER
 /vendor
 
+# TESTS
+.env.testing
+/tests/_craft/storage/*
+!/tests/_craft/storage/.gitkeep
+
 # BUILD FILES
 /bower_components/*
 /node_modules/*
@@ -29,3 +34,13 @@
 !.vscode/tasks.json
 !.vscode/launch.json
 !.vscode/extensions.json
+
+/.cache/
+
+/.ddev/docker-compose.tests-local.yaml
+
+/.phpunit.result.cache
+/tests/runtime/web/cpresources/
+
+/test-results/
+/playwright-report/

@@ -1,19 +1,16 @@
 import path from 'path';
 
-// Vite Plugins
-import VuePlugin from '@vitejs/plugin-vue';
-import EslintPlugin from 'vite-plugin-eslint';
-import CompressionPlugin from 'vite-plugin-compression';
-
-// Rollup Plugins
-import AnalyzePlugin from 'rollup-plugin-analyzer';
-
 export default ({ command }) => ({
     // Set the root to our source folder
     root: './src/web/assets',
 
-    // When building update the destination base
-    base: command === 'serve' ? '' : '/dist/',
+    // Relative for builds, because Craft republishes `dist/` into a hashed
+    // `cpresources/<hash>/` directory whose URL is not known at build time. Entry files
+    // are registered by the asset bundle through the manifest and so were unaffected, but
+    // anything the browser resolves at runtime — a dynamic `import()`, a `url()` in CSS —
+    // was pointed at `/dist/...` and 404'd. With `./`, Vite resolves those against
+    // `import.meta.url` instead, which is correct wherever the folder ends up.
+    base: command === 'serve' ? '' : './',
 
     build: {
         outDir: 'field/dist',
@@ -22,7 +19,10 @@ export default ({ command }) => ({
         sourcemap: true,
         rollupOptions: {
             input: {
-                vizy: '/field/src/js/vizy.js',
+                vizy: '/field/src/ts/vizy.ts',
+                'field-settings': '/fieldsettings/src/ts/field-settings.ts',
+                'editor-config-settings': '/editorconfigsettings/src/ts/editor-config-settings.ts',
+                'icon-picker': '/iconpicker/src/ts/icon-picker.ts',
             },
             output: {
                 sourcemapExcludeSources: true,
@@ -39,33 +39,7 @@ export default ({ command }) => ({
         },
     },
 
-    plugins: [
-        // Keep JS looking good with eslint
-        // https://github.com/gxmari007/vite-plugin-eslint
-        EslintPlugin({
-            cache: false,
-            fix: true,
-            include: './src/web/assets/**/*.{js,vue}',
-            exclude: './src/web/assets/field/src/js/vendor/**/*.{js,vue}',
-        }),
-
-        // Vue 3 support
-        // https://github.com/vitejs/vite/tree/main/packages/plugin-vue
-        VuePlugin(),
-
-        // Analyze bundle size
-        // https://github.com/doesdev/rollup-plugin-analyzer
-        AnalyzePlugin({
-            summaryOnly: true,
-            limit: 15,
-        }),
-
-        // Gzip assets
-        // https://github.com/vbenjs/vite-plugin-compression
-        CompressionPlugin({
-            filter: /\.(js|mjs|json|css|map)$/i,
-        }),
-    ],
+    plugins: [],
 
     resolve: {
         alias: {
@@ -75,19 +49,12 @@ export default ({ command }) => ({
             // Allow us to use `@utils/` in JS for misc utilities.
             '@utils': path.resolve('./src/web/assets/field/src/js/utils'),
 
-            // Allow us to use `@components/` in Vue components.
-            '@components': path.resolve('./src/web/assets/field/src/components'),
-
-            // Vue 3 doesn't support the template compiler out of the box
-            'vue': 'vue/dist/vue.esm-bundler.js',
+            '@components': path.resolve('./src/web/assets/field/src/ts/components'),
         },
     },
 
     // Add in any components to optimise them early.
     optimizeDeps: {
-        include: [
-            'lodash-es',
-            'vue',
-        ],
+        include: ['@tiptap/core', '@tiptap/starter-kit', 'lit'],
     },
 });

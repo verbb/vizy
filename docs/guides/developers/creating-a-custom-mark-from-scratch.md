@@ -1,323 +1,203 @@
-# Creating a custom Mark from scratch
+# Creating a Custom Mark from Scratch
 
-Vizy already supports plenty of marks to model your content, but you can already create your own!
+This guide adds an **Abbreviation** mark (`abbr`) to Vizy — from a Craft module
+through to the Control Panel toolbar and front-end HTML. When an author selects
+text and clicks **Abbreviation**, Vizy saves that mark with the field and
+outputs something like `<abbr>NASA</abbr>` when you call `render()` in Twig.
 
-We'll cover creating a new mark to change the font color for text content.
+TipTap is the library Vizy uses under the hood for rich text. You don’t need
+prior TipTap experience; each step below shows the piece you need. For a shorter
+overview of the same APIs, see [Extending Vizy](docs:developers/extending-vizy).
+A ready-to-copy Craft module lives at `examples/vizy-abbr-module/` in the plugin
+repo.
 
-:::warning
-Heads up! This guide requires that you're familiar with [Tiptap](https://tiptap.dev) and creating custom extensions. We'll cover all the details for Vizy, but not cover the specifics of Tiptap or [ProseMirror](https://prosemirror.net/docs/guide/) work.
+Use your own namespace and module ID wherever you see `acme` or `vizymodule`.
 
-This guide will give you an excellent starting point to continue developing your own.
-:::
+## What You’Re Putting Together
 
-### Understanding Vizy Plugin anatomy
-Before we dive in, let's discuss the anatomy of a Vizy Plugin, which ties into a little bit about how [Tiptap](https://tiptap.dev) works. There's a few concepts to grasp, but we'll try and cover them as required, step-by-step.
+A custom mark is three small pieces that share the same name (`abbr`). PHP tells
+Vizy the mark exists and how it should become HTML. JavaScript teaches the
+Control Panel editor how to toggle it. An Editor Config turns it on for a field
+and puts a button on the toolbar. Leave any piece out and you’ll usually get a
+missing button, an editor that won’t start, or empty HTML on the front end.
 
-In our case, we want to register a new button that when pressed, toggles a color on some text. That requires three parts:
+You’ll need a Craft module or plugin for the PHP and a Control Panel script.
+The walkthrough assumes you can edit PHP and JavaScript files and have a module that Craft loads. You don’t need Vite in your module; Vizy already shares TipTap
+helpers as `Craft.Vizy.tiptap.core`, so avoid installing a second TipTap copy.
 
-- A  [Tiptap](https://tiptap.dev) extension to add the new mark definition to the editor
-- A button, that when pressed performs the actual action
-- A PHP class that handles the color saved in ProseMirror schema to output on the front-end
+## 1. Register the Capability in PHP
 
-In order to construct a document model, Tiptap (and ProseMirror) needs to know all the pieces you're trying to add to it. This is called a "schema". For example, you might have a button that bolds text when clicked, but Tiptap needs to know _how_ to do that to the text. 
-
-As such, we'll be creating a Tiptap extension in the form of a custom mark that generates a DOM element in the editor to show our color. Once added to the Vizy field, Tiptap will be able to understand what a font color mark is, what it looks like, how to create one, and more.
-
-The second part is more on the Vizy end (as Tiptap is renderless), where we need to register a button in the toolbar. If the extension is adding the instructions to the editor on what to do, a button is the action to actually _do it_.
-
-The third part is in PHP, once the color has been saved as JSON to the database. Like in the editor itself, we use a schema when rendering the content of the field on the front-end, which is largely structured according to ProseMirror. But the schema won't know how to handle our custom color mark, so we'll need to give it instructions on how we want to render that mark.
-
-### Create your module
-First, you'll need to get familiar with [creating a module](/blog/everything-you-need-to-know-about-modules), as we'll be registering our custom files through a module.
-
-When creating your module, set the namespace to `modules\vizymodule` and the module ID to `vizy-module`.
-
-Create the following directory and file structure:
-
-```treeview
-my-project/
-├── config/
-│    └── vizy/
-│            └── Custom.json
-├── modules/
-│    └── vizymodule/
-│        └── src/
-│            └── assets/
-│                └── js/
-│                    └── font-color.js
-│                └── FontColorAsset.php
-│            └── marks/
-│                └── FontColor.php
-│            └── VizyModule.php
-└── ...
-```
+Put the imports at the top of your module’s PHP file and the event listener inside its `init()` method:
 
 ```php
-// modules/vizymodule/src/VizyModule.php
-
-<?php
-namespace modules\vizymodule;
-
-use Craft;
-use modules\vizymodule\assets\FontColorAsset;
-use modules\vizymodule\marks\FontColor;
-use verbb\vizy\base\Plugin as VizyPlugin;
-use verbb\vizy\events\RegisterMarksEvent;
-use verbb\vizy\events\RegisterPluginEvent;
-use verbb\vizy\fields\VizyField;
-use verbb\vizy\services\Nodes;
+use verbb\vizy\events\RegisterExtensionsEvent;
+use verbb\vizy\services\Extensions;
 use yii\base\Event;
-use yii\base\Module;
+use acme\vizy\marks\Abbr;
 
-class VizyModule extends Module
+Event::on(
+    Extensions::class,
+    Extensions::EVENT_REGISTER_EXTENSIONS,
+    function(RegisterExtensionsEvent $event) {
+        $event->marks[] = Abbr::class;
+    }
+);
+```
+
+Create the following mark class in the directory that your project maps to the `acme\vizy\marks` namespace. Its name and label identify it in the editor, and `tag()` tells Vizy which HTML element to use for the marked text:
+
+```php
+namespace acme\vizy\marks;
+
+use verbb\vizy\base\EditorSurface;
+use verbb\vizy\base\EditorGroup;
+use verbb\vizy\base\Mark;
+
+class Abbr extends Mark
 {
-    // Public Methods
-    // =========================================================================
+    public static ?string $type = 'abbr';
 
-    public function init()
+    public static function moduleId(): string
     {
-        // Call the `Module::init()` method, which will do its own initializations
-        parent::init();
+        return 'acme/mark/abbr';
+    }
 
-        // Define a custom alias named after the namespace
-        Craft::setAlias('@vizy-module', __DIR__);
+    public static function label(): string
+    {
+        return 'Abbreviation';
+    }
 
-        // Register our custom plugin
-        Event::on(VizyField::class, VizyField::EVENT_REGISTER_PLUGINS, function(RegisterPluginEvent $event) {
-            $event->plugins[] = new VizyPlugin([
-                'handle' => 'font-color',
-                'assetBundle' => FontColorAsset::class,
-            ]);
-        });
+    public static function icon(): ?string
+    {
+        return '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16"><text x="1" y="12" font-size="10">Ab</text></svg>';
+    }
 
-        // Register our custom mark
-        Event::on(Nodes::class, Nodes::EVENT_REGISTER_MARKS, function(RegisterNodesEvent $event) {
-            $event->marks[] = FontColor::class;
-        });
+    public static function surfaces(): array
+    {
+        return [EditorSurface::Toolbar, EditorSurface::Bubble];
+    }
+
+    public static function group(): ?string
+    {
+        return EditorGroup::Marks;
+    }
+
+    public static function tag(): string|array|null
+    {
+        return 'abbr';
     }
 }
 ```
 
-Here our main module file is pretty simple. We tell Vizy we want to register a new `VizyPlugin` with the handle `font-color`, and provide it the asset bundle `FontColorAsset`.
+That registration adds **Abbreviation** to Vizy’s capabilities list (what Editor
+Configs can enable), marks it installed because the module ID sits outside the
+reserved `vizy/core/…` prefix, and tells `VizyDocument::render()` to wrap the marked text in the `<abbr>` tag returned by `tag()`.
 
-:::tip
-You can name the handle whatever you like, so long as it's unique for any other Vizy Plugin registered. It'll be this value that we'll use in our editor config to enable the plugin.
-:::
+## 2. Load JavaScript in the Control Panel
 
-Lastly, we register a `FontColor` class for our custom mark. This will be for us to define what to do with an color mark when rendering the content of the Vizy field on the front-end.
+Create an AssetBundle that depends on Vizy’s field assets, then register it on
+CP requests — the same pattern as any Craft Control Panel script:
 
-#### Asset Bundle class
 ```php
-// modules/vizymodule/src/assets/FontColorAsset.php
-
-<?php
-namespace modules\vizymodule\assets;
-
 use craft\web\AssetBundle;
 use craft\web\assets\cp\CpAsset;
 use verbb\vizy\web\assets\field\VizyAsset;
 
-class FontColorAsset extends AssetBundle
+class AbbrAsset extends AssetBundle
 {
-    // Public Methods
-    // =========================================================================
-
     public function init(): void
     {
-        $this->sourcePath = '@vizy-module/assets';
-
-        $this->depends = [
-            CpAsset::class,
-            VizyAsset::class,
-        ];
-
-        $this->js = [
-            'js/font-color.js',
-        ];
-
+        $this->sourcePath = '@modules/vizymodule/assets';
+        $this->depends = [CpAsset::class, VizyAsset::class];
+        $this->js = ['abbr.js'];
         parent::init();
     }
 }
 ```
 
-For our asset bundle, we register any CSS or JS that we'll need for our plugin. These can be named whatever you like. We also ensure that this asset bundle is dependant on `CpAsset` and `VizyAsset` to ensure things are loaded correctly.
+After defining `AbbrAsset`, register it from your module’s `init()` method for control-panel requests. Use the full class name if the AssetBundle is in another namespace:
 
-#### Editor Config
-Before we dive into the JS code, let's add this newly-registered plugin to our [editor config](/get-started/configuration#editor-configuration). This allows us to actually load the plugin on a Vizy field that uses this editor config.
-
-```
-// config/vizy/Custom.json
-
-{
-    "buttons": ["italic", "bold", "font-color"],
-    "plugins": ["font-color"]
+```php
+if (\Craft::$app->getRequest()->getIsCpRequest()) {
+    \Craft::$app->getView()->registerAssetBundle(AbbrAsset::class);
 }
 ```
-We ensure that our plugin handle exists in the `plugins` array, and because we're going to register a new button, we'll add a `font-color` to the `buttons` array. Note that despite being named the same, these are two different things and don't have to be named the same.
 
-Once you've created this file, ensure that the Vizy field you'll be testing with is using this config, by editing the settings of the Vizy field.
+The bundle’s `sourcePath` must resolve to the folder containing `abbr.js`. Its dependency on `VizyAsset` ensures Vizy’s editor APIs load before your script. Reload the control panel after adding the bundle.
 
-#### Font Color JS
-Next, we need to create our JavaScript file that will be run when Vizy is initialized. It'll be this code that registers our [Tiptap](https://tiptap.dev/api/marks) mark.
+## 3. Register the TipTap Factory in JavaScript
+
+In `assets/abbr.js`:
 
 ```js
-// modules/vizymodule/src/assets/js/font-color.js
+(function () {
+    function register() {
+        if (!window.Craft || !Craft.Vizy || !Craft.Vizy.registerModule) {
+            return;
+        }
 
-document.addEventListener('onVizyConfigReady', (e) => {
-    const { Mark, mergeAttributes } = Craft.Vizy.Config.tiptap.core;
+        const { Mark, mergeAttributes } = Craft.Vizy.tiptap.core;
 
-    const FontColor = Mark.create({
-        name: 'fontColor',
+        const Abbr = Mark.create({
+            name: 'abbr',
+            parseHTML() {
+                return [{ tag: 'abbr' }];
+            },
+            renderHTML({ HTMLAttributes }) {
+                return ['abbr', mergeAttributes(HTMLAttributes), 0];
+            },
+            addCommands() {
+                return {
+                    toggleAbbr: () => ({ commands }) => commands.toggleMark(this.name),
+                };
+            },
+        });
 
-        addAttributes() {
-            return {
-                color: {
-                    default: null,
-                    parseHTML: element => element.getAttribute('data-color') || element.style.color,
-                    renderHTML: attributes => {
-                        if (!attributes.color) {
-                            return {};
-                        }
+        // Same string as PHP `moduleId()`.
+        Craft.Vizy.registerModule('acme/mark/abbr', () => Abbr);
 
-                        return {
-                            'data-color': attributes.color,
-                            style: `color: ${attributes.color};`,
-                        }
-                    },
-                },
-            }
-        },
-
-        parseHTML() {
-            return [
-                { tag: 'span[data-color]' },
-            ]
-        },
-
-        renderHTML({ HTMLAttributes }) {
-            return ['span', HTMLAttributes, 0];
-        },
-
-        addCommands() {
-            return {
-                setColor: color => ({ commands }) => {
-                    return commands.setMark(this.name, { color })
-                },
-
-                toggleColor: color => ({ commands }) => {
-                    return commands.toggleMark(this.name, { color })
-                },
-
-                unsetColor: () => ({ commands }) => {
-                    return commands.unsetMark(this.name)
-                },
-            }
-        },
-    });
-
-    Craft.Vizy.Config.registerExtensions((extensions) => {
-        return [
-            FontColor,
-        ];
-    });
-
-    Craft.Vizy.Config.registerButtons((buttons) => {
-        return [{
-            name: 'font-color',
-            svg: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 384 512"><path d="M192 512C86 512 0 426 0 320C0 228.8 130.2 57.7 166.6 11.7C172.6 4.2 181.5 0 191.1 0h1.8c9.6 0 18.5 4.2 24.5 11.7C253.8 57.7 384 228.8 384 320c0 106-86 192-192 192zM96 336c0-8.8-7.2-16-16-16s-16 7.2-16 16c0 61.9 50.1 112 112 112c8.8 0 16-7.2 16-16s-7.2-16-16-16c-44.2 0-80-35.8-80-80z"/></svg>',
-            title: Craft.t('vizy', 'Font Color'),
-            action: (editor) => { return editor.chain().focus().toggleColor('#958DF1').run(); },
-            isActive: (editor) => { return editor.isActive('fontColor', { color: '#958DF1' }); },
-        }];
-    });
-});
-```
-
-Let's cover this code a step at a time.
-
-Calling `document.addEventListener('onVizyConfigReady')` will ensure that our code is only run when Vizy is ready to load our plugin code.
-
-We can then access the Tiptap API without having to run `npm install @tiptap/core`. This is where we get our `Mark` class definition to create a new one.
-
-Next, we define our Mark class. We won't cover all the details here, but this follows the structure of a Tiptap [Mark](https://tiptap.dev/api/marks).
-
-We then register this new mark with `Craft.Vizy.Config.registerExtensions()` to let Vizy load up this mark definition in the editor.
-
-Finally, we need a button to be able to trigger our new extension! We can add a new button with `Craft.Vizy.Config.registerButtons()` which has an `action` to run the `toggleColor()` command defined in our mark class. We're also using the `name` we've added to our `buttons` array in our editor config.
-
-:::tip
-Be sure to check out the [Extending Vizy](/template-guides/extending-vizy) docs for more detail on the available options.
-:::
-
-With all those pieces in place, let's load up the Vizy field in an entry. You should see your new button in the toolbar, ready to get pressed. Go ahead, press it!
-
-![Get ready to add some outrageous bling to your page](https://assets.verbb.io/blog/creating-a-custom-mark-from-scratch/vizy-custom-mark.png)
-
-*Get ready to add some outrageous bling to your page*
-
-That's looking good, just please don't make your page look like a Geocities '98 page.
-
-Inspecting the code in the editor, you'll see the following:
-
-```html
-<p>So you want some <span data-color="#958DF1" style="color: #958DF1;">special</span> text, huh?</p>
-```
-
-It's created a `<span>` element with the color as a `data-color` and `style` attribute. More on that later.
-
-However, saving your entry and viewing it on the front-end, you'll notice that your shiny new color is missing 🙁 That's because Vizy doesn't know how to handle that content in the ProseMirror schema — that's the JSON content saved to your database.
-
-So — we need to tell Vizy how to handle this new node with a custom PHP class.
-
-#### Node class
-```php
-// modules/vizymodule/src/marks/FontColor.php
-
-<?php
-namespace modules\vizymodule\marks;
-
-use verbb\vizy\base\Mark;
-
-use craft\helpers\ArrayHelper;
-
-class FontColor extends Mark
-{
-    // Properties
-    // =========================================================================
-
-    public static ?string $type = 'fontColor';
-    public mixed $tagName = 'span';
-
-
-    // Public Methods
-    // =========================================================================
-
-    public function getTag(): array
-    {
-        $color = ArrayHelper::remove($this->attrs, 'color');
-
-        $this->attrs['data-color'] = $color;
-        $this->attrs['style'] = 'color: ' . $color;
-
-        return parent::getTag();
+        // Optional: only needed for custom dialogs. Standard toggleMark actions
+        // work from the Editor Config toolbar without registerControl.
+        // Craft.Vizy.registerControl('abbr', {
+        //   run: (editor) => editor.chain().focus().toggleMark('abbr').run(),
+        //   isActive: (editor) => editor.isActive('abbr'),
+        // });
     }
-}
+
+    if (window.Craft?.Vizy?.registerModule) {
+        register();
+    } else {
+        document.addEventListener('vizy:register', register);
+    }
+})();
 ```
 
-We ensure the `type` property matches the `name` we've given the node in our JS class, along with `tagName`. We also use `getTag()` to control how exactly we want to render the text color.
+## 4. Enable It on a Field
 
-Remember how the `<span>` element also had a `data-color` attribute in the Vizy field? That's because we can control the output of the mark with the `attrs` properties. The `color` is stored in `attrs`.
+Open **Settings → Vizy → Editor Configs** (or edit a `config/vizy/*.json` file).
+Under capabilities / marks, enable **Abbreviation**, add it to the toolbar
+(and Bubble Menu if you like), then assign that Editor Config to your Vizy
+field.
 
-So if we omitted the `getTag()` function above, we'd get:
+Authors can now toggle the mark. Saved JSON includes `"type": "abbr"` marks, and
+`{{ entry.myVizyField.render() }}` outputs `<abbr>…</abbr>`.
 
-```html
-<p>So you want some <span color="#958DF1">special</span> text, huh?</p>
-```
+## Test the Finished Mark
 
-Which is _sort of_ okay, but it's not exactly valid HTML. Instead, our `getTag()` removes the `color` from `$this->attrs` and adds a `data-color` and `style`attributes, rendering:
+Open an entry with the configured Vizy field and type `NASA`. Select that text and click **Abbreviation**, then save the entry. Reopen it to check that the formatting was retained. In the entry’s Twig template, render the field with `{{ entry.myVizyField.render() }}`, replacing `myVizyField` with your field’s handle.
 
-```html
-<p>So you want some <span data-color="#958DF1" style="color: #958DF1;">special</span> text, huh?</p>
-```
+Inspect the resulting page’s HTML. The selected text should appear inside `<abbr>NASA</abbr>`. The browser may not style that element differently by default; the HTML confirms the mark is working, and your site’s stylesheet can define its appearance.
 
-Which is more like it. Totally your call whether to use the `data-color` or just use the inline style, or something else entirely — up to you!
+## If Something Doesn’T Work
+
+When the capability never appears in Editor Config, the PHP event usually isn’t
+registered. An editor error like `untrustedEditorModule:…` almost always means
+the JS `registerModule` id doesn’t match the PHP `moduleId()` string, or the
+AssetBundle never loaded. A toolbar button that does nothing usually means the
+mark isn’t on the Editor Config toolbar, or the TipTap `name` doesn’t match the
+capability `name` / type `id()`. Empty front-end HTML points at a missing or
+wrong `tag()` (or `renderOccurrenceHtml()` for custom markup) on the PHP type
+class.
+
+For the wider API picture, see [Extending Vizy](docs:developers/extending-vizy).
+Custom toolbar dialogs use `Craft.Vizy.registerControl`. See [Choosing Insertion Controls](docs:guides/developers/choosing-insertion-controls) when deciding how editors should reach your feature.

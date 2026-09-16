@@ -2,9 +2,12 @@
 namespace verbb\vizy\services;
 
 use verbb\vizy\Vizy;
+use verbb\vizy\document\VizyBlock;
+use verbb\vizy\document\VizyDocument;
+use verbb\vizy\elements\Block;
 use verbb\vizy\elements\MatrixAnchor;
 use verbb\vizy\fields\VizyField;
-use verbb\vizy\nodes\VizyBlock;
+use verbb\vizy\helpers\Matrix as MatrixHelper;
 use verbb\vizy\records\MatrixAnchor as MatrixAnchorRecord;
 
 use Craft;
@@ -13,8 +16,6 @@ use craft\base\ElementInterface;
 use craft\fields\Matrix;
 use craft\models\FieldLayout;
 
-use verbb\vizy\models\NodeCollection as VizyNodeCollection;
-
 use yii\db\IntegrityException;
 
 class Anchors extends Component
@@ -22,28 +23,28 @@ class Anchors extends Component
     // Public Methods
     // =========================================================================
 
+    /**
+     * Resolve a MatrixAnchor for the authorized ownership tuple only.
+     *
+     * Client-supplied `$anchorUid` is never an authorization input. When
+     * provided, it must match the ownership-resolved row or this returns null
+     * (fail closed). There is no UID-only lookup path.
+     */
     public function getAnchor(
         ElementInterface $parentOwner,
         VizyField $vizyField,
         string $blockInstanceId,
         ?string $anchorUid = null,
     ): ?MatrixAnchor {
-        $elementsService = Craft::$app->getElements();
-        $siteId = $parentOwner->siteId;
-
-        if ($anchorUid) {
-            $anchor = $elementsService->getElementByUid($anchorUid, MatrixAnchor::class, $siteId);
-
-            if ($anchor instanceof MatrixAnchor) {
-                return $anchor;
-            }
+        while ($parentOwner instanceof Block) {
+            $parentOwner = $parentOwner->getOwner();
         }
-
         if (!$parentOwner->id) {
             return null;
         }
 
-        $parentOwnerId = (int)$parentOwner->getCanonicalId();
+        $parentOwnerId = (int)$parentOwner->id;
+        $siteId = $parentOwner->siteId;
 
         $record = MatrixAnchorRecord::findOne([
             'parentOwnerId' => $parentOwnerId,
@@ -55,9 +56,17 @@ class Anchors extends Component
             return null;
         }
 
-        $anchor = $elementsService->getElementById($record->id, MatrixAnchor::class, $siteId);
+        $anchor = Craft::$app->getElements()->getElementById($record->id, MatrixAnchor::class, $siteId);
+        if (!$anchor instanceof MatrixAnchor) {
+            return null;
+        }
 
-        return $anchor instanceof MatrixAnchor ? $anchor : null;
+        // Optional UID must agree with the ownership row — never retarget by UID.
+        if (is_string($anchorUid) && $anchorUid !== '' && $anchor->uid !== $anchorUid) {
+            return null;
+        }
+
+        return $anchor;
     }
 
     public function ensureAnchor(
@@ -67,11 +76,16 @@ class Anchors extends Component
         ?FieldLayout $fieldLayout = null,
         ?string $anchorUid = null,
     ): ?MatrixAnchor {
+        while ($parentOwner instanceof Block) {
+            $parentOwner = $parentOwner->getOwner();
+        }
         if (!$parentOwner->id) {
             return null;
         }
 
-        $anchor = $this->getAnchor($parentOwner, $vizyField, $blockInstanceId, $anchorUid);
+        // Find by ownership only — stale/forged client UIDs must not block sync
+        // or create a second row for the same tuple.
+        $anchor = $this->getAnchor($parentOwner, $vizyField, $blockInstanceId, null);
 
         if ($anchor) {
             return $this->_applyFieldLayout($anchor, $fieldLayout);
@@ -81,19 +95,44 @@ class Anchors extends Component
         $mutex = Craft::$app->getMutex();
 
         if (!$mutex->acquire($lockName, 5)) {
-            $anchor = $this->getAnchor($parentOwner, $vizyField, $blockInstanceId, $anchorUid);
+            $anchor = $this->getAnchor($parentOwner, $vizyField, $blockInstanceId, null);
 
             return $anchor ? $this->_applyFieldLayout($anchor, $fieldLayout) : null;
         }
 
         try {
-            $anchor = $this->getAnchor($parentOwner, $vizyField, $blockInstanceId, $anchorUid);
+            $anchor = $this->getAnchor($parentOwner, $vizyField, $blockInstanceId, null);
 
             if ($anchor) {
                 return $this->_applyFieldLayout($anchor, $fieldLayout);
             }
 
-            return $this->_createAnchor($parentOwner, $vizyField, $blockInstanceId, $fieldLayout, $anchorUid);
+            $transaction = Craft::$app->getDb()->beginTransaction();
+            try {
+                $anchor = $this->_createAnchor($parentOwner, $vizyField, $blockInstanceId, $fieldLayout, $anchorUid);
+                // Drafts and revisions own independent Matrix snapshots. Resolve
+                // the source through Craft's owner relationship, never by a UID alone.
+                $sourceOwner = $parentOwner->duplicateOf;
+                if (!$sourceOwner && $parentOwner->getIsDerivative()) {
+                    $sourceOwner = $parentOwner->getCanonical();
+                }
+                if ($anchor && $sourceOwner && $sourceOwner->id !== $parentOwner->id && $fieldLayout) {
+                    $source = $this->getAnchor($sourceOwner, $vizyField, $blockInstanceId);
+                    if ($source) {
+                        $source->setFieldLayout($fieldLayout);
+                        foreach ($fieldLayout->getCustomFields() as $field) {
+                            if ($field instanceof Matrix) {
+                                $this->copyMatrixField($field, $source, $anchor);
+                            }
+                        }
+                    }
+                }
+                $transaction->commit();
+                return $anchor;
+            } catch (\Throwable $e) {
+                $transaction->rollBack();
+                throw $e;
+            }
         } finally {
             $mutex->release($lockName);
         }
@@ -114,6 +153,15 @@ class Anchors extends Component
         $field->afterElementPropagate($anchor, $isNew);
     }
 
+    public function copyMatrixField(Matrix $field, MatrixAnchor $source, MatrixAnchor $target): void
+    {
+        $payload = MatrixHelper::payloadForIndependentCopy(
+            $field->serializeValue(MatrixHelper::nestedEntryQuery($field, $source), $source),
+        );
+        $value = $field->normalizeValue($payload, $target);
+        $this->saveMatrixField($field, $target, $value, false);
+    }
+
     public function deleteAnchor(MatrixAnchor $anchor): void
     {
         if ($fieldLayout = $anchor->getFieldLayout()) {
@@ -129,6 +177,9 @@ class Anchors extends Component
 
     public function gcOrphans(ElementInterface $parentOwner, VizyField $vizyField): void
     {
+        while ($parentOwner instanceof Block) {
+            $parentOwner = $parentOwner->getOwner();
+        }
         if (!$parentOwner->id) {
             return;
         }
@@ -137,7 +188,7 @@ class Anchors extends Component
 
         $records = MatrixAnchorRecord::find()
             ->where([
-                'parentOwnerId' => (int)$parentOwner->getCanonicalId(),
+                'parentOwnerId' => (int)$parentOwner->id,
                 'vizyFieldId' => $vizyField->id,
             ])
             ->all();
@@ -191,12 +242,12 @@ class Anchors extends Component
     {
         $value = $element->getFieldValue($vizyField->handle);
 
-        if (!$value instanceof VizyNodeCollection) {
+        if (!$value instanceof VizyDocument) {
             return false;
         }
 
-        foreach ($value->query()->where(['type' => VizyBlock::$type])->all() as $block) {
-            if ($block instanceof VizyBlock && $this->blockNeedsMatrixAnchorBackfill($block, $element, $vizyField)) {
+        foreach ($value->blocks(null) as $block) {
+            if ($this->blockNeedsMatrixAnchorBackfill($block, $element, $vizyField)) {
                 return true;
             }
         }
@@ -209,7 +260,8 @@ class Anchors extends Component
         ElementInterface $parentOwner,
         VizyField $vizyField,
     ): bool {
-        if (!$block->hasMatrixFields() || !$parentOwner->id || !($blockInstanceId = $block->getId())) {
+        $layout = $block->blockType()?->getFieldLayout();
+        if (!$this->blockHasMatrixFields($layout) || !$parentOwner->id) {
             return false;
         }
 
@@ -220,8 +272,8 @@ class Anchors extends Component
         return $this->getAnchor(
             $parentOwner,
             $vizyField,
-            $blockInstanceId,
-            $block->getMatrixAnchorUid(),
+            $block->uid(),
+            $block->matrixAnchorUid(),
         ) === null;
     }
 
@@ -231,8 +283,10 @@ class Anchors extends Component
 
     private function _blockHasMatrixJsonContent(VizyBlock $block): bool
     {
-        $fields = $block->attrs['values']['content']['fields'] ?? [];
-        $fieldLayout = $block->getFieldLayout();
+        // Vizy 4 stores placements in fieldSlots (UID keys); legacy JSON may still
+        // use Matrix handles. Check both against the Block Type layout.
+        $slots = $block->rawFieldValues();
+        $fieldLayout = $block->blockType()?->getFieldLayout();
 
         if (!$fieldLayout) {
             return false;
@@ -246,11 +300,11 @@ class Anchors extends Component
             $handle = $field->handle;
             $uid = $field->layoutElement?->uid;
 
-            if (array_key_exists($handle, $fields) && $this->_matrixContentFilled($fields[$handle])) {
+            if (array_key_exists($handle, $slots) && $this->_matrixContentFilled($slots[$handle])) {
                 return true;
             }
 
-            if ($uid && array_key_exists($uid, $fields) && $this->_matrixContentFilled($fields[$uid])) {
+            if ($uid && array_key_exists($uid, $slots) && $this->_matrixContentFilled($slots[$uid])) {
                 return true;
             }
         }
@@ -279,7 +333,7 @@ class Anchors extends Component
     ): string {
         return sprintf(
             'vizy-matrix-anchor:%d:%d:%s',
-            (int)$parentOwner->getCanonicalId(),
+            (int)$parentOwner->id,
             $vizyField->id,
             $blockInstanceId,
         );
@@ -295,7 +349,7 @@ class Anchors extends Component
         $anchor = new MatrixAnchor([
             'vizyFieldId' => $vizyField->id,
             'blockInstanceId' => $blockInstanceId,
-            'parentOwnerId' => (int)$parentOwner->getCanonicalId(),
+            'parentOwnerId' => (int)$parentOwner->id,
             'siteId' => $parentOwner->siteId,
         ]);
 
@@ -308,7 +362,7 @@ class Anchors extends Component
                 return $anchor;
             }
         } catch (IntegrityException $e) {
-            $existing = $this->getAnchor($parentOwner, $vizyField, $blockInstanceId, $anchorUid);
+            $existing = $this->getAnchor($parentOwner, $vizyField, $blockInstanceId, null);
 
             if ($existing) {
                 return $this->_applyFieldLayout($existing, $fieldLayout);
@@ -317,7 +371,7 @@ class Anchors extends Component
             throw $e;
         }
 
-        $existing = $this->getAnchor($parentOwner, $vizyField, $blockInstanceId, $anchorUid);
+        $existing = $this->getAnchor($parentOwner, $vizyField, $blockInstanceId, null);
 
         if ($existing) {
             return $this->_applyFieldLayout($existing, $fieldLayout);
@@ -332,16 +386,13 @@ class Anchors extends Component
     {
         $value = $parentOwner->getFieldValue($vizyField->handle);
 
-        if (!$value instanceof VizyNodeCollection) {
+        if (!$value instanceof VizyDocument) {
             return [];
         }
 
         $ids = [];
-
-        foreach ($value->query()->where(['type' => VizyBlock::$type])->all() as $block) {
-            if ($block instanceof VizyBlock && ($id = $block->getId())) {
-                $ids[] = $id;
-            }
+        foreach ($value->blocks(null) as $block) {
+            $ids[] = $block->uid();
         }
 
         return $ids;

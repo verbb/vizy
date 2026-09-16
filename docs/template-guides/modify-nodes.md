@@ -1,104 +1,32 @@
 # Modify Nodes
-You can modify the output of any node via Twig or PHP, depending on your preference and workflow. This modification allows you to alter things like classes, attributes and more, without having to construct the HTML from scratch. You can also modify any other attributes of a node.
 
-## Using Twig
-When outputting the content of a Vizy field, you'll likely use:
+Sometimes you want to tweak how Vizy turns a node or mark into HTML — add a class, change a tag, wrap an image — without rebuilding the whole document in Twig. Use the PHP events below.
 
-```twig
-{{ entry.vizyField.renderHtml() }}
-```
-
-You can pass in an object to the `renderHtml()` with a configuration map of additional attributes you'd like included. For example, let's say we want to add a `text-lg` class to our Paragraph node.
+For everyday front-end output, stick with:
 
 ```twig
-{{ entry.vizyField.renderHtml({
-    paragraph: {
-        attrs: {
-            class: 'text-lg',
-        },
-    },
-}) }}
-
-{# Resulting HTML #}
-<p class="text-lg">Well it's gonna cost you. How much money you got on you?</p>
+{{ entry.vizyField.render() }}
 ```
 
-Or, another example could be modifying a Bold mark. Note that in order to supply config options for Marks, we need to attach them to Node config. 
+and use [Block Type Templates](docs:template-guides/block-type-templates) for Blocks. Use the events below to change HTML across all Vizy fields or only a selected field.
 
-```twig
-{{ entry.vizyField.renderHtml({
-    paragraph: {
-        marks: {
-            bold: {
-                attrs: {
-                    class: 'text-blue-500',
-                },
-            },
-        },
-    },
-}) }}
+See also [Extensibility](docs:developers/extending-vizy) and [Events](docs:developers/events).
 
-<p>I'm sure that in <strong class="text-blue-500">1985</strong>, plutonium is available at every corner drug store.</p>
-```
+## How Overrides Work
 
-Of course, you're not limited to using just `class` attributes, and you're also able to change the HTML tag used.
+`VizyDocument::render()` builds HTML from each type’s class (`tag()`, `resolveAttrs()`, optional `renderOccurrenceHtml()`). Modify events fire **on that class** for every HTML-emitting mark and node — including layout wrappers, images, and simple tags.
 
-```twig
-{{ entry.vizyField.renderHtml({
-    paragraph: {
-        marks: {
-            italic: {
-                tagName: 'i',
-                attrs: {
-                    'data-text': 'italic',
-                },
-            },
-        },
-    },
-}) }}
+Register the listener in your module or plugin’s `init()` method, with the imports at the top of the PHP file. Listen on a concrete type such as `Bold::class` when the change should affect only that type. Listen on the base `Mark::class` or `Node::class` when it should apply to every mark or node.
 
-<p>My experiment worked. They're all exactly <i data-text="italic">twenty-five minutes</i> slow.</p>
-```
-
-So far, all the overrides we've done have completely replaced the attributes on a node. This might be desireable in some cases, but you can also change this behaviour using `merge: true`.
-
-```twig
-{{ entry.vizyField.renderHtml({
-    paragraph: {
-        merge: true,
-        attrs: {
-            class: 'text-lg',
-        },
-    },
-}) }}
-```
-
-Importantly, the Paragraph node actually outputs a `text-left`, `text-right`, etc class depending on the alignment in the editor. Without `merge` set, our custom class would completely replace these clases, losing our alignment functionality.
-
-You can also use `merge` for marks.
-
-```twig
-{{ entry.vizyField.renderHtml({
-    paragraph: {
-        marks: {
-            link: {
-                merge: true,
-                attrs: {
-                    class: 'text-xl',
-                },
-            },
-        },
-    },
-}) }}
-```
+The default renderer provides the type through `$event->typeId`, its attributes through `$event->attrs`, and the field, owner, and site through `$event->context`. It does not construct a node or mark object for this event, so `$event->node` and `$event->mark` are null.
 
 ## Using PHP
-Alternatively, you can use the PHP method from a plugin or module to control this behaviour as well.
+
+Change the open and close tags for a mark — here, Bold:
 
 ```php
 use verbb\vizy\events\ModifyMarkTagEvent;
 use verbb\vizy\marks\Bold;
-
 use yii\base\Event;
 
 Event::on(Bold::class, Bold::EVENT_MODIFY_TAG, function(ModifyMarkTagEvent $event) {
@@ -106,23 +34,30 @@ Event::on(Bold::class, Bold::EVENT_MODIFY_TAG, function(ModifyMarkTagEvent $even
 });
 ```
 
-Here, we're modifying the `tag` attribute on the event, which is used when rendering the open and closing HTML tags for nodes and marks. This will apply the `text-orange-500` class globally, for all Bold marks for all Vizy fields. You might like to filter via the field:
+Limit that to one field when you need to:
 
 ```php
 Event::on(Bold::class, Bold::EVENT_MODIFY_TAG, function(ModifyMarkTagEvent $event) {
-    if ($event->mark->field->handle == 'myVizyField') {
+    $handle = $event->context?->field?->handle ?? null;
+    if ($handle === 'myVizyField') {
         $event->tag[0]['attrs']['class'] = 'text-orange-500';
     }
 });
 ```
 
-You'll also notice we're using `tag[0]`. This is because defining a tag can actually support multiple items. For example, a Code Block node actually renders a `<pre>` and `<code>` tag. This can be useful if you require wrapping your nodes in additional HTML tags.
+Cross-cutting listeners can attach to the base type instead:
 
+```php
+Event::on(\verbb\vizy\base\Mark::class, \verbb\vizy\base\Mark::EVENT_MODIFY_TAG, function(ModifyMarkTagEvent $event) {
+    // Fires for every mark after the concrete type’s handlers.
+});
+```
+
+`tag` is a list because some nodes emit more than one HTML tag (a Code Block uses both `<pre>` and `<code>`). You can wrap a node by putting another tag in front:
 
 ```php
 use verbb\vizy\events\ModifyNodeTagEvent;
 use verbb\vizy\nodes\Paragraph;
-
 use yii\base\Event;
 
 Event::on(Paragraph::class, Paragraph::EVENT_MODIFY_TAG, function(ModifyNodeTagEvent $event) {
@@ -140,25 +75,21 @@ Event::on(Paragraph::class, Paragraph::EVENT_MODIFY_TAG, function(ModifyNodeTagE
 });
 ```
 
-Here, we're including two items for the tag. The first item being a `div` with a class `rich-text`, with the second being the original attributes a Paragraph node uses for its tag. This ends up producing the following:
+That produces:
 
-```twig
+```html
 <div class="rich-text">
     <p>That was the day I invented time travel. I remember it vividly.</p>
 </div>
-``` 
+```
 
-There are also times where modifying just the tag will be limiting. For example, an `Image` node is self-closing, so if you want to add a wrapper `<div>` or create multiple HTML elements associated with that node, it's going to produce invalid HTML.
-
-In that scenario, we recommend taking full control over the rendering of a node.
+For self-closing or fully custom nodes such as Image, take over the full rendered HTML instead:
 
 ```php
 use craft\helpers\Html;
-
 use verbb\vizy\events\ModifyRenderedNodeEvent;
 use verbb\vizy\nodes\Image;
-
-use yii\base\Image;
+use yii\base\Event;
 
 Event::on(Image::class, Image::EVENT_MODIFY_RENDERED_NODE, function(ModifyRenderedNodeEvent $event) {
     $image = $event->renderedNode;
@@ -170,4 +101,3 @@ Event::on(Image::class, Image::EVENT_MODIFY_RENDERED_NODE, function(ModifyRender
     $event->renderedNode = $wrapper;
 });
 ```
- 

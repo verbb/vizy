@@ -1,164 +1,144 @@
 # Querying Nodes
-You can query Nodes within a Vizy field using our query engine. It aims to be similar to Element Queries, and how you would query Matrix blocks. When you query a Vizy field, don't forget you're querying Nodes, which include Paragraph, Images and more - not just Vizy Blocks.
 
-## Examples
-Let's look at a few example use-cases.
+Use a query when you need particular pieces of a Vizy field. For example, you can select an article’s root headings for a contents list or read callout blocks separately from its paragraphs.
+
+The examples belong in an entry’s Twig template. They assume a Vizy field with the handle `vizyField`; replace it with your field’s handle. `query()` selects root nodes, including paragraphs and blocks. It does not search inside layouts or nested Vizy fields.
+
+Use `query().where(...)` to select content. Queries keep their enabled scope when you add or replace ordinary filters. See [Node Query](docs:developers/node-query) for combining conditions.
+
+## Display Callout Text
+
+Create a Block Type with the handle `callout`, add a Plain Text field with the handle `text`, and allow that type in your Vizy field. Add two callouts at the root of an entry’s content and save it. Put this in the entry template:
+
+```twig
+<ul class="callouts">
+    {% for block in entry.vizyField.query().where({ type: 'vizyBlock', handle: 'callout' }).all() %}
+        <li>{{ block.text }}</li>
+    {% endfor %}
+</ul>
+```
+
+Each enabled root callout becomes a list item in document order. Other Block Types and surrounding paragraphs are left out. This reads the Plain Text field directly; it does not use the Block Type’s rendering template.
+
+## Selecting Content
 
 ### Fetch Nodes
+
 Fetch all paragraph nodes in a field:
 
 ```twig
 {% set paragraphs = entry.vizyField.query().where({ type: 'paragraph' }).all() %}
 
 {# Alternative syntax #}
-{% set paragraphs = entry.vizyField.query().where([ '=', 'type', 'paragraph' ]).all() %}
+{% set paragraphs = entry.vizyField.query().andWhere([ '=', 'type', 'paragraph' ]).all() %}
 ```
 
-Fetch all Vizy Block and paragraph nodes in a field:
+Fetch all Vizy Block and paragraph nodes:
 
 ```twig
-{% set blocks = entry.vizyField.query().where({ type: ['vizyBlock', 'paragraph'] }).all() %}
+{% set nodes = entry.vizyField.query().where({ type: ['vizyBlock', 'paragraph'] }).all() %}
 ```
 
-Fetch all Vizy Block nodes for a given handle:
+Fetch Vizy Blocks for a given Block Type handle:
 
 ```twig
 {% set blocks = entry.vizyField.query().where({ type: 'vizyBlock', handle: 'textBlock' }).all() %}
 ```
 
-Fetch all nodes that are **not** a paragraph node:
+Fetch all nodes that are **not** a paragraph:
 
 ```twig
-{% set blocks = entry.vizyField.query().where([ '!=', 'type', 'paragraph' ]).all() %}
+{% set nodes = entry.vizyField.query().andWhere([ '!=', 'type', 'paragraph' ]).all() %}
 
 {# Alternative syntax #}
-{% set blocks = entry.vizyField.query().where([ 'not', { type: 'paragraph' } ]).all() %}
+{% set nodes = entry.vizyField.query().andWhere([ 'not', { type: 'paragraph' } ]).all() %}
 ```
 
-
 ### Limit
-Return the first 2 nodes.
 
 ```twig
 {% set nodes = entry.vizyField.query().limit(2).all() %}
 ```
 
-
 ### Count
-Return the total count of nodes in a field:
 
 ```twig
-{# For all types of nodes #}
 {{ entry.vizyField.query().count() }}
 
-{# For all Vizy Block nodes #}
 {{ entry.vizyField.query().where({ type: 'vizyBlock' }).count() }}
 
-{# For all image nodes #}
 {{ entry.vizyField.query().where({ type: 'image' }).count() }}
 ```
 
-
 ### Order By
-Return all nodes ordered by their type.
 
 ```twig
-{% set paragraphs = entry.vizyField.query().orderBy('type DESC').all() %}
+{% set nodes = entry.vizyField.query().orderBy('type DESC').all() %}
 ```
 
-Return all Vizy Block nodes of type `textBlock` ordered by a `plainText` field:
+Order Vizy Blocks of type `textBlock` by a Plain Text field:
 
 ```twig
-{% set paragraphs = entry.vizyField.query().where({ type: 'vizyBlock', handle: 'textBlock' }).orderBy('plainText DESC').all() %}
+{% set blocks = entry.vizyField.query()
+    .where({ type: 'vizyBlock', handle: 'textBlock' })
+    .orderBy('plainText DESC')
+    .all() %}
 ```
-
 
 ### Enabled
-By default, only enabled Vizy blocks will be returned in a query. You can control this with `enabled`. This has no effect on other node types like Paragraph, Image, etc.
+
+By default only **enabled** Vizy Blocks are returned (prose nodes always count as enabled). Control this with `enabled`:
 
 ```twig
-{# Return all blocks that are enabled _only_ (default) #}
 {% set blocks = entry.vizyField.query().where({ enabled: true }).all() %}
 
-{# Return all blocks that are disabled _only_ #}
 {% set blocks = entry.vizyField.query().where({ enabled: false }).all() %}
 
-{# Return all blocks that are both enabled and disabled #}
-{% set blocks = entry.vizyField.query().where({ enabled: null }).all() %}
+{# Both enabled and disabled Blocks (and prose) #}
+{% set nodes = entry.vizyField.query().where({ enabled: null }).all() %}
 ```
 
-
 ### Fields
-Return all Vizy Block nodes of type `textBlock` with a `plainText` field with a value equal to `123`:
+
+For the following examples, create a Block Type with the handle `textBlock` and add Plain Text, Number, and Date fields with the handles `plainText`, `number`, and `date`. Read it through the entry’s Vizy field so Craft can resolve those field values:
 
 ```twig
 {% set blocks = entry.vizyField.query()
     .where({ type: 'vizyBlock', handle: 'textBlock', plainText: '123' })
     .all() %}
 
-{# Alternative syntax #}
 {% set blocks = entry.vizyField.query()
     .where({ type: 'vizyBlock', handle: 'textBlock' })
     .andWhere(['=', 'plainText', '123'])
     .all() %}
-```
 
-Return all Vizy Block nodes of type `textBlock` with a `number` field with a value greater than `10`:
-
-```twig
 {% set blocks = entry.vizyField.query()
     .where({ type: 'vizyBlock', handle: 'textBlock' })
     .andWhere(['>', 'number', 10])
     .all() %}
-```
 
-Return all Vizy Block nodes of type `textBlock` with a `date` field with a value between `7 days ago` and `now`:
-
-```twig
 {% set blocks = entry.vizyField.query()
     .where({ type: 'vizyBlock', handle: 'textBlock' })
     .andWhere(['between', 'date', now | date_modify('-7 day'), now])
     .all() %}
 ```
 
-## Available Methods
-You can use the below methods on a query to either filter or fetch nodes.
+On each Block result, field handles work like Matrix:
 
-Option | Description
---- | ---
-`where()` | Used to filter items based on params.
-`andWhere()` | In addition to `where()`, filter using `and` matching conditions.
-`orWhere()` | In addition to `where()`, filter using `or` matching conditions.
-`filterWhere()` | See `where()`.
-`andFilterWhere()` | See `andWhere()`.
-`orFilterWhere()` | See `orWhere()`.
-`exists()` | Whether any items match the query.
-`limit()` | Limit the number of nodes returned.
-`orderBy()` | Return nodes ordered by a property.
-`count()` | Return the total count for the query.
-`one()` | Return the first matching node.
-`all()` | Return a collection of all matching nodes.
+```twig
+{% for block in entry.vizyField.query().where({ type: 'vizyBlock', handle: 'textBlock' }).all() %}
+    {{ block.handle }}
+    {{ block.plainText }}
+{% endfor %}
+```
 
+<a id="available-methods"></a>
+<a id="available-params"></a>
 
-## Available Params
-You can use the following operators in the above methods like `where()`, `andWhere()`, 
+See [Node Query](docs:developers/node-query) for the full method and operator reference.
 
-Param | Example
---- | ---
-`not` | `where(['not', ['username' => 'admin']])`
-`and` | `where(['and', { username: 'admin' }, { id: 3}])`
-`or` | `where(['or', { username: 'admin' }, { id: 3}])`
-`between` | `where(['between', 'id', 1, 2])`
-`not between` | `where(['not between', 'id', 1, 2])`
-`in` | `where(['in', 'id', [1, 3]])`
-`not in` | `where(['not in', 'id', [1, 3]])`
-`like` | `where(['like', 'username', 'admin'])`
-`not like` | `where(['not like', 'username', 'admin'])`
-`or like` | `where(['or like', 'username', 'admin'])`
-`or not like` | `where(['or not like', 'username', 'admin'])`
-`>` | `where(['>', 'id', 1])`
-`<` | `where(['<', 'id', 2])`
-`>=` | `where(['>=', 'id', 1])`
-`<=` | `where(['<=', 'id', 2])`
-`=` | `where(['=', 'id', 1])`
-`!=` | `where(['!=', 'id', 1])`
+## Reading Content Without a Query
+
+Use `blocks()` for enabled blocks throughout the outer node tree, including layouts. Use `blocks(false)` for disabled blocks or `blocks(null)` for both states. `findBlock(uid)` is an identity lookup and can return a disabled block. To read the root nodes as arrays, use `content().nodes()`; `traverse()` follows node children. These methods do not enter fields nested inside blocks. Read an inner Vizy field through its block field handle, as shown in [Nested Vizy](docs:feature-tour/nested-vizy#displaying-the-nested-field).
+
+See [Rendering Content](docs:template-guides/rendering-content) for examples of these approaches. GraphQL’s `nodes` and `blocks` fields also support filtering, limits, and ordering; see [GraphQL](docs:developers/graphql).

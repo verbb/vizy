@@ -1,0 +1,301 @@
+/* Single-column configurator: stacked groups of full-width block type rows,
+   mirroring the single-column authoring experience in the editor itself.
+   Editing a block type happens in a slideout, so there is no detail pane. */
+
+.vizy-configurator {
+    max-width: 600px;
+}
+
+/* Groups */
+
+/* Outer edge uses the same token as Craft's own .card / .chip / .matrixblock
+   border, which is a step darker than --hairline-color. Internal separators stay
+   on the hairline, so the container edge reads as the stronger line. */
+.vizy-block-group {
+    margin-bottom: 14px;
+    border: 1px solid var(--gray-200, hsl(212, 30%, 85%));
+    border-radius: var(--large-border-radius, 5px);
+    background: var(--white, #fff);
+}
+
+.vizy-block-group-header {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 10px;
+    border-bottom: 1px solid var(--hairline-color, rgba(51, 64, 77, 0.1));
+}
+
+.vizy-block-group-name {
+    flex: 1;
+    min-width: 0;
+    margin: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.vizy-block-group-footer {
+    padding: 8px 10px;
+}
+
+/* Rows */
+
+.vizy-block-rows {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    /* Hairlines via gap, not per-row border-top + :first-child. dnd-kit inserts a
+       hidden placeholder sibling on dragstart; a first-child border exemption
+       gives that clone an extra 1px and the whole list jumps when dragging the
+       top row or landing at index 0. */
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+    /* Panel wash behind white block rows; 1px gap reads as a hairline between items. */
+    background: var(--gray-050, #f3f7fc);
+}
+
+/* The empty-state drop zone lives inside the list rather than beside it, so an
+   emptied group's panel keeps layout height mid-drag and remains a pointer
+   hit-test target. It is styled as a fixed-height landing strip, not as a block
+   row — drops into empty groups are committed from geometry, not from a
+   Sortable stand-in (a stand-in made OptimisticSortingPlugin treat it as an
+   above/below peer and broke within-group reorders). */
+.vizy-block-group-dropzone {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 44px;
+    margin: 0;
+    padding: 8px 10px;
+    background: #fff;
+    color: var(--pk-color-gray-350, #8b96a2);
+    font-size: 12px;
+    font-style: italic;
+    text-align: center;
+}
+
+.vizy-block-group-dropzone-label {
+    pointer-events: none;
+}
+
+/* While a row is hovering an empty group, the label steps back — the dashed
+   outline on the zone itself is the answer, same pattern as Editor Config. */
+.vizy-block-group-dropzone.is-drop-target .vizy-block-group-dropzone-label {
+    opacity: 0.45;
+}
+
+.vizy-configurator.is-sorting .vizy-block-group-dropzone.is-drop-target {
+    border-radius: var(--small-border-radius, 3px);
+    outline: 1px dashed var(--pk-color-gray-300, #9aa5b1);
+    outline-offset: -5px;
+    background: var(--gray-050, #f3f7fc);
+}
+
+/* Reserved during a last-item drag: injected up front, revealed once the real
+   row leaves the list (dnd-kit's hidden placeholder does not count as a row). */
+.vizy-block-group-dropzone.is-reserved.is-pending {
+    display: none;
+}
+
+.vizy-block-group-dropzone.is-reserved .vizy-block-group-dropzone-label {
+    opacity: 0.65;
+}
+
+.vizy-block-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 6px 10px;
+    background: #fff;
+}
+
+/* Accent wash only — same footprint as plain rows (no margin/radius/rail).
+   A perimeter ring doubled against the list gap / next coloured row; a left
+   rail was tried and rejected as visual noise. Background is enough. */
+.vizy-block-row.has-color {
+    --custom-bg-color: color-mix(in oklab, var(--vizy-block-accent-color) 9%, #fff);
+    background: var(--custom-bg-color);
+}
+
+.vizy-block-row[data-dnd-placeholder] {
+    box-shadow: none;
+    border-radius: 0;
+}
+
+.vizy-block-row:hover {
+    background: var(--gray-050, #f3f7fc);
+}
+
+.vizy-block-row.has-color:hover {
+    background: color-mix(in oklab, var(--vizy-block-accent-color) 14%, #fff);
+}
+
+.vizy-block-row.is-disabled .vizy-block-row-text {
+    opacity: 0.5;
+}
+
+.vizy-block-row.is-missing .vizy-block-row-name {
+    color: var(--error-color, #cf1124);
+}
+
+/* dnd-kit reorders rows as you drag, so the dragged row needs to read as lifted
+   rather than as a gap. Elevation only while dragging, since flex items honour
+   z-index without positioning. */
+.vizy-block-row.is-dragging {
+    z-index: 1;
+    border-radius: var(--small-border-radius, 3px);
+    background: #fff;
+    box-shadow: 0 4px 12px -2px rgba(31, 41, 51, 0.25);
+    cursor: move;
+}
+
+.vizy-block-row.has-color.is-dragging {
+    background: var(--custom-bg-color);
+    box-shadow: 0 4px 12px -2px rgba(31, 41, 51, 0.25);
+}
+
+/* Suppress hover repaints on the rows shifting out of the way mid-drag. */
+.vizy-configurator.is-sorting .vizy-block-row:hover {
+    background: #fff;
+}
+
+.vizy-configurator.is-sorting .vizy-block-row.has-color:hover {
+    background: var(--custom-bg-color);
+}
+
+.vizy-configurator.is-sorting .vizy-block-row.is-dragging:hover {
+    background: #fff;
+}
+
+.vizy-configurator.is-sorting .vizy-block-row.has-color.is-dragging:hover {
+    background: var(--custom-bg-color);
+}
+
+.vizy-block-row-switch {
+    flex-shrink: 0;
+}
+
+/* pk-lightswitch names its control from `label`, and aria-label on the host does
+   not reach the control inside its shadow root. The row already shows the block
+   name, so the label text is hidden visually while still naming the switch. */
+.vizy-block-row-switch::part(label) {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    margin: -1px;
+    padding: 0;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+    border: 0;
+}
+
+.vizy-block-row-main {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex: 1;
+    min-width: 0;
+    padding: 2px 0;
+    border: none;
+    background: none;
+    text-align: left;
+    cursor: pointer;
+}
+
+.vizy-block-row-icon {
+    display: inline-flex;
+    width: 16px;
+    height: 16px;
+    flex-shrink: 0;
+    color: var(--vizy-block-accent-color, inherit);
+}
+
+.vizy-block-row-icon pk-icon {
+    font-size: 16px;
+    color: inherit;
+}
+
+.vizy-block-row-icon svg {
+    width: 100%;
+    height: 100%;
+    fill: currentColor;
+}
+
+.vizy-block-row-text {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+    line-height: 1.3;
+}
+
+.vizy-block-row-name {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.vizy-block-row-meta {
+    font-size: 11px;
+    opacity: 0.6;
+}
+
+.vizy-block-row-warning {
+    color: var(--error-color, #cf1124);
+    font-size: 11px;
+}
+
+/* The grip is not a pk-button, so it gets the same square footprint by hand.
+   Without this it collapses to the glyph's own width and the trailing menu
+   buttons land at a different x on every row. */
+.vizy-block-row-grip {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    width: var(--pk-btn-height-sm, 1.875rem);
+    height: var(--pk-btn-height-sm, 1.875rem);
+    cursor: move;
+    /* The handle owns the gesture, so the row itself never starts a text selection. */
+    touch-action: none;
+}
+
+/* pk-icon is a 1em box, so it would otherwise inherit the row's font size. The
+   grip glyph is a loose dot cluster, so it reads smaller than the ellipsis at an
+   identical box size — hence one step up from the menu button's 13px rather than
+   a match. Colour is pinned to the same token pk-button paints its own glyph
+   with, so the two sit at equal weight. */
+.vizy-block-row-grip pk-icon {
+    font-size: 15px;
+    color: var(--pk-color-gray-700, #3f4d5a);
+    vertical-align: 0;
+}
+
+/* pk-icon's `label` renders an SVG <title>, which is what gives an icon-only
+   pk-button its accessible name — pk-button does not forward aria-label to the
+   native button inside its shadow root, so the name has to come from content.
+   But an SVG <title> also paints a native tooltip on hover, the same nuisance as
+   a title attribute. Taking the glyph out of hit-testing suppresses the tooltip
+   and leaves the name intact; the button (or grip) owns the hit area anyway. */
+.vizy-configurator pk-icon {
+    pointer-events: none;
+}
+
+/* pk-dropdown-menu sets align-self: flex-start on its own host, which beats the
+   row's align-items: center and left the menu glyph ~3px above the grip. */
+.vizy-block-row pk-dropdown-menu,
+.vizy-block-group-header pk-dropdown-menu {
+    align-self: center;
+}
+
+/* Grip and overflow menu read as one trailing control cluster, so they sit
+   tighter than the row's general gap. */
+.vizy-block-row-grip+pk-dropdown-menu {
+    margin-left: -6px;
+}
+
+.vizy-add-group {
+    margin-top: 2px;
+}

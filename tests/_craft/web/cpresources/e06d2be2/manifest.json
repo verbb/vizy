@@ -1,0 +1,127 @@
+{
+  "../../../node_modules/@verbb/plugin-kit-web/dist/components/code-editor.js": {
+    "file": "assets/code-editor-CeEBv_HX.js",
+    "name": "code-editor",
+    "src": "../../../node_modules/@verbb/plugin-kit-web/dist/components/code-editor.js",
+    "isDynamicEntry": true,
+    "imports": [
+      "_lightswitch-BWEX4jAd.js",
+      "_pk-popup-CgiXok-U-C177Qz6R.js",
+      "_w3c-keyname-BOAvb0qz.js"
+    ]
+  },
+  "_lightswitch-BWEX4jAd.js": {
+    "file": "assets/lightswitch-BWEX4jAd.js",
+    "name": "lightswitch",
+    "imports": [
+      "_pk-popup-CgiXok-U-C177Qz6R.js",
+      "_unsafe-html-Dyi7SXUS.js"
+    ],
+    "css": [
+      "assets/lightswitch-ekR-Z1gs.css"
+    ]
+  },
+  "_lightswitch-ekR-Z1gs.css": {
+    "file": "assets/lightswitch-ekR-Z1gs.css",
+    "src": "_lightswitch-ekR-Z1gs.css"
+  },
+  "_menu-chevron-BiInd-kt.js": {
+    "file": "assets/menu-chevron-BiInd-kt.js",
+    "name": "menu-chevron",
+    "imports": [
+      "_unsafe-html-Dyi7SXUS.js"
+    ]
+  },
+  "_pk-popup-CgiXok-U-C177Qz6R.js": {
+    "file": "assets/pk-popup-CgiXok-U-C177Qz6R.js",
+    "name": "pk-popup-CgiXok-U"
+  },
+  "_pk-spinner-Blxd3SIH-6Jm7zgEV.js": {
+    "file": "assets/pk-spinner-Blxd3SIH-6Jm7zgEV.js",
+    "name": "pk-spinner-Blxd3SIH",
+    "imports": [
+      "_pk-popup-CgiXok-U-C177Qz6R.js",
+      "_unsafe-html-Dyi7SXUS.js"
+    ]
+  },
+  "_popup-CNWXqYp0.js": {
+    "file": "assets/popup-CNWXqYp0.js",
+    "name": "popup",
+    "imports": [
+      "_pk-popup-CgiXok-U-C177Qz6R.js"
+    ]
+  },
+  "_unsafe-html-Dyi7SXUS.js": {
+    "file": "assets/unsafe-html-Dyi7SXUS.js",
+    "name": "unsafe-html",
+    "imports": [
+      "_pk-popup-CgiXok-U-C177Qz6R.js"
+    ]
+  },
+  "_w3c-keyname-BOAvb0qz.js": {
+    "file": "assets/w3c-keyname-BOAvb0qz.js",
+    "name": "w3c-keyname"
+  },
+  "editorconfigsettings/src/ts/editor-config-settings.ts": {
+    "file": "assets/editor-config-settings-M-ItyVKB.js",
+    "name": "editor-config-settings",
+    "src": "editorconfigsettings/src/ts/editor-config-settings.ts",
+    "isEntry": true,
+    "imports": [
+      "_lightswitch-BWEX4jAd.js",
+      "_pk-popup-CgiXok-U-C177Qz6R.js",
+      "_unsafe-html-Dyi7SXUS.js",
+      "_menu-chevron-BiInd-kt.js"
+    ],
+    "dynamicImports": [
+      "../../../node_modules/@verbb/plugin-kit-web/dist/components/code-editor.js"
+    ],
+    "css": [
+      "assets/editor-config-settings-v5zDI0Kd.css"
+    ]
+  },
+  "field/src/ts/vizy.ts": {
+    "file": "assets/vizy-BhjBjqUi.js",
+    "name": "vizy",
+    "src": "field/src/ts/vizy.ts",
+    "isEntry": true,
+    "imports": [
+      "_pk-popup-CgiXok-U-C177Qz6R.js",
+      "_pk-spinner-Blxd3SIH-6Jm7zgEV.js",
+      "_unsafe-html-Dyi7SXUS.js",
+      "_popup-CNWXqYp0.js",
+      "_menu-chevron-BiInd-kt.js",
+      "_w3c-keyname-BOAvb0qz.js"
+    ],
+    "css": [
+      "assets/vizy-BpJyqc1K.css"
+    ]
+  },
+  "fieldsettings/src/ts/field-settings.ts": {
+    "file": "assets/field-settings-Y6fwLEZB.js",
+    "name": "field-settings",
+    "src": "fieldsettings/src/ts/field-settings.ts",
+    "isEntry": true,
+    "imports": [
+      "_lightswitch-BWEX4jAd.js",
+      "_pk-popup-CgiXok-U-C177Qz6R.js",
+      "_pk-spinner-Blxd3SIH-6Jm7zgEV.js",
+      "_unsafe-html-Dyi7SXUS.js"
+    ],
+    "css": [
+      "assets/field-settings-tPr65eJm.css"
+    ]
+  },
+  "iconpicker/src/ts/icon-picker.ts": {
+    "file": "assets/icon-picker-CYXNgv6f.js",
+    "name": "icon-picker",
+    "src": "iconpicker/src/ts/icon-picker.ts",
+    "isEntry": true,
+    "imports": [
+      "_popup-CNWXqYp0.js"
+    ],
+    "css": [
+      "assets/icon-picker-B4TdR1jn.css"
+    ]
+  }
+}

@@ -1,0 +1,76 @@
+{
+  "_capability-icons-JIPpyATQ.js": {
+    "file": "assets/capability-icons-JIPpyATQ.js",
+    "name": "capability-icons",
+    "imports": [
+      "_floating-ui.dom-BEayZKUV.js"
+    ]
+  },
+  "_floating-ui.dom-BEayZKUV.js": {
+    "file": "assets/floating-ui.dom-BEayZKUV.js",
+    "name": "floating-ui.dom"
+  },
+  "_tooltip-BRQU7O4B.js": {
+    "file": "assets/tooltip-BRQU7O4B.js",
+    "name": "tooltip",
+    "imports": [
+      "_floating-ui.dom-BEayZKUV.js"
+    ],
+    "css": [
+      "assets/tooltip-ekR-Z1gs.css"
+    ]
+  },
+  "_tooltip-ekR-Z1gs.css": {
+    "file": "assets/tooltip-ekR-Z1gs.css",
+    "src": "_tooltip-ekR-Z1gs.css"
+  },
+  "editorconfigsettings/src/ts/editor-config-settings.ts": {
+    "file": "assets/editor-config-settings-Cgkc95sd.js",
+    "name": "editor-config-settings",
+    "src": "editorconfigsettings/src/ts/editor-config-settings.ts",
+    "isEntry": true,
+    "imports": [
+      "_tooltip-BRQU7O4B.js",
+      "_floating-ui.dom-BEayZKUV.js",
+      "_capability-icons-JIPpyATQ.js"
+    ],
+    "css": [
+      "assets/editor-config-settings-f10Crsl2.css"
+    ]
+  },
+  "field/src/ts/vizy.ts": {
+    "file": "assets/vizy-BSpsPcnm.js",
+    "name": "vizy",
+    "src": "field/src/ts/vizy.ts",
+    "isEntry": true,
+    "imports": [
+      "_floating-ui.dom-BEayZKUV.js",
+      "_capability-icons-JIPpyATQ.js"
+    ],
+    "css": [
+      "assets/vizy-D1OenylS.css"
+    ]
+  },
+  "fieldsettings/src/ts/field-settings.ts": {
+    "file": "assets/field-settings-pYIRtptW.js",
+    "name": "field-settings",
+    "src": "fieldsettings/src/ts/field-settings.ts",
+    "isEntry": true,
+    "imports": [
+      "_tooltip-BRQU7O4B.js",
+      "_floating-ui.dom-BEayZKUV.js"
+    ],
+    "css": [
+      "assets/field-settings-BrWpAr5G.css"
+    ]
+  },
+  "iconpicker/src/ts/icon-picker.ts": {
+    "file": "assets/icon-picker-IQx4XZ5D.js",
+    "name": "icon-picker",
+    "src": "iconpicker/src/ts/icon-picker.ts",
+    "isEntry": true,
+    "css": [
+      "assets/icon-picker-2g6Pub1R.css"
+    ]
+  }
+}

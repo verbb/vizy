@@ -1,18 +1,22 @@
 <?php
 namespace verbb\vizy\gql\interfaces;
 
-use verbb\vizy\gql\types\generators\VizyBlockTypeGenerator;
+use verbb\vizy\gql\GqlHelpers;
+use verbb\vizy\gql\GqlNode;
 use verbb\vizy\gql\types\ArrayType;
+use verbb\vizy\gql\types\generators\VizyBlockTypeGenerator;
 
 use Craft;
 use craft\gql\GqlEntityRegistry;
+
+use InvalidArgumentException;
 
 use GraphQL\Type\Definition\InterfaceType;
 use GraphQL\Type\Definition\Type;
 
 class VizyBlockInterface extends VizyNodeInterface
 {
-    // Public Methods
+    // Static Methods
     // =========================================================================
 
     public static function getTypeGenerator(): string
@@ -28,10 +32,15 @@ class VizyBlockInterface extends VizyNodeInterface
 
         $type = GqlEntityRegistry::createEntity(self::getName(), new InterfaceType([
             'name' => static::getName(),
+            'description' => 'A Vizy Block node with Craft field values.',
             'fields' => self::class . '::getFieldDefinitions',
-            'description' => 'This is the interface implemented by Vizy Block nodes.',
-            'resolveType' => function($value) {
-                return $value->getGqlTypeName();
+            'resolveType' => static function($value) {
+                $node = $value instanceof GqlNode ? $value : null;
+                if ($node === null || !$node->isBlock()) {
+                    throw new InvalidArgumentException('VizyBlockInterface requires a Block GqlNode source.');
+                }
+
+                return GqlHelpers::resolveNodeTypeName($node);
             },
         ]));
 
@@ -48,45 +57,40 @@ class VizyBlockInterface extends VizyNodeInterface
     public static function getFieldDefinitions(): array
     {
         return Craft::$app->getGql()->prepareFieldDefinitions(array_merge(parent::getFieldDefinitions(), [
-            'enabled' => [
-                'name' => 'enabled',
-                'description' => 'Whether this Vizy block is enabled or not.',
-                'type' => Type::boolean(),
-                'resolve' => function($source) {
-                    return $source->getEnabled();
-                },
+            'uid' => [
+                'name' => 'uid',
+                'type' => Type::nonNull(Type::id()),
+                'description' => 'Canonical Block instance UID.',
+                'resolve' => static fn(GqlNode $node): string => $node->block()?->uid() ?? '',
             ],
-            'collapsed' => [
-                'name' => 'collapsed',
-                'description' => 'Whether this Vizy block is collapsed or not.',
-                'type' => Type::boolean(),
-                'resolve' => function($source) {
-                    return $source->attrs['collapsed'] ?? false;
-                },
-            ],
-            'blockTypeId' => [
-                'name' => 'blockTypeId',
-                'description' => 'The block type ID for this Vizy block.',
-                'type' => Type::string(),
-                'resolve' => function($source) {
-                    return $source->getBlockType()->id;
-                },
+            'blockTypeUid' => [
+                'name' => 'blockTypeUid',
+                'type' => Type::nonNull(Type::id()),
+                'description' => 'Canonical Block Type UID.',
+                'resolve' => static fn(GqlNode $node): string => $node->block()?->blockTypeUid() ?? '',
             ],
             'blockTypeHandle' => [
                 'name' => 'blockTypeHandle',
-                'description' => 'The block type handle for this Vizy block.',
                 'type' => Type::string(),
-                'resolve' => function($source) {
-                    return $source->getBlockType()->handle;
-                },
+                'description' => 'Current Block Type handle when schema resolves.',
+                'resolve' => static fn(GqlNode $node): ?string => $node->block()?->getHandle(),
             ],
-            'values' => [
-                'name' => 'values',
-                'description' => 'The field values for this Vizy block.',
-                'type' => ArrayType::getType(),
-                'resolve' => function($source) {
-                    return $source->attrs['values']['content'] ?? [];
-                },
+            'enabled' => [
+                'name' => 'enabled',
+                'type' => Type::nonNull(Type::boolean()),
+                'resolve' => static fn(GqlNode $node): bool => $node->block()?->isEnabled() ?? false,
+            ],
+            'resolved' => [
+                'name' => 'resolved',
+                'type' => Type::nonNull(Type::boolean()),
+                'description' => 'Whether Block Type and FieldLayout resolve in the current schema.',
+                'resolve' => static fn(GqlNode $node): bool => $node->block()?->isResolved() ?? false,
+            ],
+            'rawFieldValues' => [
+                'name' => 'rawFieldValues',
+                'type' => Type::nonNull(ArrayType::getType()),
+                'description' => 'Placement-UID keyed raw fieldSlots (includes Hosted Vizy envelopes).',
+                'resolve' => static fn(GqlNode $node): array => $node->block()?->rawFieldValues() ?? [],
             ],
         ]), self::getName());
     }

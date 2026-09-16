@@ -1,0 +1,95 @@
+{
+  "../../../node_modules/@verbb/plugin-kit-web/dist/components/code-editor.js": {
+    "file": "assets/code-editor-1FfeIq4W.js",
+    "name": "code-editor",
+    "src": "../../../node_modules/@verbb/plugin-kit-web/dist/components/code-editor.js",
+    "isDynamicEntry": true,
+    "imports": [
+      "_tooltip-Cq1eJwOl.js",
+      "_floating-ui.dom-BGxPGImR.js",
+      "_w3c-keyname-BOAvb0qz.js"
+    ]
+  },
+  "_floating-ui.dom-BGxPGImR.js": {
+    "file": "assets/floating-ui.dom-BGxPGImR.js",
+    "name": "floating-ui.dom"
+  },
+  "_tooltip-Cq1eJwOl.js": {
+    "file": "assets/tooltip-Cq1eJwOl.js",
+    "name": "tooltip",
+    "imports": [
+      "_floating-ui.dom-BGxPGImR.js"
+    ],
+    "css": [
+      "assets/tooltip-ekR-Z1gs.css"
+    ]
+  },
+  "_tooltip-ekR-Z1gs.css": {
+    "file": "assets/tooltip-ekR-Z1gs.css",
+    "src": "_tooltip-ekR-Z1gs.css"
+  },
+  "_unsafe-html-DtFaVCWL.js": {
+    "file": "assets/unsafe-html-DtFaVCWL.js",
+    "name": "unsafe-html",
+    "imports": [
+      "_floating-ui.dom-BGxPGImR.js"
+    ]
+  },
+  "_w3c-keyname-BOAvb0qz.js": {
+    "file": "assets/w3c-keyname-BOAvb0qz.js",
+    "name": "w3c-keyname"
+  },
+  "editorconfigsettings/src/ts/editor-config-settings.ts": {
+    "file": "assets/editor-config-settings-xgQjjNNg.js",
+    "name": "editor-config-settings",
+    "src": "editorconfigsettings/src/ts/editor-config-settings.ts",
+    "isEntry": true,
+    "imports": [
+      "_tooltip-Cq1eJwOl.js",
+      "_floating-ui.dom-BGxPGImR.js",
+      "_unsafe-html-DtFaVCWL.js"
+    ],
+    "dynamicImports": [
+      "../../../node_modules/@verbb/plugin-kit-web/dist/components/code-editor.js"
+    ],
+    "css": [
+      "assets/editor-config-settings-CgCo2202.css"
+    ]
+  },
+  "field/src/ts/vizy.ts": {
+    "file": "assets/vizy-DgmVkDdm.js",
+    "name": "vizy",
+    "src": "field/src/ts/vizy.ts",
+    "isEntry": true,
+    "imports": [
+      "_floating-ui.dom-BGxPGImR.js",
+      "_unsafe-html-DtFaVCWL.js",
+      "_w3c-keyname-BOAvb0qz.js"
+    ],
+    "css": [
+      "assets/vizy-CJLxRwV4.css"
+    ]
+  },
+  "fieldsettings/src/ts/field-settings.ts": {
+    "file": "assets/field-settings-CYFsEEoy.js",
+    "name": "field-settings",
+    "src": "fieldsettings/src/ts/field-settings.ts",
+    "isEntry": true,
+    "imports": [
+      "_tooltip-Cq1eJwOl.js",
+      "_floating-ui.dom-BGxPGImR.js"
+    ],
+    "css": [
+      "assets/field-settings-BrWpAr5G.css"
+    ]
+  },
+  "iconpicker/src/ts/icon-picker.ts": {
+    "file": "assets/icon-picker-DI1XOaM3.js",
+    "name": "icon-picker",
+    "src": "iconpicker/src/ts/icon-picker.ts",
+    "isEntry": true,
+    "css": [
+      "assets/icon-picker-BtVqsGkq.css"
+    ]
+  }
+}

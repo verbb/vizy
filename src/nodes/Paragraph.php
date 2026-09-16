@@ -1,59 +1,65 @@
 <?php
 namespace verbb\vizy\nodes;
 
+use verbb\vizy\base\EditorGroup;
+use verbb\vizy\base\EditorSurface;
 use verbb\vizy\base\Node;
+use verbb\vizy\base\RenderContext;
 
-use craft\base\ElementInterface;
 use craft\helpers\ArrayHelper;
-use craft\helpers\StringHelper;
 
 class Paragraph extends Node
 {
+    // Static Methods
+    // =========================================================================
+
+    public static function label(): string
+    {
+        return 'Paragraph';
+    }
+
+    public static function icon(): ?string
+    {
+        return 'paragraph';
+    }
+
+    public static function group(): ?string
+    {
+        return EditorGroup::Text;
+    }
+
+    public static function surfaces(): array
+    {
+        return [EditorSurface::Toolbar];
+    }
+
+    public static function tag(): string|array|null
+    {
+        return 'p';
+    }
+
+    public static function resolveAttrs(array $attrs, RenderContext $ctx): array
+    {
+        $align = ArrayHelper::remove($attrs, 'textAlign');
+
+        // TipTap textAlign → utility class (text-left, text-center, …); skip default "start".
+        if ($align && $align !== 'start') {
+            $attrs['class'] = trim(($attrs['class'] ?? '') . ' text-' . $align);
+        }
+
+        return $attrs;
+    }
+
+    public static function alwaysEnabled(): bool
+    {
+        return true;
+    }
+
+
     // Properties
     // =========================================================================
 
     public static ?string $type = 'paragraph';
     public mixed $tagName = 'p';
-
-
-    // Public Methods
-    // =========================================================================
-
-    public function getTag(): array
-    {
-        // Don't include certain attributes in rendering
-        $align = ArrayHelper::remove($this->attrs, 'textAlign');
-
-        // Add instead as a class, `text-left`, `text-right`, etc.
-        if ($align && $align !== 'start') {
-            $this->attrs['class'] = trim(($this->attrs['class'] ?? '') . ' text-' . $align);
-        }
-
-        return parent::getTag();
-    }
-
-    public function serializeValue(ElementInterface $element = null): ?array
-    {
-        $value = parent::serializeValue($element);
-
-        // Check if we're to exclude empty nodes
-        if ($this->getField()->trimEmptyParagraphs) {
-            // Does this have a nested node/mark?
-            $type = $value['content'][0]['type'] ?? null;
-
-            if ($type) {
-                return $value;
-            }
-
-            $text = $value['content'][0]['text'] ?? '';
-            $text = StringHelper::trim($text);
-
-            if ($text === '') {
-                return null;
-            }
-        }
-
-        return $value;
-    }
 
 }

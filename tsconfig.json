@@ -1,0 +1,18 @@
+{
+    "compilerOptions": {
+        "target": "ES2022",
+        "useDefineForClassFields": true,
+        "module": "ESNext",
+        "moduleResolution": "Bundler",
+        "lib": ["ES2022", "DOM", "DOM.Iterable"],
+        "strict": true,
+        "experimentalDecorators": true,
+        "noEmit": true,
+        "skipLibCheck": true,
+        "allowJs": false,
+        "resolveJsonModule": true,
+        "isolatedModules": true,
+        "types": ["vite/client", "node"]
+    },
+    "include": ["src/web/assets/field/src/ts/**/*.ts", "tests/frontend/**/*.ts"]
+}

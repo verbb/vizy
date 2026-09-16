@@ -8,7 +8,14 @@ use Tiptap\Utils\HTML;
 
 class VizyBlock extends Node
 {
+    // Properties
+    // =========================================================================
+
     public static $name = 'vizyBlock';
+
+
+    // Public Methods
+    // =========================================================================
 
     public function parseHTML()
     {

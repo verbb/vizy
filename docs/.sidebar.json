@@ -4,8 +4,10 @@
         "collapsable": false,
         "children": [
             "get-started/installation-setup",
+            "get-started/creating-your-first-editor",
             "get-started/requirements",
-            "get-started/configuration"
+            "get-started/configuration",
+            "get-started/upgrading-from-v3"
         ]
     },
     {
@@ -13,8 +15,15 @@
         "collapsable": false,
         "children": [
             "feature-tour/what-is-vizy",
+            "feature-tour/block-based-editor",
             "feature-tour/field-settings",
-            "feature-tour/block-based-editor"
+            "feature-tour/editor-configs",
+            "feature-tour/blocks-and-block-types",
+            "feature-tour/rich-text",
+            "feature-tour/layout-and-columns",
+            "feature-tour/nested-vizy",
+            "feature-tour/matrix-in-blocks",
+            "feature-tour/limitations"
         ]
     },
     {
@@ -23,10 +32,9 @@
         "children": [
             "template-guides/rendering-content",
             "template-guides/modify-nodes",
-            "template-guides/querying-nodes",
             "template-guides/modular-templates",
             "template-guides/block-type-templates",
-            "template-guides/extending-vizy"
+            "template-guides/querying-nodes"
         ]
     },
     {
@@ -34,17 +42,24 @@
         "collapsable": false,
         "children": [
             "developers/events",
+            "developers/extending-vizy",
             "developers/node",
+            "developers/node-query",
             "developers/mark",
-            "developers/node-collection",
-            "developers/graphql"
+            "developers/graphql",
+            "developers/vizy-document",
+            "developers/managing-embedded-content"
         ]
     },
     {
-        "title": "Guides",
+        "title": "User Guides",
         "collapsable": false,
         "children": [
-            "guides/developers/index"
+            "guides/developers/creating-a-custom-mark-from-scratch",
+            "guides/developers/creating-a-custom-node-from-scratch",
+            "guides/developers/modifying-the-toolbar-buttons",
+            "guides/developers/creating-your-own-formatting-buttons-and-dropdown",
+            "guides/developers/choosing-insertion-controls"
         ]
     }
 ]

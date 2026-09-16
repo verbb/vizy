@@ -1,26 +1,27 @@
 <p align="center"><img src="https://assets.verbb.io/plugins/vizy/vizy-icon.svg" width="100" height="100" alt="Vizy icon"></p>
 <h1 align="center">Vizy for Craft CMS</h1>
 
-Vizy is a Craft CMS plugin with a content editor field, combining everything you already know about [WYSIWYG](https://plugins.craftcms.com/redactor), the power of Matrix blocks and a sprinkle of [Neo](https://plugins.craftcms.com/neo) into an all-new editor experience.
+Vizy is a content editor field for Craft CMS. Editors can combine rich text with structured blocks, while Twig templates control how that content appears on your site.
 
 ## Features
-- A fully-featured WYSIWYG field.
-- All content is stored as JSON blocks. No HTML-wrangling required.
-- 100% control over the output from a Vizy field.
-- Create blocks inline with content. Think Matrix blocks in between your formatted text.
-- Infinitely nest Vizy fields for some _crazy_ business.
-- Use existing fields for Vizy blocks. Even use UI elements in blocks.
-- Tabs support for blocks, to keep your UI lean.
-- Modularise block templates, by linking a Twig partial to blocks.
-- Performance focused. No more n+1 query issues - a single database call to fetch your content.
-- Query field nodes, just like you're used to with Matrix fields.
-- Configure buttons and editor options with field settings or config files.
-- GraphQL Support.
+
+- Rich text, links, images, tables, and column layouts.
+- Reusable Block Types built from your existing Craft fields.
+- Named Editor Configs for choosing content and formatting tools.
+- Nested Vizy fields for blocks with their own editable content.
+- Structured JSON storage, automatic HTML rendering, and queries for individual nodes.
+- Twig templates for Block Types and PHP events for custom HTML.
+- GraphQL queries and Feed Me imports.
+- Custom editor nodes, marks, and toolbar controls.
+
+See [Limitations](./docs/feature-tour/limitations.md) when planning integrations. For an existing installation, review [Upgrading from v3](./docs/get-started/upgrading-from-v3.md) before updating.
 
 ## Documentation
+
 Visit the [Vizy Plugin page](https://verbb.io/craft-plugins/vizy) for all documentation, guides, pricing and developer resources.
 
 ## Support
+
 Get in touch with us via the [Vizy Support page](https://verbb.io/craft-plugins/vizy/support) or by [creating a Github issue](https://github.com/verbb/vizy/issues)
 
 <h2></h2>

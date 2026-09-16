@@ -1,32 +1,27 @@
-# What is Vizy?
-Vizy is an intuitive and flexible content editor field for Craft CMS. It aims to combine WYSIWYG features (like [Redactor](https://plugins.craftcms.com/redactor)) and Matrix blocks, to create an integrated field type for content editors. It also aims to be developer-friendly, providing full control over outputting of content in an un-opinionated fashion.
+# What Is Vizy
 
-## Block-Based Editor
-Part of what makes Vizy special is how content is stored. Unlike many WYSIWYG fields, which store the raw HTML in the database, Vizy instead stores your content as JSON. This provides amazing flexibility and control when it comes to outputting the content of a Vizy field in your templates. Instead of trying to parse HTML to add classes, remove attributes, or modify the structure, you'll have full control over how you want to output the content.
+Vizy is a content editor field for Craft CMS. Editors can write paragraphs, add images and links, and place structured blocks between their text. For example, an article can combine a written introduction with a quote, an image gallery, and a callout, all in one field.
 
-Continue reading the [Block-Based Editor](docs:feature-tour/block-based-editor) guide.
+## Combining Text and Blocks
 
-## Blocks, Tabs, Fields and more
-Whilst Vizy includes WYSIWYG functionality that many people are experienced in using, it adds that ability to include "Vizy Blocks" inline with WYSIWYG content. A Vizy Block is very similar to Matrix blocks with some key differences.
+Use rich text for content that editors write freely. Use a **Block Type** when a piece of content needs a consistent set of fields, such as a callout with a heading and a body. A Block Type uses your existing Craft fields, and you choose which types each Vizy field offers.
 
-A Vizy field consists of multiple Groups. Each Group contains multiple Block Types. When creating your content in a Vizy field, you'll be able to pick from these Block Types. Each Block Type can have multiple fields, organised into tabs. The key benefit here, is that you pick from your **existing** fields, unlike Matrix, and similar to Neo. We use the Craft Field Layout Designer so you can even include visual UI Elements like Headings, Tips and Warnings, and even organise your fields into columns.
+Block Types are shared across fields. Editing a type changes its definition wherever it is used; each block in an entry still has its own content. [Blocks and Block Types](docs:feature-tour/blocks-and-block-types) explains how to set them up.
 
-## Nodes & Marks
-Vizy uses the terms "Nodes" and "Marks" to represent chunks of content in the editor. For example, a Node typically represents an individual element in the editor. This might be a Paragraph, an Image or a Vizy Block. Marks are related to Nodes in that they exist inside a Node, and are used inline. For example, a Mark might be text in a Paragraph Node, that is Bold, Italic, or even a Link.
+## Choosing Editing Tools
 
-These terms aren't required to be understood by content editors, but if you're a developer looking to output Vizy field content in a template, or extend Vizy's functionality, it's important to understand these core concepts.
+An **Editor Config** controls the available formatting and toolbar. A short introduction might offer bold, italic, and links, while an article needs headings, tables, and images. Several fields can share a config so their editing tools stay consistent.
 
-Continue reading the [Node](docs:developers/node) and [Mark](docs:developers/mark) guides.
+The field’s **Editor Mode** determines whether editors can use rich text, blocks, or both. Start with [Field Settings](docs:feature-tour/field-settings), then see [Editor Configs](docs:feature-tour/editor-configs) for configuring the tools.
 
-## Built for Speed
-Vizy stores all its content as JSON, which means in practical terms that it's significantly less overhead in fetching data for your fields, than say Matrix, Super Table or Neo fields. Instead of each block in a Vizy field being an element, with multiple database table joins, it's a single database call to fetch the content and un-serialize it for use in your templates.
+## Displaying Content
 
-## Querying Nodes
-Vizy includes a powerful querying engine to filter, sort or search Vizy field content - in much the same way you can query Matrix blocks. For example, you might have multiple Block Types in your Vizy field, but when outputting the content, you only want ones of a particular type, limited to a certain number, or ordered in a particular way.
+Vizy stores structured content as JSON. Your templates can render the whole field as HTML or read individual pieces when a page needs a more specific output. Give each Block Type a Twig template to control the markup for its fields.
 
-Continue reading the [Querying Nodes](docs:template-guides/querying-nodes) guide.
+[Rendering Content](docs:template-guides/rendering-content) shows how to display a field. [Block-Based Editor](docs:feature-tour/block-based-editor) explains the stored structure for developers who need to work with individual nodes.
 
-## Supporting Open Source
-Vizy is built on top of the excellent [tiptap](https://github.com/ueberdosis/tiptap) library, which itself is built on top of [ProseMirror](https://github.com/prosemirror), used for many high-profile companies such as _Atlassian_ and _New York Times_.
+## Nesting Content
 
-For every sale of a Vizy license, we contribute a percentage of funds to these open source libraries to fund development and support.
+A block can contain another Vizy field. For example, a callout can have its own rich-text body with fewer tools than the surrounding article. [Nested Vizy](docs:feature-tour/nested-vizy) explains how to configure this.
+
+Read [Limitations](docs:feature-tour/limitations) when planning relationships, imports, or a headless frontend.

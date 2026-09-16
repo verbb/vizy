@@ -1,114 +1,65 @@
 # Rendering Content
-There are a number of different methods for rendering a Vizy field in your templates.
 
-When calling a Vizy field when attached to an element such as `{{ entry.vizyField }}` you're actually dealing with a [Node Collection](docs:developers/node-collection). Be sure to read up on the documentation for a Node Collection to see what options you have available to you.
+When you read a Vizy field in Twig — for example `entry.vizyField` — you get a
+**`VizyDocument`**: the field’s saved content as Vizy understands it. In the entry’s Twig template, replace `vizyField` with your field’s handle and call `render()` where its HTML should appear.
 
 ## Automatic Rendering
-The simplest and most common method will be to automatically render the HTML for your content. All nodes such as Paragraph, Image, etc will use the in-built rendering methods to render content.
+
+The simplest approach is to let Vizy render the whole document. Core nodes
+(paragraphs, headings, links, and so on) use Vizy’s renderer. Vizy Blocks use
+their [Block Type Templates](docs:template-guides/block-type-templates) when
+you’ve set one.
 
 ```twig
-{{ entry.vizyField }}
+{{ entry.vizyField.render() }}
 
-{# Is the same as... #}
-{{ entry.vizyField.renderHtml() }}
+{# Skip empty fields #}
+{% if not entry.vizyField.isEmpty() %}
+    {{ entry.vizyField.render() }}
+{% endif %}
 ```
 
-For example you might have the following content in your field:
+For example, type “Read our guide” in a paragraph, then use the link control to link “guide” to `https://example.com/guide`. Save the entry with **New Window** off. Rendering produces:
 
-```
-“The name [gin](https://en.wikipedia.org/wiki/Gin) is a shortened form of the older English word genever.”
+```html
+<p>Read our <a href="https://example.com/guide">guide</a></p>
 ```
 
-Which calling `renderHtml()` would produce the HTML:
+Blocks appear in automatic HTML when their Block Type has a template. If a block is missing from the output, check that it is enabled and its type has a template assigned. You can also render selected root blocks yourself using [Modular Templates](docs:template-guides/modular-templates).
+
+## Working with Blocks and Nodes
+
+To read enabled blocks at the document’s root:
 
 ```twig
-<p>The name <a href="https://en.wikipedia.org/wiki/Gin" target="_blank" rel="noreferrer noopener">gin</a> is a shortened form of the older English word genever.</p>
-```
-
-For Vizy Block nodes these will only be output if you have [Block Type Templates](docs:feature-tour/field-settings) setup for the field. If no template is specified for a Block Type, they will not appear. Instead, you'll need to manually render the nodes.
-
-## Manual Render
-Using the manual render method is far more involved, but gives you complete control over the output of nodes. In this scenario, you loop through individual [Node](docs:developers/node) objects, controlling how to render each node.
-
-```twig
-{% for node in entry.vizyField.all() %}
-    {# If this is a Vizy Block node, handle that differently #}
-    {% if node.type == 'vizyBlock' %}
-        {# Render the `imageText` block type #}
-        {% if node.handle == 'imageText' %}
-            <div class="image-{{ node.imageAlignment.value }}">
-                <div class="text">
-                    {{ node.text }}
-                </div>
-
-                <div class="image">
-                    <img src="{{ node.image.one().url }}" alt="{{ node.image.one().title }}" />
-                </div>
-            </div>
-        {% else %}
-            {# Render other block types #}
-        {% endif %}
-    {% elseif node.type == 'paragraph' %}
-        {# Handle rendering paragraphs #}
-        {% for nodeContent in node.content %}
-            <p class="p-text">{{ nodeContent.text }}</p>
-        {% endfor %}
-    {% else %}
-        {# Otherwise, render using the default #}
-        {{ node.renderHtml() }}
-    {% endif %}
+{% for block in entry.vizyField.query().where({ type: 'vizyBlock' }).all() %}
+    {{ block.handle }}
 {% endfor %}
 ```
 
-For the above example, we call `all()` on the Vizy field to allow us to loop through all [Node](docs:developers/node) objects for the field. Our conditional checks on what type of node each item is. We have a Vizy Block Type with a handle `imageText` with a few fields, but also check to render paragraph nodes differently. For all other cases, we fall back to use `renderHtml()` for the node to let Vizy generate the HTML for us.
+Use `entry.vizyField.blocks()` when you also need blocks inside layouts. It returns enabled blocks in document order. Pass `false` for disabled blocks or `null` for both states. Fields nested inside blocks are separate documents; read them through their field handles.
 
-Whilst this approach is fine, for larger fields, this can be difficult to maintain. We recommend a modular approach to handle your nodes. Continue reading [Modular Templates](docs:template-guides/modular-templates).
-
-## Querying Nodes
-You can use our query engine to filter, limit or search nodes for a field.
+To walk the document’s root content as raw node data (each item has a `type`,
+and may have `attrs`, `content`, and `marks`):
 
 ```twig
-{% set paragraphs = entry.vizyField.query().where({ type: 'paragraph' }).all() %}
+{% for node in entry.vizyField.content().nodes() %}
+    {{ node.type }}
+{% endfor %}
 ```
 
-For further examples, see [Querying Nodes](docs:template-guides/querying-nodes).
+`entry.vizyField.traverse()` follows node children, including layouts, but does not enter fields nested inside blocks. For most sites,
+[Block Type Templates](docs:template-guides/block-type-templates) plus
+`render()` is enough without hand-rolling every node. Larger custom loops are
+covered in [Modular Templates](docs:template-guides/modular-templates).
 
-## Raw Node Data
-You can also get the raw JSON block data, exactly as it's stored in the database. Vizy will unserialize the JSON into an array for use in your templates.
+## Raw Document Data
+
+To inspect what’s stored, dump the canonical document:
 
 ```twig
-{{ dump(entry.vizyField.getRawNodes()) }}
+{{ dump(entry.vizyField.toArray()) }}
 
-{# Returns the following array #}
-[
-    {
-        "type": "paragraph",
-        "attrs": {
-            "textAlign": "left"
-        },
-        "content": [
-            {
-                "type": "text",
-                "text": "The name "
-            },
-            {
-                "type": "text",
-                "marks": [
-                    {
-                        "type": "link",
-                        "attrs": {
-                            "href": "https:\/\/en.wikipedia.org\/wiki\/Gin",
-                            "target": "_blank"
-                        }
-                    }
-                ],
-                "text": "gin"
-            },
-            {
-                "type": "text",
-                "text": " is a shortened form of the older English word genever."
-            }
-        ]
-    }
-]
+{# Root nodes only #}
+{{ dump(entry.vizyField.content().toArray()) }}
 ```

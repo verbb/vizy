@@ -1,19 +1,24 @@
 <?php
 namespace verbb\vizy\gql\interfaces;
 
-use verbb\vizy\gql\types\generators\VizyNodeGenerator;
+use verbb\vizy\Vizy;
+use verbb\vizy\gql\GqlHelpers;
+use verbb\vizy\gql\GqlNode;
 use verbb\vizy\gql\types\ArrayType;
+use verbb\vizy\gql\types\generators\VizyNodeGenerator;
 
 use Craft;
 use craft\gql\base\InterfaceType as BaseInterfaceType;
 use craft\gql\GqlEntityRegistry;
+
+use InvalidArgumentException;
 
 use GraphQL\Type\Definition\InterfaceType;
 use GraphQL\Type\Definition\Type;
 
 class VizyNodeInterface extends BaseInterfaceType
 {
-    // Public Methods
+    // Static Methods
     // =========================================================================
 
     public static function getTypeGenerator(): string
@@ -29,10 +34,15 @@ class VizyNodeInterface extends BaseInterfaceType
 
         $type = GqlEntityRegistry::createEntity(self::getName(), new InterfaceType([
             'name' => static::getName(),
+            'description' => 'A Vizy document node (prose, layout, Block, or unknown).',
             'fields' => self::class . '::getFieldDefinitions',
-            'description' => 'This is the interface implemented by all fields.',
-            'resolveType' => function($value) {
-                return $value->getGqlTypeName();
+            'resolveType' => static function($value) {
+                $node = $value instanceof GqlNode ? $value : null;
+                if ($node === null) {
+                    throw new InvalidArgumentException('VizyNodeInterface requires a GqlNode source.');
+                }
+
+                return GqlHelpers::resolveNodeTypeName($node);
             },
         ]));
 
@@ -51,66 +61,56 @@ class VizyNodeInterface extends BaseInterfaceType
         return Craft::$app->getGql()->prepareFieldDefinitions([
             'type' => [
                 'name' => 'type',
-                'description' => 'The node type.',
-                'type' => Type::string(),
-            ],
-            'tagName' => [
-                'name' => 'tagName',
-                'description' => 'The HTML tag used for this node.',
-                'type' => Type::string(),
-            ],
-            'html' => [
-                'name' => 'html',
-                'description' => 'The rendered HTML for this node.',
-                'type' => Type::string(),
-                'resolve' => function($source) {
-                    return $source->renderHtml();
-                },
-            ],
-            'content' => [
-                'name' => 'content',
-                'description' => 'The content for this node.',
-                'type' => ArrayType::getType(),
-                'resolve' => function($source) {
-                    return $source->rawNode['content'] ?? [];
-                },
-            ],
-            'contentNodes' => [
-                'name' => 'contentNodes',
-                'description' => 'The content nodes and marks for this node.',
-                'type' => Type::listOf(VizyNodeInterface::getType()),
-                'resolve' => function($source) {
-                    return $source->content ?? [];
-                },
+                'type' => Type::nonNull(Type::string()),
+                'description' => 'TipTap node type name.',
+                'resolve' => static fn(GqlNode $node): string => $node->type(),
             ],
             'attrs' => [
                 'name' => 'attrs',
-                'description' => 'The attributes for this node.',
                 'type' => ArrayType::getType(),
-                'resolve' => function($source) {
-                    return $source->rawNode['attrs'] ?? [];
-                },
+                'description' => 'Node attributes as JSON.',
+                'resolve' => static fn(GqlNode $node): array => $node->attrs(),
             ],
             'marks' => [
                 'name' => 'marks',
-                'description' => 'The nested marks for this node.',
-                'type' => Type::listOf(VizyMarkInterface::getType()),
-                'resolve' => function($source) {
-                    return $source->marks;
-                },
+                'type' => Type::nonNull(Type::listOf(Type::nonNull(VizyMarkInterface::getType()))),
+                'description' => 'Marks on this node (typically text leaves).',
+                'resolve' => static fn(GqlNode $node): array => $node->marks(),
+            ],
+            'children' => [
+                'name' => 'children',
+                'type' => Type::nonNull(Type::listOf(Type::nonNull(self::getType()))),
+                'description' => 'Ordered TipTap children. Empty for Blocks (nesting is Hosted Vizy fields).',
+                'resolve' => static fn(GqlNode $node): array => $node->children(),
             ],
             'text' => [
                 'name' => 'text',
-                'description' => 'The textual content for this node.',
                 'type' => Type::string(),
-                'resolve' => function($source) {
-                    return $source->getStaticText();
+                'description' => 'Leaf text, or concatenated descendant text for containers.',
+                'resolve' => static fn(GqlNode $node): ?string => $node->text(),
+            ],
+            'html' => [
+                'name' => 'html',
+                'type' => Type::nonNull(Type::string()),
+                'description' => 'Rendered HTML for this node (same emit path as document renderedHtml).',
+                'resolve' => static function(GqlNode $node): string {
+                    return (string)Vizy::$plugin->getRenderer()->renderNode(
+                        $node->document(),
+                        $node->node(),
+                    );
                 },
             ],
-            'rawNode' => [
-                'name' => 'rawNode',
-                'description' => 'The raw JSON content for this node.',
-                'type' => ArrayType::getType(),
+            'raw' => [
+                'name' => 'raw',
+                'type' => Type::nonNull(ArrayType::getType()),
+                'description' => 'Canonical TipTap JSON for this node.',
+                'resolve' => static fn(GqlNode $node): array => $node->node(),
+            ],
+            'isUnknown' => [
+                'name' => 'isUnknown',
+                'type' => Type::nonNull(Type::boolean()),
+                'description' => 'True when the node type has no installed Extension definition.',
+                'resolve' => static fn(GqlNode $node): bool => $node->isUnknown(),
             ],
         ], self::getName());
     }

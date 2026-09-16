@@ -1,0 +1,106 @@
+name: Tests
+on:
+  pull_request:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  pest:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v5
+      - uses: ddev/github-action-setup-ddev@v1
+        with:
+          version: "1.24.4"
+          autostart: false
+      - name: Clean-install integration tests
+        run: ddev test --suite=all --fail-on-skipped
+      - name: Test diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-diagnostics
+          include-hidden-files: true
+          path: |
+            .cache/verbb-tests/latest.log
+            .cache/verbb-tests/junit.xml
+            .cache/verbb-tests/result.json
+            .cache/verbb-tests/app/storage/logs/
+  frontend:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci
+      - run: npm run typecheck
+      - run: npm test
+      - run: npm run build
+      - run: npx playwright install --with-deps chromium firefox webkit
+      - run: npm run test:browser -- --workers=4
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: browser-diagnostics
+          path: test-results/
+  craft-browser:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - uses: ddev/github-action-setup-ddev@v1
+        with:
+          version: '1.24.4'
+          autostart: false
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium
+      - run: npm run test:cp
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: craft-browser-diagnostics
+          include-hidden-files: true
+          path: |
+            test-results/craft-cp/
+            .cache/verbb-tests/latest.log
+
+  qualification:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - profile: minimum
+            php: '8.2'
+          - profile: feed-me
+            php: '8.3'
+    steps:
+      - uses: actions/checkout@v5
+      - uses: ddev/github-action-setup-ddev@v1
+        with:
+          version: '1.24.4'
+          autostart: false
+      - name: Configure isolated qualification runtime
+        run: ddev config --php-version=${{ matrix.php }}
+      - name: Qualify supported runtime and integration
+        run: ddev test --profile=${{ matrix.profile }} --suite=all --fail-on-skipped
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: qualification-${{ matrix.profile }}
+          include-hidden-files: true
+          path: |
+            .cache/verbb-tests/latest.log
+            .cache/verbb-tests/junit.xml
+            .cache/verbb-tests/result.json
+            .cache/verbb-tests/app/composer.lock
+            .cache/verbb-tests/minimum-advisories.json

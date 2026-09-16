@@ -14,6 +14,9 @@ class IconsController extends Controller
 
     public function actionIndex(): Response
     {
+        // Icon catalog is for CP pickers only — never anonymous / front-end.
+        $this->requireCpRequest();
+
         $icons = Vizy::$plugin->getIcons()->getAvailableIconSets();
 
         return $this->asJson($icons);

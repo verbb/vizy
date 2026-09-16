@@ -1,0 +1,28 @@
+[03-Sep-2026 13:01:07 UTC] PHP Fatal error:  Uncaught yii\base\InvalidConfigException: Unable to determine the entry script file path. in /Users/joshcrawford/public_html/vizy-react/vizy-plugin-repo/vendor/yiisoft/yii2/base/Request.php:85
+Stack trace:
+#0 /Users/joshcrawford/public_html/vizy-react/vizy-plugin-repo/vendor/yiisoft/yii2/base/Request.php(62): yii\base\Request->setScriptFile('')
+#1 /Users/joshcrawford/public_html/vizy-react/vizy-plugin-repo/vendor/craftcms/cms/src/console/Request.php(32): yii\base\Request->getScriptFile()
+#2 /Users/joshcrawford/public_html/vizy-react/vizy-plugin-repo/vendor/yiisoft/yii2/base/BaseObject.php(109): craft\console\Request->init()
+#3 [internal function]: yii\base\BaseObject->__construct(Array)
+#4 /Users/joshcrawford/public_html/vizy-react/vizy-plugin-repo/vendor/yiisoft/yii2/di/Container.php(426): ReflectionClass->newInstanceArgs(Array)
+#5 /Users/joshcrawford/public_html/vizy-react/vizy-plugin-repo/vendor/yiisoft/yii2/di/Container.php(174): yii\di\Container->build('craft\\console\\R...', Array, Array)
+#6 /Users/joshcrawford/public_html/vizy-react/vizy-plugin-repo/vendor/yiisoft/yii2/BaseYii.php(370): yii\di\Container->get('craft\\console\\R...', Array, Array)
+#7 /Users/joshcrawford/public_html/vizy-react/vizy-plugin-repo/vendor/yiisoft/yii2/di/ServiceLocator.php(137): yii\BaseYii::createObject(Array)
+#8 /Users/joshcrawford/public_html/vizy-react/vizy-plugin-repo/vendor/yiisoft/yii2/base/Module.php(773): yii\di\ServiceLocator->get('request', true)
+#9 /Users/joshcrawford/public_html/vizy-react/vizy-plugin-repo/vendor/craftcms/cms/src/console/Application.php(174): yii\base\Module->get('request', true)
+#10 /Users/joshcrawford/public_html/vizy-react/vizy-plugin-repo/vendor/yiisoft/yii2/console/Application.php(219): craft\console\Application->get('request')
+#11 /Users/joshcrawford/public_html/vizy-react/vizy-plugin-repo/vendor/craftcms/cms/src/base/ApplicationTrait.php(1609): yii\console\Application->getRequest()
+#12 /Users/joshcrawford/public_html/vizy-react/vizy-plugin-repo/vendor/craftcms/cms/src/console/Application.php(51): craft\console\Application->_preInit()
+#13 /Users/joshcrawford/public_html/vizy-react/vizy-plugin-repo/vendor/yiisoft/yii2/base/BaseObject.php(109): craft\console\Application->init()
+#14 /Users/joshcrawford/public_html/vizy-react/vizy-plugin-repo/vendor/yiisoft/yii2/base/Application.php(203): yii\base\BaseObject->__construct(Array)
+#15 /Users/joshcrawford/public_html/vizy-react/vizy-plugin-repo/vendor/yiisoft/yii2/console/Application.php(89): yii\base\Application->__construct(Array)
+#16 [internal function]: yii\console\Application->__construct(Array)
+#17 /Users/joshcrawford/public_html/vizy-react/vizy-plugin-repo/vendor/yiisoft/yii2/di/Container.php(426): ReflectionClass->newInstanceArgs(Array)
+#18 /Users/joshcrawford/public_html/vizy-react/vizy-plugin-repo/vendor/yiisoft/yii2/di/Container.php(174): yii\di\Container->build('craft\\console\\A...', Array, Array)
+#19 /Users/joshcrawford/public_html/vizy-react/vizy-plugin-repo/vendor/yiisoft/yii2/BaseYii.php(370): yii\di\Container->get('craft\\console\\A...', Array, Array)
+#20 /Users/joshcrawford/public_html/vizy-react/vizy-plugin-repo/vendor/craftcms/cms/src/Craft.php(69): yii\BaseYii::createObject(Array, Array)
+#21 /Users/joshcrawford/public_html/vizy-react/vizy-plugin-repo/vendor/craftcms/cms/bootstrap/bootstrap.php(307): Craft::createObject(Array)
+#22 /Users/joshcrawford/public_html/vizy-react/vizy-plugin-repo/vendor/craftcms/cms/bootstrap/console.php(35): require('/Users/joshcraw...')
+#23 Command line code(3): require('/Users/joshcraw...')
+#24 {main}
+  thrown in /Users/joshcrawford/public_html/vizy-react/vizy-plugin-repo/vendor/yiisoft/yii2/base/Request.php on line 85

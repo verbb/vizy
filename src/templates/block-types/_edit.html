@@ -1,0 +1,86 @@
+{% import '_includes/forms' as forms %}
+
+{# Rendered as a CP screen content template, so it emits fields only — the
+   surrounding form, buttons and CP shell come from Craft, which lets the same
+   template serve the standalone page and the Vizy field settings slideout.
+
+   Save / Save and continue editing / Duplicate / Delete live on the CP screen’s
+   Save menu (see BlockTypesController::actionEdit), matching Fields and Entry
+   Types — not as footer buttons in this body. #}
+
+{{ hiddenInput('uid', blockType.uid) }}
+
+<div class="flex-fields">
+    {{ forms.textField({
+        label: 'Name' | t('app'),
+        instructions: 'What this block type will be called in the control panel.' | t('vizy'),
+        id: 'name',
+        name: 'name',
+        value: blockType.name,
+        required: true,
+        autofocus: true,
+        errors: blockType.getErrors('name'),
+    }) }}
+
+    {{ forms.textField({
+        label: 'Handle' | t('app'),
+        instructions: 'How you’ll refer to this block type in the templates.' | t('vizy'),
+        id: 'handle',
+        name: 'handle',
+        value: blockType.handle,
+        required: true,
+        class: 'code',
+        errors: blockType.getErrors('handle'),
+    }) }}
+</div>
+
+{{ forms.field({
+    label: 'Icon' | t('vizy'),
+    instructions: 'Select an appropriate icon for the block type.' | t('vizy'),
+    id: 'icon',
+    errors: blockType.getErrors('icon'),
+}, iconPickerHtml) }}
+
+{{ forms.field({
+    label: 'Color' | t('app'),
+    instructions: 'Set a colour used to differentiate this block type while authoring.' | t('vizy'),
+    id: 'color',
+    errors: blockType.getErrors('color'),
+}, colorInputHtml) }}
+
+{{ forms.field({
+    label: 'Preview Image' | t('vizy'),
+    instructions: 'Set the Preview Image for the block.' | t('vizy'),
+    id: 'previewImage',
+    errors: blockType.getErrors('previewImage'),
+}, previewImagePickerHtml) }}
+
+{{ forms.autosuggestField({
+    label: 'Template' | t('vizy'),
+    instructions: 'Provide the path for a template partial for rendering this block type.' | t('vizy'),
+    id: 'template',
+    name: 'template',
+    value: blockType.template,
+    suggestions: craft.cp.getTemplateSuggestions(),
+    errors: blockType.getErrors('template'),
+}) }}
+
+<hr>
+
+<h2>{{ 'Layout' | t('vizy') }}</h2>
+<p class="light">{{ 'Define what type of fields this block type has.' | t('vizy') }}</p>
+{{ vizyFieldLayoutDesigner(blockType.getFieldLayout(), {
+    id: 'block-type-field-layout-' ~ blockType.uid,
+})|raw }}
+
+{# Render via Twig so registerJs runs inside Craft's namespaced slideout render.
+   Pre-rendering in the controller breaks Add/New Tab in CpScreenSlideout. #}
+
+{# Craft's generator only auto-fills while the handle is empty and untouched, so
+   this is safe to wire unconditionally — but saved block types must never have
+   their handle rewritten from a rename, hence the `isNew` guard. #}
+{% if isNew %}
+    {% js %}
+        new Craft.HandleGenerator('#{{ 'name'|namespaceInputId|e('js') }}', '#{{ 'handle'|namespaceInputId|e('js') }}');
+    {% endjs %}
+{% endif %}

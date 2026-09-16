@@ -1,9 +1,10 @@
 <?php
 namespace verbb\vizy\web\assets\field;
 
+use verbb\vizy\helpers\ViteManifest;
+
 use Craft;
 use craft\base\ElementInterface;
-use craft\helpers\Json;
 use craft\web\AssetBundle;
 use craft\web\assets\cp\CpAsset;
 use craft\web\View;
@@ -19,6 +20,12 @@ class VizyAsset extends AssetBundle
     {
         $this->sourcePath = __DIR__ . '/dist/';
 
+        $assets = ViteManifest::assets($this->sourcePath . 'manifest.json', 'field/src/ts/vizy.ts');
+
+        $this->js = [$assets['js']];
+        $this->css = $assets['css'];
+        $this->jsOptions = ['type' => 'module'];
+
         $this->depends = [
             VerbbCpAsset::class,
             CpAsset::class,
@@ -32,7 +39,7 @@ class VizyAsset extends AssetBundle
         parent::registerAssetFiles($view);
 
         if ($view instanceof View) {
-            $this->registerRefHandles($view);
+            $this->_registerRefHandles($view);
 
             $view->registerTranslations('vizy', [
                 'Link to the current site',
@@ -44,12 +51,11 @@ class VizyAsset extends AssetBundle
     // Private Methods
     // =========================================================================
 
-    private function registerRefHandles(View $view): void
+    private function _registerRefHandles(View $view): void
     {
         $refHandles = [];
 
         foreach (Craft::$app->getElements()->getAllElementTypes() as $elementType) {
-            /** @var string|ElementInterface $elementType */
             if ($elementType::isLocalized() && ($refHandle = $elementType::refHandle()) !== null) {
                 $refHandles[] = $refHandle;
             }

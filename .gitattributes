@@ -1,0 +1,27 @@
+# Keep development fixtures, dependencies, and environment files out of release archives.
+/tests export-ignore
+/storage export-ignore
+/test-results export-ignore
+/node_modules export-ignore
+/vendor export-ignore
+/.env* export-ignore
+/.github export-ignore
+/.idea export-ignore
+/.vscode export-ignore
+/package.json export-ignore
+/package-lock.json export-ignore
+/composer.lock export-ignore
+/phpunit*.xml export-ignore
+/tsconfig.json export-ignore
+/vite.config.* export-ignore
+/vitest.config.* export-ignore
+/playwright.config.* export-ignore
+/playwright.cp.config.* export-ignore
+**/.DS_Store export-ignore
+/.eslintrc.* export-ignore
+/.pest.xml export-ignore
+/config.codekit3 export-ignore
+/.gitattributes export-ignore
+/.gitignore export-ignore
+/.cache export-ignore
+/.ddev export-ignore

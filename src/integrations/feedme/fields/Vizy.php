@@ -2,17 +2,15 @@
 namespace verbb\vizy\integrations\feedme\fields;
 
 use verbb\vizy\fields\VizyField;
+use verbb\vizy\integrations\feedme\FeedMeDocumentAdapter;
 use verbb\vizy\integrations\feedme\VizyBlock;
-
-use craft\helpers\Json;
 
 use craft\feedme\base\Field;
 use craft\feedme\base\FieldInterface;
-
 use Tiptap\Editor;
+use Tiptap\Extensions\StarterKit;
 use Tiptap\Marks;
 use Tiptap\Nodes;
-use Tiptap\Extensions\StarterKit;
 
 class Vizy extends Field implements FieldInterface
 {
@@ -23,25 +21,23 @@ class Vizy extends Field implements FieldInterface
     public static $class = VizyField::class;
 
 
-    // Templates
+    // Public Methods
     // =========================================================================
+
+    // Templates
 
     public function getMappingTemplate(): string
     {
         return 'feed-me/_includes/fields/default';
     }
 
-
-    // Public Methods
-    // =========================================================================
-
     public function parseField(): string
     {
         $value = $this->fetchValue() ?? null;
 
-        // Check to see if we're passing in raw JSON, assume it's schema-ready
-        if (is_string($value) && Json::isJsonObject($value)) {
-            return $value;
+        $adapter = new FeedMeDocumentAdapter();
+        if ($canonical = $adapter->canonicalize($value)) {
+            return $canonical;
         }
 
         if (!$value) {
@@ -69,9 +65,9 @@ class Vizy extends Field implements FieldInterface
         $doc = $editor->getDocument();
 
         if (is_array($doc) && array_key_exists('content', $doc)) {
-            return Json::encode($doc['content']);
+            return $adapter->validateEnvelope($doc['content']);
         }
 
-        return '';
+        return $adapter->validateEnvelope([]);
     }
 }

@@ -1,0 +1,75 @@
+{
+  "_floating-ui.dom-C6Mj1-30.js": {
+    "file": "assets/floating-ui.dom-C6Mj1-30.js",
+    "name": "floating-ui.dom"
+  },
+  "_tooltip-BHhRUPiD.js": {
+    "file": "assets/tooltip-BHhRUPiD.js",
+    "name": "tooltip",
+    "imports": [
+      "_floating-ui.dom-C6Mj1-30.js"
+    ],
+    "css": [
+      "assets/tooltip-ekR-Z1gs.css"
+    ]
+  },
+  "_tooltip-ekR-Z1gs.css": {
+    "file": "assets/tooltip-ekR-Z1gs.css",
+    "src": "_tooltip-ekR-Z1gs.css"
+  },
+  "_unsafe-html-Uv_wo90H.js": {
+    "file": "assets/unsafe-html-Uv_wo90H.js",
+    "name": "unsafe-html",
+    "imports": [
+      "_floating-ui.dom-C6Mj1-30.js"
+    ]
+  },
+  "editorconfigsettings/src/ts/editor-config-settings.ts": {
+    "file": "assets/editor-config-settings-rOmi-7JP.js",
+    "name": "editor-config-settings",
+    "src": "editorconfigsettings/src/ts/editor-config-settings.ts",
+    "isEntry": true,
+    "imports": [
+      "_tooltip-BHhRUPiD.js"
+    ],
+    "css": [
+      "assets/editor-config-settings-CiIDSAuJ.css"
+    ]
+  },
+  "field/src/ts/vizy.ts": {
+    "file": "assets/vizy-DQscFY2I.js",
+    "name": "vizy",
+    "src": "field/src/ts/vizy.ts",
+    "isEntry": true,
+    "imports": [
+      "_floating-ui.dom-C6Mj1-30.js",
+      "_unsafe-html-Uv_wo90H.js"
+    ],
+    "css": [
+      "assets/vizy-CJLxRwV4.css"
+    ]
+  },
+  "fieldsettings/src/ts/field-settings.ts": {
+    "file": "assets/field-settings-8-dl4RVP.js",
+    "name": "field-settings",
+    "src": "fieldsettings/src/ts/field-settings.ts",
+    "isEntry": true,
+    "imports": [
+      "_floating-ui.dom-C6Mj1-30.js",
+      "_tooltip-BHhRUPiD.js",
+      "_unsafe-html-Uv_wo90H.js"
+    ],
+    "css": [
+      "assets/field-settings-BrWpAr5G.css"
+    ]
+  },
+  "iconpicker/src/ts/icon-picker.ts": {
+    "file": "assets/icon-picker-DGb9J_pQ.js",
+    "name": "icon-picker",
+    "src": "iconpicker/src/ts/icon-picker.ts",
+    "isEntry": true,
+    "css": [
+      "assets/icon-picker-2g6Pub1R.css"
+    ]
+  }
+}

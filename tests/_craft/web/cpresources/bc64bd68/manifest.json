@@ -1,0 +1,56 @@
+{
+  "_floating-ui.dom-BGxPGImR.js": {
+    "file": "assets/floating-ui.dom-BGxPGImR.js",
+    "name": "floating-ui.dom"
+  },
+  "_sortable-CPfArjcy.js": {
+    "file": "assets/sortable-CPfArjcy.js",
+    "name": "sortable"
+  },
+  "editorconfigsettings/src/ts/editor-config-settings.ts": {
+    "file": "assets/editor-config-settings-8oKJEUqF.js",
+    "name": "editor-config-settings",
+    "src": "editorconfigsettings/src/ts/editor-config-settings.ts",
+    "isEntry": true,
+    "imports": [
+      "_sortable-CPfArjcy.js"
+    ],
+    "css": [
+      "assets/editor-config-settings-sckz4kNS.css"
+    ]
+  },
+  "field/src/ts/vizy.ts": {
+    "file": "assets/vizy-BbPu8Rl7.js",
+    "name": "vizy",
+    "src": "field/src/ts/vizy.ts",
+    "isEntry": true,
+    "imports": [
+      "_floating-ui.dom-BGxPGImR.js"
+    ],
+    "css": [
+      "assets/vizy-D1OenylS.css"
+    ]
+  },
+  "fieldsettings/src/ts/field-settings.ts": {
+    "file": "assets/field-settings-BWkXDarJ.js",
+    "name": "field-settings",
+    "src": "fieldsettings/src/ts/field-settings.ts",
+    "isEntry": true,
+    "imports": [
+      "_floating-ui.dom-BGxPGImR.js",
+      "_sortable-CPfArjcy.js"
+    ],
+    "css": [
+      "assets/field-settings-B7ZCfPsO.css"
+    ]
+  },
+  "iconpicker/src/ts/icon-picker.ts": {
+    "file": "assets/icon-picker-DGb9J_pQ.js",
+    "name": "icon-picker",
+    "src": "iconpicker/src/ts/icon-picker.ts",
+    "isEntry": true,
+    "css": [
+      "assets/icon-picker-2g6Pub1R.css"
+    ]
+  }
+}

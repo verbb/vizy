@@ -1,0 +1,11 @@
+{
+  "field/src/ts/vizy.ts": {
+    "file": "assets/vizy-Bdi-gUBL.js",
+    "name": "vizy",
+    "src": "field/src/ts/vizy.ts",
+    "isEntry": true,
+    "css": [
+      "assets/vizy-BYwj-z1P.css"
+    ]
+  }
+}

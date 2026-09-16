@@ -1,34 +1,158 @@
 <?php
 namespace verbb\vizy\base;
 
-use verbb\vizy\Vizy;
+use verbb\vizy\deprecations\VizyNodeInstanceHtmlDeprecations;
 use verbb\vizy\events\ModifyNodeTagEvent;
 use verbb\vizy\events\ModifyRenderedNodeEvent;
-use verbb\vizy\helpers\Nodes;
+use verbb\vizy\helpers\TypeHtml;
 
-use Craft;
 use craft\base\Component;
 use craft\base\ElementInterface;
 use craft\base\FieldInterface;
-use craft\helpers\Html;
-use craft\helpers\Template;
 
-use GraphQL\Type\Definition\Type;
+use yii\base\InvalidConfigException;
+
 use GraphQL\Type\Definition\ScalarType;
+use GraphQL\Type\Definition\Type;
 
-use Twig\Markup;
-
+/**
+ * TipTap node base — catalogue + HTML policy live on statics.
+ *
+ * Instance HTML methods are deprecated shims (see VizyNodeInstanceHtmlDeprecations).
+ */
 class Node extends Component implements NodeInterface
 {
-    // Constants
-    // =========================================================================
-
-    public const EVENT_MODIFY_TAG = 'modifyTag';
-    public const EVENT_MODIFY_RENDERED_NODE = 'modifyRenderedNode';
-
-
     // Static Methods
     // =========================================================================
+
+    public static function id(): string
+    {
+        if (static::$type === null || static::$type === '') {
+            throw new InvalidConfigException(static::class . ' must define $type or override id().');
+        }
+
+        return static::$type;
+    }
+
+    public static function moduleId(): string
+    {
+        return 'vizy/core/node/' . static::id();
+    }
+
+    public static function label(): string
+    {
+        return ucfirst(static::id());
+    }
+
+    public static function surfaces(): array
+    {
+        return [EditorSurface::Toolbar];
+    }
+
+    public static function icon(): ?string
+    {
+        return null;
+    }
+
+    public static function group(): ?string
+    {
+        return null;
+    }
+
+    public static function tag(): string|array|null
+    {
+        return null;
+    }
+
+    public static function tagForAttrs(array $attrs): string|array|null
+    {
+        return static::tag();
+    }
+
+    public static function isSelfClosing(): bool
+    {
+        return false;
+    }
+
+    public static function normalizeAttrs(array $attrs, RenderContext $ctx): array
+    {
+        return $attrs;
+    }
+
+    public static function resolveAttrs(array $attrs, RenderContext $ctx): array
+    {
+        return $attrs;
+    }
+
+    public static function renderOccurrenceHtml(string $children, array $resolvedAttrs, RenderContext $ctx): ?string
+    {
+        return null;
+    }
+
+    public static function dependencies(): array
+    {
+        return [];
+    }
+
+    public static function implies(): array
+    {
+        return [];
+    }
+
+    public static function alwaysEnabled(): bool
+    {
+        return false;
+    }
+
+    public static function isInternal(): bool
+    {
+        return false;
+    }
+
+    /**
+     * Class-level modifyTag — no Node instance required.
+     */
+    public static function modifyTagStructure(string|array|null $tag, array $attrs, RenderContext $ctx, bool $opening): array
+    {
+        $structure = TypeHtml::structureFromTag($tag, $attrs);
+        $event = new ModifyNodeTagEvent([
+            'tag' => $structure,
+            'node' => null,
+            'attrs' => $attrs,
+            'typeId' => static::id(),
+            'context' => $ctx,
+            'opening' => $opening ? true : null,
+            'closing' => $opening ? null : true,
+        ]);
+
+        TypeHtml::triggerClassEvent(static::class, self::EVENT_MODIFY_TAG, $event);
+        // Yii class-level Event::trigger already walks parents — do not fire Node again.
+
+        return is_array($event->tag) ? $event->tag : [];
+    }
+
+    /**
+     * Class-level modifyRenderedNode.
+     */
+    public static function modifyRenderedHtml(string $html, RenderContext $ctx): string
+    {
+        if (!TypeHtml::hasClassHandlers(static::class, self::EVENT_MODIFY_RENDERED_NODE)
+            && !TypeHtml::hasClassHandlers(self::class, self::EVENT_MODIFY_RENDERED_NODE)) {
+            return $html;
+        }
+
+        $event = new ModifyRenderedNodeEvent([
+            'renderedNode' => $html,
+            'typeId' => static::id(),
+            'context' => $ctx,
+            'node' => null,
+        ]);
+
+        TypeHtml::triggerClassEvent(static::class, self::EVENT_MODIFY_RENDERED_NODE, $event);
+        // Yii inheritance already delivers base-class handlers.
+
+        return (string)($event->renderedNode ?? '');
+    }
 
     public static function gqlTypeNameByContext(mixed $context): string
     {
@@ -39,11 +163,23 @@ class Node extends Component implements NodeInterface
     }
 
 
+    // Constants
+    // =========================================================================
+
+    public const EVENT_MODIFY_TAG = 'modifyTag';
+    public const EVENT_MODIFY_RENDERED_NODE = 'modifyRenderedNode';
+
+
+    // Traits
+    // =========================================================================
+
+    use VizyNodeInstanceHtmlDeprecations;
+
+
     // Properties
     // =========================================================================
 
     public static ?string $type = null;
-
     public mixed $tagName = null;
     public array $content = [];
     public array $attrs = [];
@@ -59,39 +195,9 @@ class Node extends Component implements NodeInterface
     // Public Methods
     // =========================================================================
 
-    public function selfClosing(): bool
-    {
-        return false;
-    }
-
-    public function isDeleted(): bool
-    {
-        return false;
-    }
-
-    public function getTag(): array
-    {
-        return [
-            [
-                'tag' => $this->tagName,
-                'attrs' => $this->attrs,
-            ],
-        ];
-    }
-
     public function getType(): ?string
     {
-        return static::$type;
-    }
-
-    public function getMarks(): array
-    {
-        return $this->marks;
-    }
-
-    public function getContent(): array
-    {
-        return $this->content;
+        return static::$type ?? static::id();
     }
 
     public function getField(): ?FieldInterface
@@ -99,7 +205,7 @@ class Node extends Component implements NodeInterface
         return $this->field;
     }
 
-    public function setField(FieldInterface $value): void
+    public function setField(?FieldInterface $value): void
     {
         $this->field = $value;
     }
@@ -109,107 +215,9 @@ class Node extends Component implements NodeInterface
         return $this->element;
     }
 
-    public function setElement(ElementInterface $value): void
+    public function setElement(?ElementInterface $value): void
     {
         $this->element = $value;
-    }
-
-    public function getAttrs(): array
-    {
-        return $this->attrs;
-    }
-
-    public function getRawText(): ?string
-    {
-        // Careful calling this in practice, don't trust content!
-        return $this->text;
-    }
-
-    public function getText(): ?Markup
-    {
-        // Ensure that we escape text by default
-        return Template::raw($this->renderText());
-    }
-
-    public function setText(mixed $value): void
-    {
-        $this->text = $value;
-    }
-
-    public function getEnabled(): bool
-    {
-        return true;
-    }
-
-    public function isEmpty(): bool
-    {
-        return !($this->getContent() || $this->getText());
-    }
-
-    public function renderNode(array $config = []): ?string
-    {
-        Craft::configure($this, $config);
-
-        $renderedNode = Vizy::$plugin->getNodes()->renderNode($this);
-
-        $event = new ModifyRenderedNodeEvent([
-            'renderedNode' => $renderedNode,
-        ]);
-
-        $this->trigger(self::EVENT_MODIFY_RENDERED_NODE, $event);
-
-        return $event->renderedNode;
-    }
-
-    public function renderHtml(array $config = []): ?Markup
-    {
-        return Template::raw((string)$this->renderNode($config));
-    }
-
-    public function renderStaticHtml(): ?Markup
-    {
-        return $this->renderHtml();
-    }
-
-    public function renderText(): string
-    {
-        // Important to escape as plain text
-        return Html::encode($this->getRawText());
-    }
-
-    public function getStaticText(): string
-    {
-        return trim(implode('', $this->_getNestedValues($this->rawNode, 'text')));
-    }
-
-    public function renderOpeningTag(): ?string
-    {
-        $tag = $this->getTag();
-
-        $event = new ModifyNodeTagEvent([
-            'tag' => $tag,
-            'node' => $this,
-            'opening' => true,
-        ]);
-
-        $this->trigger(self::EVENT_MODIFY_TAG, $event);
-
-        return Nodes::renderOpeningTag($event->tag);
-    }
-
-    public function renderClosingTag(): ?string
-    {
-        $tag = $this->getTag();
-
-        $event = new ModifyNodeTagEvent([
-            'tag' => $tag,
-            'node' => $this,
-            'closing' => true,
-        ]);
-
-        $this->trigger(self::EVENT_MODIFY_TAG, $event);
-
-        return Nodes::renderClosingTag($event->tag);
     }
 
     public function getGqlTypeName(): string
@@ -220,56 +228,5 @@ class Node extends Component implements NodeInterface
     public function getContentGqlType(): ScalarType
     {
         return Type::string();
-    }
-
-    public function serializeValue(?ElementInterface $element = null): ?array
-    {
-        return $this->rawNode;
-    }
-
-    public function normalizeValue(?ElementInterface $element = null): ?array
-    {
-        // Tiptap can't handle any empty text nodes in content, so filter these out.
-        $rawContent = $this->rawNode['content'] ?? [];
-
-        if ($rawContent) {
-            foreach ($rawContent as $key => $content) {
-                $type = $content['type'] ?? null;
-                $text = $content['text'] ?? null;
-
-                // Only drop genuinely empty text nodes. Whitespace-only nodes (e.g. a single
-                // space between adjacent marks) must be kept or HTML output loses spaces — see
-                // https://github.com/verbb/vizy/issues/366
-                if ($type === 'text' && $text !== null) {
-                    if ($text === '') {
-                        unset($rawContent[$key]);
-                    }
-                }
-            }
-
-            // Reset keys if needed
-            $this->rawNode['content'] = array_values($rawContent);
-        }
-
-        return $this->rawNode;
-    }
-
-
-    // Public Methods
-    // =========================================================================
-
-    private function _getNestedValues($value, $key, &$items = []): array
-    {
-        foreach ($value as $k => $v) {
-            if ((string)$k === $key) {
-                $items[] = $v;
-            }
-
-            if (is_array($v)) {
-                $this->_getNestedValues($v, $key, $items);
-            }
-        }
-
-        return $items;
     }
 }

@@ -13,6 +13,12 @@ use craft\helpers\StringHelper;
 
 class Icons extends Component
 {
+    // Constants
+    // =========================================================================
+
+    public const BLOCK_TYPE_FALLBACK_ICON = 'vizy-block-fallback';
+
+
     // Properties
     // =========================================================================
 
@@ -25,8 +31,7 @@ class Icons extends Component
 
     public function getCustomIcons(): array
     {
-        /** @var Settings $settings */
-        $settings = Vizy::$plugin->getSettings();
+                $settings = Vizy::$plugin->getSettings();
         $iconsPath = $settings->getIconsPath();
 
         if (!is_dir($iconsPath)) {
@@ -149,14 +154,75 @@ class Icons extends Component
         return null;
     }
 
+    /**
+     * SVG for a configured Block Type icon only. The fallback is rendered client-side
+     * via `<pk-icon icon="vizy-block-fallback">`.
+     */
+    public function blockTypeIconSvg(mixed $icon): ?string
+    {
+        $value = is_string($icon) ? trim($icon) : '';
+        if ($value === '') {
+            return null;
+        }
+
+        return $this->getSvgForValue($value);
+    }
+
+    public function blockTypeInsertionIcon(mixed $icon, ?string $color = null): array
+    {
+        $value = is_string($icon) ? trim($icon) : '';
+        if ($value !== '') {
+            $svg = $this->getSvgForValue($value);
+            if ($svg !== null) {
+                return [
+                    'name' => $value,
+                    'svg' => $svg,
+                    'color' => $color,
+                ];
+            }
+        }
+
+        return [
+            'name' => self::BLOCK_TYPE_FALLBACK_ICON,
+            'svg' => null,
+            'color' => $color,
+        ];
+    }
+
+    /**
+     * Resolves many icon values in one indexed pass.
+     *
+     * `getSvgForValue()` scans every group linearly, which is fine for the one
+     * icon a Block Type row needs but not for a whole toolbar: the catalog holds
+     * ~2,000 icons, so twenty sequential lookups is twenty full scans. Callers
+     * that need a set should ask once.
+     */
+    public function getSvgsForValues(array $values): array
+    {
+        $wanted = array_fill_keys(array_map('strval', $values), true);
+        $found = [];
+
+        foreach ($this->getAvailableIconSets() as $iconGroup) {
+            foreach ($iconGroup['icons'] ?? [] as $icon) {
+                $value = (string)($icon['value'] ?? '');
+                // First group wins, matching `getIconForValue()`'s precedence.
+                if ($value === '' || !isset($wanted[$value]) || isset($found[$value])) {
+                    continue;
+                }
+                $found[$value] = (string)($icon['svg'] ?? '');
+            }
+        }
+
+        return array_filter($found, static fn(string $svg): bool => $svg !== '');
+    }
+
 
     // Private Methods
     // =========================================================================
 
     private function _getFiles(string $path, array $options): array
     {
-        /** @var Settings $settings */
-        $settings = Vizy::$plugin->getSettings();
+                $settings = Vizy::$plugin->getSettings();
 
         if (!is_dir($settings->getIconsPath())) {
             return [];
@@ -189,5 +255,4 @@ class Icons extends Component
 
         return StringHelper::titleizeForHumans($string);
     }
-
 }

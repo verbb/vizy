@@ -1,0 +1,107 @@
+{% import '_includes/forms' as forms %}
+
+{# CP screen content template, shared by the standalone page and the slideout
+   opened from Vizy field settings. File configs get a different body below: identity
+   plus the JSON on disk, nothing of the visual builder. #}
+
+{% set isFile = isFile ?? false %}
+
+{{ hiddenInput('id', configId) }}
+
+{% if isFile %}
+    {# Same readonly treatment on both fields — no disabled (that greys them differently
+       from each other). The JSON is the file itself, not a re-serialised payload. #}
+    {{ forms.textField({
+        label: 'Label' | t('app'),
+        instructions: 'What this editor config will be called in the control panel.' | t('vizy'),
+        id: 'label',
+        value: config.label,
+        first: true,
+        readonly: true,
+    }) }}
+
+    {{ forms.textField({
+        label: 'Config ID' | t('vizy'),
+        instructions: 'How you’ll refer to this editor config in field settings. Taken from the filename.' | t('vizy'),
+        value: configId,
+        class: 'code',
+        readonly: true,
+    }) }}
+
+    {{ forms.textareaField({
+        label: 'Config' | t('vizy'),
+        instructions: 'Contents of `{path}`. Edit the file on disk to change it.' | t('vizy', {
+            path: 'config/vizy/' ~ (filename ?? (configId ~ '.json')),
+        }),
+        value: fileJson ?? '',
+        class: 'code',
+        rows: 24,
+        readonly: true,
+    }) }}
+{% else %}
+    {# Both ids are given rather than left to `forms.textField`, which falls back to a random one like
+       `text236144598`. The handle generator below has to name these two inputs, and it cannot name an
+       id that is invented per render. #}
+    {{ forms.textField({
+        label: 'Label' | t('app'),
+        instructions: 'What this editor config will be called in the control panel.' | t('vizy'),
+        id: 'label',
+        name: 'label',
+        value: config.label,
+        required: true,
+        autofocus: true,
+        first: true,
+    }) }}
+
+    {% if isNew %}
+        {{ forms.textField({
+            label: 'Config ID' | t('vizy'),
+            instructions: 'How you’ll refer to this editor config in field settings. Lowercase letters, numbers, dashes and underscores only. This cannot be changed later.' | t('vizy'),
+            id: 'newId',
+            name: 'newId',
+            value: '',
+            class: 'code',
+            required: true,
+        }) }}
+
+        {# Suggested from the label, the way every other Craft screen with a handle does it. Only ever
+           here, inside `isNew`: the ID cannot be changed after saving, so there is nothing for a later
+           rename to regenerate. Craft's generators stop as soon as the field is typed in, so this
+           suggests rather than governs.
+
+           Not `Craft.HandleGenerator`, which camelCases to suit Craft handles and would hand us
+           `longFormArticle` — a value `EditorConfigs::normalize()` rejects outright, since config IDs
+           are lowercase, dashes and underscores only. The callback below is Craft's own handle
+           normalisation (strip tags and quotes, fold to ASCII, require a letter first) joined with
+           dashes instead, so what it offers always satisfies that rule.
+
+           Ids are namespaced because this template also renders into the field settings slideout,
+           where a bare `#label` would find the wrong input, or none. #}
+        {% js %}
+            new Craft.DynamicGenerator('#{{ 'label'|namespaceInputId|e('js') }}', '#{{ 'newId'|namespaceInputId|e('js') }}', (source) => {
+                const ascii = Craft.asciiString(
+                    source.replace(/<(.*?)>/g, '').replace(/['"‘’“”ʻ\[\]\(\)\{\}:]/g, '').toLowerCase()
+                );
+                return Craft.filterArray(ascii.replace(/^[^a-z]+/, '').split(/[^a-z0-9]+/)).join('-');
+            });
+        {% endjs %}
+    {% else %}
+        {# An input rather than plain text, so an immutable value still reads as a field
+           instead of getting lost between the ones you can edit. Deliberately unnamed — the ID
+           posts via the hidden input above, and is not editable here in any case. #}
+        {{ forms.textField({
+            label: 'Config ID' | t('vizy'),
+            instructions: 'How you’ll refer to this editor config in field settings.' | t('vizy'),
+            value: configId,
+            class: 'code',
+            readonly: true,
+        }) }}
+    {% endif %}
+
+    <hr>
+
+    <vizy-editor-config-settings data-initial="{{ editorConfigInitial|json_encode|e('html_attr') }}">
+        <div data-vizy-config-host></div>
+        <div data-vizy-config-sync hidden></div>
+    </vizy-editor-config-settings>
+{% endif %}

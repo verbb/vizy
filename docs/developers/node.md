@@ -1,276 +1,151 @@
 # Node
-A Node object represents a singular "chunk" of content within the context of a Vizy field. Each node has a type, attributes and different logic on how it should be rendered. Some nodes have block content, whilst others have no content.
 
-Each Node shares the following attributes and methods.
+A **node** represents a piece of content, such as a paragraph, image, or Vizy block. Nodes can contain other nodes: a list contains list items, for example, and each item can contain text. A node’s PHP class defines how Vizy renders that content as HTML.
 
-## Attributes
+Register a custom node class through `Extensions::EVENT_REGISTER_EXTENSIONS` using `$event->nodes[] = MyNode::class`. See [Extending Vizy](docs:developers/extending-vizy) for the registration process.
 
-Attribute | Description
---- | ---
-`type` | Returns the type of node this is.
-`tagName` | Returns name for the HTML tag the node should use.
-`attrs` | Returns an array of node attributes. This will vary for each node type.
-`content` | Returns an array of nested [Node](docs:developers/node) objects.
-`marks` | Returns an array of nested [Mark](docs:developers/mark) objects.
-`text` | Returns any body text for this node.
+## Static Methods
 
-## Methods
+::: reference
+### `id()`
 
-Method | Description
---- | ---
-`selfClosing()` | Whether this node has a self-closing tag.
-`isDeleted()` | Whether this node has been deleted. Only applicable to Vizy Blocks.
-`isEmpty()` | Whether the node is considered empty of content.
-`getTag()` | Returns the HTML tag name and attributes the node should use for the HTML tag.
-`getField()` | Returns the Vizy field model.
-`getType()` | Returns the type of node this is.
-`getMarks()` | Returns an array of nested [Mark](docs:developers/mark) objects.
-`getAttrs()` | Returns any attributes stored against the node.
-`getContent()` | Returns an array of nested [Node](docs:developers/node) objects.
-`getText()` | Returns any body text for this node.
-`renderNode()` | Renders the node using in-built defaults.
-`renderHtml(config)` | Returns the result from `renderNode()` in raw HTML.
-`renderOpeningTag()` | Renders the opening tag for the node.
-`renderClosingTag()` | Renders the closing tag for the node.
+**Returns:** `string` / `$type`
 
-## Node Types
-
-### Blockquote
-
-#### Properties
-
-Property | Value
---- | ---
-`type` | `blockquote`
-`tagName` | `blockquote`
-
-
-### Bullet List
-
-#### Properties
-
-Property | Value
---- | ---
-`type` | `bulletList`
-`tagName` | `ul`
-
-
-### Code Block
-
-#### Properties
-
-Property | Value
---- | ---
-`type` | `codeBlock`
-`tagName` | `['pre', 'code']`
-
-
-### Hard Break
-
-#### Properties
-
-Property | Value
---- | ---
-`type` | `hardBreak`
-`tagName` | `br`
-
-
-### Heading
-
-#### Properties
-
-Property | Value
---- | ---
-`type` | `heading`
-
-#### Attributes
-These can be accessed via `attrs`.
-
-Attribute | Description
---- | ---
-`level` | A numeric value for which level heading to use.
-
-
-### Horizontal Rule
-
-#### Properties
-
-Property | Value
---- | ---
-`type` | `horizontal_rule`
-`tagName` | `hr`
-
-
-### Iframe
-
-#### Properties
-
-Property | Value
---- | ---
-`type` | `iframe`
-`tagName` | `iframe`
-
-
-### Image
-
-#### Properties
-
-Property | Value
---- | ---
-`type` | `image`
-`tagName` | `img`
-
-#### Attributes
-These can be accessed via `attrs`.
-
-Attribute | Description
---- | ---
-`src` | The URL to the path of the image.
-`alt` | The alternative text for the image.
-`title` | The title text for the image.
-`url` | The URL for the optional link surrounding the image.
-`target` | The target for the optional link surrounding the image.
-
-
-### List Item
-
-#### Properties
-
-Property | Value
---- | ---
-`type` | `listItem`
-`tagName` | `li`
-
-
-### Media Embed
-
-#### Properties
-
-Property | Value
---- | ---
-`type` | `mediaEmbed`
-
-#### Attributes
-These can be accessed via `attrs`.
-
-Attribute | Description
---- | ---
-`url` | The URL provided for the embed.
-`data` | The raw data (usually oembed) fetched from the URL.
-
-
-### Ordered List
-
-#### Properties
-
-Property | Value
---- | ---
-`type` | `orderedList`
-`tagName` | `ol`
-
-
-### Paragraph
-
-#### Properties
-
-Property | Value
---- | ---
-`type` | `paragraph`
-`tagName` | `p`
-
-
-### Table
-
-#### Properties
-
-Property | Value
---- | ---
-`type` | `table`
-`tagName` | `table`
-
-
-### Table Row
-
-#### Properties
-
-Property | Value
---- | ---
-`type` | `tableRow`
-`tagName` | `tr`
-
-
-### Table Cell
-
-#### Properties
-
-Property | Value
---- | ---
-`type` | `tableCell`
-`tagName` | `td`
-
-
-### Table Header
-
-#### Properties
-
-Property | Value
---- | ---
-`type` | `tableHeader`
-`tagName` | `th`
-
-
-### Vizy Block
-Due to Vizy Blocks being able to support custom fields, you can directly call a custom field's handle on a Vizy Block node object.
-
-For example, you might have a custom field attached to a Vizy Block with the handle `plainText`. You could access this value via:
-
-```twig
-{{ node.plainText }}
-
-{# Shortcut for: #}
-{{ node.values.content.fields.plainText }}
-```
-
-:::warning
-It's not recommended to use `node.values.content.fields` to retrieve field content unless you know what you're doing. The direct access method runs field content through `normalizeValue()` in order to convert the raw, plain values stored in the database, to values the corresponding field requires. For instance, a Date field would convert a plain text date into a DateTime object.
+TipTap JSON type (`paragraph`, `heading`, …).
 :::
 
-#### Properties
+::: reference
+### `moduleId()`
 
-Property | Value
---- | ---
-`type` | `vizyBlock`
-`handle` | `mixed`.
+**Returns:** `string`
 
-#### Attributes
-These can be accessed via `attrs`.
+Editor module id (`vizy/core/node/paragraph`).
+:::
 
-Attribute | Description
---- | ---
-`id` | The ID for this block.
-`enabled` | Returns whether the block is enabled or not.
-`collapsed` | Returns whether the block is collapsed or not.
-`blockTypeEnabled` | Returns whether the block type is enabled or not.
-`values` | An array of content values. Refer to below.
+::: reference
+### `label()`
 
-#### Values
-These can be accessed via `attrs.values`.
+**Returns:** `string` / `icon()` / `group()` / `surfaces()`
 
-Value | Description
---- | ---
-`id` | The ID for the block.
-`type` | The ID for the block type.
-`typeEnabled` | Whether the block type is enabled or not.
-`content.fields` | An array containing the field data.
+Catalogue metadata.
+:::
+
+::: reference
+### `tag()`
+
+**Returns:** `array|string|null` / `tagForAttrs($attrs)`
+
+HTML tag(s), or null when omitted / custom.
+:::
+
+::: reference
+### `isSelfClosing()`
+
+**Returns:** `bool`
+
+Void elements (`img`, …).
+:::
+
+::: reference
+### `normalizeAttrs()`
+
+**Returns:** `array`
+
+Semantic shaping on parse (storage attrs).
+:::
+
+::: reference
+### `resolveAttrs()`
+
+**Returns:** `array`
+
+Output-only attrs (refs, URLs) on render.
+:::
+
+::: reference
+### `renderOccurrenceHtml()`
+
+**Returns:** `string|null`
+
+Optional full HTML override; null = default tag path.
+:::
+
+::: reference
+### `alwaysEnabled()`
+
+**Returns:** `bool` / `isInternal()` / `dependencies()` / `implies()`
+
+Enablement.
+:::
 
 
-### Methods
+Register and author: [Extending Vizy](docs:developers/extending-vizy).
+Override tags: [Modify Nodes](docs:template-guides/modify-nodes).
 
-Method | Description
---- | ---
-`getBlockType()` | Return the block type object.
-`getFieldLayout()` | Return the field layout object.
-`getEnabled()` | Returns whether the block is enabled or not.
-`getCollapsed()` | Returns whether the block is collapsed or not.
-`getBlockTypeEnabled()` | Returns whether the block type is enabled or not.
+## Reading Content in Twig
 
+Read the Vizy field from an entry to render its document or query individual pieces of content. In this example, replace `myVizyField` with your field’s handle:
+
+```twig
+{{ entry.myVizyField.render() }}
+{% for node in entry.myVizyField.query().all() %}
+  {# VizyContentNode / VizyBlock projections #}
+{% endfor %}
+```
+
+See [Rendering Content](docs:template-guides/rendering-content) and
+[Querying Nodes](docs:template-guides/querying-nodes). GraphQL mirrors the same
+shape — [GraphQL](docs:developers/graphql).
+
+## Built-In Types
+
+Core classes live under `verbb\vizy\nodes\`. Block HTML uses Block Type Twig
+templates, not `tag()`.
+
+### Prose
+
+| Type | HTML | Notable attrs |
+| --- | --- | --- |
+| `doc` | *(root — not emitted)* | `schemaVersion` (`2`) on the document |
+| `paragraph` | `<p>` | `textAlign` → `class` (`text-left`, …); default align omitted |
+| `heading` | `<h1>`…`<h6>` | Storage `level` (1–6); `textAlign` → `class`; `level` never emitted as an HTML attr |
+| `blockquote` | `<blockquote>` | — |
+| `codeBlock` | `<pre><code>` | — |
+| `bulletList` / `orderedList` | `<ul>` / `<ol>` | — |
+| `listItem` | `<li>` | — |
+| `hardBreak` | `<br>` | — |
+| `horizontalRule` | `<hr>` | — |
+| `text` | *(text node)* | Marks wrap text; text is HTML-encoded on render |
+
+### Layout
+
+| Type | HTML | Notable attrs |
+| --- | --- | --- |
+| `layout` | `<div class="vizy-layout">` | Storage `layoutUid`, `stack` (`never` / `small` / …) → `data-stack`; CSS `--vizy-cols:12` |
+| `column` | `<div class="vizy-column">` | Storage `columnUid`, `span` (1–12) → `data-span` + `--vizy-col`; **internal** (pulled in by Layout) |
+
+See [Layout and Columns](docs:feature-tour/layout-and-columns).
+
+### Media
+
+| Type | HTML | Notable attrs |
+| --- | --- | --- |
+| `image` | `<img>` (optional link wrap) | **Persist `assetUid` only** — never store `src`. Render resolves Asset URL; emit allowlists `src` / `alt` / dimensions / `class` / … and sanitises `src` (http/https). Link fields (`url`, `target`, …) wrap via the Link mark path |
+| `iframe` | `<iframe>` | Authoring `url` → sanitised `src` (http/https); attr allowlist (`width`, `height`, `title`, `loading`, `allow`, …). Omitted when URI rejected |
+| `mediaEmbed` | Custom (YouTube/Vimeo shell, purified oEmbed, or safe link) | `url` + optional `data.html`. Known providers rebuild trusted iframes from URL; unknown providers purify stored HTML (SafeIframe); else encoded link |
+
+### Tables
+
+| Type | HTML | Notable attrs |
+| --- | --- | --- |
+| `table` | `<table><tbody>` | — |
+| `tableRow` | `<tr>` | — |
+| `tableCell` / `tableHeader` | `<td>` / `<th>` | `colspan`, `rowspan`, `colwidth` (as emitted by TipTap) |
+
+### Blocks
+
+| Type | HTML | Notable attrs |
+| --- | --- | --- |
+| `vizyBlock` | Block Type Twig template (or empty) | `blockTypeUid`, instance `blockUid`, `enabled`, `fieldSlots` (placement UID → values). Nested Vizy slots are Hosted documents (objects). Matrix slots refer to their owning anchor through `matrixAnchorUid` |
+
+The default renderer removes event-handler attributes such as `onclick`, and removes `srcdoc`, before producing HTML.

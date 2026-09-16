@@ -2,16 +2,17 @@
 namespace verbb\vizy\helpers;
 
 use Craft;
-use craft\models\FieldLayout;
-use craft\models\FieldLayoutTab;
+use craft\base\FieldLayoutElement;
+use craft\fieldlayoutelements\BaseField;
+use craft\fieldlayoutelements\CustomField;
+use craft\helpers\ArrayHelper;
 use craft\helpers\Cp;
 use craft\helpers\DateTimeHelper;
 use craft\helpers\Html;
 use craft\helpers\Json;
 use craft\helpers\StringHelper;
-use craft\base\FieldLayoutElement;
-use craft\helpers\ArrayHelper;
-use craft\fieldlayoutelements\BaseField;
+use craft\models\FieldLayout;
+use craft\models\FieldLayoutTab;
 
 use DateTime;
 
@@ -75,9 +76,66 @@ class Fields
             'readOnly' => $readOnly,
         ]);
         $namespacedId = $view->namespaceInputId($config['id']);
+        $blockElementType = Json::encode(\verbb\vizy\elements\Block::class);
 
+        // Craft-style Field + UI library only (Content Areas / third bucket retired).
+        // Gate “New field” / field-editor slideouts so nested-owner types never appear
+        // in the type menu (library filtering alone does not cover create-field).
         $js = <<<JS
 new Craft.FieldLayoutDesigner("#$namespacedId", $jsSettings);
+(function () {
+  const blockElementType = {$blockElementType};
+  if (Craft.FieldLayoutDesigner.prototype.__vizyBlockTypeFieldGate) {
+    return;
+  }
+  Craft.FieldLayoutDesigner.prototype.__vizyBlockTypeFieldGate = true;
+
+  const withVizyBlockTypeLayoutParam = function (fn) {
+    return function () {
+      const designer = this.settings ? this : this.tab?.designer;
+      if (!designer || designer.settings.elementType !== blockElementType) {
+        return fn.apply(this, arguments);
+      }
+      const Orig = Craft.CpScreenSlideout;
+      const Patched = function (action, settings) {
+        settings = Object.assign({}, settings || {});
+        if (action === 'fields/edit-field') {
+          settings.params = Object.assign({}, settings.params || {}, {
+            vizyBlockTypeLayout: 1,
+          });
+        }
+        return new Orig(action, settings);
+      };
+      Patched.prototype = Orig.prototype;
+      Object.assign(Patched, Orig);
+      Craft.CpScreenSlideout = Patched;
+      let result;
+      try {
+        result = fn.apply(this, arguments);
+      } catch (e) {
+        Craft.CpScreenSlideout = Orig;
+        throw e;
+      }
+      if (result && typeof result.then === 'function') {
+        return result.finally(function () {
+          Craft.CpScreenSlideout = Orig;
+        });
+      }
+      Craft.CpScreenSlideout = Orig;
+      return result;
+    };
+  };
+
+  Craft.FieldLayoutDesigner.prototype.createField = withVizyBlockTypeLayoutParam(
+    Craft.FieldLayoutDesigner.prototype.createField
+  );
+  if (Craft.FieldLayoutDesigner.Element?.prototype?.showFieldEditor) {
+    Craft.FieldLayoutDesigner.Element.prototype.showFieldEditor =
+      withVizyBlockTypeLayoutParam(
+        Craft.FieldLayoutDesigner.Element.prototype.showFieldEditor
+      );
+  }
+})();
 JS;
         $view->registerJs($js);
 
@@ -123,7 +181,7 @@ JS;
                 'id' => $config['id'],
                 'class' => 'layoutdesigner',
             ]) .
-            Html::hiddenInput('fieldLayout', Json::encode($fieldLayoutConfig), [
+            Html::hiddenInput($config['inputName'] ?? 'fieldLayout', Json::encode($fieldLayoutConfig), [
                 'data' => ['config-input' => true],
             ]) .
             Html::beginTag('div', ['class' => 'fld-container']) .
@@ -188,7 +246,7 @@ JS;
             Html::endTag('div'); // .layoutdesigner
     }
 
-    private static function _fldTabHtml(FieldLayoutTab $tab, bool $customizable, $disabled): string
+    private static function _fldTabHtml(FieldLayoutTab $tab, bool $customizable, mixed $disabled): string
     {
         return
             Html::beginTag('div', [

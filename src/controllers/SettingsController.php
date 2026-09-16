@@ -15,10 +15,12 @@ class SettingsController extends Controller
 
     public function actionIndex(): Response
     {
+        $this->requireAdmin();
+
         /* @var Settings $settings */
         $settings = Vizy::$plugin->getSettings();
 
-        return $this->renderTemplate('vizy/settings', [
+        return $this->renderTemplate('vizy/settings/index', [
             'settings' => $settings,
         ]);
     }

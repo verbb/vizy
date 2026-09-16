@@ -11,7 +11,11 @@ class Settings extends Model
     // =========================================================================
 
     public string $iconsPath = '@webroot/icons/';
-    public int $recursiveFieldCount = 10;
+    /**
+     * Folder of Block Type preview images (png/jpg/webp/gif). Relative paths are
+     * stored on Block Types for Project Config portability — not Craft assets.
+     */
+    public string $blockPreviewImagesPath = '@webroot/vizy-block-previews/';
 
 
     // Public Methods
@@ -26,4 +30,17 @@ class Settings extends Model
         return $this->iconsPath;
     }
 
+    public function getBlockPreviewImagesPath(): string
+    {
+        if ($this->blockPreviewImagesPath) {
+            return FileHelper::normalizePath(App::parseEnv($this->blockPreviewImagesPath));
+        }
+
+        return $this->blockPreviewImagesPath;
+    }
+
+    public function defineRules(): array
+    {
+        return parent::defineRules();
+    }
 }

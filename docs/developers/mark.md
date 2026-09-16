@@ -1,126 +1,88 @@
 # Mark
-A mark object represents inline styles that can be applied to certain nodes. Marks cannot be used outside of the context of a [Node](docs:developers/node).
 
-A common example of a Mark would be Bold text within a Paragraph node.
+A **mark** applies formatting to text inside a node. For example, a paragraph can contain a few bold words without making the whole paragraph bold. The mark stores the formatting type and any settings; Vizy uses its PHP class to produce the surrounding HTML when rendering the document.
 
-Each Mark shares the following attributes and methods.
+Register a custom mark class through `Extensions::EVENT_REGISTER_EXTENSIONS` using `$event->marks[] = MyMark::class`. The [custom mark guide](docs:guides/developers/creating-a-custom-mark-from-scratch) shows how to connect that class to the editor.
 
-## Attributes
+## Static Methods
 
-Attribute | Description
---- | ---
-`type` | Returns the type of mark this is.
-`tagName` | Returns name for the HTML tag the mark should use.
-`attrs` | Returns an array of mark attributes. This will vary for each mark type.
+::: reference
+### `id()`
 
-## Methods
+**Returns:** `string` / `$type`
 
-Method | Description
---- | ---
-`getTag()` | Returns the HTML tag name and attributes the mark should use for the HTML tag.
-`getAttrs()` | Returns an array of mark attributes. This will vary for each mark type.
-`getType()` | Returns the type of mark this is.
-`renderOpeningTag()` | Renders the opening tag for the mark.
-`renderClosingTag()` | Renders the closing tag for the mark.
+TipTap JSON type (`bold`, `link`, …).
+:::
 
+::: reference
+### `moduleId()`
 
-## Mark Types
+**Returns:** `string`
 
-### Bold
+Editor module id (`vizy/core/mark/bold`).
+:::
 
-#### Properties
+::: reference
+### `label()`
 
-Property | Value
---- | ---
-`type` | `bold`
-`tagName` | `strong`
+**Returns:** `string` / `icon()` / `group()` / `surfaces()`
 
+Catalogue metadata.
+:::
 
-### Code
+::: reference
+### `tag()`
 
-#### Properties
+**Returns:** `array|string|null` / `tagForAttrs($attrs)`
 
-Property | Value
---- | ---
-`type` | `code`
-`tagName` | `code`
+HTML tag(s).
+:::
 
+::: reference
+### `normalizeAttrs()`
 
-### Italic
+**Returns:** `array`
 
-#### Properties
+Semantic shaping on parse.
+:::
 
-Property | Value
---- | ---
-`type` | `italic`
-`tagName` | `em`
+::: reference
+### `resolveAttrs()`
 
+**Returns:** `array`
 
-### Link
+Output-only attrs (e.g. Link refs, `rel` for `_blank`).
+:::
 
-#### Properties
+::: reference
+### `alwaysEnabled()`
 
-Property | Value
---- | ---
-`type` | `link`
-`tagName` | `a`
+**Returns:** `bool` / `isInternal()` / `dependencies()` / `implies()`
 
-#### Attributes
-These can be accessed via `attrs`.
-
-Attribute | Description
---- | ---
-`href` | The URL for the link.
-`target` | The target of the link.
-`rel` | The rel value for the link.
+Enablement.
+:::
 
 
-### Strike
+Walkthrough: [Creating a custom mark](docs:guides/developers/creating-a-custom-mark-from-scratch).
+Sample: `examples/vizy-abbr-module/`.
+Override tags: [Modify Nodes](docs:template-guides/modify-nodes).
 
-#### Properties
+## Built-In Types
 
-Property | Value
---- | ---
-`type` | `strike`
-`tagName` | `strike`
+Core classes live under `verbb\vizy\marks\`.
 
+| Type | HTML | Notable attrs |
+| --- | --- | --- |
+| `bold` | `<strong>` | — |
+| `italic` | `<em>` | — |
+| `underline` | `<u>` | — |
+| `strike` | `<s>` | — |
+| `code` | `<code>` | — |
+| `subscript` | `<sub>` | — |
+| `superscript` | `<sup>` | — |
+| `highlight` | `<mark>` | — |
+| `textStyle` | *(no default tag)* | TipTap text-style carrier; pair with Modify Nodes / custom emit if you need CSS vars |
+| `link` | `<a>` | **Semantic storage** (not a bare `href`): `type` (`url` / `email` / `tel` / `sms` / `entry` / `asset` / `category`), `value` or `targetUid`, optional `siteMode` / `siteUid` / `suffix` / `newWindow`. Render resolves `href` via `Link::resolveHref` + HTMLPurifier URI schemes (`http`/`https`/`mailto`/`tel`/`sms`). Rejected URIs omit the `<a>` (inner text kept). `_blank` adds `rel="noopener noreferrer"`. GraphQL also exposes `url` / `element` convenience fields |
 
-### Subscript
-
-#### Properties
-
-Property | Value
---- | ---
-`type` | `subscript`
-`tagName` | `sub`
-
-
-### Superscript
-
-#### Properties
-
-Property | Value
---- | ---
-`type` | `superscript`
-`tagName` | `sup`
-
-
-### TextStyle
-
-#### Properties
-
-Property | Value
---- | ---
-`type` | `textStyle`
-`tagName` | `span`
-
-
-### Underline
-
-#### Properties
-
-Property | Value
---- | ---
-`type` | `underline`
-`tagName` | `u`
-
+Authoring-only keys (`type`, `value`, `targetUid`, …) are stripped before HTML
+emit so they never become attributes.

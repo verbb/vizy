@@ -1,27 +1,24 @@
 {% extends parentLayout ?? '_layouts/cp' %}
 
+{% do view.registerAssetBundle('verbb\\vizy\\web\\assets\\cp\\VizyCpAsset') -%}
+
 {% if title is not defined %}
     {% set title = 'Vizy' | t('vizy') %}
 {% endif %}
 
 {% block content %}
-    {% block blockContent %}
-
-    {% endblock %}
+    {% block blockContent %}{% endblock %}
 
     <hr>
-    
+
     <div id="plugin-footer">
         <div class="footer-left">
-            {% block footerButton %}
-
-            {% endblock %}
+            {% block footerButton %}{% endblock %}
         </div>
 
         <div class="footer-right">
             <a class="plugin-credit" href="https://verbb.io" target="_blank">
                 <span class="credit-love">Made with <span style="color: #e25555;">&#9829;</span> by</span>
-
                 <div class="credit-pill">
                     <div class="credit-mask">
                         <div class="credit-wrap">

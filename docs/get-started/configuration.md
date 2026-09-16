@@ -1,213 +1,105 @@
 # Configuration
-Create a `vizy.php` file under your `/config` directory with the following options available to you. You can also use multi-environment options to change these per environment.
 
-The below shows the defaults already used by Vizy, so you don't need to add these options unless you want to modify the values.
+You can customise Vizy’s settings using a PHP configuration file. This is optional: each setting has a default, so you only need to include the values you want to change.
+
+To override a setting, create `vizy.php` in your Craft project’s `/config` directory and return an array of setting names and values. For example, the following will use a custom icon directory:
 
 ```php
 <?php
 
 return [
-    '*' => [
-        'iconsPath' => '@webroot/icons/',
-        'recursiveFieldCount' => 10,
-    ],
+    'iconsPath' => '@webroot/custom-icons/',
 ];
 ```
 
-## Configuration options
-- `iconsPath` - Provide a file system path for a collection of SVG icons. These are available when creating your Block Types for a Vizy field. This also accepts environment variables or aliases.
-- `recursiveFieldCount` - For recursive Vizy fields, set the limit for how many times a Vizy fields can be nested.
+All other settings keep their defaults. Add any further settings you want to change to the same array. The options below explain the available settings and their defaults.
+
+## Configuration Options
+
+::: reference
+### `iconsPath`
+
+**Type:** `string` · **Default:** `'@webroot/icons/'`
+
+Provide a file system path for a collection of SVG icons. These are available when creating your Block Types for a Vizy field. This also accepts environment variables or aliases.
+:::
+
+::: reference
+### `blockPreviewImagesPath`
+
+**Type:** `string` · **Default:** `'@webroot/vizy-block-previews/'`
+
+Folder of Block Type preview images (`png`, `jpg`, `jpeg`, `webp`, `gif`). Block Types store a relative path under this folder in Project Config (portable across environments — not Craft assets). Accepts environment variables or aliases.
+:::
+
 
 ## Control Panel
 You can also manage configuration settings through the Control Panel by visiting Settings → Vizy.
 
 ## Editor Configuration
-You can provide configuration files for the editor by providing a `.json` file with its configurations, very similar to how the [Redactor](https://plugins.craftcms.com/redactor) plugin works. From this file, you can define what buttons are shown, what order and more. This can be particularly useful in maintaining consistent configurations for your Vizy fields across projects.
+Editor configs are named, reusable definitions of what a Vizy field may contain and which toolbar / Bubble Menu controls it offers. Every Vizy field picks one by ID.
+
+To build a config visually, open **Settings → Vizy → Editor Configs**. You can arrange the toolbar and choose the available content and Bubble Menu controls there. Vizy saves these settings in Project Config.
+
+You can also define a config in `config/vizy/{id}.json`, using the same keys as the Advanced JSON tab. File configs appear in the control panel so you can inspect and select them, but you edit their contents in the file itself. Both approaches can be used in the same project.
+
+The filename stem is the Config ID (`minimal.json` → `minimal`). IDs must be lowercase letters, numbers, dashes and underscores, starting with a letter. Project Config and files share one ID namespace: if both claim the same ID, Project Config wins and the file is ignored with a warning. Creating a Project Config entry under a file's ID is refused until you rename or remove the file.
 
 :::tip
-Ensure your file is valid JSON, taking care of trailing commas, and double quotes around properties.
+Ensure file configs are valid JSON — no trailing commas, double quotes around properties.
 :::
 
-For example, create a `vizy` folder in your `/config` directory, and inside that, create a `Minimal.json` file. Place the following content into that file:
+### File Example
+
+Create `config/vizy/minimal.json`:
 
 ```json
 {
-    "buttons": ["italic", "bold", "undo", "redo"]
-}
-```
-
-Here, we're setting the buttons available to the editor to only show Italic, Bold, Undo and Redo (in that order). All other buttons and functionality will be disabled.
-
-### Available Options
-The below list details the available configuration options to use in your JSON files.
-
-Option | Description
---- | ---
-`buttons` | An array of available buttons. Refer to below.
-`formatting` | An array of available formatting options. Refer to below.
-`toolbarFixed` | A boolean `true/false` to denote if the button toolbar should stick to the viewport when scrolling.
-`table` | An array of available table options. Refer to below.
-`commands` | An array of available commands for the Command Palette. These will be the same as `buttons`.
-
-### Buttons
-
-Option | Description
---- | ---
-`h1` | Allow the use of `<h1>` heading tags.
-`h2` | Allow the use of `<h2>` heading tags.
-`h3` | Allow the use of `<h3>` heading tags.
-`h4` | Allow the use of `<h4>` heading tags.
-`h5` | Allow the use of `<h5>` heading tags.
-`h6` | Allow the use of `<h6>` heading tags.
-`paragraph` | Allow text to be shown as a paragraph.
-`bold` | Allow text to be bold.
-`italic` | Allow text to be italic.
-`underline` | Allow text to be underlined.
-`strikethrough` | Allow text to have a strikethrough.
-`subscript` | Allow text to be subscript.
-`superscript` | Allow text to be superscript.
-`unordered-list` | Allow the use of `<ul>` elements for an unordered list.
-`ordered-list` | Allow the use of `<ol>` elements for an unordered list.
-`blockquote` | Allow text to be shown as a blockquote.
-`highlight` | Allow text to be highlighted.
-`code` | Allow text to be shown as inline code.
-`code-block` | Allow text to be shown as a code blocks.
-`hr` | Allow the use of a `<hr>` element for a horizontal rule.
-`line-break` | Allow the use of a `<br>` element for a horizontal rule.
-`align-left` | Allow text to be left-aligned.
-`align-center` | Allow text to be center-aligned.
-`align-right` | Allow text to be right-aligned.
-`align-justify` | Allow text to be justify.
-`clear-format` | Allow all formatting to be cleared.
-`undo` | Allow undo functionality.
-`redo` | Allow redo functionality.
-`html` | Allow raw editing of HTML, generated by the editor.
-`link` | Allow text to be shown as a link.
-`image` | Allow an image to be inserted.
-`iframe` | Allow the creation of `<iframe>` elements.
-`media-embed` | Allow embedding of videos and other remote content.
-`formatting` | Allow a dropdown for formatting options. See below for configuration.
-`table` | Allow a dropdown for table options. See below for configuration.
-
-```json
-{
-    "buttons": ["italic", "bold", "undo", "redo"]
-}
-```
-
-You can also provide this as an empty array, to disable buttons completely.
-
-```json
-{
-    "buttons": []
-}
-```
-
-### Formatting
-You can use the following options in the `formatting` options. Note that you'll also need to include `formatting` as a button in the `buttons` options.
-
-Option | Description
---- | ---
-`h1` | Allow the use of `<h1>` heading tags.
-`h2` | Allow the use of `<h2>` heading tags.
-`h3` | Allow the use of `<h3>` heading tags.
-`h4` | Allow the use of `<h4>` heading tags.
-`h5` | Allow the use of `<h5>` heading tags.
-`h6` | Allow the use of `<h6>` heading tags.
-`code-block` | Allow text to be shown as code blocks.
-`blockquote` | Allow text to be shown as a blockquote.
-`paragraph` | Allow text to be shown as a paragraph.
-
-```json
-{
-    "buttons": ["formatting", "bold", "italic"],
-    "formatting": ["h2", "h3", "h4", "h5", "h6"]
-}
-```
-
-### Table
-You can use the following options in the `table` options. Note that you'll also need to include `table` as a button in the `buttons` options.
-
-Option | Description
---- | ---
-`insert-table` | Creates the `<table>` element.
-`delete-table` | Removes the `<table>` element.
-`add-col-before` | Adds a column before the current cursor.
-`add-col-after` | Adds a column after the current cursor.
-`delete-col` | Removes the column at the current cursor.
-`add-row-before` | Adds a row before the current cursor.
-`add-row-after` | Adds a row after the current cursor.
-`delete-row` | Removes the row at the current cursor.
-`merge-cells` | Merges one or more cells.
-`split-cells` | Splits one or more cells.
-`toggle-header-column` | Toggles the header column at the current cursor.
-`toggle-header-row` | Toggles the header row at the current cursor.
-`toggle-header-cell` | Toggles the header cell at the current cursor.
-
-
-```json
-{
-    "buttons": ["table", "bold", "italic"],
-    "table": ["insert-table", "delete-table", "add-col-before", "delete-col", "add-row-before", "delete-col"]
-}
-```
-
-### Commands
-You can use the any of the `buttons` values in the `commands` options to enable them in the Command Palette.
-
-```json
-{
-    "buttons": ["table", "bold", "italic"],
-    "commands": ["table", "bold", "italic"]
-}
-```
-
-### Kitchen Sink
-The below is a "kitchen sink" example that contains everything.
-
-```json
-{
-    "buttons": ["html", "formatting", "h1", "h2", "h3", "h4", "h5", "h6", "bold", "italic", "underline", "strikethrough", "subscript", "superscript", "ordered-list", "unordered-list", "code-block", "hr", "highlight", "align-left", "align-right", "align-center", "align-justify", "clear-format", "line-break", "link", "image", "table", "media-embed", "iframe", "undo", "redo"],
-    "formatting": ["paragraph", "code-block", "blockquote", "h1", "h2", "h3", "h4", "h5", "h6"],
-    "table": ["insert-table", "delete-table", "add-col-before", "add-col-after", "delete-col", "add-row-before", "add-row-after", "delete-row", "merge-cells", "split-cells", "toggle-header-column", "toggle-header-row", "toggle-header-cell"],
-    "toolbarFixed": true
-}
-```
-
-### Custom Buttons
-In addition to including or excluding available button, you can also define your own custom buttons that extend an existing [Node](docs:developers/node) or [Mark](docs:developers/mark). For example, you might want to create your own custom Paragraph node with specific attributes.
-
-```json
-{
-    "buttons": [
+    "label": "Minimal",
+    "capabilities": {
+        "nodes": ["heading", "blockquote"],
+        "marks": ["bold", "italic", "link"]
+    },
+    "headings": {
+        "levels": [2, 3]
+    },
+    "toolbar": [
+        "dropdown:formatting",
+        "separator",
         "bold",
         "italic",
-        {
-            "svg": "h1", 
-            "title": "Featured Heading 1", 
-            "type": "heading", 
-            "attrs": {"level": "1", "class": "feature-heading"},
-            "editorStyle": ".feature-heading { color: red; }"
-        }
+        "link"
     ],
-    "formatting": [
-        {
-            "svg": "<svg ... />", 
-            "title": "Lead", 
-            "type": "paragraph", 
-            "attrs": {"class": "lead-text", "data-name": "lead-text"}
-        },
-        "paragraph"
-    ]
+    "dropdowns": {
+        "formatting": ["heading2", "heading3", "paragraph"]
+    },
+    "bubble": {
+        "enabled": true,
+        "items": ["bold", "italic", "link"]
+    }
 }
 ```
 
-Option | Description
---- | ---
-`svg` | A named SVG that Vizy already uses, or a raw `<svg>` icon.
-`title` | What the button or dropdown item should be labelled as.
-`type` | Pick an existing [Node](docs:developers/node) or [Mark](docs:developers/mark) to extend from, (e.g. `paragraph`, `bold`, `heading`, etc).
-`attrs` | Any attributes to be stored against the node/mark. These will be rendered as HTML attributes.
-`editorStyle` | Any CSS that will be applied to the node while in the control panel. This will not be applied on the front-end.
+`label` may be omitted; it is derived from the filename. Omit `dropdowns` (or leave it empty) to keep each dropdown's registered roster.
 
-These definitions can be included at the top-level, or within the `formatting` dropdown.
+### Available Keys
+
+| Key | Description |
+| --- | --- |
+| `label` | Display name in the CP and field select. |
+| `capabilities` | Allowed content: `nodes` and `marks` lists. |
+| `headings` | `{ "levels": [2, 3, 4] }` — which heading levels the schema allows. |
+| `toolbar` | Flat list of control IDs (`bold`, `dropdown:formatting`, `separator`, …). |
+| `dropdowns` | Optional map of dropdown name → member IDs, trimming/reordering a registered roster. |
+| `bubble` | `{ "enabled": true, "items": ["bold", "italic", "link"] }`. |
+| `gutterInsert` | `true` (default) — `+` control beside the content. Independent of toolbar `addBlock`. |
+| `slashInsert` | `true` (default) — blank-line `/` opens the Add Block list. |
+
+Toolbar and dropdown IDs use the Editor Config vocabulary (`heading2`,
+`bulletList`, `alignLeft`, `dropdown:formatting`, …). The full control catalogue
+is what the Editor Configs screen offers under Available items. Your own
+controls are registered in PHP (see [Extensibility](docs:developers/extending-vizy)),
+not declared as free-form objects inside the JSON.
+
+
+Save the config and open an entry using that field to check that its toolbar and content choices match your settings.

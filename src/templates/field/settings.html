@@ -1,90 +1,68 @@
 {% import '_includes/forms' as forms %}
 
-{% set mode = field.editorMode ?? 'combined' %}
-
+{# `editorMode` is a presentation-only projection of the stored root policy:
+   Vizy 4 persists only `rich` or `blocks`, so "Rich Text Only" is really "rich
+   with no block types". Selecting it hides the configurator but preserves the
+   stored allowances, making the switch lossless in both directions. #}
 {{ forms.selectField({
     label: 'Editor Mode' | t('vizy'),
     instructions: 'Select the mode for the editor to use.' | t('vizy'),
+    id: 'editorMode',
     name: 'editorMode',
-    value: field.editorMode,
+    value: editorMode,
     options: [
         { label: 'Blocks & Rich Text' | t('vizy'), value: 'combined' },
         { label: 'Rich Text Only' | t('vizy'), value: 'richText' },
         { label: 'Blocks Only' | t('vizy'), value: 'blocks' },
     ],
     toggle: true,
-    targetPrefix: '.mode-',
-    errors: field.getErrors('editorMode'),
+    targetPrefix: '.vizy-mode-',
 }) }}
 
-<div class="mode-richText mode-combined {{ mode == 'blocks' ? 'hidden' }}" style="margin-bottom: 24px !important;">
-    {% set configInput %}
-        <div class="flex">
-            {{ forms.select({
-                name: 'configSelectionMode',
-                options: [
-                    { label: 'Choose a config file' | t('vizy'), value: 'choose' },
-                    { label: 'Enter a custom config' | t('vizy'), value: 'manual' }
-                ],
-                value: field.configSelectionMode,
-                toggle: true,
-                targetPrefix: '.csm-'
-            }) }}
+{% set blockConfigurationInput %}
+    <vizy-field-settings
+        data-initial="{{ configuratorInitial|json_encode|e('html_attr') }}"
+        data-picker-groups-name="{{ pickerGroupsInputName|e('html_attr') }}"
+    ></vizy-field-settings>
+{% endset %}
 
-            {{ forms.select({
-                id: 'vizyConfig',
-                name: 'vizyConfig',
-                class: ['csm-choose', field.configSelectionMode == 'manual' ? 'hidden'] | filter,
-                options: vizyConfigOptions,
-                value: field.vizyConfig,
-            }) }}
-        </div>
-    {% endset %}
-
+<div class="vizy-mode-blocks vizy-mode-combined {{ editorMode == 'richText' ? 'hidden' }}">
+    {# Instructions are parsed as Markdown, so the management link lives here
+       rather than as separate UI below the configurator. #}
     {{ forms.field({
-        label: 'Editor Config' | t('vizy'),
-        id: 'config',
-        instructions: 'You can save custom editor configs as `.json` files in `config/vizy/`, or you can enter a custom config.' | t('vizy') ~ ' <a href="https://verbb.io/craft-plugins/vizy/docs/get-started/configuration#editor-configuration" rel="noopener" target="_blank" class="go">' ~ 'View available settings' | t('vizy') ~ '</a>',
-        required: true,
-    }, configInput) }}
-
-    {{ forms.textareaField({
-        label: 'Custom Editor Config' | t('vizy'),
-        instructions: 'The config must be entered as valid JSON.' | t('vizy'),
-        fieldClass: ['csm-manual', field.configSelectionMode == 'choose' ? 'hidden'] | filter,
-        class: ['code', 'ltr'],
-        name: 'manualConfig',
-        value: field.manualConfig,
-        rows: 10,
-        cols: 50,
-        errors: field.getErrors('manualConfig'),
-    }) }}
-</div>
-
-<div class="mode-blocks mode-combined {{ mode == 'richText' ? 'hidden' }}" style="margin-bottom: 24px !important;">
-    <div class="field" aria-describedby="configurator">
-        <div class="heading">
-            <label id="label">{{ 'Block Configuration' | t('vizy') }}</label>
-        </div>
-
-        <div id="configurator" class="instructions">
-            <p>{{ 'Define the types of blocks that can be created within this Vizy field, as well as the fields each block type is made up of.' | t('vizy') }}</p>
-        </div>
-
-        {% set fieldName = craft.app.view.namespaceInputName('fieldData') %}
-
-        <div {{ attr({
-            class: ['vizy-configurator', inputIdPrefix ~ '-vizy-configurator'],
-            'data-vizy-auto-mount': 'settings',
-            'data-field-data': componentData.fieldData | json_encode,
-            'data-settings': componentData.settings | json_encode,
-        }) }}>
-            <vizy-settings field-name="{{ fieldName }}" :errors="{{ field.getErrors() | json_encode }}"></vizy-settings>
-        </div>
-    </div>
+        label: 'Block Configuration' | t('vizy'),
+        instructions: 'Choose which block types authors can insert in this field, group them, and set their order. Block types themselves are global — editing one affects every Vizy field that uses it. [Manage all block types]({url}).' | t('vizy', { url: url('vizy/settings/block-types') }),
+        errors: field.getErrors('blockTypePickerGroups'),
+    }, blockConfigurationInput) }}
 
     <hr>
 </div>
+
+{% set editorConfigInput %}
+    <div class="flex">
+        {{ forms.select({
+            id: 'editorConfig',
+            name: 'editorConfig',
+            value: field.editorConfig,
+            options: editorConfigOptions,
+        }) }}
+
+        <button type="button" class="btn" data-vizy-new-editor-config>{{ 'New' | t('app') }}</button>
+        <button type="button" class="btn" data-vizy-edit-editor-config>{{ 'Edit' | t('app') }}</button>
+    </div>
+{% endset %}
+
+{{ forms.field({
+    label: 'Editor Config' | t('vizy'),
+    instructions: 'Editor configs define which formatting controls this field offers. [Manage all editor configs]({url}).' | t('vizy', { url: url('vizy/settings/editor-configs') }),
+    id: 'editorConfig',
+    required: true,
+    errors: field.getErrors('editorConfig'),
+}, editorConfigInput) }}
+
+{% for diagnostic in field.editorConfigDiagnostics %}
+    <p class="warning">{{ 'Missing Editor Config: {id}' | t('vizy', {id: diagnostic.id}) }}</p>
+{% endfor %}
 
 {{ forms.textField({
     label: 'Initial Rows' | t('vizy'),
@@ -95,7 +73,7 @@
     errors: field.getErrors('initialRows'),
 }) }}
 
-<div class="mode-richText mode-combined {{ mode == 'blocks' ? 'hidden' }}" style="margin-bottom: 24px !important;">
+<div class="vizy-mode-richText vizy-mode-combined {{ editorMode == 'blocks' ? 'hidden' }}">
     {{ forms.lightswitchField({
         label: 'Remove Empty Paragraphs' | t('vizy'),
         instructions: 'Whether empty paragraphs should be trimmed automatically from field output.' | t('vizy'),
@@ -111,22 +89,12 @@
         on: field.pasteAsPlainText,
         errors: field.getErrors('pasteAsPlainText'),
     }) }}
-
-    <hr>
 </div>
 
-<div class="mode-blocks mode-combined {{ mode == 'richText' ? 'hidden' }}" style="margin-bottom: 24px !important;">
-    {{ forms.selectField({
-        label: 'Block Type Picker Behaviour' | t('vizy'),
-        instructions: 'Select the behaviour for picking block types for the field.' | t('vizy'),
-        name: 'blockTypeBehaviour',
-        value: field.blockTypeBehaviour,
-        options: [
-            { label: 'Click' | t('vizy'), value: 'click' },
-            { label: 'Hover' | t('vizy'), value: 'hover' },
-        ],
-        errors: field.getErrors('blockTypeBehaviour'),
-    }) }}
+{# Leading rule rather than trailing on the preceding section, so the separator
+   only ever appears when the block-count fields do. #}
+<div class="vizy-mode-blocks vizy-mode-combined {{ editorMode == 'richText' ? 'hidden' }}">
+    <hr>
 
     {{ forms.textField({
         label: 'Min Blocks' | t('vizy'),
@@ -143,7 +111,15 @@
         name: 'maxBlocks',
         value: field.maxBlocks,
         size: 2,
-        errors: field.getErrors('maxlocks'),
+        errors: field.getErrors('maxBlocks'),
+    }) }}
+
+    {{ forms.lightswitchField({
+        label: 'Confirm Block Deletion' | t('vizy'),
+        instructions: 'Whether authors must confirm before deleting a block from the field.' | t('vizy'),
+        name: 'confirmBlockDeletion',
+        on: field.confirmBlockDeletion,
+        errors: field.getErrors('confirmBlockDeletion'),
     }) }}
 </div>
 
@@ -176,6 +152,7 @@
         sourceOptions: sourceOptions,
         sourceValue: field.defaultUploadLocationSource,
         errors: field.getErrors('defaultUploadLocationSubpath'),
+        warning: uploadLocationWarning,
     }) }}
 
     {{ forms.checkboxField({
@@ -202,16 +179,18 @@
         options: volumeOptions,
         values: field.availableVolumes,
         showAllOption: volumeOptions | length ? true : false,
+        warning: volumeOptionsWarning,
     }) }}
 
     {{ forms.checkboxSelectField({
         id: 'availableTransforms',
         name: 'availableTransforms',
+        values: field.availableTransforms,
         label: 'Available Transforms' | t('vizy'),
         instructions: 'The transforms that should be available when inserting images.' | t('vizy'),
         options: transformOptions,
-        values: field.availableTransforms,
         showAllOption: transformOptions | length ? true : false,
+        warning: transformOptionsWarning,
     }) }}
 
     {{ forms.selectField({
@@ -221,6 +200,7 @@
         instructions: 'The default transform that should be applied when inserting images.' | t('vizy'),
         options: defaultTransformOptions,
         value: field.defaultTransform,
+        warning: transformOptionsWarning,
     }) }}
 </div>
 
@@ -241,5 +221,4 @@
         values: field.linkSettings,
         showAllOption: false,
     }) }}
-
 </div>

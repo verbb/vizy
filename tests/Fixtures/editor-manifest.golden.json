@@ -1,0 +1,206 @@
+{
+    "uid": "<request-local-uuid>",
+    "revision": "1:94d6f9b8d9eea847756f767147bf0520b08dad158897ebb9cd33c94bec633935",
+    "hash": "94d6f9b8d9eea847756f767147bf0520b08dad158897ebb9cd33c94bec633935",
+    "manifestVersion": 1,
+    "registryRevision": "2b27076d016672d373b6a95308d8472199a5aca2c5f1401e13d38bcec9c8d35e",
+    "editorConfig": {
+        "id": "test-contract",
+        "revision": "1:6da0b016e1ad8080e5554bea35f1241db7d136b281d5402699fb46958f0c17fe",
+        "hash": "6da0b016e1ad8080e5554bea35f1241db7d136b281d5402699fb46958f0c17fe"
+    },
+    "schemaRevision": "89819e000c1a3746749536147db98738100c023f056b2020bfbc0c26a6c65547",
+    "enabledNodes": [
+        "bulletList",
+        "doc",
+        "hardBreak",
+        "heading",
+        "listItem",
+        "paragraph",
+        "text",
+        "vizyBlock"
+    ],
+    "enabledMarks": [
+        "bold",
+        "italic"
+    ],
+    "internalNodes": [
+        "doc",
+        "listItem",
+        "text",
+        "vizyBlock"
+    ],
+    "modules": [
+        "vizy/core/mark/bold",
+        "vizy/core/mark/italic",
+        "vizy/core/node/bulletList",
+        "vizy/core/node/doc",
+        "vizy/core/node/hardBreak",
+        "vizy/core/node/heading",
+        "vizy/core/node/listItem",
+        "vizy/core/node/paragraph",
+        "vizy/core/node/text",
+        "vizy/core/node/vizyBlock"
+    ],
+    "headingLevels": [
+        2,
+        3
+    ],
+    "field": {
+        "fieldUid": "11111111-1111-4111-8111-111111111111",
+        "fieldHandle": "contractBody",
+        "rootContentType": "rich",
+        "blockTypePickerGroups": [],
+        "allowedBlockTypeUids": [],
+        "insertableBlockTypeUids": [],
+        "minBlocks": null,
+        "maxBlocks": null,
+        "confirmBlockDeletion": false,
+        "sameBlockTypeMaxDepth": 3
+    },
+    "blockTypes": [],
+    "insertionItems": [
+        {
+            "id": "node:vizy:bulletList",
+            "kind": "node",
+            "nodeName": "bulletList",
+            "label": "Bullet list",
+            "description": null,
+            "icon": {
+                "name": "bulletList",
+                "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 512 512\"><path d=\"M48 48a48 48 0 1 0 48 48 48 48 0 0 0-48-48zm0 160a48 48 0 1 0 48 48 48 48 0 0 0-48-48zm0 160a48 48 0 1 0 48 48 48 48 0 0 0-48-48zm448 16H176a16 16 0 0 0-16 16v32a16 16 0 0 0 16 16h320a16 16 0 0 0 16-16v-32a16 16 0 0 0-16-16zm0-320H176a16 16 0 0 0-16 16v32a16 16 0 0 0 16 16h320a16 16 0 0 0 16-16V80a16 16 0 0 0-16-16zm0 160H176a16 16 0 0 0-16 16v32a16 16 0 0 0 16 16h320a16 16 0 0 0 16-16v-32a16 16 0 0 0-16-16z\"/></svg>"
+            },
+            "group": "Lists",
+            "keywords": [
+                "bulletList"
+            ],
+            "aliases": [],
+            "order": 0,
+            "surfaces": [
+                "browse",
+                "empty",
+                "inline",
+                "keyboard",
+                "slash"
+            ],
+            "requiresInput": false
+        },
+        {
+            "id": "node:vizy:hardBreak",
+            "kind": "node",
+            "nodeName": "hardBreak",
+            "label": "Line break",
+            "description": null,
+            "icon": {
+                "name": "hardBreak",
+                "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 576 512\"><path d=\"M144 48.06L304 48v112a16 16 0 0 0 16 16h112v40h48v-84a48.09 48.09 0 0 0-14.09-34L382 14.07A48.09 48.09 0 0 0 348 0L128 .08a32 32 0 0 0-32 32V216h48zM352 52l76.07 76H352zM240 264a16 16 0 0 0-16 16v16a16 16 0 0 0 16 16h96a16 16 0 0 0 16-16v-16a16 16 0 0 0-16-16zm192 200H144V360H96v120a32 32 0 0 0 32 32h320a32 32 0 0 0 32-32V360h-48zm128-200H432a16 16 0 0 0-16 16v16a16 16 0 0 0 16 16h128a16 16 0 0 0 16-16v-16a16 16 0 0 0-16-16zm-400 32v-16a16 16 0 0 0-16-16H16a16 16 0 0 0-16 16v16a16 16 0 0 0 16 16h128a16 16 0 0 0 16-16z\"></path></svg>"
+            },
+            "group": "Text",
+            "keywords": [
+                "hardBreak"
+            ],
+            "aliases": [],
+            "order": 1,
+            "surfaces": [
+                "browse",
+                "empty",
+                "inline",
+                "keyboard",
+                "slash"
+            ],
+            "requiresInput": false
+        },
+        {
+            "id": "node:vizy:heading",
+            "kind": "node",
+            "nodeName": "heading",
+            "label": "Heading",
+            "description": null,
+            "icon": {
+                "name": "heading",
+                "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 448 512\"><path d=\"M0 64C0 46.3 14.3 32 32 32l48 0 48 0c17.7 0 32 14.3 32 32s-14.3 32-32 32l-16 0 0 112 224 0 0-112-16 0c-17.7 0-32-14.3-32-32s14.3-32 32-32l48 0 48 0c17.7 0 32 14.3 32 32s-14.3 32-32 32l-16 0 0 144 0 176 16 0c17.7 0 32 14.3 32 32s-14.3 32-32 32l-48 0-48 0c-17.7 0-32-14.3-32-32s14.3-32 32-32l16 0 0-144-224 0 0 144 16 0c17.7 0 32 14.3 32 32s-14.3 32-32 32l-48 0-48 0c-17.7 0-32-14.3-32-32s14.3-32 32-32l16 0 0-176L48 96 32 96C14.3 96 0 81.7 0 64z\"/></svg>"
+            },
+            "group": "Text",
+            "keywords": [
+                "heading"
+            ],
+            "aliases": [],
+            "order": 2,
+            "surfaces": [
+                "browse",
+                "empty",
+                "inline",
+                "keyboard",
+                "slash"
+            ],
+            "requiresInput": false
+        },
+        {
+            "id": "node:vizy:paragraph",
+            "kind": "node",
+            "nodeName": "paragraph",
+            "label": "Paragraph",
+            "description": null,
+            "icon": {
+                "name": "paragraph",
+                "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 448 512\"><path d=\"M64 96v32c0 17.7-14.3 32-32 32s-32-14.3-32-32V80C0 53.5 21.5 32 48 32H224 400c26.5 0 48 21.5 48 48v48c0 17.7-14.3 32-32 32s-32-14.3-32-32V96H256l0 320h48c17.7 0 32 14.3 32 32s-14.3 32-32 32H144c-17.7 0-32-14.3-32-32s14.3-32 32-32h48l0-320H64z\"/></svg>"
+            },
+            "group": "Text",
+            "keywords": [
+                "paragraph"
+            ],
+            "aliases": [],
+            "order": 3,
+            "surfaces": [
+                "browse",
+                "empty",
+                "inline",
+                "keyboard",
+                "slash"
+            ],
+            "requiresInput": false
+        }
+    ],
+    "toolbar": {
+        "controls": [
+            {
+                "id": "bold",
+                "kind": "mark",
+                "label": "Bold",
+                "icon": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 384 512\"><path d=\"M333.49 238a122 122 0 0 0 27-65.21C367.87 96.49 308 32 233.42 32H34a16 16 0 0 0-16 16v48a16 16 0 0 0 16 16h31.87v288H34a16 16 0 0 0-16 16v48a16 16 0 0 0 16 16h209.32c70.8 0 134.14-51.75 141-122.4 4.74-48.45-16.39-92.06-50.83-119.6zM145.66 112h87.76a48 48 0 0 1 0 96h-87.76zm87.76 288h-87.76V288h87.76a56 56 0 0 1 0 112z\"/></svg>",
+                "action": {
+                    "command": "toggleMark",
+                    "markName": "bold"
+                }
+            },
+            {
+                "id": "italic",
+                "kind": "mark",
+                "label": "Italic",
+                "icon": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 320 512\"><path d=\"M320 48v32a16 16 0 0 1-16 16h-62.76l-80 320H208a16 16 0 0 1 16 16v32a16 16 0 0 1-16 16H16a16 16 0 0 1-16-16v-32a16 16 0 0 1 16-16h62.76l80-320H112a16 16 0 0 1-16-16V48a16 16 0 0 1 16-16h192a16 16 0 0 1 16 16z\"/></svg>",
+                "action": {
+                    "command": "toggleMark",
+                    "markName": "italic"
+                }
+            }
+        ]
+    },
+    "bubble": {
+        "enabled": true,
+        "controls": [
+            {
+                "id": "bubble:bold",
+                "kind": "mark",
+                "label": "Bold",
+                "icon": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 384 512\"><path d=\"M333.49 238a122 122 0 0 0 27-65.21C367.87 96.49 308 32 233.42 32H34a16 16 0 0 0-16 16v48a16 16 0 0 0 16 16h31.87v288H34a16 16 0 0 0-16 16v48a16 16 0 0 0 16 16h209.32c70.8 0 134.14-51.75 141-122.4 4.74-48.45-16.39-92.06-50.83-119.6zM145.66 112h87.76a48 48 0 0 1 0 96h-87.76zm87.76 288h-87.76V288h87.76a56 56 0 0 1 0 112z\"/></svg>",
+                "action": {
+                    "command": "toggleMark",
+                    "markName": "bold"
+                }
+            }
+        ]
+    },
+    "gutterInsert": true,
+    "slashInsert": true,
+    "diagnostics": []
+}

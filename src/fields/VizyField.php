@@ -2,79 +2,39 @@
 namespace verbb\vizy\fields;
 
 use verbb\vizy\Vizy;
-use verbb\vizy\base\PluginInterface;
-use verbb\vizy\elements\Block as BlockElement;
-use verbb\vizy\events\ModifyVizyConfigEvent;
-use verbb\vizy\events\RegisterLinkOptionsEvent;
-use verbb\vizy\events\RegisterPluginEvent;
-use verbb\vizy\gql\types\NodeCollectionType;
-use verbb\vizy\helpers\Plugin;
+use verbb\vizy\deprecations\VizyFieldConfigDeprecations;
+use verbb\vizy\deprecations\VizyFieldLegacySettingsDeprecations;
+use verbb\vizy\deprecations\VizyFieldPluginDeprecations;
+use verbb\vizy\deprecations\VizyFieldPurifierDeprecations;
+use verbb\vizy\document\VizyDocument as CanonicalVizyDocument;
+use verbb\vizy\elements\Block;
+use verbb\vizy\gql\types\VizyDocumentType;
+use verbb\vizy\helpers\FieldImageOptions;
+use verbb\vizy\helpers\FieldImagePreviews;
+use verbb\vizy\helpers\FieldLinkOptions;
 use verbb\vizy\models\BlockType;
-use verbb\vizy\models\NodeCollection;
-use verbb\vizy\nodes\VizyBlock;
+use verbb\vizy\services\BlockTypes;
+use verbb\vizy\services\HostedVizy;
 use verbb\vizy\web\assets\field\VizyAsset;
+use verbb\vizy\web\assets\fieldsettings\FieldSettingsAsset;
 
 use Craft;
 use craft\base\Element;
 use craft\base\ElementInterface;
 use craft\base\Field;
 use craft\elements\Asset;
-use craft\elements\Category;
-use craft\elements\Entry;
-use craft\elements\MatrixBlock;
-use craft\enums\PropagationMethod;
-use craft\fieldlayoutelements\CustomField;
-use craft\helpers\ArrayHelper;
-use craft\helpers\FileHelper;
+use craft\fields\conditions\EmptyFieldConditionRule;
 use craft\helpers\Html;
 use craft\helpers\Json;
 use craft\helpers\StringHelper;
-use craft\fields\BaseRelationField;
-use craft\fields\conditions\EmptyFieldConditionRule;
-use craft\fields\Matrix;
-use craft\models\CategoryGroup;
-use craft\models\EntryType;
-use craft\models\FieldLayout;
-use craft\models\ImageTransform;
-use craft\models\Section;
-use craft\models\Volume;
-use craft\services\ElementSources;
 use craft\validators\ArrayValidator;
-use craft\web\twig\variables\Cp;
 
-use Illuminate\Support\Collection;
-
-use yii\base\Event;
 use yii\base\InvalidConfigException;
-use yii\db\Schema;
-
-use Throwable;
 
 use GraphQL\Type\Definition\Type;
 
-use verbb\supertable\elements\SuperTableBlockElement;
-use verbb\supertable\fields\SuperTableField as SuperTable;
-
-use benf\neo\elements\Block as NeoBlock;
-
 class VizyField extends Field
 {
-    // Constants
-    // =========================================================================
-
-    public const EVENT_DEFINE_VIZY_CONFIG = 'defineVizyConfig';
-    public const EVENT_MODIFY_PURIFIER_CONFIG = 'modifyPurifierConfig';
-    public const EVENT_REGISTER_LINK_OPTIONS = 'registerLinkOptions';
-    public const EVENT_REGISTER_PLUGINS = 'registerPlugins';
-
-    public const PICKER_BEHAVIOUR_CLICK = 'click';
-    public const PICKER_BEHAVIOUR_HOVER = 'hover';
-
-    public const MODE_COMBINED = 'combined';
-    public const MODE_BLOCKS = 'blocks';
-    public const MODE_RICH_TEXT = 'richText';
-
-
     // Static Methods
     // =========================================================================
 
@@ -90,37 +50,53 @@ class VizyField extends Field
 
     public static function phpType(): string
     {
-        return 'string|null';
+        return CanonicalVizyDocument::class;
     }
 
-    public static function registerPlugin(string $pluginKey): void
+    private static function _recursiveImplode(array $array, string $glue = ',', bool $include_keys = false, bool $trim_all = false): string
     {
-        if (isset(self::$_registeredPlugins[$pluginKey])) {
-            return;
-        }
+        $glued_string = '';
 
-        $event = new RegisterPluginEvent([
-            'plugins' => [],
-        ]);
-        Event::trigger(self::class, self::EVENT_REGISTER_PLUGINS, $event);
+        // Recursively iterates array and adds key/value to glued string
+        array_walk_recursive($array, function($value, $key) use ($glue, $include_keys, &$glued_string) {
+            $include_keys && $glued_string .= $key . $glue;
+            $glued_string .= $value . $glue;
+        });
 
-        foreach ($event->plugins as $plugin) {
-            if (($plugin instanceof PluginInterface) && $pluginKey === $plugin->handle) {
-                Craft::$app->getView()->registerAssetBundle($plugin->assetBundle);
+        // Removes last $glue from string
+        $glue !== '' && $glued_string = substr($glued_string, 0, -strlen($glue));
 
-                self::$_registeredPlugins[$pluginKey] = true;
-            }
-        }
+        // Trim ALL whitespace
+        $trim_all && $glued_string = preg_replace("/(\s)/ixsm", '', $glued_string);
+
+        return (string)$glued_string;
     }
+
+
+    // Constants
+    // =========================================================================
+
+    public const EVENT_REGISTER_LINK_OPTIONS = 'registerLinkOptions';
+
+    public const MODE_COMBINED = 'combined';
+    public const MODE_BLOCKS = 'blocks';
+    public const MODE_RICH_TEXT = 'richText';
+    public const ROOT_CONTENT_RICH = 'rich';
+    public const ROOT_CONTENT_BLOCKS = 'blocks';
+
+
+    // Traits
+    // =========================================================================
+
+    use VizyFieldConfigDeprecations;
+    use VizyFieldLegacySettingsDeprecations;
+    use VizyFieldPluginDeprecations;
+    use VizyFieldPurifierDeprecations;
 
 
     // Properties
     // =========================================================================
 
-    public array $fieldData = [];
-    public string $vizyConfig = '';
-    public string $configSelectionMode = 'choose';
-    public string $manualConfig = '';
     public string|array|null $availableVolumes = '*';
     public string|array|null $availableTransforms = '*';
     public bool $showUnpermittedVolumes = false;
@@ -132,28 +108,69 @@ class VizyField extends Field
     public int $initialRows = 7;
     public ?int $minBlocks = null;
     public ?int $maxBlocks = null;
-    public string $blockTypeBehaviour = self::PICKER_BEHAVIOUR_CLICK;
-    public string $editorMode = self::MODE_COMBINED;
+    /**
+     * When true, Block ⋯ → Delete asks for confirmation. Off by default —
+     * Delete is already an explicit menu action; a second prompt is opt-in.
+     */
+    public bool $confirmBlockDeletion = false;
+    /**
+     * Suppresses root Block insertion without discarding allowances, so the
+     * "Rich Text Only" editor mode round-trips losslessly. See getEditorMode().
+     */
+    public bool $richTextOnly = false;
     public array $linkSettings = ['text', 'newWindow', 'site', 'title', 'classes'];
-
-    private static array $_registeredPlugins = [];
-
-    private ?array $_blockTypesById = [];
-    private ?array $_linkOptions = null;
-    private ?array $_entrySources = null;
-    private ?array $_categorySources = null;
-    private ?array $_assetSources = null;
-    private ?array $_transforms = null;
-    private ?int $_recursiveFieldCount = null;
+    /**
+     * Ordered field-local presentation groups referencing global Block Type UIDs.
+     *
+     * `blockTypeUids` is the full ordered membership. `disabledBlockTypeUids` is a
+     * subset that authors may not insert; membership is kept separate from
+     * availability so toggling a Block Type off never loses its group placement or
+     * ordering, and never invalidates existing authored content of that type.
+     */
+    public array $blockTypePickerGroups = [];
+    public string $editorConfig = 'standard';
+    public string $rootContentType = self::ROOT_CONTENT_RICH;
 
 
     // Public Methods
     // =========================================================================
 
+    /**
+     * Presentation projection over the stored root policy.
+     *
+     * `rootContentType` is locked to `rich` or `blocks`, so "Rich Text
+     * Only" is not a third stored policy — it is `rich` plus `richTextOnly`,
+     * which suppresses root Block insertion while leaving the configured
+     * allowances untouched so switching modes is lossless.
+     */
+    public function getEditorMode(): string
+    {
+        if ($this->rootContentType === self::ROOT_CONTENT_BLOCKS) {
+            return self::MODE_BLOCKS;
+        }
+
+        return $this->richTextOnly ? self::MODE_RICH_TEXT : self::MODE_COMBINED;
+    }
+
+    public function setEditorMode(string $value): void
+    {
+        // Also the Vizy 3 promotion path: a legacy `editorMode` setting maps
+        // straight onto the canonical pair.
+        match ($value) {
+            self::MODE_BLOCKS => [$this->rootContentType, $this->richTextOnly] = [self::ROOT_CONTENT_BLOCKS, false],
+            self::MODE_RICH_TEXT => [$this->rootContentType, $this->richTextOnly] = [self::ROOT_CONTENT_RICH, true],
+            default => [$this->rootContentType, $this->richTextOnly] = [self::ROOT_CONTENT_RICH, false],
+        };
+    }
+
     public function __construct($config = [])
     {
         // Remove unused settings
         unset($config['columnType']);
+        // Transient field-settings POST payload for global Block Types; not a field attribute.
+        unset($config['vizyBlockTypes']);
+        // Vizy 3 Block picker hover/click behaviour — unused in Vizy 4 UI.
+        unset($config['blockTypeBehaviour']);
 
         parent::__construct($config);
     }
@@ -162,8 +179,8 @@ class VizyField extends Field
     {
         $isValueEmpty = parent::isValueEmpty($value, $element);
 
-        // Check for an empty paragraph
-        if ($value instanceof NodeCollection) {
+        // Empty / blank-paragraph documents count as empty for Craft’s isValueEmpty.
+        if ($value instanceof CanonicalVizyDocument) {
             $isValueEmpty = $isValueEmpty || $value->isEmpty();
         }
 
@@ -173,19 +190,7 @@ class VizyField extends Field
     public function getSettingsHtml(): ?string
     {
         $view = Craft::$app->getView();
-
-        $fieldData = $this->_getBlockGroupsForSettings();
-
-        $settings = [
-            'fieldId' => $this->id,
-            'suggestions' => (new Cp())->getTemplateSuggestions(),
-        ];
-
-        $inputNamePrefix = $view->getNamespace();
-        $inputIdPrefix = Html::id($inputNamePrefix);
-
-        // Register Vizy assets; roots are mounted automatically by vizy.js.
-        Plugin::registerAsset('field/src/js/vizy.js');
+        $view->registerAssetBundle(FieldSettingsAsset::class);
 
         $volumeOptions = [];
 
@@ -207,19 +212,112 @@ class VizyField extends Field
             ];
         }
 
+        $sourceOptions = $this->_getSourceOptions();
+
+        $uploadLocationWarning = $sourceOptions === []
+            ? Craft::t('app', 'No volumes exist yet.')
+            : null;
+
+        $volumeOptionsWarning = null;
+        if ($volumeOptions === []) {
+            $volumeOptionsWarning = Craft::$app->getVolumes()->getAllVolumes() === []
+                ? Craft::t('app', 'No volumes exist yet.')
+                : Craft::t(
+                    'vizy',
+                    'No volumes have public URLs. Image and file picking requires at least one volume whose filesystem has public URLs.',
+                );
+        }
+
+        $transformOptionsWarning = $transformOptions === []
+            ? Craft::t('app', 'No image transforms exist yet.')
+            : null;
+
+        $pickerGroups = $this->_getBlockGroupsForSettings();
+        $blockTypeOptions = array_map(
+            static fn(BlockType $type) => [
+                'label' => "{$type->name} ({$type->handle})",
+                'value' => $type->uid,
+            ],
+            Vizy::$plugin->getBlockTypes()->getAllBlockTypes(),
+        );
+        $knownOptionUids = array_column($blockTypeOptions, 'value');
+        foreach ($pickerGroups as $group) {
+            foreach ($group['blockTypeUids'] as $uid) {
+                if (!in_array($uid, $knownOptionUids, true)) {
+                    $blockTypeOptions[] = ['label' => "Missing: {$uid}", 'value' => $uid];
+                    $knownOptionUids[] = $uid;
+                }
+            }
+        }
+        $editorConfigOptions = Vizy::$plugin->getEditorConfigs()->getOptions();
+        if ($this->editorConfig !== '' && !in_array($this->editorConfig, array_column($editorConfigOptions, 'value'), true)) {
+            $editorConfigOptions[] = [
+                'label' => Craft::t('vizy', 'Missing: {id}', ['id' => $this->editorConfig]),
+                'value' => $this->editorConfig,
+            ];
+        }
+
+        $referencedUids = [];
+        foreach ($pickerGroups as $group) {
+            foreach ($group['blockTypeUids'] as $uid) {
+                $referencedUids[$uid] = true;
+            }
+        }
+
+        // The configurator only ever presents summaries. Global Block Type
+        // editing happens in a slideout against vizy/block-types/edit, so the
+        // field settings form never embeds or submits global schema.
+        $summarize = static fn(BlockType $type): array => [
+            'uid' => $type->uid,
+            'name' => $type->name,
+            'handle' => $type->handle,
+            'icon' => is_string($type->icon) ? $type->icon : null,
+            'iconSvg' => Vizy::$plugin->getIcons()->blockTypeIconSvg($type->icon),
+            'color' => $type->color,
+            'template' => $type->template,
+        ];
+
+        $availableBlockTypes = [];
+        $blockTypeSummaries = [];
+        foreach (Vizy::$plugin->getBlockTypes()->getAllBlockTypes() as $type) {
+            $availableBlockTypes[] = $summarize($type);
+            if (isset($referencedUids[$type->uid])) {
+                $blockTypeSummaries[$type->uid] = $summarize($type);
+            }
+        }
+
+        // Unchanged missing references stay visible and submit as-is.
+        foreach (array_keys($referencedUids) as $uid) {
+            if (!isset($blockTypeSummaries[$uid])) {
+                $blockTypeSummaries[$uid] = [
+                    'uid' => $uid,
+                    'name' => Craft::t('vizy', 'Missing: {uid}', ['uid' => $uid]),
+                    'handle' => '',
+                    'icon' => null,
+                    'iconSvg' => null,
+                    'color' => null,
+                    'template' => null,
+                    'missing' => true,
+                ];
+            }
+        }
+
         return $view->renderTemplate('vizy/field/settings', [
             'field' => $this,
-            'inputNamePrefix' => $inputNamePrefix,
-            'inputIdPrefix' => $inputIdPrefix,
-            'componentData' => [
-                'id' => $inputIdPrefix,
-                'fieldData' => $fieldData,
-                'settings' => $settings,
+            'editorMode' => $this->getEditorMode(),
+            'editorConfigOptions' => $editorConfigOptions,
+            'pickerGroupsInputName' => $view->namespaceInputName('blockTypePickerGroups'),
+            'configuratorInitial' => [
+                'groups' => $pickerGroups,
+                'blockTypes' => $blockTypeSummaries,
+                'availableBlockTypes' => $availableBlockTypes,
             ],
-            'vizyConfigOptions' => $this->_getCustomConfigOptions('vizy'),
             'volumeOptions' => $volumeOptions,
-            'sourceOptions' => $this->_getSourceOptions(),
+            'sourceOptions' => $sourceOptions,
             'transformOptions' => $transformOptions,
+            'uploadLocationWarning' => $uploadLocationWarning,
+            'volumeOptionsWarning' => $volumeOptionsWarning,
+            'transformOptionsWarning' => $transformOptionsWarning,
             'defaultTransformOptions' => [
                 ...[
                     [
@@ -231,35 +329,36 @@ class VizyField extends Field
         ]);
     }
 
-    public function normalizeValue(mixed $value, ElementInterface $element = null): mixed
+    public function normalizeValue(mixed $value, ElementInterface $element = null): CanonicalVizyDocument
     {
-        if ($value instanceof NodeCollection) {
-            return $value;
-        }
-
-        if (is_string($value) && !empty($value)) {
-            $value = Json::decodeIfJson($value);
-        }
-
-        if (!is_array($value)) {
-            $value = [];
-        }
-
-        return new NodeCollection($this, $value, $element);
+        return $element
+            ? Vizy::$plugin->getDocuments()->normalizeValue($value, $element, $this)
+            : Vizy::$plugin->getDocuments()->normalizeDetached($value);
     }
 
     public function serializeValue(mixed $value, ElementInterface $element = null): mixed
     {
-        if ($value instanceof NodeCollection) {
-            $value = $value->serializeValues($element);
-
-            // Save the content as encoded JSON. We're getting some strange re-ordering of properties
-            // when saving actual JSON to the database, and this re-ordering messes up "changed" content.
-            // This is likely to do with the MySQL JSON column type in Craft 5.
-            return Json::encode($value);
+        if ($value instanceof CanonicalVizyDocument) {
+            return Vizy::$plugin->getDocuments()->serializeValue($value);
         }
 
         return $value;
+    }
+
+    public function serializeValueForDb(mixed $value, ElementInterface $element): mixed
+    {
+        if ($value instanceof CanonicalVizyDocument) {
+            // Craft calls general serialization during reads and copies too.
+            // Only this hook runs while persisting the owner's content row.
+            $value = $value->recontextualize($element, $this);
+            $serialized = Vizy::$plugin->getDocuments()->serializeForPersistence($value);
+            // After-save acknowledgements and upload finalization must observe
+            // the exact snapshot written to the content row, including anchor UIDs.
+            $element->setFieldValue($this->handle, Vizy::$plugin->getDocuments()->normalizeValue($serialized, $element, $this));
+            return $serialized;
+        }
+
+        return parent::serializeValueForDb($value, $element);
     }
 
     public function getElementConditionRuleType(): array|string|null
@@ -273,7 +372,11 @@ class VizyField extends Field
 
         $view->registerAssetBundle(VizyAsset::class);
 
-        return Html::tag('div', $value->renderStaticHtml() ?: '&nbsp;', [
+        if (!$value instanceof CanonicalVizyDocument) {
+            $value = $this->normalizeValue($value, $element);
+        }
+
+        return Html::tag('div', (string)$value->render() ?: '&nbsp;', [
             'class' => 'text vizy-static',
         ]);
     }
@@ -283,159 +386,49 @@ class VizyField extends Field
         if (!parent::beforeSave($isNew)) {
             return false;
         }
-
-        $errors = [];
-
-        // Prepare the setting data to be saved
-        $this->fieldData = Json::decodeIfJson($this->fieldData) ?? [];
-
-        foreach ($this->fieldData as $groupKey => $group) {
-            $blockTypes = $group['blockTypes'] ?? [];
-
-            foreach ($blockTypes as $blockTypeKey => $blockType) {
-                // Ensure we catch errors to prevent data loss
-                try {
-                    // Remove this before populating the model
-                    $layoutConfig = Json::decode(ArrayHelper::remove($blockType, 'layout'));
-
-                    // Create a model so we can properly validate
-                    $blockType = new BlockType($blockType);
-
-                    if (!$blockType->validate()) {
-                        foreach ($blockType->getErrors() as $key => $error) {
-                            $errors[$blockType->id . ':' . $key] = $error;
-                        }
-
-                        continue;
-                    }
-
-                    // Check if there's any changes to be made
-                    if ($layoutConfig && $fieldLayout = FieldLayout::createFromConfig($layoutConfig)) {
-                        $fieldLayout->type = BlockType::class;
-
-                        // Set the layout here, saving takes place in PC event handlers, straight after this
-                        $blockType->setFieldLayout($fieldLayout);
-                    }
-
-                    // Override with our cleaned model data
-                    $this->fieldData[$groupKey]['blockTypes'][$blockTypeKey] = $blockType->serializeArray();
-                } catch (Throwable $e) {
-                    $this->addErrors([$blockType['id'] . ':general' => $e->getMessage()]);
-
-                    return false;
-                }
+        // Canonical fields only store UID references. Global Block Type schema is
+        // saved exclusively through services\BlockTypes via the CP screen, so a
+        // field save can never mutate global schema as a side effect.
+        $groups = [];
+        foreach ($this->blockTypePickerGroups as $group) {
+            $uids = array_values(array_filter(
+                array_map('strval', $group['blockTypeUids'] ?? []),
+                static fn(string $uid) => $uid !== '',
+            ));
+            if ($uids !== []) {
+                // Disabled entries are only meaningful as a subset of membership, so
+                // drop any that no longer reference UID in this group.
+                $disabled = array_values(array_intersect(
+                    array_map('strval', $group['disabledBlockTypeUids'] ?? []),
+                    $uids,
+                ));
+                $groups[] = [
+                    'name' => (string)($group['name'] ?? ''),
+                    'blockTypeUids' => $uids,
+                    'disabledBlockTypeUids' => $disabled,
+                ];
             }
         }
-
-        if ($errors) {
-            $this->addErrors($errors);
-
-            return false;
-        }
-
-        // Prevent any empty groups.
-        foreach ($this->fieldData as $groupKey => $group) {
-            $blocks = $group['blockTypes'] ?? [];
-
-            if (!$blocks) {
-                unset($this->fieldData[$groupKey]);
-            }
-        }
-
-        // Be sure to reset the array keys, in case empty blocks have been deleted.
-        // Can cause PC issues with `unpackAssociativeArray`.
-        $this->fieldData = array_values($this->fieldData);
-
-        // Any fields not in the global scope won't trigger a PC change event. Go manual.
-        if ($this->context !== 'global') {
-            Vizy::$plugin->getService()->saveField($this->fieldData);
-        }
-
+        $this->blockTypePickerGroups = $groups;
         return true;
     }
 
     public function beforeElementSave(ElementInterface $element, bool $isNew): bool
     {
-        // If we're propagating the element (entry), we need to perform some additional checks in a specific scenario
-        // If the Vizy field is set to un-translatable but the inner fields are, Craft's `_propagateElement()` will copy
-        // values across all elements, which we don't want. As such, check each field and remove the duplicated content,
-        // restoring the content that was there. This is tricky that Vizy fields don't use elements for their content
-        // unlike Matrix, so we need to do a deep-dive into the content to re-jig it.
-        //
-        // We can also skip over this entirely if the Vizy field is translatable - that works as expected.
-        if ($element->propagating && $this->translationMethod === Field::TRANSLATION_METHOD_NONE) {
-            $translatableFields = [];
-
-            // Before going any further, are there any inner fields in _any_ block type for this field
-            // that are translatable? No need to go further if there aren't, and saves a lot of time.
-            foreach ($this->getBlockTypes() as $blockType) {
-                if (($fieldLayout = $blockType->getFieldLayout()) !== null) {
-                    foreach ($fieldLayout->getCustomFields() as $field) {
-                        if ($field->translationMethod !== Field::TRANSLATION_METHOD_NONE) {
-                            $translatableFields[$blockType->id][] = $field->handle;
-                        }
-                    }
-                }
-            }
-
-            if ($translatableFields) {
-                // Fetch the current element, so we can get it's content before saving.
-                $siteElement = Craft::$app->getElements()->getElementById($element->id, $element::class, $element->siteId);
-
-                if ($siteElement) {
-                    $hasUpdatedContent = false;
-                    $newNodes = $element->getFieldValue($this->handle)->getRawNodes();
-
-                    // Extract the raw content for _just_ the translatable fields
-                    foreach ($siteElement->getFieldValue($this->handle)->getRawNodes() as $rawNode) {
-                        if ($rawNode['type'] === 'vizyBlock') {
-                            $blockId = $rawNode['attrs']['id'] ?? '';
-                            $blockTypeId = $rawNode['attrs']['values']['type'] ?? '';
-                            $fields = $translatableFields[$blockTypeId] ?? [];
-
-                            foreach ($fields as $fieldHandle) {
-                                // For some fields, they control their own propagation settings. 
-                                // Check those, and only proceed with swapping content if not managing per-site.
-                                $field = Craft::$app->getFields()->getFieldByHandle($fieldHandle);
-
-                                // "Only save blocks to the site they were created in" (none) is selected
-                                if ($field instanceof Matrix && $field->propagationMethod !== PropagationMethod::None) {
-                                    continue;
-                                }
-
-                                // "Only save blocks to the site they were created in" (none) is selected
-                                if (Craft::$app->getPlugins()->isPluginEnabled('super-table')) {
-                                    if ($field instanceof SuperTable && $field->propagationMethod !== PropagationMethod::None) {
-                                        continue;
-                                    }
-                                }
-
-                                // "Manage relations on a per-site basis" is disabled
-                                if ($field instanceof BaseRelationField && !$field->localizeRelations) {
-                                    continue;
-                                }
-
-                                // Ensure we find the right block to update
-                                foreach ($newNodes as $key => $newNode) {
-                                    $newBlockId = $newNode['attrs']['id'] ?? '';
-
-                                    if ($newBlockId === $blockId) {
-                                        $hasUpdatedContent = true;
-
-                                        $newNodes[$key]['attrs']['values']['content']['fields'][$fieldHandle] = $rawNode['attrs']['values']['content']['fields'][$fieldHandle] ?? '';
-                                    }
-                                }
-                            }
-                        }
-                    }
-
-                    if ($hasUpdatedContent) {
-                        // Rebuild the node collection - if it's changed
-                        $nodeCollection = new NodeCollection($this, $newNodes, $element);
-
-                        $element->setFieldValue($this->handle, $nodeCollection);
-                    }
-                }
+        // Craft uses duplication internally for drafts, revisions, and restores.
+        // Only a true canonical-owner duplicate receives new document identity.
+        if (
+            $element->duplicateOf
+            && !$element->duplicateOf->getIsDerivative()
+            && $element->getIsCanonical()
+            && !$element->updatingFromDerivative
+        ) {
+            $document = $element->getFieldValue($this->handle);
+            if ($document instanceof CanonicalVizyDocument) {
+                $element->setFieldValue(
+                    $this->handle,
+                    Vizy::$plugin->getMultisiteDocuments()->duplicateForCraftOwner($document, $element),
+                );
             }
         }
 
@@ -444,106 +437,240 @@ class VizyField extends Field
 
     public function afterElementSave(ElementInterface $element, bool $isNew): void
     {
-        Vizy::$plugin->getAnchors()->gcOrphans($element, $this);
-
         parent::afterElementSave($element, $isNew);
+
+        $document = $element->getFieldValue($this->handle);
+        if ($document instanceof CanonicalVizyDocument) {
+            // Field hooks run inside Craft's owner transaction. Register the
+            // exact immutable scope; the public outermost DB commit event is
+            // the only seam allowed to execute file moves.
+            Vizy::$plugin->getAssetUploads()->defer($element, $this, $document);
+            Vizy::$plugin->getEditorAcknowledgements()->collect($element, $this, $document);
+        }
+    }
+
+    public function propagateValue(ElementInterface $from, ElementInterface $to): void
+    {
+        $source = $from->getFieldValue($this->handle);
+        if (!$source instanceof CanonicalVizyDocument) {
+            $source = $this->normalizeValue($source, $from);
+        }
+
+        // Craft clones the source over the target when propagateAll is active.
+        // Reload through the public Elements API before applying localized slots.
+        $targetOwner = $to;
+        if ($from->propagateAll && $to->id) {
+            $criteria = [];
+            if ($to->getIsDraft()) {
+                $criteria['draftId'] = $to->draftId;
+            } elseif ($to->getIsRevision()) {
+                $criteria['revisionId'] = $to->revisionId;
+            }
+            $targetOwner = Craft::$app->getElements()->getElementById(
+                (int)$to->id,
+                $to::class,
+                $to->siteId,
+                $criteria,
+            ) ?? $to;
+        }
+
+        $target = $targetOwner->getFieldValue($this->handle);
+        if (!$target instanceof CanonicalVizyDocument) {
+            $target = $this->normalizeValue($target, $targetOwner);
+        }
+        if ($target->owner() !== $to) {
+            $target = $target->recontextualize($to, $this);
+        }
+
+        $to->setFieldValue(
+            $this->handle,
+            Vizy::$plugin->getMultisiteDocuments()->mergeForCraftPropagation($source, $target),
+        );
     }
 
     public function getBlockTypeById($blockTypeId)
     {
-        if (isset($this->_blockTypesById[$blockTypeId])) {
-            return $this->_blockTypesById[$blockTypeId];
-        }
-
-        foreach ($this->fieldData as $group) {
-            foreach ($group['blockTypes'] as $block) {
-                if ($block['id'] === $blockTypeId) {
-                    return $this->_blockTypesById[$blockTypeId] = new BlockType($block);
-                }
-            }
-        }
-
-        return null;
+        return is_numeric($blockTypeId)
+            ? Vizy::$plugin->getBlockTypes()->getBlockTypeById((int)$blockTypeId)
+            : null;
     }
 
-    public function getBlockTypeByIdOrHandle(string $blockTypeId): ?BlockType
+    public function getBlockTypeByIdOrHandle(string|int $blockTypeId): ?BlockType
     {
-        if (isset($this->_blockTypesById[$blockTypeId])) {
-            return $this->_blockTypesById[$blockTypeId];
-        }
+        $type = is_int($blockTypeId) || ctype_digit((string)$blockTypeId)
+            ? Vizy::$plugin->getBlockTypes()->getBlockTypeById((int)$blockTypeId)
+            : Vizy::$plugin->getBlockTypes()->getBlockTypeByUid((string)$blockTypeId)
+                ?? Vizy::$plugin->getBlockTypes()->getBlockTypeByHandle((string)$blockTypeId);
 
-        foreach ($this->fieldData as $group) {
-            foreach ($group['blockTypes'] as $block) {
-                if ($block['id'] === $blockTypeId || $block['handle'] === $blockTypeId) {
-                    return $this->_blockTypesById[$blockTypeId] = new BlockType($block);
-                }
-            }
-        }
-
-        return null;
+        return $type && $this->allowsBlockTypeUid((string)$type->uid) ? $type : null;
     }
 
     public function getBlockTypes(): array
     {
-        $blockTypes = [];
+        return $this->getAllowedBlockTypes();
+    }
 
-        foreach ($this->fieldData as $group) {
-            $blocks = $group['blockTypes'] ?? [];
-
-            foreach ($blocks as $blockTypeData) {
-                // Remove this before populating the model
-                ArrayHelper::remove($blockTypeData, 'layout');
-
-                $blockType = new BlockType($blockTypeData);
-                $blockType->fieldId = $this->id;
-
-                $blockTypes[] = $blockType;
+    /**
+     * Every Block Type UID this field references, including field-locally disabled
+     * ones. This is the permission/validation surface: an author who disables a
+     * Block Type must still be able to open and validate Blocks already authored
+     * with it.
+     */
+    public function getAllowedBlockTypeUids(): array
+    {
+        $uids = [];
+        foreach ($this->blockTypePickerGroups as $group) {
+            foreach ($group['blockTypeUids'] ?? [] as $uid) {
+                $uids[] = (string)$uid;
             }
         }
+        return $uids;
+    }
 
-        return $blockTypes;
+    /**
+     * The subset authors may actually insert. Insertion surfaces use this;
+     * permission and validation use `getAllowedBlockTypeUids()`.
+     */
+    public function getInsertableBlockTypeUids(): array
+    {
+        if ($this->richTextOnly) {
+            return [];
+        }
+
+        $disabled = $this->getDisabledBlockTypeUids();
+
+        return array_values(array_filter(
+            $this->getAllowedBlockTypeUids(),
+            static fn(string $uid) => !in_array($uid, $disabled, true),
+        ));
+    }
+
+    public function getDisabledBlockTypeUids(): array
+    {
+        $uids = [];
+        foreach ($this->blockTypePickerGroups as $group) {
+            foreach ($group['disabledBlockTypeUids'] ?? [] as $uid) {
+                $uids[] = (string)$uid;
+            }
+        }
+        return $uids;
+    }
+
+    public function getAllowedBlockTypes(): array
+    {
+        $types = [];
+        foreach ($this->getAllowedBlockTypeUids() as $uid) {
+            if ($type = Vizy::$plugin->getBlockTypes()->getBlockTypeByUid($uid)) {
+                $types[] = $type;
+            }
+        }
+        return $types;
+    }
+
+    public function allowsBlockTypeUid(string $uid): bool
+    {
+        return in_array($uid, $this->getAllowedBlockTypeUids(), true);
+    }
+
+    public function getBlockTypeDiagnostics(): array
+    {
+        $diagnostics = [];
+        foreach ($this->getAllowedBlockTypeUids() as $uid) {
+            if (!Vizy::$plugin->getBlockTypes()->getBlockTypeByUid($uid)) {
+                $diagnostics[] = ['code' => 'missingAllowedBlockType', 'uid' => $uid];
+            }
+        }
+        return $diagnostics;
+    }
+
+    public function getEditorConfigDiagnostics(): array
+    {
+        return Vizy::$plugin->getEditorConfigs()->getFieldDiagnostics($this);
+    }
+
+    /**
+     * @internal Migration provenance supplies this immutable map.
+     */
+    public function getLegacySchemaMap(): ?array
+    {
+        return is_string($this->uid) && $this->uid !== ''
+            ? Vizy::$plugin->getLegacySchemaMaps()->getSchemaMap($this->uid)
+            : null;
     }
 
     public function getContentGqlType(): Type|array
     {
-        return NodeCollectionType::getType($this);
+        // Field-scoped so Block Type unions match this field’s allowances.
+        return VizyDocumentType::getType($this);
     }
 
     public function getElementValidationRules(): array
     {
+        // Intentionally omit SCENARIO_ESSENTIALS: Craft uses that scenario when
+        // duplicating for revisions/drafts, and Editor Config / schema checks must
+        // not reject preserve-existing capabilities (or trusted migration candidates)
+        // during snapshot duplication.
         return [
             [
                 'validateBlocks',
-                'on' => [Element::SCENARIO_ESSENTIALS, Element::SCENARIO_DEFAULT, Element::SCENARIO_LIVE],
+                'on' => [Element::SCENARIO_DEFAULT, Element::SCENARIO_LIVE],
                 'skipOnEmpty' => false,
             ],
         ];
     }
 
-    public function validateBlocks(ElementInterface $element): void
+    public function validateBlocks(ElementInterface $element, ?CanonicalVizyDocument $trustedBaseline = null): void
     {
         $scenario = $element->getScenario();
-
-        if ($scenario !== Element::SCENARIO_LIVE) {
+        $value = $element->getFieldValue($this->handle);
+        if (!$value instanceof CanonicalVizyDocument) {
             return;
         }
 
-        $value = $element->getFieldValue($this->handle);
-        $blocks = $value->query()->where(['type' => 'vizyBlock'])->all();
+        $baseline = $trustedBaseline ?? Vizy::$plugin->getContentBaselines()->document($element, $this);
+        foreach (Vizy::$plugin->getEditorManifests()->validateCapabilities($value, $this, $baseline) as $violation) {
+            $element->addError(
+                $this->handle,
+                "New or changed {$violation['kind']} {$violation['name']} is not enabled by Editor Config {$this->editorConfig}.",
+            );
+        }
 
-        foreach ($blocks as $i => $block) {
-            $blockElement = $block->getBlockElement($element);
-            $blockElement->setScenario($scenario);
+        // Root-only policy (min/max, rootContentType). Type allowance + Craft
+        // field validation must cover every TipTap-located Block — including
+        // layout → column children — not only the document root.
+        $rootBlocks = $value->content()->blocks(false, null);
+        $allBlocks = $value->content()->blocks(true, null);
 
-            if ($block->enabled && !$blockElement->validate()) {
-                $element->addModelErrors($blockElement, "{$this->handle}[{$i}]");
+        if ($this->rootContentType === self::ROOT_CONTENT_BLOCKS) {
+            foreach ($value->content()->nodes() as $node) {
+                if (($node['type'] ?? null) !== 'vizyBlock') {
+                    $element->addError($this->handle, 'This Vizy field only permits Blocks at its root.');
+                    break;
+                }
             }
         }
 
-        if ($this->minBlocks || $this->maxBlocks) {
+        $seen = [];
+        foreach ($allBlocks as $block) {
+            if (isset($seen[$block->uid()])) {
+                $element->addError($this->handle, "Duplicate Vizy Block UID: {$block->uid()}.");
+            }
+            $seen[$block->uid()] = true;
+        }
+
+        foreach ($allBlocks as $block) {
+            if (!$this->allowsBlockTypeUid($block->blockTypeUid())) {
+                $element->addError(
+                    $this->handle,
+                    "Block Type {$block->blockTypeUid()} is not allowed in this Vizy field.",
+                );
+            }
+        }
+
+        if ($this->minBlocks !== null || $this->maxBlocks !== null) {
             $arrayValidator = new ArrayValidator([
-                'min' => $this->minBlocks ?: null,
-                'max' => $this->maxBlocks ?: null,
+                'min' => $this->minBlocks,
+                'max' => $this->maxBlocks,
                 'tooFew' => $this->minBlocks ? Craft::t('app', '{attribute} should contain at least {min, number} {min, plural, one{block} other{blocks}}.', [
                     'attribute' => Craft::t('site', $this->name),
                     'min' => $this->minBlocks, // Need to pass this in now
@@ -555,46 +682,54 @@ class VizyField extends Field
                 'skipOnEmpty' => false,
             ]);
 
-            if (!$arrayValidator->validate($blocks, $error)) {
+            if (!$arrayValidator->validate($rootBlocks, $error)) {
                 $element->addError($this->handle, $error);
             }
         }
 
-        // Validate block types
-        $blockTypesCount = [];
-        $blockTypesById = [];
+        $validate = function(
+            \verbb\vizy\document\VizyBlock $block,
+            bool $ancestorEnabled = true,
+            array $ancestorTypeUids = [],
+        ) use ($element, $scenario): void {
+            $enabled = $ancestorEnabled && $block->isEnabled();
+            $type = $block->blockType();
+            $layout = $type?->getFieldLayout();
+            $typeUid = $block->blockTypeUid();
 
-        foreach ($this->getBlockTypes() as $blockType) {
-            $blockTypesCount[$blockType->id] = 0;
-            $blockTypesById[$blockType->id] = $blockType;
-        }
-
-        foreach ($blocks as $block) {
-            if ($block->enabled) {
-                $blockTypesCount[$block->blockType->id] += 1;
-            }
-        }
-
-        foreach ($blockTypesCount as $blockTypeId => $blockTypeCount) {
-            $blockType = $blockTypesById[$blockTypeId];
-
-            if ($blockType->minBlocks > 0 && $blockTypeCount < $blockType->minBlocks) {
-                $element->addError($this->handle, Craft::t('vizy', '{attribute} should contain at least {minBlockTypeBlocks, number} {minBlockTypeBlocks, plural, one{block} other{blocks}} of type {blockType}.', [
-                        'attribute' => Craft::t('site', $this->name),
-                        'minBlockTypeBlocks' => $blockType->minBlocks,
-                        'blockType' => $blockType->name,
-                    ])
+            // Consecutive same-type nesting; a different type resets.
+            if (BlockTypes::consecutiveSameTypeDepth($ancestorTypeUids, $typeUid) > BlockTypes::SAME_BLOCK_TYPE_MAX_DEPTH) {
+                $element->addError(
+                    $this->handle,
+                    "Block Type {$typeUid} exceeds the maximum same-type nesting depth of "
+                    . BlockTypes::SAME_BLOCK_TYPE_MAX_DEPTH . '.',
                 );
             }
 
-            if ($blockType->maxBlocks > 0 && $blockTypeCount > $blockType->maxBlocks) {
-                $element->addError($this->handle, Craft::t('vizy', '{attribute} should contain at most {maxBlockTypeBlocks, number} {maxBlockTypeBlocks, plural, one{block} other{blocks}} of type {blockType}.', [
-                        'attribute' => Craft::t('site', $this->name),
-                        'maxBlockTypeBlocks' => $blockType->maxBlocks,
-                        'blockType' => $blockType->name,
-                    ])
-                );
+            if ($enabled && $layout) {
+                $blockElement = $block->document()->blockElement($block);
+                $blockElement->setScenario($scenario);
+                if (!$blockElement->validate()) {
+                    $placements = [];
+                    foreach ($layout->getCustomFieldElements() as $placement) {
+                        $placements[$placement->getField()->handle] = $placement->uid;
+                    }
+                    foreach ($blockElement->getErrors() as $attribute => $messages) {
+                        $handle = str_starts_with($attribute, 'field:') ? substr($attribute, 6) : $attribute;
+                        $placementUid = $placements[$handle] ?? '__block';
+                        foreach ($messages as $message) {
+                            $element->addError("{$this->handle}.{$block->uid()}.{$placementUid}", $message);
+                        }
+                    }
+                }
             }
+            // TipTap leaf: nested composition is Hosted Vizy in fieldSlots (Craft field validate above).
+        };
+
+        // TipTap layout/column wrappers are not Block ancestors for same-type
+        // depth — Hosted Vizy nesting advances ancestry via nested field validate.
+        foreach ($allBlocks as $block) {
+            $validate($block);
         }
     }
 
@@ -607,139 +742,80 @@ class VizyField extends Field
         $rules = parent::defineRules();
 
         $rules[] = [['initialRows', 'minBlocks', 'maxBlocks'], 'integer', 'min' => 0];
+        $rules[] = [['rootContentType'], 'in', 'range' => [self::ROOT_CONTENT_RICH, self::ROOT_CONTENT_BLOCKS]];
+        $rules[] = [['editorConfig'], 'match', 'pattern' => '/^[a-z][a-z0-9_-]*$/'];
+        $rules[] = [['editorConfig'], function(): void {
+            Vizy::$plugin->getEditorConfigs()->validateFieldReference($this);
+        }];
+        $rules[] = [['maxBlocks'], 'compare', 'compareAttribute' => 'minBlocks', 'operator' => '>=', 'when' => fn() => $this->minBlocks !== null && $this->maxBlocks !== null];
+        $rules[] = [['blockTypePickerGroups'], function(): void {
+            $seen = [];
+            foreach ($this->blockTypePickerGroups as $group) {
+                if (trim((string)($group['name'] ?? '')) === '') {
+                    $this->addError('blockTypePickerGroups', 'Picker group names are required.');
+                }
+                foreach ($group['blockTypeUids'] ?? [] as $uid) {
+                    if (!is_string($uid) || !preg_match('/^[0-9a-f-]{36}$/i', $uid)) {
+                        $this->addError('blockTypePickerGroups', 'Picker groups may contain only Block Type UIDs.');
+                    } elseif (isset($seen[$uid])) {
+                        $this->addError('blockTypePickerGroups', "Block Type UID {$uid} appears more than once.");
+                    }
+                    $seen[$uid] = true;
+                }
+                $membership = array_map('strval', $group['blockTypeUids'] ?? []);
+                foreach ($group['disabledBlockTypeUids'] ?? [] as $uid) {
+                    if (!in_array((string)$uid, $membership, true)) {
+                        $this->addError('blockTypePickerGroups', "Disabled Block Type UID {$uid} is not a member of its group.");
+                    }
+                }
+            }
+        }];
 
         return $rules;
     }
 
     protected function inputHtml(mixed $value, ?ElementInterface $element, bool $inline): string
     {
-        $view = Craft::$app->getView();
-        $id = Html::id($this->handle);
-
-        $site = ($element ? $element->getSite() : Craft::$app->getSites()->getCurrentSite());
-
-        // Cache the placeholder key for the fields' JS. Because we're caching the block type HTML/JS
-        // we also need to cache the placeholder key to match that cached data.
-        $placeholderKey = Vizy::$plugin->getCache()->getOrSet($this->getCacheKey('placeholderKey'), function() {
-            return StringHelper::randomString(10);
-        });
-
-        // Because we can recursively nest Vizy fields, this can turn into an infinite loop if we're not careful. We limit to 10
-        // nested instances, so ensure we keep a count of how many identical fields we're implementing.
-        $this->_recursiveFieldCount = Vizy::$plugin->getCache()->get($this->getCacheKey('recursiveFieldCount'));
-        $this->_recursiveFieldCount += 1;
-        Vizy::$plugin->getCache()->set($this->getCacheKey('recursiveFieldCount'), $this->_recursiveFieldCount);
-
-        $settings = [
-            // Render block group templates before existing blocks so shared field instances aren't
-            // left in a static state from existing block content when generating new block HTML.
-            'blockGroups' => $this->_getBlockGroupsForInput($placeholderKey, $element),
-            'blocks' => $this->_getBlocksForInput($value, $placeholderKey, $element),
-            'vizyConfig' => $this->_getVizyConfig(),
-            'elementSiteId' => $site->id,
-            'showAllUploaders' => $this->showUnpermittedFiles,
-            'placeholderKey' => $placeholderKey,
-            'fieldId' => $this->id,
-            'fieldHandle' => $this->handle,
-            'isRoot' => true,
-            'initialRows' => $this->initialRows,
-            'minBlocks' => $this->minBlocks,
-            'maxBlocks' => $this->maxBlocks,
-            'pasteAsPlainText' => $this->pasteAsPlainText,
-            'blockTypeBehaviour' => $this->blockTypeBehaviour,
-            'editorMode' => $this->editorMode,
-            'linkSettings' => $this->linkSettings,
-            'plugins' => self::$_registeredPlugins,
-        ];
-
-        // Set Asset setting
-        if (!empty($this->defaultTransform) && $transform = Craft::$app->getImageTransforms()->getTransformByUid($this->defaultTransform)) {
-            $settings['defaultTransform'] = $transform->handle;
+        if (!$value instanceof CanonicalVizyDocument) {
+            $value = $element
+                ? $this->normalizeValue($value, $element)
+                : Vizy::$plugin->getDocuments()->normalizeDetached($value);
         }
 
-        $settings['defaultSource'] = $this->defaultUploadLocationSource;
-
-        foreach ($this->getBlockTypes() as $blockType) {
-            if ($blockType->minBlocks) {
-                $settings['minBlockTypeBlocks'][$blockType->id] = $blockType->minBlocks;
-            }
-
-            if ($blockType->maxBlocks) {
-                $settings['maxBlockTypeBlocks'][$blockType->id] = $blockType->maxBlocks;
-            }
+        if (!$element) {
+            throw new InvalidConfigException('The canonical Vizy editor requires an owner context.');
         }
 
-        // Only include some options if we need them - for performance
-        $buttons = $settings['vizyConfig']['buttons'] ?? [];
-
-        if (in_array('link', $buttons) || in_array('image', $buttons)) {
-            $settings['linkOptions'] = $this->_getLinkOptions($element);
-            $settings['volumes'] = $this->_assetSources();
-            $settings['transforms'] = $this->_transforms();
-
-            $settings['allSiteOptions'][] = ['label' => Craft::t('vizy', 'Link to the current site'), 'value' => ''];
-            
-            foreach (Craft::$app->getSites()->getAllSites(false) as $site) {
-                $settings['allSiteOptions'][] = ['label' => $site->name, 'value' => $site->id];
-            }
+        // Block host → Hosted Vizy Editor (nested field), not Entry-owned root.
+        if ($element instanceof Block) {
+            return $this->_hostedInputHtml($value, $element);
         }
 
-        // Register Vizy assets; roots are mounted automatically by vizy.js.
-        Plugin::registerAsset('field/src/js/vizy.js');
-
-        // Let the field know if this is the root field for nested fields
-        $settings['isRoot'] = $this->_isRootField($element);
-
-        // Register any third-party plugins
-        if (isset($settings['vizyConfig']['plugins'])) {
-            foreach ($settings['vizyConfig']['plugins'] as $pluginKey) {
-                static::registerPlugin($pluginKey);
-            }
-        }
-
-        $rawNodes = $value->getRawNodes();
-
-        $this->_registerMatrixOwnerContextJs($element);
-
-        return $view->renderTemplate('vizy/field/input', [
-            'id' => $id,
-            'name' => $this->handle,
-            'field' => $this,
-            'element' => $element,
-            'isDebug' => Plugin::isDebug(),
-
-            // Prevent nested JSON content from being escaped, and don't encode special characters
-            'value' => Json::encode($rawNodes, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE),
-            'settings' => Json::encode($settings, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE),
-        ]);
+        return $this->_rootInputHtml($value, $element);
     }
 
     protected function searchKeywords(mixed $value, ElementInterface $element): string
     {
         $keywords = parent::searchKeywords($value, $element);
 
-        if ($value instanceof NodeCollection) {
-            $nodes = $value->getRawNodes();
+        if ($value instanceof CanonicalVizyDocument) {
+            $parts = [];
+            // Prose text + Image alt / Link labels / Asset titles from TipTap JSON.
+            $this->_collectDocumentSearchParts($value->content()->nodes(), $parts, (int)$element->siteId);
 
-            // Any actual editor text
-            $keywords = $this->_getNestedValues($nodes, 'text');
-
-            // Fields are different, and we need to check on their searchability
-            foreach ($value->getNodes() as $block) {
-                if ($block instanceof VizyBlock) {
-                    if ($fieldLayout = $block->getFieldLayout()) {
-                        foreach ($fieldLayout->getCustomFields() as $field) {
-                            if (!$field->searchable) {
-                                continue;
-                            }
-
-                            $fieldData = $block->getFieldValue($field->handle);
-
-                            $keywords[] = $field->searchKeywords($fieldData, $element);
+            // Searchable Block FieldLayout fields (Hosted Vizy recurses here when
+            // the nested field is searchable — same path as Vizy 3 nested Vizy).
+            foreach ($value->blocks(null) as $block) {
+                if ($fieldLayout = $block->blockType()?->getFieldLayout()) {
+                    foreach ($fieldLayout->getCustomFields() as $field) {
+                        if ($field->searchable) {
+                            $parts[] = $field->searchKeywords($block->fieldValue($field->handle), $element);
                         }
                     }
                 }
             }
+
+            $keywords = $parts;
         }
 
         if (is_array($keywords)) {
@@ -753,677 +829,232 @@ class VizyField extends Field
     // Private Methods
     // =========================================================================
 
-    private static function _recursiveImplode(array $array, string $glue = ',', bool $include_keys = false, bool $trim_all = false): string
+    /**
+     * Entry (or other non-Block) Vizy field — owns ElementEditor dirty/save.
+     */
+    private function _rootInputHtml(CanonicalVizyDocument $value, ElementInterface $element): string
     {
-        $glued_string = '';
-
-        // Recursively iterates array and adds key/value to glued string
-        array_walk_recursive($array, function($value, $key) use ($glue, $include_keys, &$glued_string) {
-            $include_keys && $glued_string .= $key . $glue;
-            $glued_string .= $value . $glue;
-        });
-
-        // Removes last $glue from string
-        $glue !== '' && $glued_string = substr($glued_string, 0, -strlen($glue));
-
-        // Trim ALL whitespace
-        $trim_all && $glued_string = preg_replace("/(\s)/ixsm", '', $glued_string);
-
-        return (string)$glued_string;
-    }
-
-    private function getCacheKey(string $key, ?ElementInterface $element = null): string
-    {
-        $cacheKey = $this->id . '-' . $this->handle . '-' . $key;
-
-        if ($element) {
-            $cacheKey .= '-' . $this->_getElementCacheKeySuffix($element);
-        }
-
-        return $cacheKey;
-    }
-
-    private function _getElementCacheKeySuffix(ElementInterface $element): string
-    {
-        $parts = ['site-' . ($element->siteId ?? 'null')];
-
-        if ($element->id) {
-            $parts[] = 'id-' . $element->id;
-        } else {
-            $parts[] = 'uid-' . ($element->uid ?? 'new');
-        }
-
-        if ($element->getIsDraft()) {
-            $parts[] = 'draft-' . ($element->draftId ?? 'new');
-        }
-
-        return implode('-', $parts);
-    }
-
-    private function _registerMatrixOwnerContextJs(?ElementInterface $element): void
-    {
-        if (!$element) {
-            return;
-        }
-
         $view = Craft::$app->getView();
+        $view->registerAssetBundle(VizyAsset::class);
+        $editorId = 'vizy-editor-' . StringHelper::randomString(12);
+        $inputId = $editorId . '-document';
+        $manifest = Vizy::$plugin->getEditorManifests()->build($this);
+        $context = Vizy::$plugin->getEditorContexts()->issue($element, $this);
+        $document = $value->toArray();
+        $bootstrap = [
+            'document' => $document,
+            'manifest' => $manifest,
+            'editorContextToken' => $context['token'],
+            // Real FieldLayout forms for Blocks already in the document arrive with
+            // the CP response. The browser adopts them before first paint; later
+            // Blocks retain the request-driven viewport path.
+            'initialFieldLayouts' => Vizy::$plugin->getInitialFieldLayouts()->build(
+                $document,
+                $context,
+                $element,
+                $this,
+            ),
+            // Per-owner Craft element link pickers — not cached with the manifest.
+            'linkOptions' => FieldLinkOptions::forField($this, $element),
+            'elementSiteId' => (int)$element->siteId,
+            // Image asset picker (volumes / transforms) — same owner scope.
+            'imageAuthoring' => FieldImageOptions::forField($this),
+            // Session thumbs for Image nodes (canonical never stores src).
+            'imagePreviews' => FieldImagePreviews::forDocument($document, (int)$element->siteId),
+        ];
+        // Embed bootstrap on the element (same path as Hosted). Slideouts /
+        // CpScreen AJAX often miss registerJs + getElementById after namespace
+        // rewrite; <template> survives HTML insertion and boots on connect.
+        $bootstrapJson = Json::encode($bootstrap, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS);
 
-        $view->registerJsWithVars(fn($uid, $draftId, $id, $vizyFieldId) => <<<JS
-(function() {
-    Craft.Vizy = Craft.Vizy || {};
-    Craft.Vizy.parentOwnerContext = {
-        uid: $uid || null,
-        draftId: $draftId || null,
-        id: $id || null,
-    };
-    Craft.Vizy.vizyFieldId = $vizyFieldId || null;
-    Craft.Vizy.matrixOwnerContexts = Craft.Vizy.matrixOwnerContexts || {};
-
-    if (Craft.Vizy.__matrixCreateEntryPatched || typeof Craft.sendActionRequest !== 'function') {
-        return;
+        // One hidden control is the complete persisted field value. FieldLayout
+        // widget controls use isolated vizyHost names and are stripped client-side.
+        return Html::tag('vizy-editor',
+            Html::hiddenInput($this->handle, $value->toJson(), [
+                'id' => $inputId,
+                'data-vizy-document' => true,
+            ])
+            . Html::tag('template', $bootstrapJson, [
+                'data-vizy-bootstrap' => true,
+            ]),
+            [
+                'id' => $editorId,
+                'data-vizy-editor' => true,
+            ],
+        );
     }
 
-    Craft.Vizy.__matrixCreateEntryPatched = true;
+    /**
+     * Nested Vizy on a Block FieldLayout — Hosted Vizy Editor.
+     * Own Editor Config; fragment lives in parent Block fieldSlots; no Entry POST.
+     */
+    private function _hostedInputHtml(CanonicalVizyDocument $value, Block $block): string
+    {
+        $depth = HostedVizy::nextDepth();
+        if (!HostedVizy::allowsDepth($depth)) {
+            return Html::tag('p', Craft::t('vizy', 'This Vizy field cannot nest further (max depth {max}).', [
+                'max' => HostedVizy::MAX_DEPTH,
+            ]), ['class' => 'warning']);
+        }
 
-    const sendActionRequest = Craft.sendActionRequest.bind(Craft);
-
-    Craft.sendActionRequest = function(method, action, config) {
-        config = config || {};
-
-        if (action === 'matrix/create-entry') {
-            const data = config.data || {};
-            const ownerElementType = data.ownerElementType || '';
-
-            if (ownerElementType.indexOf('verbb\\\\vizy\\\\elements\\\\Block') !== -1) {
-                const ctx = Craft.Vizy.parentOwnerContext || {};
-                const form = document.querySelector('form#main-form');
-                const parseBlockInstanceId = (namespace) => {
-                    if (!namespace) {
-                        return null;
-                    }
-
-                    const match = namespace.match(/vizyData\[([^\]]+)\]/);
-
-                    return match ? match[1] : null;
-                };
-                const blockInstanceId = parseBlockInstanceId(data.namespace);
-                const blockCtx = Craft.Vizy.matrixOwnerContexts[data.ownerId]
-                    || (blockInstanceId ? Craft.Vizy.matrixOwnerContexts['block:' + blockInstanceId] : null)
-                    || {};
-                const \$block = blockInstanceId
-                    ? document.querySelector('.vizyblock[data-vizy-block-id="' + blockInstanceId + '"]')
-                    : null;
-
-                config.data = Object.assign({}, data, {
-                    parentOwnerUid: ctx.uid || form?.querySelector('input[name="uid"]')?.value || null,
-                    parentDraftId: ctx.draftId || form?.querySelector('input[name="draftId"]')?.value || new URLSearchParams(window.location.search).get('draftId') || null,
-                    parentOwnerId: ctx.id || form?.querySelector('input[name="elementId"]')?.value || null,
-                    vizyFieldId: blockCtx.vizyFieldId || Craft.Vizy.vizyFieldId || null,
-                    blockInstanceId: blockInstanceId || blockCtx.blockInstanceId || \$block?.dataset?.vizyBlockId || null,
-                    matrixAnchorUid: blockCtx.matrixAnchorUid || \$block?.dataset?.matrixAnchorUid || null,
-                    vizyBlockTypeId: blockCtx.vizyBlockTypeId || \$block?.dataset?.vizyBlockTypeId || null,
-                });
+        $owner = $block->getOwner();
+        $parentField = $block->getField();
+        $placementUid = null;
+        foreach ($block->getFieldLayout()?->getCustomFieldElements() ?? [] as $placement) {
+            if ($placement->getField()?->uid === $this->uid) {
+                $placementUid = $placement->uid;
+                break;
             }
         }
-
-        return sendActionRequest(method, action, config);
-    };
-})();
-JS, [
-            $element->uid ?? null,
-            $element->draftId ?? null,
-            $element->id ?? null,
-            $this->id,
-        ]);
-    }
-
-    private function _registerMatrixBlockContextJs(string $blockInstanceId, int $ownerId, ?string $matrixAnchorUid = null, ?string $blockTypeId = null): void
-    {
-        $view = Craft::$app->getView();
-
-        $view->registerJsWithVars(fn($blockInstanceId, $ownerId, $vizyFieldId, $matrixAnchorUid, $blockTypeId) => <<<JS
-(function() {
-    Craft.Vizy = Craft.Vizy || {};
-    Craft.Vizy.matrixOwnerContexts = Craft.Vizy.matrixOwnerContexts || {};
-    Craft.Vizy.matrixOwnerContexts[$ownerId] = {
-        blockInstanceId: $blockInstanceId,
-        vizyFieldId: $vizyFieldId,
-        matrixAnchorUid: $matrixAnchorUid || null,
-        vizyBlockTypeId: $blockTypeId || null,
-    };
-    Craft.Vizy.matrixOwnerContexts['block:' + $blockInstanceId] = Craft.Vizy.matrixOwnerContexts[$ownerId];
-})();
-JS, [
-            $blockInstanceId,
-            $ownerId,
-            $this->id,
-            $matrixAnchorUid,
-            $blockTypeId,
-        ]);
-    }
-
-    private function _resetFieldLayoutFieldStatic(?FieldLayout $fieldLayout): void
-    {
-        if (!$fieldLayout) {
-            return;
+        if ($placementUid === null) {
+            return Html::tag('p', Craft::t('vizy', 'Hosted Vizy field is missing its FieldLayout placement.'), [
+                'class' => 'error',
+            ]);
         }
 
-        foreach ($fieldLayout->getCustomFields() as $field) {
-            $field->static = false;
+        // Auth root = Entry-placed Vizy. Immediate parent may be another hosted
+        // Vizy (Nested 2 → Nested 3); that field is not on the Entry layout.
+        $entryFieldUid = HostedVizy::entryFieldUid() ?? $parentField->uid;
+        $entryField = Craft::$app->getFields()->getFieldByUid($entryFieldUid);
+        if (!$entryField instanceof VizyField) {
+            $entryField = $parentField;
+        }
 
-            if ($field instanceof Matrix) {
-                foreach ($field->getEntryTypes() as $entryType) {
-                    $this->_resetFieldLayoutFieldStatic($entryType->getFieldLayout());
+        $view = Craft::$app->getView();
+        $view->registerAssetBundle(VizyAsset::class);
+        $editorId = 'vizy-editor-hosted-' . StringHelper::randomString(12);
+        $inputId = $editorId . '-document';
+        $manifest = Vizy::$plugin->getEditorManifests()->build($this);
+        $context = Vizy::$plugin->getEditorContexts()->issueHosted($owner, $entryField, $this, [
+            'depth' => $depth,
+            'blockUid' => $block->getBlockUid(),
+            'placementUid' => $placementUid,
+            'parentFieldUid' => $parentField->uid,
+            'path' => [...HostedVizy::renderingPath(), [
+                'blockTypeUid' => $block->getType()->uid,
+                'layoutUid' => $block->getFieldLayout()->uid,
+                'placementUid' => $placementUid,
+                'fieldUid' => $this->uid,
+            ]],
+        ]);
+        $document = $value->toArray();
+        $bootstrap = [
+            'document' => $document,
+            'manifest' => $manifest,
+            'editorContextToken' => $context['token'],
+            'hosted' => [
+                'depth' => $depth,
+                'entryFieldUid' => $entryField->uid,
+                'parentFieldUid' => $parentField->uid,
+                'blockUid' => $block->getBlockUid(),
+                'placementUid' => $placementUid,
+                'nestedFieldUid' => $this->uid,
+            ],
+            'initialFieldLayouts' => Vizy::$plugin->getInitialFieldLayouts()->build(
+                $document,
+                $context,
+                $owner,
+                $this,
+            ),
+            'linkOptions' => FieldLinkOptions::forField($this, $owner),
+            'elementSiteId' => (int)$owner->siteId,
+            'imageAuthoring' => FieldImageOptions::forField($this),
+            'imagePreviews' => FieldImagePreviews::forDocument($document, (int)$owner->siteId),
+        ];
+        // Embed bootstrap on the element so FieldLayout mount does not depend on
+        // appendBodyHtml + getElementById (easy to miss after fragment distribution).
+        // Same sole payload as root Entry Vizy (slideout-safe). Use <template> —
+        // survives host.innerHTML; <script> is unreliable there.
+        $bootstrapJson = Json::encode($bootstrap, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS);
+
+        // Namespaced under vizyHost by FieldLayoutForms — stripped from Entry POST.
+        // data-vizy-document still holds the fragment the hosted adapter reads.
+        return Html::tag('vizy-editor',
+            Html::hiddenInput($this->handle, $value->toJson(), [
+                'id' => $inputId,
+                'data-vizy-document' => true,
+            ])
+            . Html::tag('template', $bootstrapJson, [
+                'data-vizy-bootstrap' => true,
+            ]),
+            [
+                'id' => $editorId,
+                'data-vizy-editor' => true,
+                'data-vizy-hosted' => true,
+                'data-vizy-hosted-depth' => (string)$depth,
+                'data-vizy-hosted-placement' => $placementUid,
+            ],
+        );
+    }
+
+    /**
+     * Walk TipTap nodes for Craft element search keywords.
+     *
+     * Collects leaf `text`, Image `alt` + Asset title/filename, and Link mark
+     * string values (url/email/tel/sms). Does not invent Craft relations.
+     */
+    private function _collectDocumentSearchParts(array $nodes, array &$parts, int $siteId): void
+    {
+        foreach ($nodes as $node) {
+            if (!is_array($node)) {
+                continue;
+            }
+
+            if (is_string($node['text'] ?? null) && $node['text'] !== '') {
+                $parts[] = $node['text'];
+            }
+
+            foreach ($node['marks'] ?? [] as $mark) {
+                if (!is_array($mark) || ($mark['type'] ?? null) !== 'link') {
+                    continue;
+                }
+                $attrs = is_array($mark['attrs'] ?? null) ? $mark['attrs'] : [];
+                $kind = $attrs['type'] ?? null;
+                $value = $attrs['value'] ?? null;
+                if (in_array($kind, ['url', 'email', 'tel', 'sms'], true) && is_string($value) && $value !== '') {
+                    $parts[] = $value;
                 }
             }
-        }
-    }
 
-    private function _isRootField(?ElementInterface $element = null): bool
-    {
-        if ($element instanceof BlockElement) {
-            return false;
-        }
-
-        if ($element instanceof MatrixBlock && $element->ownerId) {
-            return $this->_isRootField($element->getOwner());
-        }
-
-        if (Plugin::isPluginInstalledAndEnabled('super-table')) {
-            if ($element instanceof SuperTableBlockElement && $element->ownerId) {
-                return $this->_isRootField($element->getOwner());
-            }
-        }
-
-        if (Plugin::isPluginInstalledAndEnabled('neo')) {
-            if ($element instanceof NeoBlock && $element->ownerId) {
-                return $this->_isRootField($element->getOwner());
-            }
-        }
-
-        return true;
-    }
-    
-    private function _getNestedValues($value, $key, &$items = []): array
-    {
-        foreach ($value as $k => $v) {
-            if ((string)$k === $key) {
-                $items[] = $v;
+            if (($node['type'] ?? null) === 'image') {
+                $attrs = is_array($node['attrs'] ?? null) ? $node['attrs'] : [];
+                $alt = $attrs['alt'] ?? null;
+                if (is_string($alt) && $alt !== '') {
+                    $parts[] = $alt;
+                }
+                $assetUid = $attrs['assetUid'] ?? null;
+                if (is_string($assetUid) && $assetUid !== '') {
+                    $asset = Craft::$app->getElements()->getElementByUid($assetUid, Asset::class, $siteId);
+                    if ($asset instanceof Asset) {
+                        if ($asset->title !== '') {
+                            $parts[] = $asset->title;
+                        }
+                        if ($asset->filename !== '') {
+                            $parts[] = $asset->filename;
+                        }
+                    }
+                }
             }
 
-            if (is_array($v)) {
-                $this->_getNestedValues($v, $key, $items);
+            $content = $node['content'] ?? null;
+            if (is_array($content)) {
+                $this->_collectDocumentSearchParts($content, $parts, $siteId);
             }
         }
-
-        return $items;
     }
 
     private function _getBlockGroupsForSettings(): array
     {
-        $data = $this->fieldData;
-
-        foreach ($data as $groupKey => $group) {
-            $blocks = $group['blockTypes'] ?? [];
-
-            foreach ($blocks as $blockTypeKey => $blockTypeData) {
-                // Remove this before populating the model
-                $layout = ArrayHelper::remove($blockTypeData, 'layout');
-
-                $blockType = new BlockType($blockTypeData);
-                $blockTypeArray = $blockType->toArray();
-
-                // Watch for Vue's reactivity with arrays/objects. Easier to just implement here.
-                // Never actually stored in the DB, but needed for field layout designer
-                $blockTypeArray['layout'] = $layout;
-
-                // Override with prepped data for Vue
-                $data[$groupKey]['blockTypes'][$blockTypeKey] = $blockTypeArray;
-            }
-        }
-
-        return $data;
-    }
-
-    private function _getBlockGroupsForInput($placeholderKey, ElementInterface $element = null): array
-    {
-        /** @var Settings $settings */
-        $settings = Vizy::$plugin->getSettings();
-
-        // Get from the cache, if we've already prepped this field's block groups.
-        // The blocks HTML/JS is unique to this fields' ID and handle. Even if used multiple
-        // times in an element, or nested, we only need to generate this once.
-        return Vizy::$plugin->getCache()->getOrSet($this->getCacheKey('blockGroups', $element), function() use ($placeholderKey, $element, $settings) {
-            $view = Craft::$app->getView();
-
-            $data = $this->fieldData;
-
-            // As we can nested the same field recursively, we'll hit infinite loop errors at some point, so stop loading blocks at 10 levels.
-            if ($this->_recursiveFieldCount > $settings->recursiveFieldCount) {
-                return [];
-            }
-
-            foreach ($data as $groupKey => $group) {
-                $blocks = $group['blockTypes'] ?? [];
-
-                foreach ($blocks as $blockTypeKey => $blockTypeData) {
-                    // Skip any disabled blocktypes
-                    $enabled = $blockTypeData['enabled'] ?? true;
-
-                    if (!$enabled) {
-                        continue;
-                    }
-
-                    $blockType = new BlockType($blockTypeData);
-
-                    $fieldLayout = $blockType->getFieldLayout();
-
-                    if (!$fieldLayout) {
-                        // Discard the blocktype
-                        unset($data[$groupKey]['blockTypes'][$blockTypeKey]);
-
-                        continue;
-                    }
-
-                    $blockTypeArray = $blockType->toArray();
-
-                    $view->startJsBuffer();
-                    $view->startScriptBuffer();
-
-                    // Create a fake element with the same fieldtype as our block
-                    $blockElement = new BlockElement();
-                    $blockElement->id = rand();
-                    $blockElement->setFieldLayout($fieldLayout);
-                    $blockElement->setOwner($element);
-                    $blockElement->setType($blockType);
-                    $blockElement->setField($this);
-
-                    $originalNamespace = $view->getNamespace();
-
-                    // Ensure that all fields in the block are marked as fresh for new blocks
-                    if ($fieldLayout = $blockElement->getFieldLayout()) {
-                        foreach ($fieldLayout->getCustomFields() as $field) {
-                            $field->setIsFresh(true);
-                        }
-
-                        // Ensure nested fields like Matrix aren't left in a static state from a previous render.
-                        $this->_resetFieldLayoutFieldStatic($fieldLayout);
-                    }
-                    
-                    // Disregard the namespace of parent fields, or even using `fields`. This keeps our field data separate to Craft.
-                    // Also add a unique key to store data, to play nicely with slide-outs and their own namespace (that we don't use).
-                    $view->setNamespace("vizyData[__VIZY_BLOCK_{$placeholderKey}__][{$placeholderKey}]");
-
-                    $form = $fieldLayout->createForm($blockElement, false);
-                    $blockTypeArray['tabs'] = $form->getTabMenu();
-                    
-                    $fieldsHtml = $view->namespaceInputs($form->render());
-                    $footHtml = $view->clearJsBuffer(false);
-                    $scriptHtml = $view->clearScriptBuffer();
-
-                    $blockTypeArray['fieldsHtml'] = $fieldsHtml;
-
-                    $view->setNamespace($originalNamespace);
-
-                    $footHtml = $this->_composeDeferredFootHtml($footHtml, $scriptHtml, $placeholderKey);
-
-                    // Reset $_isFresh's
-                    if ($fieldLayout = $blockElement->getFieldLayout()) {
-                        foreach ($fieldLayout->getCustomFields() as $field) {
-                            $field->setIsFresh(null);
-                        }
-                    }
-
-                    $blockTypeArray['footHtml'] = $footHtml;
-
-                    $data[$groupKey]['blockTypes'][$blockTypeKey] = $blockTypeArray;
-                }
-
-                // Ensure we reset array indexes to play nicely with JS
-                $data[$groupKey]['blockTypes'] = array_values($data[$groupKey]['blockTypes']);
-            }
-
-            return $data;
-        });
-    }
-
-    private function _getBlocksForInput($value, $placeholderKey, ElementInterface $element = null): array
-    {
-        $view = Craft::$app->getView();
-
-        $blocks = [];
-
-        if ($value instanceof NodeCollection) {
-            foreach ($value->getNodes() as $block) {
-                if ($block instanceof VizyBlock) {
-                    $tabErrors = [];
-                    $blockId = $block->attrs['id'];
-                    $fieldLayout = $block->getFieldLayout();
-
-                    if (!$fieldLayout) {
-                        continue;
-                    }
-
-                    $view->startJsBuffer();
-                    $view->startScriptBuffer();
-
-                    // Create a fake element with the same fieldtype as our block
-                    $blockElement = $block->getBlockElement($element);
-                    $blockElement->setType($block->getBlockType());
-                    $blockElement->setField($this);
-                    $blockElement->setIsFresh(false);
-
-                    $originalNamespace = $view->getNamespace();
-
-                    if ($fieldLayout = $blockElement->getFieldLayout()) {
-                        foreach ($fieldLayout->getTabs() as $tab) {
-                            foreach ($tab->getElements() as $layoutElement) {
-                                if ($layoutElement instanceof CustomField) {
-                                    $layoutElement->getField()->setIsFresh(false);
-
-                                    // Record any tabs with field errors so we can reflect it via the UI
-                                    if (isset($blockElement->getErrors()[$layoutElement->getField()->handle])) {
-                                        $tabErrors[] = 'tab-' . $tab->getHtmlId();
-                                    }
-                                }
-                            }
-                        }
-
-                        $this->_resetFieldLayoutFieldStatic($fieldLayout);
-                    }
-
-                    // Disregard the namespace of parent fields, or even using `fields`. This keeps our field data separate to Craft.
-                    // Also add a unique key to store data, to play nicely with slide-outs and their own namespace (that we don't use).
-                    $view->setNamespace("vizyData[__VIZY_BLOCK_{$placeholderKey}__][{$placeholderKey}]");
-
-                    $fieldsHtml = $view->namespaceInputs($fieldLayout->createForm($blockElement, false)->render());
-                    $footHtml = $view->clearJsBuffer(false);
-                    $scriptHtml = $view->clearScriptBuffer();
-
-                    $view->setNamespace($originalNamespace);
-
-                    $footHtml = $this->_composeDeferredFootHtml($footHtml, $scriptHtml, $placeholderKey);
-
-                    if ($block->hasMatrixFields() && $blockElement->id) {
-                        $this->_registerMatrixBlockContextJs(
-                            $blockId,
-                            (int)$blockElement->id,
-                            $block->getMatrixAnchorUid(),
-                            $block->getBlockType()?->id,
-                        );
-                    }
-
-                    $blocks[] = [
-                        'id' => $blockId,
-                        'fieldsHtml' => $fieldsHtml,
-                        'footHtml' => $footHtml,
-                        'tabErrors' => $tabErrors,
-                    ];
-                }
-            }
-        }
-
-        return $blocks;
-    }
-
-    private function _getVizyConfig(): array
-    {
-        if ($this->configSelectionMode === 'manual') {
-            $config = Json::decode($this->manualConfig);
-        } else {
-            $config = $this->_getConfig('vizy', $this->vizyConfig) ?: [];
-        }
-
-        // Give plugins a chance to modify the config
-        $event = new ModifyVizyConfigEvent([
-            'config' => $config,
-            'field' => $this,
-        ]);
-
-        $this->trigger(self::EVENT_DEFINE_VIZY_CONFIG, $event);
-
-        return $event->config;
-    }
-
-    private function _getConfig(string $dir, string $file = null)
-    {
-        if (!$file) {
-            $file = 'Default.json';
-        }
-
-        $path = Craft::$app->getPath()->getConfigPath() . DIRECTORY_SEPARATOR . $dir . DIRECTORY_SEPARATOR . $file;
-
-        if (!is_file($path)) {
-            if ($file !== 'Default.json') {
-                // Try again with Default
-                return $this->_getConfig($dir);
-            }
-            return false;
-        }
-
-        return Json::decode(file_get_contents($path));
-    }
-
-    private function _getCustomConfigOptions(string $dir): array
-    {
-        $options = ['' => Craft::t('vizy', 'Default')];
-        $path = Craft::$app->getPath()->getConfigPath() . DIRECTORY_SEPARATOR . $dir;
-
-        if (is_dir($path)) {
-            $files = FileHelper::findFiles($path, [
-                'only' => ['*.json'],
-                'recursive' => false,
-            ]);
-
-            foreach ($files as $file) {
-                $filename = basename($file);
-
-                if ($filename !== 'Default.json') {
-                    $options[$filename] = pathinfo($file, PATHINFO_FILENAME);
-                }
-            }
-        }
-
-        return $options;
-    }
-
-    private function _getLinkOptions(Element $element = null): array
-    {
-        if ($this->_linkOptions !== null) {
-            return $this->_linkOptions;
-        }
-
-        $linkOptions = [];
-
-        $entrySources = $this->_entrySources($element);
-        $categorySources = $this->_categorySources($element);
-        $assetSources = $this->_assetSources();
-
-        if (!empty($entrySources)) {
-            $linkOptions[] = [
-                'optionTitle' => Craft::t('vizy', 'Link to an entry'),
-                'elementType' => Entry::class,
-                'refHandle' => Entry::refHandle(),
-                'sources' => $entrySources,
-                'criteria' => ['uri' => ':notempty:'],
-            ];
-        }
-
-        if (!empty($assetSources)) {
-            $linkOptions[] = [
-                'optionTitle' => Craft::t('vizy', 'Link to an asset'),
-                'elementType' => Asset::class,
-                'refHandle' => Asset::refHandle(),
-                'sources' => $assetSources,
-            ];
-        }
-
-        if (!empty($categorySources)) {
-            $linkOptions[] = [
-                'optionTitle' => Craft::t('vizy', 'Link to a category'),
-                'elementType' => Category::class,
-                'refHandle' => Category::refHandle(),
-                'sources' => $categorySources,
-            ];
-        }
-
-        // Give plugins a chance to add their own
-        $event = new RegisterLinkOptionsEvent([
-            'linkOptions' => $linkOptions,
-        ]);
-        $this->trigger(self::EVENT_REGISTER_LINK_OPTIONS, $event);
-        $linkOptions = $event->linkOptions;
-
-        // Fill in any missing ref handles
-        foreach ($linkOptions as &$linkOption) {
-            if (!isset($linkOption['refHandle'])) {
-                /** @var ElementInterface|string $class */
-                $class = $linkOption['elementType'];
-                $linkOption['refHandle'] = $class::refHandle() ?? $class;
-            }
-        }
-
-        return $this->_linkOptions = $linkOptions;
-    }
-
-    private function _entrySources(?ElementInterface $element, bool $showSingles = false): array
-    {
-        if ($this->_entrySources !== null) {
-            return $this->_entrySources;
-        }
-
-        $sources = [];
-        $sections = Craft::$app->getEntries()->getAllSections();
-
-        // Get all sites
-        $sites = Craft::$app->getSites()->getAllSites();
-
-        foreach ($sections as $section) {
-            if ($section->type === Section::TYPE_SINGLE) {
-                $showSingles = true;
-            } else if ($element) {
-                $sectionSiteSettings = $section->getSiteSettings();
-
-                foreach ($sites as $site) {
-                    if (isset($sectionSiteSettings[$site->id]) && $sectionSiteSettings[$site->id]->hasUrls) {
-                        $sources[] = 'section:' . $section->uid;
-                    }
-                }
-            }
-        }
-
-        $sources = array_values(array_unique($sources));
-
-        if ($showSingles) {
-            array_unshift($sources, 'singles');
-        }
-
-        if (!empty($sources)) {
-            array_unshift($sources, '*');
-        }
-
-        $sources = array_values(array_unique($sources));
-
-        // Include custom sources
-        $customSources = $this->_getCustomSources(Entry::class);
-
-        if (!empty($customSources)) {
-            $sources = array_merge($sources, $customSources);
-        }
-
-        return $this->_entrySources = $sources;
-    }
-
-    private function _categorySources(?ElementInterface $element): array
-    {
-        if ($this->_categorySources !== null) {
-            return $this->_categorySources;
-        }
-
-        if (!$element) {
-            return [];
-        }
-
-        $sources = Collection::make(Craft::$app->getCategories()->getAllGroups())
-            ->filter(fn(CategoryGroup $group) => $group->getSiteSettings()[$element->siteId]?->hasUrls ?? false)
-            ->map(fn(CategoryGroup $group) => "group:$group->uid")
-            ->values()
-            ->all();
-
-        // Include custom sources
-        $customSources = $this->_getCustomSources(Category::class);
-        
-        if (!empty($customSources)) {
-            $sources = array_merge($sources, $customSources);
-        }
-
-        return $this->_categorySources = $sources;
-    }
-
-    private function _assetSources(bool $withUrlsOnly = false): array
-    {
-        if ($this->_assetSources !== null) {
-            return $this->_assetSources;
-        }
-
-        if (!$this->availableVolumes) {
-            return [];
-        }
-
-        $volumes = Collection::make(Craft::$app->getVolumes()->getAllVolumes());
-
-        if (is_array($this->availableVolumes)) {
-            $volumes = $volumes->filter(fn(Volume $volume) => in_array($volume->uid, $this->availableVolumes));
-        }
-
-        if (!$this->showUnpermittedVolumes) {
-            $userService = Craft::$app->getUser();
-            $volumes = $volumes->filter(fn(Volume $volume) => $userService->checkPermission("viewAssets:$volume->uid"));
-        }
-
-        if ($withUrlsOnly) {
-            // only allow volumes that belong to FS that have public URLs
-            $volumes = $volumes->filter(fn(Volume $volume) => $volume->getFs()->hasUrls);
-        }
-
-        $sources = $volumes
-            ->map(fn(Volume $volume) => "volume:$volume->uid")
-            ->values()
-            ->all();
-
-        // Include custom sources
-        $customSources = $this->_getCustomSources(Asset::class);
-
-        if (!empty($customSources)) {
-            $sources = array_merge($sources, $customSources);
-        }
-
-        return $this->_assetSources = $sources;
-    }
-
-    private function _transforms(): array
-    {
-        if ($this->_transforms !== null) {
-            return $this->_transforms;
-        }
-
-        if (!$this->availableTransforms) {
-            return [];
-        }
-
-        $allTransforms = Craft::$app->getImageTransforms()->getAllTransforms();
-        $transformList = [];
-
-        foreach ($allTransforms as $transform) {
-            if (!is_array($this->availableTransforms) || in_array($transform->uid, $this->availableTransforms, false)) {
-                $transformList[] = [
-                    'handle' => Html::encode($transform->handle),
-                    'name' => Html::encode($transform->name),
-                ];
-            }
-        }
-
-        return $this->_transforms = $transformList;
+        $groups = $this->blockTypePickerGroups;
+
+        // Missing references remain visible and submit unchanged; this method
+        // never expands UID into field-local schema or a copied FieldLayout.
+        return array_map(static fn(array $group, int $index) => [
+            'id' => 'group-' . $index,
+            'name' => (string)($group['name'] ?? ''),
+            'blockTypeUids' => array_values(array_map('strval', $group['blockTypeUids'] ?? [])),
+            'disabledBlockTypeUids' => array_values(array_map('strval', $group['disabledBlockTypeUids'] ?? [])),
+        ], $groups, array_keys($groups));
     }
 
     private function _getSourceOptions(): array
@@ -1440,47 +1071,5 @@ JS, [
         }
 
         return $sourceOptions;
-    }
-
-    private function _getCustomSources(string $elementType): array
-    {
-        $customSources = [];
-        $elementSources = Craft::$app->getElementSources()->getSources($elementType, 'modal');
-        
-        foreach ($elementSources as $elementSource) {
-            if ($elementSource['type'] === ElementSources::TYPE_CUSTOM && isset($elementSource['key'])) {
-                $customSources[] = $elementSource['key'];
-            }
-        }
-
-        return $customSources;
-    }
-
-    private function _composeDeferredFootHtml(string|false $js, array|false $scripts, string $placeholderKey): string
-    {
-        $payload = '';
-
-        if (is_string($js) && $js !== '') {
-            $payload .= '<script id="script-__VIZY_BLOCK_' . $placeholderKey . '__">' . $js . '</script>';
-        }
-
-        if (is_array($scripts)) {
-            $payload .= $this->_flattenScriptBuffer($scripts);
-        }
-
-        return $payload;
-    }
-
-    private function _flattenScriptBuffer(array $scripts): string
-    {
-        $output = '';
-
-        foreach ($scripts as $positionScripts) {
-            if (is_array($positionScripts) && $positionScripts) {
-                $output .= implode("\n", $positionScripts) . "\n";
-            }
-        }
-
-        return $output;
     }
 }

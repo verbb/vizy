@@ -1,11 +1,30 @@
-{% extends 'vizy/_layouts' %}
+{% extends 'verbb-base/_layouts/settings' %}
 
 {% import '_includes/forms' as forms %}
 {% import 'verbb-base/_macros' as macros %}
 
 {% requireAdmin %}
 
+{% do view.registerAssetBundle('verbb\\vizy\\web\\assets\\cp\\VizyCpAsset') -%}
+{% do view.registerAssetBundle('craft\\web\\assets\\admintable\\AdminTableAsset') -%}
+
 {% set crumbs = [
-    { label: 'Vizy' | t('vizy'), url: url('vizy') },
-    { label: 'Settings' | t('app'), url: url('vizy/settings') },
-] %}
+    { label: 'Settings' | t('app'), url: url('settings') },
+    { label: 'Plugins' | t('app'), url: url('settings/plugins') },
+    { label: 'Vizy' | t('vizy'), url: url('vizy/settings') },
+] | merge(crumbs ?? []) %}
+
+{% set pageTabs = {
+    general: { title: 'General Settings' | t('vizy'), url: url('vizy/settings') },
+    'block-types': { title: 'Block Types' | t('vizy'), url: url('vizy/settings/block-types') },
+    'editor-configs': { title: 'Editor Configs' | t('vizy'), url: url('vizy/settings/editor-configs') },
+} %}
+
+{% set pageTitle = pageTitle ?? false %}
+{% if title is not defined and pageTitle %}
+    {% set title = pageTitle %}
+{% endif %}
+
+{% block settingsMeta %}
+    {{ hiddenInput('pluginHandle', 'vizy') }}
+{% endblock %}
