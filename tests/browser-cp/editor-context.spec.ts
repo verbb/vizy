@@ -8,7 +8,12 @@ async function login(page: Page, username = 'editor') {
     await page.goto('/index.php?p=admin/login');
     await page.getByRole('textbox', { name: 'Username or Email' }).fill(username);
     await page.getByRole('textbox', { name: 'Password', exact: true }).fill('testing-only-password');
-    await page.getByRole('button', { name: 'Sign in', exact: true }).click();
+    // Authentication and the destination page can outlast a UI assertion's
+    // polling window on a cold Craft app. Wait for the actual navigation.
+    await Promise.all([
+        page.waitForURL((url) => url.searchParams.get('p') !== 'admin/login', { waitUntil: 'domcontentloaded' }),
+        page.getByRole('button', { name: 'Sign in', exact: true }).click(),
+    ]);
     await expect(page.getByRole('textbox', { name: 'Username or Email' })).toHaveCount(0);
 }
 

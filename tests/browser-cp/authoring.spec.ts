@@ -8,7 +8,12 @@ async function login(page: Page, username = 'admin') {
     await page.goto('/index.php?p=admin/login');
     await page.getByRole('textbox', { name: 'Username or Email' }).fill(username);
     await page.getByRole('textbox', { name: 'Password', exact: true }).fill('testing-only-password');
-    await page.getByRole('button', { name: 'Sign in', exact: true }).click();
+    // Authentication and the destination page can outlast a UI assertion's
+    // polling window on a cold Craft app. Wait for the actual navigation.
+    await Promise.all([
+        page.waitForURL((url) => url.searchParams.get('p') !== 'admin/login', { waitUntil: 'domcontentloaded' }),
+        page.getByRole('button', { name: 'Sign in', exact: true }).click(),
+    ]);
     await expect(page.getByRole('textbox', { name: 'Username or Email' })).toHaveCount(0);
 }
 
@@ -72,7 +77,11 @@ test('a required hosted field blocks saving without discarding edits or changing
     const rootText = page.locator('vizy-editor').first().locator('.ProseMirror').first().locator(':scope > p').first();
     await heading.fill('');
     await rootText.fill('Unsaved validation edit');
-    await page.keyboard.press('ControlOrMeta+S');
+    await Promise.all([
+        page.waitForEvent('framenavigated', { predicate: (frame) => frame === page.mainFrame() }),
+        page.keyboard.press('ControlOrMeta+S'),
+    ]);
+    await page.waitForLoadState('domcontentloaded');
     await expect(page.getByRole('link', { name: 'Card heading cannot be blank.', exact: true })).toBeVisible();
     await expect(heading).toHaveValue('');
     await expect(rootText).toHaveText('Unsaved validation edit');
