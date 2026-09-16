@@ -375,6 +375,14 @@ it('supports unsaved Entry defining context and rejects canSave denial', functio
         'siteId' => Craft::$app->getSites()->getPrimarySite()->id,
         'scenario' => Entry::SCENARIO_LIVE,
     ]);
+    // Earlier tests can retain Craft's placed field clone in the cached layout.
+    // Keep this fixture's configured types in sync with that same-request clone.
+    foreach ($unsaved->getFieldLayout()->getCustomFieldElements() as $placement) {
+        $layoutField = $placement->getField();
+        if ($layoutField instanceof \verbb\vizy\fields\VizyField && $layoutField->uid === $field->uid) {
+            $layoutField->blockTypePickerGroups = $field->blockTypePickerGroups;
+        }
+    }
     $context = Vizy::$plugin->getEditorContexts()->issue($unsaved, $field);
     $block = [
         'type' => 'vizyBlock',
