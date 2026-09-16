@@ -249,7 +249,8 @@ export class VizyImageDialogElement extends LitElement {
         void this.dialog?.hide('submit');
     };
 
-    #onAfterHide = (): void => {
+    #onAfterHide = (event: Event): void => {
+        if (event.target !== this.dialog) return;
         this.#editor = null;
         this.#seed = null;
     };

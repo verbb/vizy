@@ -315,6 +315,42 @@ test('applies Enabled Link Settings Site to semantic and fallback element links'
     }
 });
 
+for (const updating of [false, true]) for (const control of ['size', 'transform']) {
+    test(`applies image ${updating ? 'Update' : 'Insert'} after choosing ${control}`, async ({ page }) => {
+        const attrs = { assetUid: '33333333-3333-4333-8333-333333333333', siteMode: 'current', altMode: 'custom', alt: 'Before', size: 'default', link: null };
+        await mount(page, { type: 'doc', attrs: { schemaVersion: 2 }, content: updating ? [{ type: 'image', attrs }] : [{ type: 'paragraph' }] }, {
+            manifest: { ...editorManifest, enabledNodes: [...editorManifest.enabledNodes, 'image'], modules: [...editorManifest.modules, 'vizy/core/node/image'] },
+        });
+        await page.evaluate(async ({ updating, attrs }) => {
+            const preview = 'data:image/svg+xml,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="10" height="10"><rect width="10" height="10" fill="blue"/></svg>');
+            (window as any).Craft.sendActionRequest = () => Promise.resolve({ data: { url: preview } });
+            const editor = (document.querySelector('vizy-editor') as any).editor;
+            if (updating) editor.commands.setNodeSelection(0);
+            else editor.commands.setTextSelection(1);
+            const dialog = document.createElement('vizy-image-dialog') as any;
+            document.body.append(dialog);
+            await dialog.openForEditor(editor, {
+                assetUid: attrs.assetUid, assetId: 12, previewUrl: preview, alt: 'Changed alt', title: '', linkUrl: '', openInNewTab: false, size: 'default', transform: '', updating,
+                ...(updating ? { originalAttrs: attrs } : {}),
+            }, { focus: false, transforms: [{ handle: 'thumb', name: 'Thumbnail' }] });
+        }, { updating, attrs });
+        const dialog = page.locator('vizy-image-dialog');
+        const select = dialog.locator(`.image-dialog__${control}`);
+        await select.click();
+        await select.getByRole('option', { name: control === 'size' ? 'Small' : 'Thumbnail', exact: true }).click();
+        await expect(select.getByRole('listbox')).not.toBeVisible();
+        await dialog.getByRole('button', { name: updating ? 'Update' : 'Insert', exact: true }).click();
+        await expect(dialog.getByRole('dialog')).not.toBeVisible();
+        const images = await page.evaluate(() => {
+            const result: any[] = [];
+            (document.querySelector('vizy-editor') as any).editor.state.doc.descendants((node: any) => { if (node.type.name === 'image') result.push(node.attrs); });
+            return result;
+        });
+        expect(images).toHaveLength(1);
+        expect(images[0]).toMatchObject({ assetUid: attrs.assetUid, alt: 'Changed alt', size: control === 'size' ? 'small' : 'default' });
+    });
+}
+
 test('honors Initial Rows independently for root and Hosted editors', async ({ page }) => {
     await mount(page, { type: 'doc', attrs: { schemaVersion: 2 }, content: [] }, {
         manifest: { ...editorManifest, field: { ...editorManifest.field, initialRows: 20 } },

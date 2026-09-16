@@ -19,6 +19,7 @@
   access; image transforms remain preview-oriented.
 
 ### Fixed
+- Fixed image Insert and Update doing nothing after choosing a Size or Transform.
 - Fixed Enabled Link Settings being ignored by link dialogs, including missing Title, Classes, and Site controls.
 - Fixed fallback element links ignoring current-site and fixed-site choices.
 - Fixed Vizy 3 migrations failing for repeated placements of the same Vizy field.
