@@ -300,7 +300,7 @@ final class OwnerContentMigrator extends Component
             }
             $field = $this->_fieldForOwner($owner, $field);
             $raw = $this->_readRawValue($owner, $field);
-            $document = Vizy::$plugin->getDocuments()->normalizeValue($raw, $owner, $field);
+            $document = $this->_persistedDocument($raw, $owner, $field);
             return $this->_hashValue($this->_canonicalArray($document)) === $checkpoint->candidateHash;
         } catch (Throwable) {
             return false;
@@ -322,7 +322,7 @@ final class OwnerContentMigrator extends Component
             $field = $this->_fieldForOwner($owner, $field);
 
             $raw = $this->_readRawValue($owner, $field);
-            $persisted = Vizy::$plugin->getDocuments()->normalizeValue($raw, $owner, $field);
+            $persisted = $this->_persistedDocument($raw, $owner, $field);
             $canonical = $this->_canonicalArray($persisted);
             $persistedHash = $this->_hashValue($canonical);
             $expectedProfile = $this->_profile(Json::decode((string)$checkpoint->candidateJson));
@@ -465,6 +465,17 @@ final class OwnerContentMigrator extends Component
         $canonical = Json::decode($serialized);
         (new DocumentParser())->parse($canonical, $document->owner(), $document->field());
         return $canonical;
+    }
+
+    private function _persistedDocument(mixed $raw, ElementInterface $owner, VizyField $field): VizyDocument
+    {
+        $value = $this->_decodeSource($raw);
+        if (!is_array($value)) {
+            throw new RuntimeException('Persisted owner content is not a canonical Vizy document.');
+        }
+
+        // Read-time legacy conversion is not evidence that the Craft write landed.
+        return (new DocumentParser())->parse($value, $owner, $field);
     }
 
     private function _profile(array $canonical): array

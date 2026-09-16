@@ -15,6 +15,58 @@ it('installs durable owner migration checkpoints', function() {
     expect(Craft::$app->getDb()->tableExists(Table::OWNER_MIGRATIONS))->toBeTrue();
 });
 
+it('requires an actual canonical write before verifying a resumed migration', function(string $state) {
+    $field = VizyFixtureFactory::vizyField();
+    $owner = VizyFixtureFactory::entry('Resume storage ' . StringHelper::randomString(8));
+    Vizy::$plugin->getLegacySchemaMaps()->saveProvenance($field->uid, [
+        'fieldUid' => $field->uid,
+        'sourceFingerprint' => 'resume-storage-fixture',
+        'schemaMap' => [],
+        'canonicalFieldSettings' => ['rootContentType' => 'rich'],
+    ]);
+    $placementUid = $owner->getFieldLayout()->getCustomFieldElements()[0]->uid;
+    $legacy = Json::encode([['type' => 'paragraph', 'content' => [['type' => 'text', 'text' => 'Legacy content']]]]);
+    $condition = ['elementId' => $owner->id, 'siteId' => $owner->siteId];
+    Craft::$app->getDb()->createCommand()->update('{{%elements_sites}}', ['content' => [$placementUid => $legacy]], $condition)->execute();
+    $read = static function() use ($condition, $placementUid) {
+        $content = (new Query())->select('content')->from('{{%elements_sites}}')->where($condition)->scalar();
+        $content = is_string($content) ? Json::decode($content) : $content;
+        return $content[$placementUid];
+    };
+    $owner = Entry::find()->id($owner->id)->siteId($owner->siteId)->status(null)->one();
+    $mapping = ['revision' => 'resume-storage', 'schemaMap' => []];
+    $migrator = Vizy::$plugin->getOwnerContentMigrator();
+    $analysis = $migrator->analyzeOwner($owner, $field, $mapping, StringHelper::UUID());
+    expect($analysis['state'])->toBe('ready');
+    $checkpoint = \verbb\vizy\records\OwnerMigration::findOne($analysis['id']);
+    if ($state !== 'ready') {
+        // Simulate interrupted bookkeeping before a write, or a bad persisted marker.
+        $checkpoint->state = $state;
+        expect($checkpoint->save())->toBeTrue();
+    }
+    if ($state === 'ready') {
+        expect(fn() => $migrator->resume((int)$checkpoint->id))->toThrow(RuntimeException::class, 'original approved mapping');
+        expect($read())->toBe($legacy)
+            ->and(\verbb\vizy\records\OwnerMigration::findOne($checkpoint->id)->state)->toBe('ready');
+        $result = $migrator->migrateOwner($owner, $field, $mapping, true, $analysis['runUid']);
+    } else {
+        $result = $migrator->resume((int)$checkpoint->id);
+    }
+    if ($state === 'persisted') {
+        expect($result['state'])->toBe('failed')
+            ->and($result['errors'][0]['code'])->toBe('verificationFailed')
+            ->and($read())->toBe($legacy);
+    } else {
+        $stored = $read();
+        $stored = is_string($stored) ? Json::decode($stored) : $stored;
+        expect($result['state'])->toBe('verified', Json::encode($result))
+            ->and($result['attempts'])->toBe(1)
+            ->and($stored['type'])->toBe('doc')
+            ->and($stored['attrs']['schemaVersion'])->toBe(2)
+            ->and($stored['content'][0]['content'][0]['text'])->toBe('Legacy content');
+    }
+})->with(['ready', 'persisting', 'persisted']);
+
 it('fails Nested Vizy → Content Area owner migrations as retired', function() {
     $field = VizyFixtureFactory::vizyField();
     expect(Craft::$app->getFields()->saveField($field))->toBeTrue();

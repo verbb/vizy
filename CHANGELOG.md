@@ -19,6 +19,7 @@
   access; image transforms remain preview-oriented.
 
 ### Fixed
+- Fixed resumed Vizy 3 migrations reporting completion before canonical content had been saved.
 - Fixed Initial Rows having no effect on editor height.
 - Fixed Plain Text Paste retaining clipboard formatting when enabled.
 - Fixed an empty Available Volumes selection showing all available image sources.
