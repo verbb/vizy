@@ -58,6 +58,115 @@ afterEach(function() {
     Vizy::$plugin->getEditorAcknowledgements()->resetRequestStateForTesting();
 });
 
+it('migrates repeated legacy placements with independent resumable checkpoints', function() {
+    ['owner' => $owner, 'fields' => $fields] = repeatedVizyPlacements();
+    $fieldUid = $fields[0]->uid;
+    Vizy::$plugin->getLegacySchemaMaps()->saveProvenance($fieldUid, [
+        'fieldUid' => $fieldUid, 'sourceFingerprint' => 'repeated-migration', 'schemaMap' => [],
+        'canonicalFieldSettings' => ['rootContentType' => 'rich'],
+    ]);
+    $raw = [];
+    foreach ($fields as $index => $field) {
+        $raw[$field->layoutElement->uid] = Json::encode([['type' => 'paragraph', 'content' => [['type' => 'text', 'text' => 'Legacy placement ' . $index]]]]);
+    }
+    $condition = ['elementId' => $owner->id, 'siteId' => $owner->siteId];
+    Craft::$app->getDb()->createCommand()->update('{{%elements_sites}}', ['content' => $raw], $condition)->execute();
+    $owner = Entry::find()->id($owner->id)->siteId($owner->siteId)->status(null)->one();
+    $migrator = Vizy::$plugin->getOwnerContentMigrator();
+    $runUid = StringHelper::UUID();
+    $mapping = ['revision' => 'repeated-placement', 'schemaMap' => []];
+    $analyses = array_map(fn($field) => $migrator->analyzeOwner($owner, $field, $mapping, $runUid), $fields);
+    expect(array_column($analyses, 'state'))->toBe(['ready', 'ready'])
+        ->and($analyses[0]['id'])->not->toBe($analyses[1]['id']);
+    $ambiguous = \verbb\vizy\records\OwnerMigration::findOne($analyses[0]['id']);
+    $ambiguous->ownerPlacementUid = null;
+    $ambiguous->state = 'persisting';
+    expect($ambiguous->save())->toBeTrue();
+    expect(fn() => $migrator->resume((int)$ambiguous->id))->toThrow(RuntimeException::class, 'Exact Vizy field');
+    $unchanged = (new \craft\db\Query())->select('content')->from('{{%elements_sites}}')->where($condition)->scalar();
+    expect(is_string($unchanged) ? Json::decode($unchanged) : $unchanged)->toEqual($raw);
+    $ambiguous->ownerPlacementUid = $fields[0]->layoutElement->uid;
+    $ambiguous->state = 'ready';
+    expect($ambiguous->save())->toBeTrue();
+    foreach ($fields as $index => $field) {
+        // Resume must select the original placement even when the same UID occurs twice.
+        $checkpoint = \verbb\vizy\records\OwnerMigration::findOne($analyses[$index]['id']);
+        $checkpoint->state = 'persisting';
+        expect($checkpoint->save())->toBeTrue();
+        $result = $migrator->resume((int)$checkpoint->id);
+        expect($result['state'])->toBe('verified', Json::encode($result))
+            ->and($result['ownerPlacementUid'])->toBe($field->layoutElement->uid);
+        $content = (new \craft\db\Query())->select('content')->from('{{%elements_sites}}')->where($condition)->scalar();
+        $content = is_string($content) ? Json::decode($content) : $content;
+        foreach ($fields as $otherIndex => $other) {
+            $value = $content[$other->layoutElement->uid];
+            $value = is_string($value) ? Json::decode($value) : $value;
+            if ($otherIndex <= $index) {
+                expect($value['type'])->toBe('doc');
+                $nodes = $value['content'];
+            } else {
+                $nodes = $value['content'] ?? $value;
+            }
+            expect($nodes[0]['content'][0]['text'])->toBe('Legacy placement ' . $otherIndex);
+        }
+    }
+    expect($migrator->migrateOwner($owner, $fields[0], $mapping, true, $runUid)['id'])->toBe($analyses[0]['id'])
+        ->and($migrator->migrateOwner($owner, $fields[1], $mapping, true, $runUid)['id'])->toBe($analyses[1]['id']);
+});
+
+it('promotes repeated owner jobs and selects the same placement through the console', function() {
+    ['owner' => $owner, 'fields' => $fields] = repeatedVizyPlacements();
+    $fieldUid = $fields[0]->uid;
+    $pc = Craft::$app->getProjectConfig();
+    $config = $pc->get('fields.' . $fieldUid);
+    $config['settings'] = ['editorMode' => VizyField::MODE_RICH_TEXT, 'vizyConfig' => 'standard', 'fieldData' => []];
+    $pc->set('fields.' . $fieldUid, $config);
+    Craft::$app->getFields()->refreshFields();
+    $content = [];
+    $jobs = [];
+    foreach ($fields as $index => $field) {
+        $content[$field->layoutElement->uid] = Json::encode([['type' => 'paragraph', 'content' => [['type' => 'text', 'text' => 'Promoted placement ' . $index]]]]);
+        $jobs[] = [
+            'elementType' => Entry::class, 'elementId' => $owner->id, 'siteId' => $owner->siteId,
+            'fieldUid' => $fieldUid, 'ownerPlacementUid' => $field->layoutElement->uid,
+            'mapping' => ['revision' => 'repeated-promotion'],
+        ];
+    }
+    $condition = ['elementId' => $owner->id, 'siteId' => $owner->siteId];
+    Craft::$app->getDb()->createCommand()->update('{{%elements_sites}}', ['content' => $content], $condition)->execute();
+    $orchestrator = Vizy::$plugin->getPromotionOrchestrator();
+    $plan = $orchestrator->analyze();
+    expect($plan['status'])->toBe('ready', Json::encode($plan))
+        ->and($plan['fields'])->toHaveKey($fieldUid);
+    $result = $orchestrator->apply($plan, ['complete' => true, 'jobs' => $jobs], \verbb\vizy\legacy\Vizy3PromotionOrchestrator::CONFIRMATION);
+    expect($result['status'])->toBe('complete', Json::encode($result));
+    $checkpoints = \verbb\vizy\records\OwnerMigration::find()->where(['ownerId' => $owner->id, 'fieldUid' => $fieldUid])->all();
+    expect($checkpoints)->toHaveCount(2);
+    $stored = (new \craft\db\Query())->select('content')->from('{{%elements_sites}}')->where($condition)->scalar();
+    $stored = is_string($stored) ? Json::decode($stored) : $stored;
+    foreach ($fields as $index => $field) {
+        $value = $stored[$field->layoutElement->uid];
+        $value = is_string($value) ? Json::decode($value) : $value;
+        expect($value['type'])->toBe('doc')->and($value['content'][0]['content'][0]['text'])->toBe('Promoted placement ' . $index);
+    }
+    $mappingFile = tempnam(Craft::$app->getPath()->getTempPath(), 'vizy-mapping-');
+    file_put_contents($mappingFile, Json::encode($jobs[0]['mapping']));
+    try {
+        $controller = new \verbb\vizy\console\controllers\MigrationsController('migrations', Vizy::$plugin, ['interactive' => false]);
+        expect($controller->actionOwner(Entry::class, (int)$owner->id, (int)$owner->siteId, $fieldUid, $mappingFile))->toBe(\yii\console\ExitCode::DATAERR);
+        foreach ($checkpoints as $checkpoint) {
+            $controller->ownerPlacementUid = $checkpoint->ownerPlacementUid;
+            $controller->runUid = $checkpoint->runUid;
+            $controller->apply = true;
+            $controller->confirm = \verbb\vizy\legacy\Vizy3PromotionOrchestrator::CONFIRMATION;
+            expect($controller->actionOwner(Entry::class, (int)$owner->id, (int)$owner->siteId, $fieldUid, $mappingFile))->toBe(\yii\console\ExitCode::OK);
+        }
+        expect((int)\verbb\vizy\records\OwnerMigration::find()->where(['ownerId' => $owner->id, 'fieldUid' => $fieldUid])->count())->toBe(2);
+    } finally {
+        unlink($mappingFile);
+    }
+});
+
 it('acknowledges each repeated field placement with its own persisted document', function() {
     ['owner' => $owner, 'fields' => $fields, 'documents' => $documents] = repeatedVizyPlacements();
     $transport = [];

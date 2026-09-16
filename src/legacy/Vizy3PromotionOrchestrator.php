@@ -3,6 +3,7 @@ namespace verbb\vizy\legacy;
 
 use verbb\vizy\Vizy;
 use verbb\vizy\fields\VizyField;
+use verbb\vizy\helpers\FieldPlacements;
 use verbb\vizy\models\BlockType;
 use verbb\vizy\records\BlockType as BlockTypeRecord;
 use verbb\vizy\records\SchemaPromotion;
@@ -349,7 +350,7 @@ final class Vizy3PromotionOrchestrator extends Component
                 (string)($job['elementType'] ?? ''),
                 (int)($job['siteId'] ?? 0),
             );
-            $field = Craft::$app->getFields()->getFieldByUid($fieldUid);
+            $field = $owner ? FieldPlacements::field($owner, $fieldUid, $job['ownerPlacementUid'] ?? null) : null;
             if (!$owner || !$field instanceof VizyField || !is_array($job['mapping'] ?? null)) {
                 throw new RuntimeException("Owner job {$index} cannot resolve its exact owner, field, or mapping.");
             }

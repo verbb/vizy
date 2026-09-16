@@ -74,6 +74,7 @@ class Install extends Migration
             'mappingRevision' => $this->string()->notNull(),
             'mappingHash' => $this->char(64)->notNull(),
             'fieldUid' => $this->uid()->notNull(),
+            'ownerPlacementUid' => $this->uid()->null()->defaultValue(null),
             'ownerType' => $this->string()->notNull(),
             'ownerId' => $this->integer()->notNull(),
             'siteId' => $this->integer()->notNull(),
@@ -97,7 +98,7 @@ class Install extends Migration
             'uid' => $this->uid(),
         ]);
         $this->createIndex(null, Table::OWNER_MIGRATIONS, [
-            'runUid', 'fieldUid', 'ownerType', 'ownerId', 'siteId', 'derivativeKey',
+            'runUid', 'fieldUid', 'ownerType', 'ownerId', 'siteId', 'derivativeKey', 'ownerPlacementUid',
         ], true);
         $this->createIndex(null, Table::OWNER_MIGRATIONS, ['state'], false);
         $this->createIndex(null, Table::OWNER_MIGRATIONS, ['fieldUid', 'mappingHash'], false);

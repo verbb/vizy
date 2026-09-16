@@ -306,7 +306,7 @@ All write commands print a short human summary and a `nextStep`, then emit **JSO
 php craft vizy/migrations/promotion-analyze
 ```
 
-Optional: pass a JSON file of target field handles to limit the plan.
+Optional: pass a JSON file of target Block Type handles, keyed by `<fieldUid>:<legacyBlockTypeId>`, to resolve handle conflicts. This changes the resulting Block Type handles; analysis still includes all eligible Vizy 3 fields.
 
 - Status **`ready`** — save the printed plan JSON.
 - Status **`blocked`** — fix every **error** diagnostic and re-run. **Info** diagnostics (for example Matrix grandfather) do not block.
@@ -323,6 +323,21 @@ Owner scope must be a JSON object with `"complete": true` and a `jobs` array (ma
 ```
 
 Populate `jobs` when the analyze plan (or your own inventory) lists owner conversions to run with apply.
+
+Each job identifies the owner, field and approved mapping. When the same field appears more than once in an owner's layout, include its `ownerPlacementUid` from that layout's Custom Field element and add a separate job for each placement:
+
+```json
+{
+  "elementType": "craft\\elements\\Entry",
+  "elementId": 123,
+  "siteId": 1,
+  "fieldUid": "<field UID>",
+  "ownerPlacementUid": "<field layout element UID>",
+  "mapping": { "revision": "1" }
+}
+```
+
+Omit `ownerPlacementUid` only when the owner's layout contains one placement of the field. Checkpoints retain the selected placement so resume converts the same value.
 
 ### 3. Preview the Upgrade
 
@@ -360,7 +375,9 @@ php craft vizy/migrations/status
 php craft vizy/migrations/resume {checkpointId} --confirm="PROMOTE VIZY 3"
 ```
 
-Default mapping is map-only: `{ "revision": 1, "schemaMap": { … } }`. If `schemaMap` is omitted, the migrator uses the map saved when that field was upgraded.
+Default mapping is map-only: `{ "revision": "1", "schemaMap": { … } }`. The revision must be a non-empty string. If `schemaMap` is omitted, the migrator uses the map saved when that field was upgraded.
+
+For a repeated field, pass `--ownerPlacementUid={fieldLayoutElementUid}` to both analysis and apply. In PHP, pass the field instance returned by the selected Custom Field layout element to `analyzeOwner()` or `migrateOwner()`.
 
 ## After Promotion
 

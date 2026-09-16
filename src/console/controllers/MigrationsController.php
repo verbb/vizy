@@ -3,6 +3,7 @@ namespace verbb\vizy\console\controllers;
 
 use verbb\vizy\Vizy;
 use verbb\vizy\fields\VizyField;
+use verbb\vizy\helpers\FieldPlacements;
 use verbb\vizy\legacy\PromotionOperatorMessages;
 use verbb\vizy\legacy\Vizy3PromotionOrchestrator;
 
@@ -26,6 +27,7 @@ final class MigrationsController extends Controller
     public bool $apply = false;
     public ?string $runUid = null;
     public ?string $confirm = null;
+    public ?string $ownerPlacementUid = null;
 
 
     // Public Methods
@@ -33,7 +35,7 @@ final class MigrationsController extends Controller
 
     public function options($actionID): array
     {
-        return [...parent::options($actionID), 'apply', 'runUid', 'confirm'];
+        return [...parent::options($actionID), 'apply', 'runUid', 'confirm', 'ownerPlacementUid'];
     }
 
     /**
@@ -47,9 +49,9 @@ final class MigrationsController extends Controller
         string $mappingFile,
     ): int {
         $owner = Craft::$app->getElements()->getElementById($elementId, $elementType, $siteId);
-        $field = Craft::$app->getFields()->getFieldByUid($fieldUid);
+        $field = $owner ? FieldPlacements::field($owner, $fieldUid, $this->ownerPlacementUid) : null;
         if (!$owner || !$field instanceof VizyField) {
-            $this->stderr(Craft::t('vizy', 'Exact owner/site or Vizy field was not found.') . PHP_EOL, Console::FG_RED);
+            $this->stderr(Craft::t('vizy', 'Exact owner/site or Vizy field placement was not found. For repeated fields, pass --ownerPlacementUid.') . PHP_EOL, Console::FG_RED);
             return ExitCode::DATAERR;
         }
 

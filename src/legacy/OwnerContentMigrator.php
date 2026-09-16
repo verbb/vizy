@@ -5,6 +5,7 @@ use verbb\vizy\Vizy;
 use verbb\vizy\document\DocumentParser;
 use verbb\vizy\document\VizyDocument;
 use verbb\vizy\fields\VizyField;
+use verbb\vizy\helpers\FieldPlacements;
 use verbb\vizy\legacy\LegacyDocumentConversionException;
 use verbb\vizy\legacy\Vizy3DocumentAdapter;
 use verbb\vizy\records\OwnerMigration;
@@ -72,7 +73,12 @@ final class OwnerContentMigrator extends Component
         $source = $this->_readRawValue($owner, $field);
         $sourceHash = $this->_hashSnapshot($source);
 
-        $checkpoint = OwnerMigration::findOne($identity) ?? new OwnerMigration($identity);
+        $checkpoint = OwnerMigration::findOne($identity);
+        if (!$checkpoint && FieldPlacements::field($owner, $field->uid, null)) {
+            // Retain pre-placement checkpoints only while their target is unambiguous.
+            $checkpoint = OwnerMigration::findOne([...$identity, 'ownerPlacementUid' => null]);
+        }
+        $checkpoint ??= new OwnerMigration($identity);
         if (!$checkpoint->getIsNewRecord()) {
             if ($checkpoint->mappingHash !== $mappingHash) {
                 throw new RuntimeException('Migration run identity is already bound to a different mapping hash.');
@@ -219,7 +225,7 @@ final class OwnerContentMigrator extends Component
         if (!$owner || $owner->getIsDraft() || $owner->getIsRevision()) {
             throw new RuntimeException('Exact canonical owner could not be reloaded for persistence.');
         }
-        $field = $this->_fieldForOwner($owner, Craft::$app->getFields()->getFieldByUid((string)$checkpoint->fieldUid));
+        $field = FieldPlacements::field($owner, (string)$checkpoint->fieldUid, $checkpoint->ownerPlacementUid);
         if (!$field instanceof VizyField) {
             throw new RuntimeException('Exact Vizy field could not be reloaded for persistence.');
         }
@@ -236,7 +242,7 @@ final class OwnerContentMigrator extends Component
             return $this->_fail($checkpoint, 'staleSourceSnapshot', 'Owner content changed before persistence.');
         }
 
-        $key = implode(':', [$owner::class, $owner->id, $owner->siteId, $field->uid]);
+        $key = implode(':', [$owner::class, $owner->id, $owner->siteId, $field->uid, FieldPlacements::uid($owner, $field)]);
         if (isset($this->saving[$key])) {
             return $this->_fail($checkpoint, 'recursiveOwnerMigration', 'Recursive owner migration was prevented.');
         }
@@ -294,11 +300,10 @@ final class OwnerContentMigrator extends Component
                 (string)$checkpoint->ownerType,
                 (int)$checkpoint->siteId,
             );
-            $field = Craft::$app->getFields()->getFieldByUid((string)$checkpoint->fieldUid);
+            $field = $owner ? FieldPlacements::field($owner, (string)$checkpoint->fieldUid, $checkpoint->ownerPlacementUid) : null;
             if (!$owner || !$field instanceof VizyField) {
                 return false;
             }
-            $field = $this->_fieldForOwner($owner, $field);
             $raw = $this->_readRawValue($owner, $field);
             $document = $this->_persistedDocument($raw, $owner, $field);
             return $this->_hashValue($this->_canonicalArray($document)) === $checkpoint->candidateHash;
@@ -315,12 +320,10 @@ final class OwnerContentMigrator extends Component
                 (string)$checkpoint->ownerType,
                 (int)$checkpoint->siteId,
             );
-            $field = Craft::$app->getFields()->getFieldByUid((string)$checkpoint->fieldUid);
+            $field = $owner ? FieldPlacements::field($owner, (string)$checkpoint->fieldUid, $checkpoint->ownerPlacementUid) : null;
             if (!$owner || !$field instanceof VizyField) {
                 throw new RuntimeException('Exact persisted owner or Vizy field could not be reloaded.');
             }
-            $field = $this->_fieldForOwner($owner, $field);
-
             $raw = $this->_readRawValue($owner, $field);
             $persisted = $this->_persistedDocument($raw, $owner, $field);
             $canonical = $this->_canonicalArray($persisted);
@@ -518,14 +521,9 @@ final class OwnerContentMigrator extends Component
 
     private function _readRawValue(ElementInterface $owner, VizyField $field): mixed
     {
-        $placementUids = [];
-        foreach ($owner->getFieldLayout()?->getCustomFieldElements() ?? [] as $placement) {
-            if ($placement->getField()->uid === $field->uid) {
-                $placementUids[] = $placement->uid;
-            }
-        }
-        if (count($placementUids) !== 1) {
-            throw new RuntimeException('Owner migration requires exactly one matching Vizy field placement.');
+        $placementUid = FieldPlacements::uid($owner, $field);
+        if ($placementUid === null) {
+            throw new RuntimeException('Owner migration requires an exact Vizy field placement.');
         }
         $content = (new Query())
             ->select(['content'])
@@ -536,28 +534,23 @@ final class OwnerContentMigrator extends Component
             throw new RuntimeException('Exact owner/site content row is missing.');
         }
         $content = is_string($content) ? Json::decode($content) : $content;
-        if (!is_array($content) || !array_key_exists($placementUids[0], $content)) {
+        if (!is_array($content) || !array_key_exists($placementUid, $content)) {
             throw new RuntimeException(
                 'Exact persisted Vizy source value is missing from owner content. Available keys: '
                 . implode(', ', is_array($content) ? array_keys($content) : []),
             );
         }
-        return $content[$placementUids[0]];
+        return $content[$placementUid];
     }
 
     private function _fieldForOwner(ElementInterface $owner, VizyField $field): VizyField
     {
-        $matches = [];
-        foreach ($owner->getFieldLayout()?->getCustomFieldElements() ?? [] as $placement) {
-            $candidate = $placement->getField();
-            if ($candidate->uid === $field->uid && $candidate instanceof VizyField) {
-                $matches[] = $candidate;
-            }
+        $placementUid = FieldPlacements::uid($owner, $field);
+        $placed = $placementUid ? FieldPlacements::field($owner, $field->uid, $placementUid) : null;
+        if (!$placed) {
+            throw new RuntimeException('Owner migration requires an exact Vizy field instance.');
         }
-        if (count($matches) !== 1) {
-            throw new RuntimeException('Owner migration requires exactly one matching Vizy field instance.');
-        }
-        return $matches[0];
+        return $placed;
     }
 
     private function _decodeSource(mixed $source): mixed
@@ -594,6 +587,7 @@ final class OwnerContentMigrator extends Component
         return [
             'runUid' => $runUid,
             'fieldUid' => $field->uid,
+            'ownerPlacementUid' => FieldPlacements::uid($owner, $field),
             'ownerType' => $owner::class,
             'ownerId' => $owner->id,
             'siteId' => $owner->siteId,
@@ -631,6 +625,7 @@ final class OwnerContentMigrator extends Component
             'mappingRevision' => $checkpoint->mappingRevision,
             'mappingHash' => $checkpoint->mappingHash,
             'fieldUid' => $checkpoint->fieldUid,
+            'ownerPlacementUid' => $checkpoint->ownerPlacementUid,
             'owner' => [
                 'type' => $checkpoint->ownerType,
                 'id' => (int)$checkpoint->ownerId,

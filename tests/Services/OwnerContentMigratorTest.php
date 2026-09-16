@@ -39,12 +39,15 @@ it('requires an actual canonical write before verifying a resumed migration', fu
     $analysis = $migrator->analyzeOwner($owner, $field, $mapping, StringHelper::UUID());
     expect($analysis['state'])->toBe('ready');
     $checkpoint = \verbb\vizy\records\OwnerMigration::findOne($analysis['id']);
-    if ($state !== 'ready') {
+    if ($state === 'legacy-ready') {
+        $checkpoint->ownerPlacementUid = null;
+        expect($checkpoint->save())->toBeTrue();
+    } elseif ($state !== 'ready') {
         // Simulate interrupted bookkeeping before a write, or a bad persisted marker.
         $checkpoint->state = $state;
         expect($checkpoint->save())->toBeTrue();
     }
-    if ($state === 'ready') {
+    if (in_array($state, ['ready', 'legacy-ready'], true)) {
         expect(fn() => $migrator->resume((int)$checkpoint->id))->toThrow(RuntimeException::class, 'original approved mapping');
         expect($read())->toBe($legacy)
             ->and(\verbb\vizy\records\OwnerMigration::findOne($checkpoint->id)->state)->toBe('ready');
@@ -60,12 +63,13 @@ it('requires an actual canonical write before verifying a resumed migration', fu
         $stored = $read();
         $stored = is_string($stored) ? Json::decode($stored) : $stored;
         expect($result['state'])->toBe('verified', Json::encode($result))
+            ->and($result['id'])->toBe($analysis['id'])
             ->and($result['attempts'])->toBe(1)
             ->and($stored['type'])->toBe('doc')
             ->and($stored['attrs']['schemaVersion'])->toBe(2)
             ->and($stored['content'][0]['content'][0]['text'])->toBe('Legacy content');
     }
-})->with(['ready', 'persisting', 'persisted']);
+})->with(['ready', 'persisting', 'persisted', 'legacy-ready']);
 
 it('fails Nested Vizy → Content Area owner migrations as retired', function() {
     $field = VizyFixtureFactory::vizyField();
