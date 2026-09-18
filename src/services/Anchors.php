@@ -385,12 +385,18 @@ class Anchors extends Component
             return true;
         }
 
-        return $this->getAnchor(
+        $anchor = $this->getAnchor(
             $parentOwner,
             $vizyField,
             $blockInstanceId,
             $block->getMatrixAnchorUid(),
-        ) === null;
+        );
+
+        if (!$anchor) {
+            return true;
+        }
+
+        return $this->_matrixFieldsWithDuplicateEntryUids($block, $anchor) !== [];
     }
 
     /**
@@ -462,13 +468,24 @@ class Anchors extends Component
                 }
 
                 $duplicateSortOrderFields = $this->_matrixFieldsWithDuplicateSortOrder($block);
+                $anchor = $this->getAnchor(
+                    $parentOwner,
+                    $vizyField,
+                    (string)$block->getId(),
+                    $block->getMatrixAnchorUid(),
+                );
+                $duplicateEntryUidFields = $anchor
+                    ? $this->_matrixFieldsWithDuplicateEntryUids($block, $anchor)
+                    : [];
 
                 $blocks[] = [
                     'id' => (string)$block->getId(),
                     'blockType' => $blockType,
-                    'reason' => $duplicateSortOrderFields
-                        ? 'duplicate-sort-order'
-                        : ($this->_blockHasMatrixJsonContent($block) ? 'json-matrix' : 'missing-anchor'),
+                    'reason' => $duplicateEntryUidFields
+                        ? 'duplicate-entry-uid'
+                        : ($duplicateSortOrderFields
+                            ? 'duplicate-sort-order'
+                            : ($this->_blockHasMatrixJsonContent($block) ? 'json-matrix' : 'missing-anchor')),
                     'matrixFields' => $matrixFields,
                     'matrixAnchorUid' => $block->getMatrixAnchorUid(),
                     'path' => $blockPath,
@@ -613,6 +630,31 @@ class Anchors extends Component
         }
 
         return array_keys($duplicates);
+    }
+
+    /**
+     * @return string[]
+     */
+    private function _matrixFieldsWithDuplicateEntryUids(VizyBlock $block, MatrixAnchor $anchor): array
+    {
+        $fieldLayout = $block->getFieldLayout();
+
+        if (!$fieldLayout) {
+            return [];
+        }
+
+        $duplicates = [];
+
+        foreach ($fieldLayout->getCustomFields() as $field) {
+            if (
+                $field instanceof Matrix &&
+                MatrixHelper::duplicateNestedEntryUids($field, $anchor)
+            ) {
+                $duplicates[] = $field->handle;
+            }
+        }
+
+        return $duplicates;
     }
 
     private function _matrixContentFilled(mixed $content): bool

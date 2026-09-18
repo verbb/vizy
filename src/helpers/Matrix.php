@@ -38,14 +38,24 @@ class Matrix
             return self::ensureSortOrder($content);
         }
 
-        // Handle legacy blocks, which are structured differently
-        if (isset($content['blocks'])) {
-            $content['blocks'] = self::filterContent($content['blocks'], $entryTypes, $blockFields);
-        } else {
-            $content = self::filterContent($content, $entryTypes, $blockFields);
+        // Legacy Vizy Matrix data is keyed by temporary identities such as `new1`.
+        // Craft only treats those keys as persistent UIDs when they use its delta format;
+        // otherwise every normalization pass creates another nested Entry with the same UID.
+        $blocks = isset($content['blocks']) ? $content['blocks'] : $content;
+        $blocks = self::filterContent($blocks, $entryTypes, $blockFields);
+        $entries = [];
+        $sortOrder = [];
+
+        foreach ($blocks as $blockKey => $block) {
+            $uid = (string)($block['uid'] ?? $blockKey);
+            $entries["uid:$uid"] = $block;
+            $sortOrder[] = $uid;
         }
 
-        return $content;
+        return [
+            'entries' => $entries,
+            'sortOrder' => $sortOrder,
+        ];
     }
 
     public static function isCraft5MatrixContent(mixed $content): bool
@@ -199,9 +209,80 @@ class Matrix
             $query->canonicalsOnly();
         }
 
-        $query->setCachedResult($query->all());
+        $query->setCachedResult(self::deduplicateEntriesByUid($query->all()));
 
         return $query;
+    }
+
+    /**
+     * Collapse legacy migration duplicates while preserving their first logical position.
+     * The newest element row wins, matching Craft's own `indexBy('uid')` normalization.
+     *
+     * @template T of object
+     * @param T[] $entries
+     * @return T[]
+     */
+    public static function deduplicateEntriesByUid(array $entries): array
+    {
+        $deduplicated = [];
+        $positions = [];
+
+        foreach ($entries as $entry) {
+            $uid = (string)($entry->uid ?? '');
+
+            if ($uid === '' || !isset($positions[$uid])) {
+                if ($uid !== '') {
+                    $positions[$uid] = count($deduplicated);
+                }
+
+                $deduplicated[] = $entry;
+
+                continue;
+            }
+
+            $position = $positions[$uid];
+            $current = $deduplicated[$position];
+
+            if ((int)($entry->id ?? 0) > (int)($current->id ?? 0)) {
+                $deduplicated[$position] = $entry;
+            }
+        }
+
+        return $deduplicated;
+    }
+
+    /**
+     * @return string[]
+     */
+    public static function duplicateNestedEntryUids(\craft\fields\Matrix $field, MatrixAnchor $anchor): array
+    {
+        $entries = Entry::find()
+            ->fieldId($field->id)
+            ->ownerId($anchor->id)
+            ->siteId($anchor->siteId)
+            ->drafts(null)
+            ->canonicalsOnly()
+            ->status(null)
+            ->limit(null)
+            ->all();
+        $seen = [];
+        $duplicates = [];
+
+        foreach ($entries as $entry) {
+            $uid = (string)$entry->uid;
+
+            if ($uid === '') {
+                continue;
+            }
+
+            if (isset($seen[$uid])) {
+                $duplicates[$uid] = $uid;
+            } else {
+                $seen[$uid] = true;
+            }
+        }
+
+        return array_values($duplicates);
     }
 
     public static function migrateJsonToAnchor($field, MatrixAnchor $anchor, mixed $content): void

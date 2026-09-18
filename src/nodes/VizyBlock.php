@@ -319,6 +319,16 @@ class VizyBlock extends Node
                             continue;
                         }
 
+                        // Older Craft 5 migrations could normalize the same legacy `newN`
+                        // identity repeatedly, leaving distinct Entry rows with duplicate UIDs.
+                        // Re-save the de-duplicated query so Craft removes the stale rows.
+                        if (Matrix::duplicateNestedEntryUids($field, $anchor)) {
+                            Vizy::$plugin->getAnchors()->saveMatrixField($field, $anchor, $fieldValue, false);
+                            $this->_stampMatrixAnchor($value, $field, $anchor);
+
+                            continue;
+                        }
+
                         // Portal miss / empty attrs — keep JSON unless already migrated.
                         if (
                             !$this->_rawMatrixContentFilled($field) &&
@@ -541,6 +551,7 @@ class VizyBlock extends Node
             if ($element) {
                 $this->_blockElement->setOwner($element);
                 $this->_syncBlockElementAnchor($element);
+                $this->_syncBlockElementMatrixValues($this->_blockElement);
             }
 
             return $this->_blockElement;
@@ -559,6 +570,7 @@ class VizyBlock extends Node
         }
 
         $this->_syncBlockElementAnchor($parent, $block);
+        $this->_syncBlockElementMatrixValues($block);
 
         return $this->_blockElement = $block;
     }
@@ -789,6 +801,28 @@ class VizyBlock extends Node
         }
 
         $block->id = rand();
+    }
+
+    private function _syncBlockElementMatrixValues(BlockElement $block): void
+    {
+        $anchor = $block->getMatrixAnchor();
+        $fieldLayout = $block->getFieldLayout();
+
+        if (!$anchor || !$fieldLayout) {
+            return;
+        }
+
+        foreach ($fieldLayout->getCustomFields() as $field) {
+            if (
+                $field instanceof MatrixField &&
+                Matrix::isEmptyMatrixContent($this->_getRawFieldContent($field->handle))
+            ) {
+                // Matrix formHtml() reads from the synthetic Block element directly, rather
+                // than VizyBlock::normalizeFieldValue(). Seed it with the same de-duplicated
+                // anchor query used by front-end access.
+                $block->setFieldValue($field->handle, Matrix::nestedEntryQuery($field, $anchor));
+            }
+        }
     }
 
     private function _stampMatrixAnchor(array &$value, MatrixField $field, \verbb\vizy\elements\MatrixAnchor $anchor): void

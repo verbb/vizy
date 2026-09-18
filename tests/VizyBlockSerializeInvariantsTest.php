@@ -52,6 +52,14 @@ final class VizyBlockSerializeInvariantsTest extends TestCase
         $this->assertStringContainsString('Matrix::sanitizeMatrixContent($field, $fieldValue)', $body);
     }
 
+    public function testSerializeValueRepairsDuplicateNestedEntryUids(): void
+    {
+        $body = $this->_methodBody($this->vizyBlock, 'serializeValue');
+
+        $this->assertStringContainsString('Matrix::duplicateNestedEntryUids($field, $anchor)', $body);
+        $this->assertStringContainsString('saveMatrixField($field, $anchor, $fieldValue, false)', $body);
+    }
+
     private function _methodBody(string $source, string $method): string
     {
         if (!preg_match('/function ' . preg_quote($method, '/') . '\([^)]*\)[^{]*\{/', $source, $match, PREG_OFFSET_CAPTURE)) {

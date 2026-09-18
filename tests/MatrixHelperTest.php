@@ -33,4 +33,44 @@ final class MatrixHelperTest extends TestCase
         self::assertSame(['first', 'uid:second', 123, 'missing'], $result['sortOrder']);
         self::assertSame(['first', 'second', '123'], Matrix::duplicateSortOrderIds($content));
     }
+
+    public function testLegacyContentUsesCraftUidDeltaFormat(): void
+    {
+        $field = new class {
+            public array $entryTypes;
+
+            public function __construct()
+            {
+                $this->entryTypes = [new class {
+                    public string $handle = 'card';
+
+                    public function getCustomFields(): array
+                    {
+                        return [];
+                    }
+                }];
+            }
+        };
+
+        $result = Matrix::sanitizeMatrixContent($field, [
+            'new1' => ['type' => 'card', 'fields' => []],
+            'new2' => ['type' => 'card', 'fields' => []],
+        ]);
+
+        self::assertSame(['uid:new1', 'uid:new2'], array_keys($result['entries']));
+        self::assertSame(['new1', 'new2'], $result['sortOrder']);
+    }
+
+    public function testNestedEntriesAreDeduplicatedByUidUsingNewestRow(): void
+    {
+        $entries = [
+            (object)['id' => 10, 'uid' => 'first'],
+            (object)['id' => 11, 'uid' => 'second'],
+            (object)['id' => 20, 'uid' => 'first'],
+        ];
+
+        $result = Matrix::deduplicateEntriesByUid($entries);
+
+        self::assertSame([20, 11], array_map(fn(object $entry) => $entry->id, $result));
+    }
 }
