@@ -302,7 +302,7 @@ class VizyBlock extends Node
                                     $element?->id,
                                     $anchor->id,
                                     $e->getMessage(),
-                                ), __METHOD__);
+                                ));
 
                                 throw $e;
                             }
@@ -345,7 +345,7 @@ class VizyBlock extends Node
                             $element?->id,
                             $anchor->id,
                             $e->getMessage(),
-                        ), __METHOD__);
+                        ));
 
                         throw $e;
                     }

@@ -1,5 +1,10 @@
 # Changelog
 
+## Unreleased
+
+### Fixed
+- Fix Matrix-in-Vizy save failures being masked by a logging `TypeError` when migrating or clearing nested Matrix content.
+
 ## 3.2.8 - 2026-09-13
 
 ### Fixed

@@ -10,13 +10,16 @@ use PHPUnit\Framework\TestCase;
 final class VizyBlockSerializeInvariantsTest extends TestCase
 {
     private string $vizyBlock;
+    private string $anchorsController;
 
     protected function setUp(): void
     {
         $root = dirname(__DIR__);
         $this->vizyBlock = file_get_contents($root . '/src/nodes/VizyBlock.php');
+        $this->anchorsController = file_get_contents($root . '/src/console/controllers/AnchorsController.php');
 
         $this->assertNotFalse($this->vizyBlock);
+        $this->assertNotFalse($this->anchorsController);
     }
 
     public function testNestedAfterElementSaveSwallowsFkFailuresWithoutMatrixAnchor(): void
@@ -28,6 +31,17 @@ final class VizyBlockSerializeInvariantsTest extends TestCase
             $body,
             'Top-level nested afterElementSave must catch FK failures on synthetic Blocks (#377), and rethrow when a MatrixAnchor provides a real element id.',
         );
+    }
+
+    public function testVizyLoggingUsesCurrentBaseSignature(): void
+    {
+        foreach ([$this->vizyBlock, $this->anchorsController] as $source) {
+            $this->assertDoesNotMatchRegularExpression(
+                '/Vizy::(?:error|warning|info)\s*\(.*?__METHOD__\s*\);/s',
+                $source,
+                'Vizy logging accepts an array of translation parameters, not a legacy category string.',
+            );
+        }
     }
 
     private function _methodBody(string $source, string $method): string

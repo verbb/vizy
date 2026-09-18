@@ -668,7 +668,7 @@ class AnchorsController extends Controller
             $e->getMessage(),
             $e->getFile(),
             $e->getLine(),
-        ), __METHOD__);
+        ));
     }
 
     private function _printInvalidFieldDetails(ElementInterface $element, InvalidFieldException $e): void
