@@ -3,7 +3,7 @@
 ## Unreleased
 
 ### Fixed
-- Fix duplicate Matrix rows being rendered when stored Craft 5 `sortOrder` data repeats an entry ID, and heal the order during MatrixAnchor migration.
+- Fix duplicate Matrix rows being rendered in control-panel and front-end output when stored Craft 5 `sortOrder` data repeats an entry ID, and heal the order during MatrixAnchor migration.
 - Fix Matrix-in-Vizy save failures being masked by a logging `TypeError` when migrating or clearing nested Matrix content.
 
 ## 3.2.8 - 2026-09-13

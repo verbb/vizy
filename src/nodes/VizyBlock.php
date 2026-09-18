@@ -48,6 +48,7 @@ class VizyBlock extends Node
 
     private mixed $_fieldLayout = null;
     private mixed $_blockType = null;
+    private array $_duplicateMatrixSortOrderFields = [];
     private ?array $_fieldsByHandle = null;
     private ?array $_normalizedFieldValues = null;
     private ?BlockElement $_blockElement = null;
@@ -114,6 +115,14 @@ class VizyBlock extends Node
     public function getBlockType()
     {
         return $this->_blockType;
+    }
+
+    /**
+     * @return string[]
+     */
+    public function getDuplicateMatrixSortOrderFields(): array
+    {
+        return array_keys($this->_duplicateMatrixSortOrderFields);
     }
 
     public function getFieldLayout()
@@ -475,20 +484,32 @@ class VizyBlock extends Node
                         if ($field instanceof MatrixField) {
                             Vizy::$plugin->setNestedMatrixFields($field->handle);
 
+                            if (Matrix::duplicateSortOrderIds($fieldValue)) {
+                                // Keep this out of rawNode while retaining enough context for
+                                // `vizy/anchors/backfill --dry-run` to report the stored defect.
+                                $this->_duplicateMatrixSortOrderFields[$field->handle] = true;
+                            }
+
+                            if (is_string($fieldValue) && Json::isJsonObject($fieldValue)) {
+                                $fieldValue = Json::decode($fieldValue);
+                            }
+
                             if ($this->getMatrixAnchorUid()) {
                                 // Persisted Vizy JSON omits matrix blobs once an anchor exists, but incoming
                                 // save requests still carry matrix POST data in attrs. Preserve it here so
                                 // serializeValue() can hand it off to the anchor. Output JSON is stripped there.
-                                if (is_string($fieldValue) && Json::isJsonObject($fieldValue)) {
-                                    $fieldContent[$field->handle] = Json::decode($fieldValue);
-                                } elseif (is_array($fieldValue) && $fieldValue !== []) {
-                                    $fieldContent[$field->handle] = $fieldValue;
+                                if (is_array($fieldValue) && $fieldValue !== []) {
+                                    $fieldContent[$field->handle] = Matrix::sanitizeMatrixContent($field, $fieldValue);
                                 } else {
                                     unset($fieldContent[$field->handle]);
                                 }
 
                                 continue;
                             }
+
+                            $fieldContent[$field->handle] = Matrix::sanitizeMatrixContent($field, $fieldValue);
+
+                            continue;
                         }
 
                         // Normalize nested Vizy field data

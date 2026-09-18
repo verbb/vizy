@@ -44,6 +44,14 @@ final class VizyBlockSerializeInvariantsTest extends TestCase
         }
     }
 
+    public function testNormalizeValueSanitizesMatrixSortOrderBeforeRendering(): void
+    {
+        $body = $this->_methodBody($this->vizyBlock, 'normalizeValue');
+
+        $this->assertStringContainsString('Matrix::duplicateSortOrderIds($fieldValue)', $body);
+        $this->assertStringContainsString('Matrix::sanitizeMatrixContent($field, $fieldValue)', $body);
+    }
+
     private function _methodBody(string $source, string $method): string
     {
         if (!preg_match('/function ' . preg_quote($method, '/') . '\([^)]*\)[^{]*\{/', $source, $match, PREG_OFFSET_CAPTURE)) {

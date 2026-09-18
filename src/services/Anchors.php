@@ -591,14 +591,13 @@ class Anchors extends Component
      */
     private function _matrixFieldsWithDuplicateSortOrder(VizyBlock $block): array
     {
+        $duplicates = array_fill_keys($block->getDuplicateMatrixSortOrderFields(), true);
         $fields = $block->attrs['values']['content']['fields'] ?? [];
         $fieldLayout = $block->getFieldLayout();
 
         if (!$fieldLayout) {
-            return [];
+            return array_keys($duplicates);
         }
-
-        $duplicates = [];
 
         foreach ($fieldLayout->getCustomFields() as $field) {
             if (!$field instanceof Matrix) {
@@ -609,11 +608,11 @@ class Anchors extends Component
             $content = $fields[$field->handle] ?? ($uid ? ($fields[$uid] ?? null) : null);
 
             if (MatrixHelper::duplicateSortOrderIds($content)) {
-                $duplicates[] = $field->handle;
+                $duplicates[$field->handle] = true;
             }
         }
 
-        return $duplicates;
+        return array_keys($duplicates);
     }
 
     private function _matrixContentFilled(mixed $content): bool
