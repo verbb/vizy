@@ -6,6 +6,7 @@ use verbb\vizy\db\Table;
 use verbb\vizy\elements\Block as BlockElement;
 use verbb\vizy\elements\MatrixAnchor;
 use verbb\vizy\fields\VizyField;
+use verbb\vizy\helpers\Matrix as MatrixHelper;
 use verbb\vizy\nodes\VizyBlock;
 use verbb\vizy\records\MatrixAnchor as MatrixAnchorRecord;
 
@@ -460,10 +461,14 @@ class Anchors extends Component
                     }
                 }
 
+                $duplicateSortOrderFields = $this->_matrixFieldsWithDuplicateSortOrder($block);
+
                 $blocks[] = [
                     'id' => (string)$block->getId(),
                     'blockType' => $blockType,
-                    'reason' => $this->_blockHasMatrixJsonContent($block) ? 'json-matrix' : 'missing-anchor',
+                    'reason' => $duplicateSortOrderFields
+                        ? 'duplicate-sort-order'
+                        : ($this->_blockHasMatrixJsonContent($block) ? 'json-matrix' : 'missing-anchor'),
                     'matrixFields' => $matrixFields,
                     'matrixAnchorUid' => $block->getMatrixAnchorUid(),
                     'path' => $blockPath,
@@ -579,6 +584,36 @@ class Anchors extends Component
         }
 
         return false;
+    }
+
+    /**
+     * @return string[]
+     */
+    private function _matrixFieldsWithDuplicateSortOrder(VizyBlock $block): array
+    {
+        $fields = $block->attrs['values']['content']['fields'] ?? [];
+        $fieldLayout = $block->getFieldLayout();
+
+        if (!$fieldLayout) {
+            return [];
+        }
+
+        $duplicates = [];
+
+        foreach ($fieldLayout->getCustomFields() as $field) {
+            if (!$field instanceof Matrix) {
+                continue;
+            }
+
+            $uid = $field->layoutElement?->uid;
+            $content = $fields[$field->handle] ?? ($uid ? ($fields[$uid] ?? null) : null);
+
+            if (MatrixHelper::duplicateSortOrderIds($content)) {
+                $duplicates[] = $field->handle;
+            }
+        }
+
+        return $duplicates;
     }
 
     private function _matrixContentFilled(mixed $content): bool

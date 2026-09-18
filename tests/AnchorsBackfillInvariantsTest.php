@@ -83,6 +83,12 @@ final class AnchorsBackfillInvariantsTest extends TestCase
         $this->assertStringContainsString('_describeBlocksNeedingBackfill', $this->anchors);
     }
 
+    public function testBackfillReportsDuplicateMatrixSortOrder(): void
+    {
+        $this->assertStringContainsString('_matrixFieldsWithDuplicateSortOrder', $this->anchors);
+        $this->assertStringContainsString("'duplicate-sort-order'", $this->anchors);
+    }
+
     public function testGcStillSkipsDraftsAndPropagating(): void
     {
         $this->assertStringContainsString('getIsDraft()', $this->anchors);

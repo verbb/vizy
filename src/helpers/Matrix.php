@@ -35,7 +35,7 @@ class Matrix
 
         // Craft 5 Matrix fields post `{ entries: ..., sortOrder: ... }`.
         if (self::isCraft5MatrixContent($content)) {
-            return $content;
+            return self::ensureSortOrder($content);
         }
 
         // Handle legacy blocks, which are structured differently
@@ -99,17 +99,83 @@ class Matrix
             $sortOrder = [];
         }
 
+        // A repeated entry ID makes Craft normalize the same nested entry more than once,
+        // while persistence can still produce only one row for that ID. Preserve the first
+        // position so malformed stored JSON heals without guessing from entry content.
+        $deduplicated = [];
+        $seen = [];
+
+        foreach ($sortOrder as $entryId) {
+            if (!is_string($entryId) && !is_int($entryId)) {
+                $deduplicated[] = $entryId;
+
+                continue;
+            }
+
+            $identity = (string)$entryId;
+
+            if (str_starts_with($identity, 'uid:')) {
+                $identity = substr($identity, 4);
+            }
+
+            if (isset($seen[$identity])) {
+                continue;
+            }
+
+            $seen[$identity] = true;
+            $deduplicated[] = $entryId;
+        }
+
         foreach (array_keys($content['entries']) as $entryKey) {
+            $entryKey = (string)$entryKey;
             $uid = str_starts_with($entryKey, 'uid:') ? substr($entryKey, 4) : $entryKey;
 
-            if (!in_array($uid, $sortOrder, true) && !in_array($entryKey, $sortOrder, true)) {
-                $sortOrder[] = $uid;
+            if (!isset($seen[$uid])) {
+                $seen[$uid] = true;
+                $deduplicated[] = $uid;
             }
         }
 
-        $content['sortOrder'] = $sortOrder;
+        $content['sortOrder'] = $deduplicated;
 
         return $content;
+    }
+
+    /**
+     * @return string[]
+     */
+    public static function duplicateSortOrderIds(mixed $content): array
+    {
+        if (is_string($content) && Json::isJsonObject($content)) {
+            $content = Json::decode($content);
+        }
+
+        if (!self::isCraft5MatrixContent($content) || !is_array($content['sortOrder'] ?? null)) {
+            return [];
+        }
+
+        $seen = [];
+        $duplicates = [];
+
+        foreach ($content['sortOrder'] as $entryId) {
+            if (!is_string($entryId) && !is_int($entryId)) {
+                continue;
+            }
+
+            $identity = (string)$entryId;
+
+            if (str_starts_with($identity, 'uid:')) {
+                $identity = substr($identity, 4);
+            }
+
+            if (isset($seen[$identity])) {
+                $duplicates[$identity] = $identity;
+            } else {
+                $seen[$identity] = true;
+            }
+        }
+
+        return array_values($duplicates);
     }
 
     public static function isMatrix($field): bool
@@ -153,6 +219,7 @@ class Matrix
         }
 
         if (self::isCraft5MatrixContent($content)) {
+            $content = self::ensureSortOrder($content);
             $fieldValue = $field->normalizeValueFromRequest($content, $anchor);
         } else {
             $content = self::sanitizeMatrixContent($field, $content);

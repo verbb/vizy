@@ -307,7 +307,10 @@ class AnchorsController extends Controller
         foreach (['hyper', 'super-table', 'neo', 'typedlink', 'typedlinkfield', 'ckeditor'] as $handle) {
             if (Craft::$app->getPlugins()->isPluginEnabled($handle)) {
                 $plugin = Craft::$app->getPlugins()->getPlugin($handle);
-                $related[] = $plugin->name . ' ' . $plugin->getVersion();
+
+                if ($plugin) {
+                    $related[] = $plugin->name . ' ' . $plugin->getVersion();
+                }
             }
         }
 
