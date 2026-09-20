@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 3.2.9 - 2026-09-20
 
 ### Fixed
 - Fix duplicate Matrix rows being rendered in control-panel and front-end output when stored Craft 5 `sortOrder` data repeats an entry ID, or legacy MatrixAnchor migration creates multiple element rows with the same UID; heal both forms on save/backfill.
