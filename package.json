@@ -7,10 +7,11 @@
         "dev": "vite --port 4001",
         "build": "vite build",
         "watch": "vite build --watch",
-        "typecheck": "tsc --noEmit",
-        "test": "vitest run",
-        "test:browser": "playwright test",
-        "test:cp": "npm run build && node tests/browser-cp/run.mjs"
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:browser": "playwright test",
+    "test:cp": "npm run build && node tests/browser-cp/run.mjs",
+    "screenshots": "npm --prefix screenshots run screenshots --"
     },
     "devDependencies": {
         "@playwright/test": "1.62.1",

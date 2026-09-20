@@ -68,35 +68,5 @@
         "handle": "vizy",
         "changelogUrl": "https://raw.githubusercontent.com/verbb/vizy/craft-5/CHANGELOG.md",
         "class": "verbb\\vizy\\Vizy"
-    },
-    "archive": {
-        "exclude": [
-            "/tests",
-            "/storage",
-            "/test-results",
-            "/node_modules",
-            "/vendor",
-            "/.env*",
-            "/.github",
-            "/.idea",
-            "/.vscode",
-            "/package.json",
-            "/package-lock.json",
-            "/composer.lock",
-            "/phpunit*.xml",
-            "/tsconfig.json",
-            "/vite.config.*",
-            "/vitest.config.*",
-            "/playwright.config.*",
-            "/playwright.cp.config.*",
-            "**/.DS_Store",
-            "/.eslintrc.*",
-            "/.pest.xml",
-            "/config.codekit3",
-            "/.gitattributes",
-            "/.gitignore",
-            "/.cache",
-            "/.ddev"
-        ]
     }
 }
