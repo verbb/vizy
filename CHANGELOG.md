@@ -1,5 +1,10 @@
 # Changelog
 
+## Unreleased
+
+### Fixed
+- Fix saves failing with an invalid field handle error when required Matrix fields inside Vizy blocks propagate across sites.
+
 ## 3.2.9 - 2026-09-20
 
 ### Fixed

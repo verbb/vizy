@@ -88,7 +88,9 @@ class MatrixAnchor extends Element
 
     public function getFieldLayout(): ?FieldLayout
     {
-        return $this->_fieldLayout;
+        // Craft reloads localized anchors directly when propagating required Matrix fields.
+        // Their layout is persisted on the element, but the in-memory override is not.
+        return $this->_fieldLayout ?? parent::getFieldLayout();
     }
 
     public function setFieldLayout(?FieldLayout $fieldLayout): void
