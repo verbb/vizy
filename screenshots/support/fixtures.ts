@@ -8,6 +8,8 @@ export type VizyFeatureFixture = {
     fieldId: number;
     fieldHandle: string;
     settingsRoute: string;
+    editorConfigRoute: string;
+    blockTypesRoute: string;
     entryEditRoute: string;
 };
 
@@ -21,7 +23,7 @@ export async function seedVizyFeatureFixture(context: ScreenshotSetupContext): P
     const output = await context.runCraftScript(seedScript, { label: 'seed-vizy-feature-tour' });
     const fixture = JSON.parse(output.trim()) as VizyFeatureFixture;
 
-    if (!fixture.fieldId || !fixture.settingsRoute || !fixture.entryEditRoute) {
+    if (!fixture.fieldId || !fixture.settingsRoute || !fixture.editorConfigRoute || !fixture.blockTypesRoute || !fixture.entryEditRoute) {
         throw new Error(`Invalid Vizy feature fixture payload: ${output}`);
     }
 

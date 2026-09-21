@@ -1,7 +1,7 @@
 /**
- * Seed a real Craft 5 Vizy field, block configuration and editorial entry.
+ * Seed genuine Vizy 4 project schema and editorial content for screenshots.
  *
- * Echoes JSON: fieldId, fieldHandle, settingsRoute and entryEditRoute.
+ * Echoes JSON with the routes consumed by the screenshot scenarios.
  * Note: no opening PHP tag — @verbb/craft-screenshots injects this into a bootstrap.
  */
 
@@ -9,14 +9,18 @@ use craft\elements\Entry;
 use craft\fieldlayoutelements\CustomField;
 use craft\fields\PlainText;
 use craft\helpers\Json;
-use craft\helpers\StringHelper;
 use craft\models\EntryType;
 use craft\models\FieldLayout;
 use craft\models\FieldLayoutTab;
 use craft\models\Section;
 use craft\models\Section_SiteSettings;
+use verbb\vizy\elements\Block as VizyBlock;
+use verbb\vizy\document\VizyDocument;
 use verbb\vizy\fields\VizyField;
+use verbb\vizy\models\BlockType;
+use verbb\vizy\Vizy;
 
+const VIZY_SCREENSHOT_CONFIG = 'editorial';
 const VIZY_SCREENSHOT_FIELD_HANDLE = 'vizyFeatureContent';
 const VIZY_SCREENSHOT_SECTION_HANDLE = 'vizyFeatureStories';
 const VIZY_SCREENSHOT_SLUG = 'designing-a-better-city-guide';
@@ -27,10 +31,7 @@ function vizyScreenshotPlainTextField(string $handle, string $name, bool $multil
     $field = $fields->getFieldByHandle($handle);
 
     if (!$field instanceof PlainText) {
-        $field = new PlainText([
-            'name' => $name,
-            'handle' => $handle,
-        ]);
+        $field = new PlainText(['name' => $name, 'handle' => $handle]);
     }
 
     $field->name = $name;
@@ -42,7 +43,6 @@ function vizyScreenshotPlainTextField(string $handle, string $name, bool $multil
     }
 
     $saved = $fields->getFieldByHandle($handle);
-
     if (!$saved instanceof PlainText) {
         throw new RuntimeException("{$name} field could not be reloaded.");
     }
@@ -50,22 +50,22 @@ function vizyScreenshotPlainTextField(string $handle, string $name, bool $multil
     return $saved;
 }
 
-function vizyScreenshotBlockLayout(string $tabName, array $fields): FieldLayout
+function vizyScreenshotEditorConfig(): void
 {
-    $layout = new FieldLayout([
-        'type' => \verbb\vizy\models\BlockType::class,
-    ]);
-    $tab = new FieldLayoutTab([
-        'name' => $tabName,
-        'layout' => $layout,
-    ]);
-    $tab->setElements(array_map(
-        static fn($field) => new CustomField($field, ['width' => 100]),
-        $fields,
-    ));
-    $layout->setTabs([$tab]);
+    $service = Vizy::$plugin->getEditorConfigs();
+    $standard = $service->getConfig('standard');
+    if (!$standard) {
+        throw new RuntimeException('The standard Vizy Editor Config is unavailable.');
+    }
 
-    return $layout;
+    $config = $service->authorablePayload($standard);
+    $config['label'] = 'Editorial';
+    $config['capabilities']['marks'] = array_values(array_unique([
+        ...$config['capabilities']['marks'],
+        'underline',
+        'highlight',
+    ]));
+    $service->saveConfig(VIZY_SCREENSHOT_CONFIG, $config);
 }
 
 function vizyScreenshotNestedField(): VizyField
@@ -74,29 +74,20 @@ function vizyScreenshotNestedField(): VizyField
     $field = $fields->getFieldByHandle('vizyFeatureNestedBody');
 
     if (!$field instanceof VizyField) {
-        $field = new VizyField([
-            'name' => 'Article Body',
-            'handle' => 'vizyFeatureNestedBody',
-        ]);
+        $field = new VizyField(['name' => 'Supporting Copy', 'handle' => 'vizyFeatureNestedBody']);
     }
 
-    $field->name = 'Article Body';
-    $field->editorMode = VizyField::MODE_COMBINED;
-    $field->configSelectionMode = 'manual';
-    $field->manualConfig = Json::encode([
-        'buttons' => ['formatting', 'bold', 'italic', 'link', 'ordered-list', 'unordered-list'],
-        'formatting' => ['paragraph', 'h3'],
-        'commands' => [],
-    ]);
-    $field->initialRows = 5;
-    $field->fieldData = [];
+    $field->name = 'Supporting Copy';
+    $field->editorConfig = VIZY_SCREENSHOT_CONFIG;
+    $field->setEditorMode(VizyField::MODE_RICH_TEXT);
+    $field->initialRows = 4;
+    $field->blockTypePickerGroups = [];
 
     if (!$fields->saveField($field)) {
         throw new RuntimeException('Unable to save nested Vizy field: ' . Json::encode($field->getErrors()));
     }
 
     $saved = $fields->getFieldByHandle('vizyFeatureNestedBody');
-
     if (!$saved instanceof VizyField) {
         throw new RuntimeException('Nested Vizy field could not be reloaded.');
     }
@@ -104,58 +95,66 @@ function vizyScreenshotNestedField(): VizyField
     return $saved;
 }
 
+/** @param array<int, array{field: craft\base\FieldInterface, placementUid: string}> $placements */
 function vizyScreenshotBlockType(
-    string $id,
+    string $uid,
+    string $layoutUid,
+    string $tabUid,
     string $name,
     string $handle,
-    string $iconLabel,
-    string $iconValue,
-    FieldLayout $layout,
-): array {
-    return [
-        'id' => $id,
+    string $icon,
+    string $color,
+    array $placements,
+): BlockType {
+    $layout = new FieldLayout(['uid' => $layoutUid, 'type' => VizyBlock::class]);
+    $tab = new FieldLayoutTab(['uid' => $tabUid, 'name' => 'Content', 'layout' => $layout]);
+    $tab->setElements(array_map(
+        static fn(array $placement) => new CustomField($placement['field'], ['uid' => $placement['placementUid']]),
+        $placements,
+    ));
+    $layout->setTabs([$tab]);
+
+    $blockType = new BlockType([
+        'uid' => $uid,
         'name' => $name,
         'handle' => $handle,
-        'icon' => [
-            'label' => $iconLabel,
-            'value' => $iconValue,
-        ],
-        'enabled' => true,
-        'layoutUid' => StringHelper::UUID(),
-        'layout' => Json::encode($layout->getConfig()),
-    ];
+        'icon' => $icon,
+        'color' => $color,
+    ]);
+    $blockType->setFieldLayout($layout);
+
+    if (!Vizy::$plugin->getBlockTypes()->saveBlockType($blockType)) {
+        throw new RuntimeException("Unable to save {$name} Block Type: " . Json::encode($blockType->getErrors()));
+    }
+
+    $saved = Vizy::$plugin->getBlockTypes()->getBlockTypeByUid($uid);
+    if (!$saved) {
+        throw new RuntimeException("{$name} Block Type could not be reloaded.");
+    }
+
+    return $saved;
 }
 
-function vizyScreenshotField(array $blockGroups): VizyField
+function vizyScreenshotField(array $groups): VizyField
 {
     $fields = Craft::$app->getFields();
     $field = $fields->getFieldByHandle(VIZY_SCREENSHOT_FIELD_HANDLE);
 
     if (!$field instanceof VizyField) {
-        $field = new VizyField([
-            'name' => 'Article Content',
-            'handle' => VIZY_SCREENSHOT_FIELD_HANDLE,
-        ]);
+        $field = new VizyField(['name' => 'Article Content', 'handle' => VIZY_SCREENSHOT_FIELD_HANDLE]);
     }
 
     $field->name = 'Article Content';
-    $field->editorMode = VizyField::MODE_COMBINED;
-    $field->configSelectionMode = 'manual';
-    $field->manualConfig = Json::encode([
-        'buttons' => ['formatting', 'bold', 'italic', 'underline', 'blockquote', 'ordered-list', 'unordered-list', 'link', 'table', 'hr', 'undo', 'redo'],
-        'formatting' => ['paragraph', 'h2', 'h3', 'blockquote'],
-        'commands' => ['h1', 'h2', 'h3', 'ordered-list', 'unordered-list', 'blockquote', 'link', 'code-block', 'hr'],
-    ]);
-    $field->initialRows = 12;
-    $field->blockTypeBehaviour = VizyField::PICKER_BEHAVIOUR_CLICK;
-    $field->fieldData = $blockGroups;
+    $field->editorConfig = VIZY_SCREENSHOT_CONFIG;
+    $field->setEditorMode(VizyField::MODE_COMBINED);
+    $field->initialRows = 14;
+    $field->blockTypePickerGroups = $groups;
 
     if (!$fields->saveField($field)) {
         throw new RuntimeException('Unable to save Vizy field: ' . Json::encode($field->getErrors()));
     }
 
     $saved = $fields->getFieldByHandle(VIZY_SCREENSHOT_FIELD_HANDLE);
-
     if (!$saved instanceof VizyField) {
         throw new RuntimeException('Vizy field could not be reloaded.');
     }
@@ -170,12 +169,7 @@ function vizyScreenshotSection(VizyField $field): Section
     $site = Craft::$app->getSites()->getPrimarySite();
 
     if (!$section) {
-        $entryType = new EntryType([
-            'name' => 'Story',
-            'handle' => 'vizyFeatureStory',
-            'hasTitleField' => true,
-        ]);
-
+        $entryType = new EntryType(['name' => 'Story', 'handle' => 'vizyFeatureStory', 'hasTitleField' => true]);
         if (!$entries->saveEntryType($entryType)) {
             throw new RuntimeException('Unable to save Vizy screenshot entry type: ' . Json::encode($entryType->getErrors()));
         }
@@ -186,18 +180,15 @@ function vizyScreenshotSection(VizyField $field): Section
             'type' => Section::TYPE_CHANNEL,
         ]);
         $section->setEntryTypes([$entryType]);
-        $section->setSiteSettings([
-            new Section_SiteSettings([
-                'siteId' => $site->id,
-                'enabledByDefault' => true,
-                'hasUrls' => false,
-            ]),
-        ]);
+        $section->setSiteSettings([new Section_SiteSettings([
+            'siteId' => $site->id,
+            'enabledByDefault' => true,
+            'hasUrls' => false,
+        ])]);
 
         if (!$entries->saveSection($section)) {
             throw new RuntimeException('Unable to save Vizy screenshot section: ' . Json::encode($section->getErrors()));
         }
-
         $section = $entries->getSectionByHandle(VIZY_SCREENSHOT_SECTION_HANDLE);
     }
 
@@ -206,16 +197,12 @@ function vizyScreenshotSection(VizyField $field): Section
     }
 
     $entryType = $entries->getEntryTypesBySectionId($section->id)[0] ?? null;
-
     if (!$entryType) {
         throw new RuntimeException('Vizy screenshot section has no entry type.');
     }
 
     $layout = $entryType->getFieldLayout() ?? new FieldLayout(['type' => Entry::class]);
-    $tab = $layout->getTabs()[0] ?? new FieldLayoutTab([
-        'name' => Craft::t('app', 'Content'),
-        'layout' => $layout,
-    ]);
+    $tab = $layout->getTabs()[0] ?? new FieldLayoutTab(['name' => Craft::t('app', 'Content'), 'layout' => $layout]);
     $elements = array_values(array_filter(
         $tab->getElements(),
         static fn($element) => !($element instanceof CustomField && $element->getField()?->handle === VIZY_SCREENSHOT_FIELD_HANDLE),
@@ -234,184 +221,83 @@ function vizyScreenshotSection(VizyField $field): Section
 
 function vizyScreenshotText(string $text, array $marks = []): array
 {
-    $node = [
-        'type' => 'text',
-        'text' => $text,
-    ];
-
+    $node = ['type' => 'text', 'text' => $text];
     if ($marks) {
         $node['marks'] = $marks;
     }
-
     return $node;
 }
 
 function vizyScreenshotParagraph(array $content): array
 {
-    return [
-        'type' => 'paragraph',
-        'attrs' => ['textAlign' => 'start'],
-        'content' => $content,
-    ];
+    return ['type' => 'paragraph', 'attrs' => ['textAlign' => 'start'], 'content' => $content];
 }
 
-function vizyScreenshotBlock(VizyField $field, string $id, string $type, array $values): array
+function vizyScreenshotPlacementUid(BlockType $blockType, string $fieldHandle): string
 {
-    $blockType = $field->getBlockTypeById($type);
-
-    if (!$blockType || !$blockType->getFieldLayout()) {
-        throw new RuntimeException("Unable to resolve Vizy block layout for {$type}.");
-    }
-
-    $fields = [];
-
-    foreach ($blockType->getFieldLayout()->getCustomFields() as $customField) {
-        $layoutElementUid = $customField->layoutElement?->uid;
-
-        if ($layoutElementUid && array_key_exists($customField->handle, $values)) {
-            $fields[$layoutElementUid] = $values[$customField->handle];
+    foreach ($blockType->getFieldLayout()?->getCustomFieldElements() ?? [] as $element) {
+        if ($element->getField()?->handle === $fieldHandle && $element->uid) {
+            return $element->uid;
         }
+    }
+    throw new RuntimeException("Unable to resolve {$fieldHandle} on {$blockType->name}.");
+}
+
+function vizyScreenshotBlock(BlockType $blockType, string $blockUid, array $values): array
+{
+    $slots = [];
+    foreach ($values as $fieldHandle => $value) {
+        $slots[vizyScreenshotPlacementUid($blockType, $fieldHandle)] = $value;
     }
 
     return [
         'type' => 'vizyBlock',
         'attrs' => [
-            'id' => $id,
+            'blockUid' => $blockUid,
+            'blockTypeUid' => $blockType->uid,
             'enabled' => true,
-            'collapsed' => false,
-            'values' => [
-                'id' => $id,
-                'type' => $type,
-                'typeEnabled' => true,
-                'content' => [
-                    'fields' => $fields,
-                ],
-            ],
+            'fieldSlots' => $slots,
         ],
     ];
 }
 
+vizyScreenshotEditorConfig();
+
 $calloutHeading = vizyScreenshotPlainTextField('vizyFeatureCalloutHeading', 'Heading');
-$calloutText = vizyScreenshotPlainTextField('vizyFeatureCalloutText', 'Text');
+$calloutText = vizyScreenshotPlainTextField('vizyFeatureCalloutText', 'Text', true);
 $quoteText = vizyScreenshotPlainTextField('vizyFeatureQuoteText', 'Quote', true);
 $quoteCredit = vizyScreenshotPlainTextField('vizyFeatureQuoteCredit', 'Credit');
 $nestedBody = vizyScreenshotNestedField();
 
-$editorialBlockTypes = [
-    vizyScreenshotBlockType(
-        'type-callout',
-        'Callout',
-        'callout',
-        'Bullhorn',
-        'bullhorn-solid',
-        vizyScreenshotBlockLayout('Content', [$calloutHeading, $calloutText]),
-    ),
-    vizyScreenshotBlockType(
-        'type-quote',
-        'Pull Quote',
-        'pullQuote',
-        'Quote Left',
-        'quote-left-solid',
-        vizyScreenshotBlockLayout('Content', [$quoteText, $quoteCredit]),
-    ),
-    vizyScreenshotBlockType(
-        'type-image-text',
-        'Image & Text',
-        'imageText',
-        'Image',
-        'image-solid',
-        vizyScreenshotBlockLayout('Content', [$calloutHeading, $calloutText]),
-    ),
-    vizyScreenshotBlockType(
-        'type-video',
-        'Video',
-        'video',
-        'Video',
-        'video-solid',
-        vizyScreenshotBlockLayout('Content', [$calloutHeading]),
-    ),
-    vizyScreenshotBlockType(
-        'type-gallery',
-        'Gallery',
-        'gallery',
-        'Images',
-        'images-solid',
-        vizyScreenshotBlockLayout('Content', [$calloutHeading]),
-    ),
-];
-
-$layoutBlockTypes = [
-    vizyScreenshotBlockType(
-        'type-columns',
-        'Columns',
-        'columns',
-        'Columns',
-        'table-columns-solid',
-        vizyScreenshotBlockLayout('Settings', [$calloutHeading]),
-    ),
-    vizyScreenshotBlockType(
-        'type-spacer',
-        'Spacer',
-        'spacer',
-        'Arrows Up Down',
-        'arrows-up-down-solid',
-        vizyScreenshotBlockLayout('Settings', [$calloutHeading]),
-    ),
-    vizyScreenshotBlockType(
-        'type-button',
-        'Button',
-        'button',
-        'Link',
-        'link-solid',
-        vizyScreenshotBlockLayout('Settings', [$calloutHeading, $calloutText]),
-    ),
-];
-
-$widgetBlockTypes = [
-    vizyScreenshotBlockType(
-        'type-latest-news',
-        'Latest News',
-        'latestNews',
-        'Newspaper',
-        'newspaper-solid',
-        vizyScreenshotBlockLayout('Content', [$calloutHeading, $nestedBody]),
-    ),
-    vizyScreenshotBlockType(
-        'type-newsletter',
-        'Newsletter',
-        'newsletter',
-        'Envelope',
-        'envelope-solid',
-        vizyScreenshotBlockLayout('Content', [$calloutHeading, $calloutText]),
-    ),
-];
+$callout = vizyScreenshotBlockType('11111111-1111-4111-8111-111111111111', '11111111-1111-4111-8111-111111111112', '11111111-1111-4111-8111-111111111113', 'Callout', 'callout', 'bullhorn-solid', '#2563eb', [
+    ['field' => $calloutHeading, 'placementUid' => '11111111-1111-4111-8111-111111111114'],
+    ['field' => $calloutText, 'placementUid' => '11111111-1111-4111-8111-111111111115'],
+]);
+$pullQuote = vizyScreenshotBlockType('22222222-2222-4222-8222-222222222221', '22222222-2222-4222-8222-222222222222', '22222222-2222-4222-8222-222222222223', 'Pull Quote', 'pullQuote', 'quote-left-solid', '#7c3aed', [
+    ['field' => $quoteText, 'placementUid' => '22222222-2222-4222-8222-222222222224'],
+    ['field' => $quoteCredit, 'placementUid' => '22222222-2222-4222-8222-222222222225'],
+]);
+$imageText = vizyScreenshotBlockType('33333333-3333-4333-8333-333333333331', '33333333-3333-4333-8333-333333333332', '33333333-3333-4333-8333-333333333333', 'Image & Text', 'imageText', 'image-solid', '#059669', [
+    ['field' => $calloutHeading, 'placementUid' => '33333333-3333-4333-8333-333333333334'],
+    ['field' => $calloutText, 'placementUid' => '33333333-3333-4333-8333-333333333335'],
+]);
+$latestNews = vizyScreenshotBlockType('44444444-4444-4444-8444-444444444441', '44444444-4444-4444-8444-444444444442', '44444444-4444-4444-8444-444444444443', 'Latest News', 'latestNews', 'newspaper-solid', '#d97706', [
+    ['field' => $calloutHeading, 'placementUid' => '44444444-4444-4444-8444-444444444444'],
+    ['field' => $nestedBody, 'placementUid' => '44444444-4444-4444-8444-444444444445'],
+]);
+$button = vizyScreenshotBlockType('55555555-5555-4555-8555-555555555551', '55555555-5555-4555-8555-555555555552', '55555555-5555-4555-8555-555555555553', 'Button', 'button', 'link-solid', '#db2777', [
+    ['field' => $calloutHeading, 'placementUid' => '55555555-5555-4555-8555-555555555554'],
+    ['field' => $calloutText, 'placementUid' => '55555555-5555-4555-8555-555555555555'],
+]);
 
 $field = vizyScreenshotField([
-    [
-        'id' => 'group-editorial',
-        'name' => 'Editorial',
-        'blockTypes' => $editorialBlockTypes,
-    ],
-    [
-        'id' => 'group-layout',
-        'name' => 'Layout',
-        'blockTypes' => $layoutBlockTypes,
-    ],
-    [
-        'id' => 'group-widgets',
-        'name' => 'Widgets',
-        'blockTypes' => $widgetBlockTypes,
-    ],
+    ['name' => 'Editorial', 'blockTypeUids' => [$callout->uid, $pullQuote->uid, $imageText->uid], 'disabledBlockTypeUids' => []],
+    ['name' => 'Components', 'blockTypeUids' => [$latestNews->uid, $button->uid], 'disabledBlockTypeUids' => []],
 ]);
 $section = vizyScreenshotSection($field);
 $site = Craft::$app->getSites()->getPrimarySite();
 $entryType = Craft::$app->getEntries()->getEntryTypesBySectionId($section->id)[0];
-$entry = Entry::find()
-    ->sectionId($section->id)
-    ->slug(VIZY_SCREENSHOT_SLUG)
-    ->siteId($site->id)
-    ->status(null)
-    ->one();
+$entry = Entry::find()->sectionId($section->id)->slug(VIZY_SCREENSHOT_SLUG)->siteId($site->id)->status(null)->one();
 
 if (!$entry) {
     $entry = new Entry([
@@ -423,76 +309,71 @@ if (!$entry) {
     ]);
 }
 
+$nestedDocument = [
+    'type' => 'doc',
+    'attrs' => ['schemaVersion' => VizyDocument::CURRENT_SCHEMA_VERSION],
+    'content' => [vizyScreenshotParagraph([
+        vizyScreenshotText('A nested editor keeps supporting copy structured without sending authors elsewhere.'),
+    ])],
+];
+
 $entry->title = 'Designing a better city guide';
 $entry->setFieldValue(VIZY_SCREENSHOT_FIELD_HANDLE, [
-    [
-        'type' => 'heading',
-        'attrs' => ['textAlign' => 'start', 'level' => 2],
-        'content' => [vizyScreenshotText('A guide built around the reader')],
+    'type' => 'doc',
+    'attrs' => ['schemaVersion' => VizyDocument::CURRENT_SCHEMA_VERSION],
+    'content' => [
+        ['type' => 'heading', 'attrs' => ['textAlign' => 'start', 'level' => 2], 'content' => [vizyScreenshotText('A guide built around the reader')]],
+        vizyScreenshotParagraph([vizyScreenshotText('Great editorial content needs room to breathe, but it also needs structure. Vizy keeps both in one focused writing experience.')]),
+        vizyScreenshotBlock($callout, 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', [
+            'vizyFeatureCalloutHeading' => 'Plan the story, not the interface',
+            'vizyFeatureCalloutText' => 'Add structured content exactly where it belongs, without sending authors to a separate builder.',
+        ]),
+        vizyScreenshotParagraph([vizyScreenshotText('Authors can move from formatted copy to reusable project fields and back again, while developers retain predictable content data.')]),
+        vizyScreenshotBlock($pullQuote, 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb', [
+            'vizyFeatureQuoteText' => 'The best editing tools disappear into the work.',
+            'vizyFeatureQuoteCredit' => 'Editorial team',
+        ]),
+        vizyScreenshotParagraph([vizyScreenshotText('Every part of the field can be tailored to the content model, including the toolbar, available blocks and authoring limits.')]),
+        ['type' => 'heading', 'attrs' => ['textAlign' => 'start', 'level' => 3], 'content' => [vizyScreenshotText('Seasonal guide at a glance')]],
+        ['type' => 'table', 'content' => [
+            ['type' => 'tableRow', 'content' => [
+                ['type' => 'tableHeader', 'content' => [vizyScreenshotParagraph([vizyScreenshotText('Season')])]],
+                ['type' => 'tableHeader', 'content' => [vizyScreenshotParagraph([vizyScreenshotText('City highlight')])]],
+            ]],
+            ['type' => 'tableRow', 'content' => [
+                ['type' => 'tableCell', 'content' => [vizyScreenshotParagraph([vizyScreenshotText('Autumn')])]],
+                ['type' => 'tableCell', 'content' => [vizyScreenshotParagraph([vizyScreenshotText('Riverside markets')])]],
+            ]],
+            ['type' => 'tableRow', 'content' => [
+                ['type' => 'tableCell', 'content' => [vizyScreenshotParagraph([vizyScreenshotText('Winter')])]],
+                ['type' => 'tableCell', 'content' => [vizyScreenshotParagraph([vizyScreenshotText('Gallery late nights')])]],
+            ]],
+        ]],
+        vizyScreenshotBlock($latestNews, 'cccccccc-cccc-4ccc-8ccc-cccccccccccc', [
+            'vizyFeatureCalloutHeading' => 'Latest city stories',
+            'vizyFeatureNestedBody' => $nestedDocument,
+        ]),
     ],
-    vizyScreenshotParagraph([
-        vizyScreenshotText('Great editorial content needs room to breathe, but it also needs structure. Vizy keeps both in one focused writing experience.'),
-    ]),
-    vizyScreenshotBlock($field, 'block-callout', 'type-callout', [
-        'vizyFeatureCalloutHeading' => 'Plan the story, not the interface',
-        'vizyFeatureCalloutText' => "Add structured content exactly where it belongs, without sending authors to a separate builder.",
-    ]),
-    vizyScreenshotParagraph([
-        vizyScreenshotText('Authors can move from formatted copy to reusable project fields and back again, while developers retain predictable content data.'),
-    ]),
-    vizyScreenshotBlock($field, 'block-quote', 'type-quote', [
-        'vizyFeatureQuoteText' => 'The best editing tools disappear into the work.',
-        'vizyFeatureQuoteCredit' => 'Editorial team',
-    ]),
-    vizyScreenshotParagraph([
-        vizyScreenshotText('Every part of the field can be tailored to the content model, including the toolbar, available blocks and authoring limits.'),
-    ]),
-    [
-        'type' => 'heading',
-        'attrs' => ['textAlign' => 'start', 'level' => 3],
-        'content' => [vizyScreenshotText('Seasonal guide at a glance')],
-    ],
-    [
-        'type' => 'table',
-        'content' => [
-            [
-                'type' => 'tableRow',
-                'content' => [
-                    ['type' => 'tableHeader', 'content' => [vizyScreenshotParagraph([vizyScreenshotText('Season')])]],
-                    ['type' => 'tableHeader', 'content' => [vizyScreenshotParagraph([vizyScreenshotText('City highlight')])]],
-                ],
-            ],
-            [
-                'type' => 'tableRow',
-                'content' => [
-                    ['type' => 'tableCell', 'content' => [vizyScreenshotParagraph([vizyScreenshotText('Autumn')])]],
-                    ['type' => 'tableCell', 'content' => [vizyScreenshotParagraph([vizyScreenshotText('Riverside markets')])]],
-                ],
-            ],
-            [
-                'type' => 'tableRow',
-                'content' => [
-                    ['type' => 'tableCell', 'content' => [vizyScreenshotParagraph([vizyScreenshotText('Winter')])]],
-                    ['type' => 'tableCell', 'content' => [vizyScreenshotParagraph([vizyScreenshotText('Gallery late nights')])]],
-                ],
-            ],
-        ],
-    ],
-    vizyScreenshotBlock($field, 'block-latest-news', 'type-latest-news', [
-        'vizyFeatureCalloutHeading' => 'Latest city stories',
-        'vizyFeatureNestedBody' => Json::encode([]),
-    ]),
 ]);
+
+// Console fixture scripts do not emit Craft's normal end-of-request event. Flush
+// queued Project Config changes so the following browser request can resolve the
+// named Editor Config and global Block Types rather than seeing database records
+// without their canonical schema definitions.
+$projectConfig = Craft::$app->getProjectConfig();
+$projectConfig->saveModifiedConfigData();
+$projectConfig->writeYamlFiles();
 
 if (!Craft::$app->getElements()->saveElement($entry)) {
     throw new RuntimeException('Unable to save Vizy screenshot entry: ' . Json::encode($entry->getErrors()));
 }
 
 $admin = Craft::$app->getConfig()->getGeneral()->cpTrigger ?: 'admin';
-
 echo Json::encode([
     'fieldId' => $field->id,
     'fieldHandle' => $field->handle,
     'settingsRoute' => "/{$admin}/settings/fields/edit/{$field->id}",
+    'editorConfigRoute' => "/{$admin}/vizy/settings/editor-configs/" . VIZY_SCREENSHOT_CONFIG,
+    'blockTypesRoute' => "/{$admin}/vizy/settings/block-types",
     'entryEditRoute' => "/{$admin}/entries/{$section->handle}/{$entry->id}",
 ]);

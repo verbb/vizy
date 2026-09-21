@@ -1,5 +1,7 @@
 # Keep development fixtures, dependencies, and environment files out of release archives.
 /tests export-ignore
+/marketing export-ignore
+/screenshots export-ignore
 /storage export-ignore
 /test-results export-ignore
 /node_modules export-ignore
