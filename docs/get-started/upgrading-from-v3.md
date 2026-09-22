@@ -286,7 +286,7 @@ The event starts with the selected named config's authorable values. Vizy normal
 
 #### Removed Hooks
 
-Remove listeners for `VizyField::EVENT_MODIFY_PURIFIER_CONFIG`; the event does not fire. Use [Modify Nodes](docs:template-guides/modify-nodes) for output changes. PHP calls to `VizyField::registerPlugin()` also do not register editor behaviour. Register the extension through the PHP event and JavaScript module described above, then check both the editor and rendered output.
+Remove listeners for `VizyField::EVENT_MODIFY_PURIFIER_CONFIG`; the event does not fire. Use the rendering hooks in [Events](docs:developers/events#customising-rendered-html) for output changes. PHP calls to `VizyField::registerPlugin()` also do not register editor behaviour. Register the extension through the PHP event and JavaScript module described above, then check both the editor and rendered output.
 
 ### GraphQL Queries
 
@@ -379,7 +379,15 @@ GraphQL `rawNodes` is also deprecated, but its alternatives return different str
 
 See also [Matrix in Vizy Blocks](../developers/matrix-in-vizy-blocks.md) and [Configuration](configuration.md).
 
-## Advanced Migration and Recovery
+## Advanced Migration
+
+Vizy captures recovery records before schema conversion and owner content changes. If you need to restore a field’s captured content, follow [Content Recovery](../developers/content-recovery.md). The commands below diagnose and resume the upgrade itself.
+
+### Repairing Shared Matrix Anchors
+
+Historical drafts may still reference their canonical owner’s Matrix anchor. Vizy refuses changes that would overwrite or delete shared content. Run `php craft vizy/anchors/backfill --drafts --revisions --trashed` to give historical derivatives independent content before retrying. Add `--dryRun` to inspect the candidates first. Opening an editor or inspecting backfill candidates does not repair or replace anchors.
+
+### Diagnosing and Resuming an Upgrade
 
 Craft’s plugin migration is the supported path for normal upgrades. The following commands expose its underlying plans and checkpoints for diagnosis, custom deployments, eager bulk conversion, or recovery work:
 

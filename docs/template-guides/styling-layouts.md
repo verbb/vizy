@@ -42,4 +42,4 @@ The breakpoint and gap are design choices rather than dimensions imposed by Vizy
 
 Create a layout containing long text and a large image, then check the page above and below the breakpoint. The columns should use their configured proportions on a wide screen, stack in document order on a narrow screen, and avoid horizontal overflow.
 
-To change the generated elements or attributes rather than styling them, use the events in [Modify Nodes](docs:template-guides/modify-nodes).
+To change the generated elements or attributes rather than styling them, use the rendering events described in [Events](docs:developers/events#customising-rendered-html).

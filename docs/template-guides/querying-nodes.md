@@ -1,10 +1,44 @@
 # Querying Nodes
 
-Use a query when you need particular pieces of a Vizy field. For example, you can select an article’s root headings for a contents list or read callout blocks separately from its paragraphs.
+Use a query when you need particular pieces of a Vizy field. For example, you can create an outline from an article’s root headings or read callout blocks separately from its paragraphs.
 
 The examples belong in an entry’s Twig template. They assume a Vizy field with the handle `vizyField`; replace it with your field’s handle. `query()` selects root nodes, including paragraphs and blocks. It does not search inside layouts or nested Vizy fields.
 
 Use `query().where(...)` to select content. Queries keep their enabled scope when you add or replace ordinary filters. See [Node Query](docs:developers/node-query) for combining conditions.
+
+## Display a Heading Outline
+
+Select root heading nodes and read their inline text to show a simple article outline:
+
+```twig
+{% set headings = entry.vizyField.query()
+    .where({ type: 'heading' })
+    .all() %}
+
+{% if headings %}
+    <nav class="article-outline" aria-label="On this page">
+        <ol>
+            {% for heading in headings %}
+                {% set label = '' %}
+
+                {% for child in heading.content %}
+                    {% if child.type == 'text' %}
+                        {% set label = label ~ child.text %}
+                    {% endif %}
+                {% endfor %}
+
+                {% if label %}
+                    <li class="article-outline__level-{{ heading.attrs.level ?? 2 }}">
+                        {{ label }}
+                    </li>
+                {% endif %}
+            {% endfor %}
+        </ol>
+    </nav>
+{% endif %}
+```
+
+This example intentionally produces an outline rather than anchor links because core heading nodes do not assign frontend IDs. A site that adds stable heading IDs through a custom node or rendering event can use the same query to build matching links.
 
 ## Display Callout Text
 
@@ -22,7 +56,7 @@ Each enabled root callout becomes a list item in document order. Other Block Typ
 
 ## Selecting Content
 
-### Fetch Nodes
+### Filter by Type
 
 Fetch all paragraph nodes in a field:
 
@@ -141,4 +175,4 @@ See [Node Query](docs:developers/node-query) for the full method and operator re
 
 Use `blocks()` for enabled blocks throughout the outer node tree, including layouts. Use `blocks(false)` for disabled blocks or `blocks(null)` for both states. `findBlock(uid)` is an identity lookup and can return a disabled block. To read the root nodes as arrays, use `content().nodes()`; `traverse()` follows node children. These methods do not enter fields nested inside blocks. Read an inner Vizy field through its block field handle, as explained in [Nested Content](docs:feature-tour/nested-content#add-a-vizy-field-to-a-block).
 
-See [Rendering Content](docs:template-guides/rendering-content) for examples of these approaches. GraphQL’s `nodes` and `blocks` fields also support filtering, limits, and ordering; see [GraphQL](docs:developers/graphql).
+See [Rendering Content](docs:template-guides/rendering-content) for guidance on choosing between full-document rendering and selected output. GraphQL’s `nodes` and `blocks` fields also support filtering, limits, and ordering; see [GraphQL](docs:developers/graphql).

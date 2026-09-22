@@ -65,7 +65,7 @@ Enablement.
 
 Walkthrough: [Creating a custom mark](docs:guides/developers/creating-a-custom-mark-from-scratch).
 Sample: `examples/vizy-abbr-module/`.
-Override tags: [Modify Nodes](docs:template-guides/modify-nodes).
+Override tags and rendered HTML: [Events](docs:developers/events#customising-rendered-html).
 
 ## Built-In Types
 
@@ -81,7 +81,7 @@ Core classes live under `verbb\vizy\marks\`.
 | `subscript` | `<sub>` | — |
 | `superscript` | `<sup>` | — |
 | `highlight` | `<mark>` | — |
-| `textStyle` | *(no default tag)* | TipTap text-style carrier; pair with Modify Nodes / custom emit if you need CSS vars |
+| `textStyle` | *(no default tag)* | TipTap text-style carrier; pair with a rendering event or custom output if you need CSS variables |
 | `link` | `<a>` | **Semantic storage** (not a bare `href`): `type` (`url` / `email` / `tel` / `sms` / `entry` / `asset` / `category`), `value` or `targetUid`, optional `siteMode` / `siteUid` / `suffix` / `newWindow`. Render resolves `href` via `Link::resolveHref` + HTMLPurifier URI schemes (`http`/`https`/`mailto`/`tel`/`sms`). Rejected URIs omit the `<a>` (inner text kept). `_blank` adds `rel="noopener noreferrer"`. GraphQL also exposes `url` / `element` convenience fields |
 
 Authoring-only keys (`type`, `value`, `targetUid`, …) are stripped before HTML

@@ -80,7 +80,7 @@ Enablement.
 
 
 Register and author: [Extending Vizy](docs:developers/extending-vizy).
-Override tags: [Modify Nodes](docs:template-guides/modify-nodes).
+Override tags and rendered HTML: [Events](docs:developers/events#customising-rendered-html).
 
 ## Reading Content in Twig
 

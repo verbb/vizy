@@ -4,7 +4,6 @@
         "collapsable": false,
         "children": [
             "get-started/installation-setup",
-            "get-started/creating-your-first-editor",
             "get-started/requirements",
             "get-started/configuration",
             "get-started/upgrading-from-v3"
@@ -29,11 +28,9 @@
         "collapsable": false,
         "children": [
             "template-guides/rendering-content",
-            "template-guides/styling-layouts",
-            "template-guides/modify-nodes",
-            "template-guides/modular-templates",
             "template-guides/block-type-templates",
-            "template-guides/querying-nodes"
+            "template-guides/querying-nodes",
+            "template-guides/styling-layouts"
         ]
     },
     {
@@ -48,7 +45,8 @@
             "developers/graphql",
             "developers/extending-vizy",
             "developers/embedded-content",
-            "developers/matrix-in-vizy-blocks"
+            "developers/matrix-in-vizy-blocks",
+            "developers/content-recovery"
         ]
     },
     {

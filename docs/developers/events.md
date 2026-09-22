@@ -65,27 +65,17 @@ Event::on(Extensions::class, Extensions::EVENT_REGISTER_TOOLBAR_DROPDOWNS, funct
 });
 ```
 
-## The `modifyNodeTag` Event
-Fired when a node’s HTML tag structure is built. On the default render path this
-is class-level: `$event->node` is null; use `$event->context` / `$event->typeId`.
+## Customising Rendered HTML
 
-```php
-use verbb\vizy\events\ModifyNodeTagEvent;
-use verbb\vizy\nodes\Paragraph;
-use yii\base\Event;
+Vizy’s rendering events change the HTML produced by existing nodes and marks without rebuilding the document in Twig. Continue using `{{ entry.vizyField.render() }}` and Block Type templates for ordinary frontend output; register these listeners in a module or plugin when the generated HTML itself needs to change.
 
-Event::on(Paragraph::class, Paragraph::EVENT_MODIFY_TAG, function(ModifyNodeTagEvent $event) {
-    $tag = $event->tag;
-    $typeId = $event->typeId;
-    $context = $event->context;
-    $opening = $event->opening;
-    $closing = $event->closing;
-    // ...
-});
-```
+`VizyDocument::render()` asks each node and mark class for its tag structure and resolved attributes. The modify events fire on those classes for every HTML-emitting occurrence, including layout wrappers, images and simple tags.
 
-## The `modifyMarkTag` Event
-Fired when a mark’s HTML tag structure is built. On the default render path this is class-level: `$event->mark` is null; use `$event->context` / `$event->typeId`.
+Listen on a concrete class such as `Bold::class` when the change applies to one type. Listen on the base `Mark::class` or `Node::class` for a cross-cutting change. On the default render path, `$event->node` and `$event->mark` are null. Use `$event->typeId`, `$event->attrs` and `$event->context` instead; the context contains the field, owner and site.
+
+### The `modifyMarkTag` Event
+
+Use `EVENT_MODIFY_TAG` on a mark class to change its opening and closing tags or attributes. This example adds a class to Bold text:
 
 ```php
 use verbb\vizy\events\ModifyMarkTagEvent;
@@ -93,25 +83,85 @@ use verbb\vizy\marks\Bold;
 use yii\base\Event;
 
 Event::on(Bold::class, Bold::EVENT_MODIFY_TAG, function(ModifyMarkTagEvent $event) {
-    $tag = $event->tag;
-    $typeId = $event->typeId;
-    $context = $event->context;
-    $opening = $event->opening;
-    $closing = $event->closing;
-    // ...
+    $event->tag[0]['attrs']['class'] = 'text-orange-500';
 });
 ```
 
-## The `modifyRenderedNode` Event
-The event that is triggered for when a node's HTML has been generated and is rendered.
+Limit the change to one Vizy field when required:
 
 ```php
+Event::on(Bold::class, Bold::EVENT_MODIFY_TAG, function(ModifyMarkTagEvent $event) {
+    if ($event->context?->field?->handle === 'articleBody') {
+        $event->tag[0]['attrs']['class'] = 'text-orange-500';
+    }
+});
+```
+
+Listen on the base class when the same logic applies to every mark:
+
+```php
+use verbb\vizy\base\Mark;
+
+Event::on(Mark::class, Mark::EVENT_MODIFY_TAG, function(ModifyMarkTagEvent $event) {
+    // Runs after listeners registered on the concrete mark class.
+});
+```
+
+### The `modifyNodeTag` Event
+
+Use `EVENT_MODIFY_TAG` on a node class to change its tag structure. `tag` is a list because some nodes emit more than one HTML tag; Code Block, for example, uses both `<pre>` and `<code>`.
+
+This example wraps every paragraph:
+
+```php
+use verbb\vizy\events\ModifyNodeTagEvent;
+use verbb\vizy\nodes\Paragraph;
+use yii\base\Event;
+
+Event::on(Paragraph::class, Paragraph::EVENT_MODIFY_TAG, function(ModifyNodeTagEvent $event) {
+    $paragraph = $event->tag[0];
+
+    $event->tag = [
+        [
+            'tag' => 'div',
+            'attrs' => [
+                'class' => 'rich-text',
+            ],
+        ],
+        $paragraph,
+    ];
+});
+```
+
+The resulting HTML is:
+
+```html
+<div class="rich-text">
+    <p>That was the day I invented time travel. I remember it vividly.</p>
+</div>
+```
+
+### The `modifyRenderedNode` Event
+
+Use `EVENT_MODIFY_RENDERED_NODE` after a node’s complete HTML has been generated. This is useful for self-closing or fully custom nodes where changing the tag structure is not enough.
+
+The following wraps an Image and appends copyright text:
+
+```php
+use craft\helpers\Html;
 use verbb\vizy\events\ModifyRenderedNodeEvent;
 use verbb\vizy\nodes\Image;
 use yii\base\Event;
 
 Event::on(Image::class, Image::EVENT_MODIFY_RENDERED_NODE, function(ModifyRenderedNodeEvent $event) {
-    $event->renderedNode = '<div class="wrapper">' . $event->renderedNode . '</div>';
+    $copyrightText = Html::tag('span', '© This is my copyright text');
+    $copyright = Html::tag('div', $copyrightText, ['class' => 'copyright']);
+
+    $event->renderedNode = Html::tag(
+        'div',
+        $event->renderedNode . $copyright,
+        ['class' => 'vizy__image'],
+    );
 });
 ```
 

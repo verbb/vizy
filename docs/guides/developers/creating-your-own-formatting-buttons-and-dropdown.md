@@ -50,6 +50,6 @@ Select the **Article** config on a Vizy field and save it. Open an entry using t
 
 A custom mark can give selected text a consistent HTML element that your stylesheet styles. Follow [Creating a Custom Mark from Scratch](docs:guides/developers/creating-a-custom-mark-from-scratch) to register an Abbreviation mark, enable it, and verify its HTML before adapting the example to your own formatting.
 
-Once the mark’s control is available, add its ID to `toolbar` or to a registered dropdown’s members. Keep its capability enabled as well. For changes to the HTML of an existing node or mark, use [Modify Nodes](docs:template-guides/modify-nodes); changing the editor’s appearance alone does not define its frontend rendering.
+Once the mark’s control is available, add its ID to `toolbar` or to a registered dropdown’s members. Keep its capability enabled as well. For changes to the HTML of an existing node or mark, use the rendering hooks in [Events](docs:developers/events#customising-rendered-html); changing the editor’s appearance alone does not define its frontend rendering.
 
 See [Modifying the Toolbar Buttons](docs:guides/developers/modifying-the-toolbar-buttons) for control placement.

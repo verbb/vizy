@@ -1,24 +1,27 @@
 # Block Type Templates
 
-A Block Type template supplies the HTML for a structured block when you render a Vizy field. For example, an Image & Text block can place an optional image beside a short description. Set up its fields and template together so the values editors enter have a defined place on the page.
+A Block Type template defines the frontend HTML for a structured Vizy Block. When `render()` reaches an enabled block, Vizy renders the site template assigned to that Block Type.
 
-## Create the Block Type
+## Create a Block Type
 
-Create these Craft fields in **Settings → Fields**: a Plain Text field named **Text** with the handle `text`, and an Assets field named **Image** with the handle `image`. Configure Image to accept images and allow one selection. Leave it optional for this example.
+Create these Craft fields in **Settings → Fields**:
 
-In **Settings → Vizy → Block Types**, create **Image & Text** with the handle `imageText`. Add Text and Image to its field layout. Block Types are shared across Vizy fields, so use a new type for this example rather than changing one already used elsewhere.
+- a Plain Text field named **Text** with the handle `text`; and
+- an Assets field named **Image** with the handle `image`, restricted to images and one selection.
 
-Set **Template** to `_vizy/blocks/image-text` and save. Open your Vizy field’s settings, choose a mode that permits blocks, and include Image & Text in its Block Configuration. Save the field and ensure it is on the entry type’s field layout.
+In **Settings → Vizy → Block Types**, create **Image & Text** with the handle `imageText`. Add Text and Image to its field layout, then set **Template** to `_vizy/blocks/image-text`.
+
+Block Types are global and can be used by multiple Vizy fields. Open the relevant Vizy field, choose a mode that permits blocks, then add Image & Text to its Block Configuration.
 
 ## Create the Template
 
-Create `templates/_vizy/blocks/image-text.twig` in your Craft project:
+Create `templates/_vizy/blocks/image-text.twig` in the Craft project:
 
 ```twig
 {% set image = block.image.one() %}
 
-<div class="image-text">
-    <div class="image-text__text">
+<section class="image-text">
+    <div class="image-text__content">
         {{ block.text }}
     </div>
 
@@ -27,31 +30,88 @@ Create `templates/_vizy/blocks/image-text.twig` in your Craft project:
             <img src="{{ image.url }}" alt="{{ image.alt ?? '' }}">
         </div>
     {% endif %}
-</div>
+</section>
 ```
 
-The template receives the current block as `block` and its Block Type as `type`. Access each field through `block` using its handle. The image is resolved once and only rendered when one has been selected. Style the two classes in your site’s stylesheet to suit the design.
+Render the Vizy field from the entry template:
+
+```twig
+{{ entry.articleBody.render() }}
+```
+
+Vizy renders the surrounding rich text and calls the assigned template whenever it reaches an enabled Image & Text block.
+
+## Available Variables
+
+Every Block Type template receives:
+
+| Variable | Value |
+| --- | --- |
+| `block` | The current Vizy Block. Read custom fields from it by handle, such as `block.text` or `block.image`. |
+| `type` | The block’s Block Type model, including properties such as `type.name`, `type.handle` and `type.uid`. |
+
+Useful block properties include:
+
+| Property | Value |
+| --- | --- |
+| `block.uid` | The persistent ID for this block instance. |
+| `block.handle` | The Block Type handle. |
+| `block.enabled` | Whether this block is enabled. Disabled blocks are not passed to the template during automatic rendering. |
+| `block.<fieldHandle>` | The normalised value of a custom field in the Block Type’s field layout. |
+
+Custom field values use the same Twig APIs as fields on entries. For example, use `block.image.one()` for an Assets field and `block.relatedEntries.all()` for an Entries field.
 
 ## Render a Nested Vizy Field
 
-When the Block Type contains a Vizy field, read it through `block` like any other custom field and call `render()`. For a nested field with the handle `body`, place this in the Block Type’s Twig template where its content should appear:
+When the Block Type contains another Vizy field, read it through `block` and render it as its own document. For a nested field with the handle `body`:
 
 ```twig
 {% if not block.body.isEmpty() %}
-    {{ block.body.render() }}
+    <div class="image-text__body">
+        {{ block.body.render() }}
+    </div>
 {% endif %}
 ```
 
-The nested field uses its own Editor Config and renders any Block Types configured within it. [Nested Content](docs:feature-tour/nested-content) explains how to plan the editing structure.
+The nested field uses its own Editor Config and Block Configuration. [Nested Content](docs:feature-tour/nested-content) covers the content-modelling considerations.
 
-## Render and Check the Result
+## Pass Variables to Block Templates
 
-Open an entry, insert Image & Text, enter a description, choose an image with suitable alternative text, and save. In the entry’s Twig template, place the following where the article body should appear, replacing `vizyField` with your Vizy field’s handle:
+Pass shared values through `blockVariables` when every Block Type template in one render needs additional context:
 
 ```twig
-{{ entry.vizyField.render() }}
+{{ entry.articleBody.render({
+    blockVariables: {
+        theme: 'dark',
+        showEyebrows: true,
+    },
+}) }}
 ```
 
-Vizy renders the surrounding text and calls the assigned template for each enabled block. A Block Type without a template contributes no automatic HTML. Check an entry with an image and another without one; both should show their text without a broken image. Disable the block and check that automatic rendering omits it.
+The assigned template can then use `theme` and `showEyebrows` directly. Vizy always supplies the authoritative `block` and `type` variables; values with those names in `blockVariables` are replaced.
 
-If a block does not appear, check that it is enabled and its type has the correct Template path. For rendering selected root blocks separately, see [Modular Templates](docs:template-guides/modular-templates).
+## Override a Template for One Render
+
+Use `blockTemplates` when one presentation of a document needs a different template without changing the global Block Type setting. The map is keyed by Block Type UID:
+
+```twig
+{{ entry.articleBody.render({
+    blockTemplates: {
+        'c1f436f5-7633-4ce0-b2ca-9a71e874aab4': '_vizy/blocks/image-text-compact',
+    },
+}) }}
+```
+
+Only the listed Block Type is overridden. Other blocks continue using their assigned templates. Because UIDs differ between independently configured projects, keep this value in project-aware configuration rather than duplicating the example UID.
+
+## Troubleshooting
+
+A Block Type without a template contributes no automatic HTML. If a block does not appear:
+
+- confirm the block is enabled;
+- check that the Block Type is allowed by the Vizy field;
+- confirm the Template setting is relative to the Craft `templates/` directory;
+- check that the Block Type and its field layout still exist in Project Config; and
+- test the template with and without optional relations such as images.
+
+Use [Querying Nodes](docs:template-guides/querying-nodes) when the goal is to read selected blocks separately rather than change their normal templates.
