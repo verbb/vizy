@@ -23,6 +23,7 @@ use verbb\vizy\services\EditorManifests;
 use verbb\vizy\services\Extensions;
 use verbb\vizy\services\FieldLayoutForms;
 use verbb\vizy\services\FieldLifecycle;
+use verbb\vizy\services\FieldMerges;
 use verbb\vizy\services\Icons;
 use verbb\vizy\services\InitialFieldLayouts;
 use verbb\vizy\services\MatrixPersistence;
@@ -66,6 +67,7 @@ trait PluginTrait
                 'extensions' => Extensions::class,
                 'fieldLifecycle' => FieldLifecycle::class,
                 'fieldLayoutForms' => FieldLayoutForms::class,
+                'fieldMerges' => FieldMerges::class,
                 'icons' => Icons::class,
                 'initialFieldLayouts' => InitialFieldLayouts::class,
                 'legacySchemaMaps' => LegacySchemaMaps::class,
@@ -202,6 +204,11 @@ trait PluginTrait
     public function getFieldLayoutForms(): FieldLayoutForms
     {
         return $this->get('fieldLayoutForms');
+    }
+
+    public function getFieldMerges(): FieldMerges
+    {
+        return $this->get('fieldMerges');
     }
 
     public function getIcons(): Icons
