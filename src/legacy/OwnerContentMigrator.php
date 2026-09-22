@@ -71,7 +71,7 @@ final class OwnerContentMigrator extends Component
         $identity = $this->_identity($owner, $field, $runUid);
         $mappingHash = $this->_hashValue($this->_stable($mapping));
         $source = $this->_readRawValue($owner, $field);
-        Vizy::$plugin->getContentRecovery()->capture($owner, $field, 'owner-migration');
+        $recoveryId = Vizy::$plugin->getContentRecovery()->capture($owner, $field, 'owner-migration');
         $sourceHash = $this->_hashSnapshot($source);
 
         $checkpoint = OwnerMigration::findOne($identity);
@@ -97,7 +97,7 @@ final class OwnerContentMigrator extends Component
         $checkpoint->mappingRevision = (string)$mapping['revision'];
         $checkpoint->mappingHash = $mappingHash;
         $checkpoint->sourceSnapshotHash = $sourceHash;
-        $checkpoint->sourceSnapshotJson = Json::encode(['value' => $source]);
+        $checkpoint->sourceSnapshotJson = Json::encode(['value' => $source, 'recoveryRecordId' => $recoveryId]);
         $checkpoint->uidMapJson = Json::encode([]);
         $checkpoint->errorsJson = Json::encode([]);
         $checkpoint->state = 'analyzed';
@@ -279,6 +279,7 @@ final class OwnerContentMigrator extends Component
             return $verified;
         } catch (InvalidElementException $exception) {
             $transaction->rollBack();
+            $checkpoint->refresh();
             $checkpoint->persistedAt = null;
             return $this->_fail(
                 $checkpoint,
@@ -287,14 +288,13 @@ final class OwnerContentMigrator extends Component
             );
         } catch (Throwable $exception) {
             $transaction->rollBack();
+            $checkpoint->refresh();
             $checkpoint->persistedAt = null;
             return $this->_fail($checkpoint, 'ownerSaveFailed', $exception->getMessage());
         } finally {
             Vizy::$plugin->getContentBaselines()->forget($owner, $field);
             unset($this->saving[$key]);
         }
-
-        return $this->_verifyCheckpoint($checkpoint);
     }
 
     /**
@@ -350,7 +350,10 @@ final class OwnerContentMigrator extends Component
             $matches = isset($verification['contentHash'])
                 ? Vizy::$plugin->getContentRecovery()->contentHash($persisted) === $verification['contentHash']
                 : $persistedHash === $checkpoint->candidateHash;
-            if (!$matches || $actualProfile !== $expectedProfile) {
+            // A persisted Matrix payload moves from fieldSlots into its anchor.
+            // The semantic hash checks the actual rows as well as all document
+            // content; raw slot counts describe storage, not content equality.
+            if (!$matches || (!isset($verification['contentHash']) && $actualProfile !== $expectedProfile)) {
                 throw new RuntimeException('Persisted canonical checksum/profile does not match the analyzed candidate.');
             }
 

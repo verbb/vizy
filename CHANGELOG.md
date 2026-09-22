@@ -2,8 +2,19 @@
 
 ## Unreleased
 
+### Added
+- Added durable Vizy content recovery records and commands to restore a field’s saved document, nested Matrix values, ownership, order, enabled states, and relations across sites. See [Content Recovery](https://verbb.io/craft-plugins/vizy/docs/v4/developers/content-recovery).
+
 ### Changed
 - Reorganised the Feature Tour around the editor, Vizy blocks, field configuration, editor capabilities, Block Types, nested content, and content-planning guidance.
+- Opening block forms and creating Matrix rows now keep changes in the editor until the owner is saved.
+- Upgrade verification now compares nested content before committing each owner conversion.
+
+### Fixed
+- Fixed empty link options, volume selections, and transform selections reverting to defaults after saving field settings.
+- Fixed unresolved anchors and incomplete Matrix submissions being treated as replacement or empty content.
+- Fixed historical shared anchors being modified or cleaned up while another owner or draft still references them.
+- Fixed stale editor submissions overwriting newer saved Vizy content.
 
 ## 4.0.0-beta.1 - 2026-09-22
 

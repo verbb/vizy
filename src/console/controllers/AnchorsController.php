@@ -25,6 +25,8 @@ class AnchorsController extends Controller
     public int $batchSize = 100;
     public ?string $site = null;
     public bool $drafts = false;
+    public bool $revisions = false;
+    public bool $trashed = false;
     public bool $dryRun = false;
 
 
@@ -39,6 +41,8 @@ class AnchorsController extends Controller
         $options[] = 'batchSize';
         $options[] = 'site';
         $options[] = 'drafts';
+        $options[] = 'revisions';
+        $options[] = 'trashed';
         $options[] = 'dryRun';
 
         return $options;
@@ -72,7 +76,8 @@ class AnchorsController extends Controller
         foreach ($elementsService->getAllElementTypes() as $elementType) {
             $query = $elementType::find()->site($this->site ?: '*')->unique(false)
                 ->status(null)->drafts($this->drafts ? null : false)
-                ->provisionalDrafts(false)->revisions(false)->trashed(false)
+                ->provisionalDrafts($this->drafts ? null : false)
+                ->revisions($this->revisions ? null : false)->trashed($this->trashed ? null : false)
                 ->orderBy(['elements.id' => SORT_ASC, 'elements_sites.siteId' => SORT_ASC]);
             if ($this->elementId) {
                 $query->id($this->elementId);

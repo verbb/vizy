@@ -53,6 +53,9 @@ final class ContentVersions extends Component
             throw new RuntimeException('The Vizy content version is invalid. Your edits have been retained; reload the editor before retrying.');
         }
         $sourceId = (int)$version['ownerId'];
+        if ($sourceId === 0 && $owner->firstSave) {
+            return;
+        }
         if ($sourceId !== (int)$owner->id && $sourceId !== (int)$owner->getCanonicalId()
             && $sourceId !== (int)($owner->duplicateOf?->id)) {
             throw new RuntimeException('The Vizy content version belongs to another owner.');

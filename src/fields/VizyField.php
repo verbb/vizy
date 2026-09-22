@@ -168,6 +168,11 @@ class VizyField extends Field
 
     public function __construct($config = [])
     {
+        foreach (['linkSettings', 'availableVolumes', 'availableTransforms'] as $setting) {
+            if (($config[$setting] ?? null) === '') {
+                $config[$setting] = [];
+            }
+        }
         // Remove unused settings
         unset($config['columnType']);
         // Transient field-settings POST payload for global Block Types; not a field attribute.
@@ -176,6 +181,19 @@ class VizyField extends Field
         unset($config['blockTypeBehaviour']);
 
         parent::__construct($config);
+    }
+
+    public function getSettings(): array
+    {
+        $settings = parent::getSettings();
+        // Project Config removes empty arrays. Preserve an explicit selection
+        // of none instead of reloading the property's default selection.
+        foreach (['linkSettings', 'availableVolumes', 'availableTransforms'] as $setting) {
+            if ($settings[$setting] === []) {
+                $settings[$setting] = '';
+            }
+        }
+        return $settings;
     }
 
     public function isValueEmpty(mixed $value, ElementInterface $element): bool

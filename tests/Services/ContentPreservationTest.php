@@ -96,6 +96,13 @@ it('preserves a canonical anchor still referenced by a historical shared draft',
     Craft::$app->getDb()->createCommand()->update(Table::ELEMENTS_SITES, ['content' => $content], ['elementId' => $draft->id, 'siteId' => $draft->siteId])->execute();
     $anchor = Vizy::$plugin->getAnchors()->getAnchor($owner, $f->field, $uid);
     expect(Vizy::$plugin->getAnchors()->hasExternalReferences($anchor))->toBeTrue();
+    $anchor->setFieldLayout($f->blockType->getFieldLayout());
+    $matrix = $f->blockType->getFieldLayout()->getCustomFieldElements()[0]->getField();
+    $query = \verbb\vizy\helpers\Matrix::nestedEntryQuery($matrix, $anchor);
+    Vizy::$plugin->getAnchors()->saveMatrixField($matrix, $anchor, $query, false);
+    expect($f->rows($uid)[0]->getFieldValue($f->text->handle))->toBe('Shared original');
+    expect(fn() => $f->save([$f->block($uid, $f->payload(['Unsafe replacement']))]))->toThrow(RuntimeException::class, 'still referenced');
+    expect($f->rows($uid)[0]->getFieldValue($f->text->handle))->toBe('Shared original');
     $f->save([]);
     expect((new Query())->from(Table::ELEMENTS)->where(['id' => $anchor->id, 'dateDeleted' => null])->exists())->toBeTrue();
 });
@@ -116,10 +123,106 @@ it('rejects a stale content version without overwriting the newer Matrix values'
     expect($owner->getFieldValue($f->field->handle)->toArray())->toBe($stale);
 });
 
+it('rolls back a restoration interrupted after nested rows were written', function() {
+    $f = new MatrixSupportFixture();
+    $uid = StringHelper::UUID();
+    $owner = $f->save([$f->block($uid, $f->payload(['Original']))]);
+    $recovery = Vizy::$plugin->getContentRecovery();
+    $id = $recovery->capture($owner, $f->field, 'interruption-test');
+    $f->save([$f->block($uid, $f->payload(['Current']))]);
+    $before = $recovery->snapshot($f->reload(), $f->field);
+    $db = Craft::$app->getDb();
+    $originalCommand = $db->commandClass;
+    $db->commandClass = InterruptedRecoveryCommand::class;
+    InterruptedRecoveryCommand::$interrupted = false;
+    try {
+        expect(fn() => $recovery->restore($id))->toThrow(RuntimeException::class, 'Injected restore interruption');
+    } finally {
+        $db->commandClass = $originalCommand;
+    }
+    expect(InterruptedRecoveryCommand::$interrupted)->toBeTrue();
+    expect($recovery->snapshot($f->reload(), $f->field))->toBe($before);
+    expect($f->rows($uid)[0]->getFieldValue($f->text->handle))->toBe('Current');
+    $recovery->restore($id);
+    expect($f->rows($uid)[0]->getFieldValue($f->text->handle))->toBe('Original');
+});
+
 it('rejects an incomplete Matrix submission without treating it as clearing', function() {
     $f = new MatrixSupportFixture();
     $uid = StringHelper::UUID();
     $f->save([$f->block($uid, $f->payload(['Keep me']))]);
     expect(fn() => $f->save([$f->block($uid, ['entries' => []])]))->toThrow(RuntimeException::class, 'complete ordering');
+    $node = $f->block($uid);
+    $node['attrs']['fieldSlots'][$f->placementUid] = null;
+    expect(fn() => $f->save([$node]))->toThrow(RuntimeException::class, 'incomplete or malformed');
     expect($f->rows($uid)[0]->getFieldValue($f->text->handle))->toBe('Keep me');
 });
+
+it('preserves conflicting historical rows that share a UID', function() {
+    $f = new MatrixSupportFixture();
+    $uid = StringHelper::UUID();
+    $f->save([$f->block($uid, $f->payload(['First content', 'Different content']))]);
+    [$first, $second] = $f->rows($uid);
+    Craft::$app->getDb()->createCommand()->update(Table::ELEMENTS, ['uid' => $first->uid], ['id' => $second->id])->execute();
+    $recovery = Vizy::$plugin->getContentRecovery();
+    $before = $recovery->snapshot($f->reload(), $f->field);
+    expect(fn() => $f->rows($uid))->toThrow(RuntimeException::class, 'different content');
+    expect(fn() => $f->save([$f->block($uid)]))->toThrow(RuntimeException::class, 'different content');
+    expect($recovery->snapshot($f->reload(), $f->field))->toBe($before);
+});
+
+it('restores site-specific Matrix relations in a new process without changing unrelated owner content', function() {
+    $sites = \Tests\Support\Fixtures\VizyFixtureFactory::ensureSites(2);
+    $f = new MatrixSupportFixture(propagation: \craft\enums\PropagationMethod::None);
+    $related = new \craft\fields\Entries(['name' => 'Recovery relation', 'handle' => 'recoveryRelation' . StringHelper::randomString(6)]);
+    expect(Craft::$app->getFields()->saveField($related))->toBeTrue();
+    $layout = $f->rowType->getFieldLayout();
+    $tab = $layout->getTabs()[0];
+    $tab->setElements([...$tab->getElements(), new \craft\fieldlayoutelements\CustomField($related)]);
+    $layout->setTabs([$tab]);
+    $f->rowType->setFieldLayout($layout);
+    expect(Craft::$app->getEntries()->saveEntryType($f->rowType))->toBeTrue();
+    Craft::$app->getFields()->refreshFields();
+    $uid = StringHelper::UUID();
+    foreach ($sites as $index => $site) {
+        $owner = \craft\elements\Entry::find()->id($f->owner->id)->siteId($site->id)->status(null)->one();
+        $payload = $f->payload(['Locale ' . $index]);
+        $key = array_key_first($payload['entries']);
+        $payload['entries'][$key]['fields'][$related->handle] = [$f->owner->id];
+        $f->save([$f->block($uid, $payload)], $owner, false);
+    }
+    $recovery = Vizy::$plugin->getContentRecovery();
+    $original = $recovery->snapshot($f->reload(), $f->field);
+    $id = $recovery->capture($f->reload(), $f->field, 'multisite-process-test');
+    expect($original['tables'][Table::RELATIONS])->not->toBeEmpty();
+    $f->save([$f->block($uid, $f->payload(['Replacement']))], propagate: false);
+    Craft::$app->getDb()->createCommand()->update(Table::ELEMENTS_SITES, ['title' => 'Keep this newer title'], ['elementId' => $f->owner->id])->execute();
+    Craft::$app->getProjectConfig()->flush();
+    $process = proc_open([PHP_BINARY, dirname(__DIR__) . '/runtime/content-recovery-worker.php', (string)$id], [0 => ['file', '/dev/null', 'r'], 1 => ['pipe', 'w'], 2 => ['pipe', 'w']], $pipes);
+    $output = stream_get_contents($pipes[1]) . stream_get_contents($pipes[2]);
+    fclose($pipes[1]);
+    fclose($pipes[2]);
+    expect(proc_close($process))->toBe(0, $output);
+    foreach ($sites as $index => $site) {
+        $owner = \craft\elements\Entry::find()->id($f->owner->id)->siteId($site->id)->status(null)->one();
+        $row = $f->rows($uid, $owner)[0];
+        expect($owner->title)->toBe('Keep this newer title');
+        expect($row->getFieldValue($f->text->handle))->toBe('Locale ' . $index);
+        expect($row->getFieldValue($related->handle)->ids())->toBe([$f->owner->id]);
+    }
+});
+
+class InterruptedRecoveryCommand extends \craft\db\Command
+{
+    public static bool $interrupted = false;
+
+    public function execute()
+    {
+        $sql = $this->getRawSql();
+        if (str_starts_with($sql, 'DELETE FROM') && str_contains($sql, 'relations')) {
+            self::$interrupted = true;
+            throw new RuntimeException('Injected restore interruption');
+        }
+        return parent::execute();
+    }
+}

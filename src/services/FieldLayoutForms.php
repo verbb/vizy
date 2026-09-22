@@ -366,6 +366,10 @@ final class FieldLayoutForms extends Component
                     if ($field instanceof Matrix) {
                         $field->viewMode = Matrix::VIEW_MODE_BLOCKS;
                         $field->showCardsInGrid = false;
+                        // Craft otherwise adds default rows on initialization,
+                        // which turns opening a field into an editor mutation.
+                        // The original placement still validates its minimum.
+                        $field->minEntries = 0;
                         MatrixHelper::bindToLayout($field);
                     }
                 }

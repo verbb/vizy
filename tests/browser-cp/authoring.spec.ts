@@ -272,26 +272,11 @@ test('Matrix creation permits the configured field and type for an authorized ed
         const block = new DOMParser().parseFromString(html, 'text/html').querySelector('.matrixblock');
         return { elementId: block?.getAttribute('data-id'), draftId: block?.getAttribute('data-draft-id') };
     }, blockHtml);
-    expect(created.elementId).toBeTruthy();
-    try {
-        expect(blockHtml).toContain(fixture.matrix.labelHandle);
-        expect(persisted().nestedElementCount).toBe(before.nestedElementCount + 1);
-        expect(persisted().document).toEqual(before.document);
-    } finally {
-        // The endpoint creates a durable draft even without an owner form save.
-        // Remove this test's draft so later authoring journeys start unchanged.
-        const cleanup = await page.request.post('/index.php?p=admin&action=elements/delete-draft', {
-            headers: { Accept: 'application/json' },
-            form: {
-                [csrf.name]: csrf.value,
-                elementId: created.elementId!, draftId: created.draftId!,
-                siteId: String(fixture.siteId),
-                ownerId: String(fixture.matrix.anchorId), fieldId: String(fixture.matrix.fieldId),
-            },
-        });
-        expect(cleanup.status(), (await cleanup.text()).slice(0, 500)).toBe(200);
-        expect(persisted().nestedElementCount).toBe(before.nestedElementCount);
-    }
+    expect(created.elementId).toBeNull();
+    expect(created.draftId).toBeNull();
+    expect(blockHtml).toContain(fixture.matrix.labelHandle);
+    expect(persisted().nestedElementCount).toBe(before.nestedElementCount);
+    expect(persisted().document).toEqual(before.document);
 });
 
 

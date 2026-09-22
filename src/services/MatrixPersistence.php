@@ -130,6 +130,9 @@ final class MatrixPersistence extends Component
             throw new RuntimeException('Matrix persistence requires a saved Vizy owner.');
         }
         $priorAnchor = Vizy::$plugin->getAnchors()->getAnchor($owner, $vizyField, $block->uid());
+        $referencedAnchor = $block->matrixAnchorUid()
+            ? Vizy::$plugin->getAnchors()->getAnchor($owner, $vizyField, $block->uid(), $block->matrixAnchorUid())
+            : null;
 
         $layout = $block->blockType()?->getFieldLayout();
         $anchor = Vizy::$plugin->getAnchors()->ensureAnchor(
@@ -141,6 +144,13 @@ final class MatrixPersistence extends Component
         );
         if (!$anchor) {
             throw new RuntimeException('Unable to persist the Vizy Matrix anchor.');
+        }
+
+        if ($priorAnchor && $referencedAnchor && $referencedAnchor->id !== $anchor->id) {
+            // An interrupted historical draft repair may already have a target
+            // anchor. The stored reference still names the authoritative source.
+            $referencedAnchor->setFieldLayout($layout);
+            Vizy::$plugin->getAnchors()->copyMatrixField($field, $referencedAnchor, $anchor);
         }
 
         $node['attrs']['matrixAnchorUid'] = $anchor->uid;
@@ -160,7 +170,7 @@ final class MatrixPersistence extends Component
             return;
         }
 
-        $content = $block->rawFieldValue($placementUid) ?? '';
+        $content = $block->rawFieldValue($placementUid);
         $fieldValue = MatrixHelper::normalizeContent($field, $content, $anchor);
 
         Vizy::$plugin->getAnchors()->saveMatrixField($field, $anchor, $fieldValue, false);

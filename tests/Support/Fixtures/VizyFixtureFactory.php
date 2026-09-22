@@ -359,7 +359,7 @@ class VizyFixtureFactory
     public static function multisiteSection(VizyField $field, int $siteCount = 2, ?array $sites = null): Section
     {
         $sites ??= self::ensureSites($siteCount);
-        $handle = 'vizyMulti' . StringHelper::randomString(5);
+        $handle = 'vizyMulti' . str_replace('-', '', StringHelper::UUID());
 
         $fieldLayout = new FieldLayout();
         $fieldLayout->setTabs([
@@ -377,7 +377,7 @@ class VizyFixtureFactory
 
         $entryType = new EntryType([
             'name' => 'Vizy Multi',
-            'handle' => 'vizyMulti' . StringHelper::randomString(4),
+            'handle' => $handle,
             'hasTitleField' => true,
         ]);
         $entryType->setFieldLayout($fieldLayout);

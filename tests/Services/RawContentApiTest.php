@@ -169,7 +169,7 @@ it('raw API traverses nested legacy content using captured provenance without re
     expect($nested)->toBeString();
     expect(Json::decode($nested)[0]['attrs']['values']['content']['fields']['old-key'])->toBe([]);
     expect(Json::decode($nested)[0]['attrs']['id'])->toBe('legacy-instance');
-    expect(fn() => Vizy::$plugin->getContent()->transformValue($value, $f['root']->uid, $f['map'], fn() => Change::unchanged()))->toThrow(RuntimeException::class, 'provenance');
+    expect(fn() => Vizy::$plugin->getContent()->transformValue($value, $f['root']->uid, $f['map'], fn() => Change::unchanged()))->toThrow(RuntimeException::class, 'captured Vizy 3 upgrade mapping');
 });
 
 it('raw API preserves unrelated empty JSON objects and detects concurrent row changes', function() {

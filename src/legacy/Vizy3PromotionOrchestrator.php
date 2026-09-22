@@ -170,6 +170,9 @@ final class Vizy3PromotionOrchestrator extends Component
             if ($stageIndex === false) {
                 throw new RuntimeException("Unknown Vizy 3 upgrade stage {$record->stage}.");
             }
+            if ($stageIndex === 0) {
+                Vizy::$plugin->getContentRecovery()->captureUpgrade(array_keys($plan['fields']));
+            }
             for ($index = $stageIndex + 1; $index < count(self::STAGES); $index++) {
                 $stage = self::STAGES[$index];
                 $this->_executeStage($stage, $plan, $ownerScope, (string)$record->runUid);

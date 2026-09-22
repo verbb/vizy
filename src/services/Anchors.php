@@ -51,39 +51,37 @@ class Anchors extends Component
             return null;
         }
 
-        $parentOwnerId = (int)$parentOwner->id;
-        $siteId = $parentOwner->siteId;
-
-        $record = MatrixAnchorRecord::findOne([
-            'parentOwnerId' => $parentOwnerId,
-            'vizyFieldId' => $vizyField->id,
-            'blockInstanceId' => $blockInstanceId,
-        ]);
-
-        if (!$record) {
-            // Historical V3 drafts can still point at their canonical anchor.
-            // Read that exact trusted relationship without creating ownership.
-            if ($anchorUid && $parentOwner->getIsDerivative()) {
-                $canonical = $parentOwner->getCanonical();
-                if ($canonical && $canonical->id !== $parentOwner->id) {
-                    return $this->getAnchor($canonical, $vizyField, $blockInstanceId, $anchorUid);
-                }
+        $owners = [$parentOwner];
+        if ($anchorUid) {
+            if ($parentOwner->duplicateOf) {
+                $owners[] = $parentOwner->duplicateOf;
             }
-            return null;
+            if ($parentOwner->getIsDerivative()) {
+                $owners[] = $parentOwner->getCanonical();
+            }
         }
-
-        $anchor = Craft::$app->getElements()->getElementById($record->id, MatrixAnchor::class, $siteId);
-        if (!$anchor instanceof MatrixAnchor) {
-            return null;
+        foreach ($owners as $candidate) {
+            if (!$candidate?->id) {
+                continue;
+            }
+            $record = MatrixAnchorRecord::findOne([
+                'parentOwnerId' => (int)$candidate->id,
+                'vizyFieldId' => $vizyField->id,
+                'blockInstanceId' => $blockInstanceId,
+            ]);
+            if (!$record) {
+                continue;
+            }
+            $anchor = Craft::$app->getElements()->getElementById($record->id, MatrixAnchor::class, $parentOwner->siteId);
+            if (!$anchor instanceof MatrixAnchor || ($anchorUid && $anchor->uid !== $anchorUid)) {
+                continue;
+            }
+            // Only Craft's explicit source relationship can authorize a shared
+            // historical reference; arbitrary UID lookup is never sufficient.
+            $anchor->setParentOwner($candidate);
+            return $anchor;
         }
-
-        // Optional UID must agree with the ownership row — never retarget by UID.
-        if (is_string($anchorUid) && $anchorUid !== '' && $anchor->uid !== $anchorUid) {
-            return null;
-        }
-
-        $anchor->setParentOwner($parentOwner);
-        return $anchor;
+        return null;
     }
 
     public function ensureAnchor(
@@ -102,13 +100,14 @@ class Anchors extends Component
 
         $this->assertResolvableReference($parentOwner, $vizyField, $blockInstanceId, $anchorUid);
 
-        // Find by ownership only — stale/forged client UIDs must not block sync
-        // or create a second row for the same tuple.
+        // Resolve the validated reference through the exact ownership tuple.
         $anchor = $this->getAnchor($parentOwner, $vizyField, $blockInstanceId, null);
 
         if ($anchor) {
             return $this->_applyFieldLayout($anchor, $fieldLayout);
         }
+
+        Vizy::$plugin->getContentRecovery()->capture($parentOwner, $vizyField, 'before-anchor-repair');
 
         $lockName = $this->_mutexLockName($parentOwner, $vizyField, $blockInstanceId);
         $mutex = Craft::$app->getMutex();
@@ -215,7 +214,14 @@ class Anchors extends Component
         bool $isNew,
     ): void {
         if ($this->hasExternalReferences($anchor)) {
-            throw new RuntimeException('This Matrix content is still referenced by another owner or historical draft. Run vizy/anchors/backfill --drafts to give derivatives independent content before editing it. No content has been replaced.');
+            // Historical drafts can reference the canonical anchor. A migration
+            // may submit its unchanged value; leave those rows entirely alone.
+            $stored = $field->serializeValue(MatrixHelper::nestedEntryQuery($field, $anchor, deduplicate: false), $anchor);
+            $submitted = $field->serializeValue($fieldValue, $anchor);
+            if ($stored === $submitted) {
+                return;
+            }
+            throw new RuntimeException('This Matrix content is still referenced by another owner or historical draft. Run vizy/anchors/backfill --drafts --revisions --trashed to give derivatives independent content before editing it. No content has been replaced.');
         }
         if ($fieldLayout = $anchor->getFieldLayout()) {
             $anchor->setFieldLayout($fieldLayout);
@@ -251,7 +257,7 @@ class Anchors extends Component
     public function deleteAnchor(MatrixAnchor $anchor, bool $hardDelete = false): void
     {
         if ($this->hasExternalReferences($anchor)) {
-            throw new RuntimeException('Cannot delete Matrix content while another owner or historical draft still references it. Run vizy/anchors/backfill --drafts first.');
+            throw new RuntimeException('Cannot delete Matrix content while another owner or historical draft still references it. Run vizy/anchors/backfill --drafts --revisions --trashed first.');
         }
         $anchor->hardDelete = $hardDelete;
         // Loaded anchors have no persisted FieldLayout. Discover the fields from
@@ -355,7 +361,7 @@ class Anchors extends Component
             ->all();
         foreach ($anchors as $anchor) {
             if ($this->hasExternalReferences($anchor)) {
-                throw new RuntimeException('Cannot delete this owner while its Matrix content is referenced by another owner or historical draft. Run vizy/anchors/backfill --drafts first.');
+                throw new RuntimeException('Cannot delete this owner while its Matrix content is referenced by another owner or historical draft. Run vizy/anchors/backfill --drafts --revisions --trashed first.');
             }
         }
         $handler = [$this, 'handleOwnerDeleted'];
@@ -490,7 +496,7 @@ class Anchors extends Component
             $block->uid(),
             $block->matrixAnchorUid(),
         );
-        if (!$anchor) {
+        if (!$anchor || $anchor->parentOwnerId !== (int)$parentOwner->id) {
             return true;
         }
         foreach ($layout->getCustomFields() as $field) {

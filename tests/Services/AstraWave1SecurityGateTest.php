@@ -75,9 +75,10 @@ it('resolves Matrix anchors by ownership tuple and rejects foreign UIDs', functi
         ->and($anchors->getAnchor($ownerA, $vizyB, $blockUidA, $anchorA->uid))->toBeNull()
         ->and($anchors->getAnchor($ownerA, $vizyA, $blockUidB, $anchorA->uid))->toBeNull();
 
-    // ensureAnchor still finds the ownership row when the client UID is stale/forged.
-    $ensured = $anchors->ensureAnchor($ownerA, $vizyA, $blockUidA, $layout, $anchorB->uid);
-    expect($ensured?->id)->toBe($anchorA->id);
+    // A stale or forged reference must be reported, never silently retargeted.
+    expect(fn() => $anchors->ensureAnchor($ownerA, $vizyA, $blockUidA, $layout, $anchorB->uid))
+        ->toThrow(RuntimeException::class, 'could not be resolved');
+    expect($anchors->getAnchor($ownerA, $vizyA, $blockUidA)?->id)->toBe($anchorA->id);
 });
 
 it('rejects unauthorized and invalid Blocks inside layout columns like root Blocks', function() {

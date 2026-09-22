@@ -177,3 +177,30 @@ it('saves existing Matrix rows concurrently through ordinary Craft saves', funct
     expect($rows[0]->id)->toBe($row->id);
     expect($rows[0]->getFieldValue($f->text->handle))->toBeIn(['First edit', 'Second edit']);
 });
+
+it('rejects one stale simultaneous Matrix edit and retains the winning complete submission', function() {
+    $f = new MatrixSupportFixture();
+    $uid = StringHelper::UUID();
+    $owner = $f->save([$f->block($uid, $f->payload(['Original']))]);
+    $row = $f->rows($uid)[0];
+    $token = \verbb\vizy\Vizy::$plugin->getContentVersions()->issue($owner, $f->field);
+    Craft::$app->getProjectConfig()->flush();
+    $jobs = [];
+    foreach (['First preserved edit', 'Second preserved edit'] as $label) {
+        $document = $owner->getFieldValue($f->field->handle)->toArray();
+        $document['attrs']['_storageToken'] = $token;
+        $document['content'][0]['attrs']['fieldSlots'][$f->placementUid] = [
+            'entries' => [(string)$row->id => ['type' => $f->rowType->handle, 'fields' => [$f->text->handle => $label]]],
+            'sortOrder' => [(string)$row->id],
+        ];
+        $jobs[] = ['ownerId' => $owner->id, 'siteId' => $owner->siteId, 'fieldId' => $f->field->id,
+            'typeUid' => $f->blockType->uid, 'blockUid' => $uid, 'document' => $document];
+    }
+    $results = runMatrixWorkers($jobs);
+    expect(array_column($results, 'error'))->toHaveCount(1);
+    $winner = isset($results[0]['error']) ? 1 : 0;
+    expect($results[1 - $winner]['error'])->toContain('changed after it was opened');
+    $expected = $jobs[$winner]['document']['content'][0]['attrs']['fieldSlots'][$f->placementUid]['entries'][(string)$row->id]['fields'][$f->text->handle];
+    expect($f->rows($uid)[0]->getFieldValue($f->text->handle))->toBe($expected);
+    expect($f->rows($uid)[0]->id)->toBe($row->id);
+});

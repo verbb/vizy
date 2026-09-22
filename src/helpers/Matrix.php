@@ -131,7 +131,7 @@ class Matrix
         $unique = [];
         foreach ($sortOrder as $identity) {
             if (!is_string($identity) && !is_int($identity)) {
-                continue;
+                throw new RuntimeException('A Matrix row has an invalid ordering identity. No rows have been discarded.');
             }
             $key = preg_replace('/^uid:/', '', (string)$identity);
             if (!isset($seen[$key])) {
@@ -266,8 +266,18 @@ class Matrix
                     $positions[$uid] = count($result);
                 }
                 $result[] = $entry;
-            } elseif ($entry->id > $result[$positions[$uid]]->id) {
-                $result[$positions[$uid]] = $entry;
+            } else {
+                $previous = $result[$positions[$uid]];
+                $content = static fn(Entry $row): array => [
+                    $row->typeId, $row->title, $row->slug, $row->enabled, $row->enabledForSite,
+                    $row->getSerializedFieldValues(),
+                ];
+                if ($content($previous) != $content($entry)) {
+                    throw new RuntimeException("Matrix rows {$previous->id} and {$entry->id} share UID {$uid} but contain different content. Resolve the conflicting rows before saving; neither has been discarded.");
+                }
+                if ($entry->id > $previous->id) {
+                    $result[$positions[$uid]] = $entry;
+                }
             }
         }
         return $result;

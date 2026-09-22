@@ -128,7 +128,7 @@ class FieldController extends Controller
 
         // Matrix row construction is a read-only form operation. A signed
         // namespace binds even a new block to its authorized owner and layout.
-        if (preg_match('/vizyHost\[([A-Za-z0-9_-]+)\]/', (string)$namespace, $matches)) {
+        if (preg_match('/vizyHost\[([A-Za-z0-9_-]+)\]/', (string)$namespace, $matches) && strlen($matches[1]) > 100) {
             try {
                 $resolver = new FieldLayoutController('field-layout', $this->module);
                 $resolved = $resolver->resolveEditorContext($matches[1]);

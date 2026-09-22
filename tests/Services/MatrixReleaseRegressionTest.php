@@ -69,7 +69,7 @@ it('projects and heals duplicate stored Matrix UIDs without changing another anc
     $f = new MatrixSupportFixture();
     $uid = StringHelper::UUID();
     $otherUid = StringHelper::UUID();
-    $owner = $f->save([$f->block($uid, $f->payload(['Old', 'Newest'])), $f->block($otherUid, $f->payload(['Neighbour']))]);
+    $owner = $f->save([$f->block($uid, $f->payload(['Identical', 'Identical'])), $f->block($otherUid, $f->payload(['Neighbour']))]);
     [$old, $new] = $f->rows($uid);
     $neighbour = $f->rows($otherUid)[0];
     // Reproduce the historical database state, which predates the V3 fix.
@@ -77,7 +77,7 @@ it('projects and heals duplicate stored Matrix UIDs without changing another anc
     $rows = $f->rows($uid);
     expect($rows)->toHaveCount(1)
         ->and($rows[0]->id)->toBe($new->id)
-        ->and($rows[0]->getFieldValue($f->text->handle))->toBe('Newest');
+        ->and($rows[0]->getFieldValue($f->text->handle))->toBe('Identical');
     $f->save([$f->block($uid), $f->block($otherUid)], $owner);
     $anchor = Vizy::$plugin->getAnchors()->getAnchor($owner, $f->field, $uid);
     expect((int)Entry::find()->ownerId($anchor->id)->fieldId($f->matrix->id)->status(null)->count())->toBe(1)

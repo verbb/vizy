@@ -61,6 +61,26 @@ final class ContentRecovery extends Component
             ->where(['ownerId' => $owner->id, 'fieldUid' => $field->uid, 'snapshotHash' => $hash])->scalar();
     }
 
+    public function captureUpgrade(array $fieldUids): void
+    {
+        $seen = [];
+        foreach (Craft::$app->getElements()->getAllElementTypes() as $type) {
+            foreach ($type::find()->site('*')->unique(false)->status(null)->drafts(null)
+                ->provisionalDrafts(null)->revisions(null)->trashed(null)->each(100) as $owner) {
+                foreach ($owner->getFieldLayout()?->getCustomFields() ?? [] as $field) {
+                    if (!$field instanceof VizyField || !in_array($field->uid, $fieldUids, true)) {
+                        continue;
+                    }
+                    $key = $owner->id . ':' . FieldPlacements::uid($owner, $field);
+                    if (!isset($seen[$key])) {
+                        $this->capture($owner, $field, 'before-schema-upgrade');
+                        $seen[$key] = true;
+                    }
+                }
+            }
+        }
+    }
+
     /** Reads storage directly, including disabled rows, trash and every locale. */
     public function snapshot(ElementInterface $owner, VizyField $field, bool $lock = false): array
     {
@@ -103,10 +123,15 @@ final class ContentRecovery extends Component
             $derivativeIds = array_values(array_filter(array_column($tables[Table::ELEMENTS], $column)));
             $tables[$table] = $derivativeIds === [] ? [] : $this->_rows($table, ['id' => $derivativeIds], $lock);
         }
+        $schema = [];
+        foreach (array_unique(array_column($tables[Table::ENTRIES], 'typeId')) as $typeId) {
+            $type = Craft::$app->getEntries()->getEntryTypeById((int)$typeId);
+            $schema[$typeId] = $type ? ['uid' => $type->uid, 'layout' => $type->getFieldLayout()?->getConfig()] : null;
+        }
         return [
             'version' => 1, 'ownerId' => (int)$owner->id, 'ownerUid' => $owner->uid,
             'ownerClass' => $owner::class, 'fieldUid' => $field->uid, 'placementUid' => $placement,
-            'sites' => $sites, 'references' => array_keys($references), 'tables' => $tables,
+            'sites' => $sites, 'references' => array_keys($references), 'tables' => $tables, 'schema' => $schema,
         ];
     }
 
@@ -175,6 +200,8 @@ final class ContentRecovery extends Component
         }
         $transaction = Craft::$app->getDb()->beginTransaction();
         try {
+            $this->_rows(Table::ELEMENTS, ['id' => $owner->id], true);
+            $this->snapshot($owner, $field, true);
             // Keep the state being replaced, so restoration itself is reversible.
             $this->capture($owner, $field, 'before-restore');
             $this->_restoring = true;
@@ -225,14 +252,14 @@ final class ContentRecovery extends Component
                 }
             }
             $transaction->commit();
-            Vizy::$plugin->getContentBaselines()->clear();
-            Craft::$app->getElements()->invalidateCachesForElement($owner);
         } catch (Throwable $exception) {
             $transaction->rollBack();
             throw $exception;
         } finally {
             $this->_restoring = false;
         }
+        Vizy::$plugin->getContentBaselines()->clear();
+        Craft::$app->getElements()->invalidateCachesForElement($owner);
     }
 
 
@@ -267,6 +294,18 @@ final class ContentRecovery extends Component
 
     private function _assertRestorable(array $snapshot, array $ids): void
     {
+        foreach ($snapshot['schema'] ?? [] as $typeId => $expected) {
+            $type = Craft::$app->getEntries()->getEntryTypeById((int)$typeId);
+            $actual = $type ? ['uid' => $type->uid, 'layout' => $type->getFieldLayout()?->getConfig()] : null;
+            if (!$actual || $actual !== $expected) {
+                throw new RuntimeException('A nested entry type or field layout has changed. Restore its schema before restoring this content.');
+            }
+        }
+        foreach ($snapshot['references'] as $uid) {
+            if (!in_array($uid, array_column($snapshot['tables'][Table::ELEMENTS], 'uid'), true)) {
+                throw new RuntimeException("Recovery record does not contain the referenced Matrix content {$uid}. Choose an earlier complete record.");
+            }
+        }
         foreach ($snapshot['tables'][Table::ELEMENTS] as $row) {
             $current = (new Query())->from(Table::ELEMENTS)->where(['id' => $row['id']])->one();
             if ($current && $current['uid'] !== $row['uid']) {
@@ -316,10 +355,14 @@ final class ContentRecovery extends Component
 
     private function _references(mixed $value, array &$references, array &$blockUids): void
     {
-        if (is_string($value) && str_starts_with(ltrim($value), '[')) {
-            $value = Json::decode($value);
-        } elseif (is_string($value) && str_starts_with(ltrim($value), '{')) {
-            $value = Json::decode($value);
+        if (is_string($value) && (str_starts_with(ltrim($value), '[') || str_starts_with(ltrim($value), '{'))) {
+            try {
+                $value = Json::decode($value);
+            } catch (\yii\base\InvalidArgumentException) {
+                // Keep the exact malformed source in sites. The migration
+                // parser reports the error; capturing it must still succeed.
+                return;
+            }
         }
         if (!is_array($value)) {
             return;
