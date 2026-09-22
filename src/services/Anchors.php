@@ -18,6 +18,7 @@ use craft\base\ElementInterface;
 use craft\db\Query;
 use craft\db\Table;
 use craft\fields\Matrix;
+use craft\helpers\Json;
 use craft\models\FieldLayout;
 
 use yii\base\Event;
@@ -98,7 +99,12 @@ class Anchors extends Component
             return null;
         }
 
-        $this->assertResolvableReference($parentOwner, $vizyField, $blockInstanceId, $anchorUid);
+        $referencedAnchor = $this->assertResolvableReference(
+            $parentOwner,
+            $vizyField,
+            $blockInstanceId,
+            $anchorUid,
+        );
 
         // Resolve the validated reference through the exact ownership tuple.
         $anchor = $this->getAnchor($parentOwner, $vizyField, $blockInstanceId, null);
@@ -169,20 +175,25 @@ class Anchors extends Component
                 $creatingAnchor = true;
                 $anchor = $this->_createAnchor($parentOwner, $vizyField, $blockInstanceId, $fieldLayout, $anchorUid);
                 $creatingAnchor = false;
-                // Drafts and revisions own independent Matrix snapshots. Resolve
-                // the source through Craft's owner relationship, never by a UID alone.
-                $sourceOwner = $parentOwner->duplicateOf;
-                if (!$sourceOwner && $parentOwner->getIsDerivative()) {
-                    $sourceOwner = $parentOwner->getCanonical();
+                // New duplicates and derivatives resolve through Craft's owner
+                // relationship. Historical duplicates have no remaining
+                // duplicateOf link, so the exact persisted foreign reference is
+                // the only authority for recovering their surviving content.
+                $source = $referencedAnchor;
+                if (!$source) {
+                    $sourceOwner = $parentOwner->duplicateOf;
+                    if (!$sourceOwner && $parentOwner->getIsDerivative()) {
+                        $sourceOwner = $parentOwner->getCanonical();
+                    }
+                    if ($sourceOwner && $sourceOwner->id !== $parentOwner->id) {
+                        $source = $this->getAnchor($sourceOwner, $vizyField, $blockInstanceId);
+                    }
                 }
-                if ($anchor && $sourceOwner && $sourceOwner->id !== $parentOwner->id && $fieldLayout) {
-                    $source = $this->getAnchor($sourceOwner, $vizyField, $blockInstanceId);
-                    if ($source) {
-                        $source->setFieldLayout($fieldLayout);
-                        foreach ($fieldLayout->getCustomFields() as $field) {
-                            if ($field instanceof Matrix) {
-                                $this->copyMatrixField($field, $source, $anchor);
-                            }
+                if ($anchor && $source && $source->id !== $anchor->id && $fieldLayout) {
+                    $source->setFieldLayout($fieldLayout);
+                    foreach ($fieldLayout->getCustomFields() as $field) {
+                        if ($field instanceof Matrix) {
+                            $this->copyMatrixField($field, $source, $anchor);
                         }
                     }
                 }
@@ -427,30 +438,93 @@ class Anchors extends Component
             ->exists();
     }
 
-    public function assertResolvableReference(ElementInterface $owner, VizyField $field, string $blockUid, ?string $uid): void
-    {
+    /**
+     * Resolve an anchor reference only when ownership or the owner's exact
+     * persisted document authorizes it. The stored-reference path repairs Vizy
+     * 3 duplicates after Craft has discarded its transient duplicateOf link.
+     */
+    public function getStoredReferencedAnchor(
+        ElementInterface $owner,
+        VizyField $field,
+        string $blockUid,
+        ?string $uid,
+    ): ?MatrixAnchor {
+        if (!$uid || !$owner->id || !$owner->siteId) {
+            return null;
+        }
+
+        $owned = $this->getAnchor($owner, $field, $blockUid, $uid);
+        if ($owned) {
+            return $owned;
+        }
+
+        $record = (new Query())
+            ->select(['a.id', 'a.parentOwnerId', 'e.dateDeleted'])
+            ->from(['a' => MatrixAnchorRecord::tableName()])
+            ->innerJoin(['e' => Table::ELEMENTS], '[[e.id]] = [[a.id]]')
+            ->where([
+                'a.vizyFieldId' => $field->id,
+                'a.blockInstanceId' => $blockUid,
+                'e.uid' => $uid,
+            ])
+            ->one();
+        if (!$record) {
+            return null;
+        }
+
+        // A localized owner may gain a new site after its anchor was created.
+        // Its existing ownership tuple is sufficient to authorize Craft to
+        // propagate that same anchor onto the newly enabled site.
+        if ((int)$record['parentOwnerId'] === (int)$owner->id) {
+            $anchor = MatrixAnchor::find()
+                ->id($record['id'])
+                ->site('*')
+                ->status(null)
+                ->trashed(null)
+                ->one();
+            if ($anchor instanceof MatrixAnchor) {
+                $anchor->setParentOwner($owner);
+            }
+
+            return $anchor instanceof MatrixAnchor ? $anchor : null;
+        }
+
+        if ($record['dateDeleted'] !== null) {
+            return null;
+        }
+
+        $anchor = MatrixAnchor::find()
+            ->id($record['id'])
+            ->siteId($owner->siteId)
+            ->status(null)
+            ->one();
+        if (!$anchor instanceof MatrixAnchor) {
+            return null;
+        }
+
+        $stored = (new Query())
+            ->select('content')
+            ->from(Table::ELEMENTS_SITES)
+            ->where(['elementId' => $owner->id, 'siteId' => $owner->siteId])
+            ->scalar();
+
+        return $this->_containsStoredAnchorReference($stored, $blockUid, $uid)
+            ? $anchor
+            : null;
+    }
+
+    public function assertResolvableReference(
+        ElementInterface $owner,
+        VizyField $field,
+        string $blockUid,
+        ?string $uid,
+    ): ?MatrixAnchor {
         if (!$uid) {
-            return;
+            return null;
         }
-        $owners = [$owner];
-        if ($owner->duplicateOf) {
-            $owners[] = $owner->duplicateOf;
-        }
-        if ($owner->getIsDerivative()) {
-            $owners[] = $owner->getCanonical();
-        }
-        foreach ($owners as $candidate) {
-            if (!$candidate?->id) {
-                continue;
-            }
-            // A missing locale or trashed anchor can be repaired on save, but
-            // only when its exact original ownership and identity still exist.
-            if ((new Query())->from(['a' => MatrixAnchorRecord::tableName()])
-                ->innerJoin(['e' => Table::ELEMENTS], '[[e.id]] = [[a.id]]')
-                ->where(['a.parentOwnerId' => $candidate->id, 'a.vizyFieldId' => $field->id, 'a.blockInstanceId' => $blockUid, 'e.uid' => $uid])
-                ->exists()) {
-                return;
-            }
+        $anchor = $this->getStoredReferencedAnchor($owner, $field, $blockUid, $uid);
+        if ($anchor) {
+            return $anchor;
         }
         throw new RuntimeException("Matrix content for block {$blockUid} could not be resolved (anchor {$uid}). The stored reference and submitted content have been retained. Restore the missing content before saving.");
     }
@@ -627,6 +701,52 @@ class Anchors extends Component
             $vizyField->id,
             $blockInstanceId,
         );
+    }
+
+    private function _containsStoredAnchorReference(
+        mixed $value,
+        string $blockUid,
+        string $anchorUid,
+        int $depth = 0,
+    ): bool {
+        if ($depth > 64) {
+            return false;
+        }
+        if (is_string($value)) {
+            try {
+                $decoded = Json::decode($value);
+            } catch (\Throwable) {
+                return false;
+            }
+            return is_array($decoded)
+                && $this->_containsStoredAnchorReference($decoded, $blockUid, $anchorUid, $depth + 1);
+        }
+        if (!is_array($value)) {
+            return false;
+        }
+
+        $attrs = is_array($value['attrs'] ?? null) ? $value['attrs'] : [];
+        $values = is_array($attrs['values'] ?? null) ? $attrs['values'] : [];
+        $content = is_array($values['content'] ?? null) ? $values['content'] : [];
+        $storedBlockUid = $attrs['blockUid'] ?? $attrs['id'] ?? null;
+        $storedAnchorUid = $attrs['matrixAnchorUid']
+            ?? $values['matrixAnchorUid']
+            ?? $content['matrixAnchorUid']
+            ?? null;
+        if (
+            ($value['type'] ?? null) === 'vizyBlock'
+            && $storedBlockUid === $blockUid
+            && $storedAnchorUid === $anchorUid
+        ) {
+            return true;
+        }
+
+        foreach ($value as $child) {
+            if ($this->_containsStoredAnchorReference($child, $blockUid, $anchorUid, $depth + 1)) {
+                return true;
+            }
+        }
+        return false;
     }
 
     private function _createAnchor(

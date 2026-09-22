@@ -35,7 +35,11 @@ final class MatrixSupportFixture
     public ?VizyField $hostedField = null;
     public ?BlockType $hostType = null;
 
-    public function __construct(bool $nested = false, PropagationMethod $propagation = PropagationMethod::All)
+    public function __construct(
+        bool $nested = false,
+        PropagationMethod $propagation = PropagationMethod::All,
+        string $fieldTranslationMethod = Field::TRANSLATION_METHOD_SITE,
+    )
     {
         $suffix = StringHelper::randomString(8);
         $this->text = new PlainText([
@@ -72,7 +76,7 @@ final class MatrixSupportFixture
         $this->field = new VizyField([
             'name' => 'Matrix article', 'handle' => 'matrixArticle' . $suffix,
             'editorConfig' => 'standard', 'rootContentType' => VizyField::ROOT_CONTENT_BLOCKS,
-            'translationMethod' => Field::TRANSLATION_METHOD_SITE,
+            'translationMethod' => $fieldTranslationMethod,
             'blockTypePickerGroups' => [['name' => 'Content', 'blockTypeUids' => [$this->blockType->uid]]],
         ]);
         expect(Craft::$app->getFields()->saveField($this->field))->toBeTrue();

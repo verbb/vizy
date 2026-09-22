@@ -54,7 +54,7 @@
 
 ### Fixed
 - Fixed Hyper 3 fields preventing Matrix content inside Vizy from loading or saving. ([#377](https://github.com/verbb/vizy/issues/377))
-- Fixed duplicated entries losing Matrix content inside Vizy blocks. ([#376](https://github.com/verbb/vizy/issues/376))
+- Fixed new and historical duplicated entries sharing or losing Matrix content inside Vizy blocks, and repaired surviving shared references into independent anchors. ([#376](https://github.com/verbb/vizy/issues/376))
 - Fixed Matrix validation checking saved rows instead of submitted changes, and preserved pending Matrix edits when an entry fails validation.
 - Fixed duplicate Matrix rows and changing row identities when saving legacy content, including temporary row identifiers on PostgreSQL; saving or backfilling also repairs duplicate stored row UIDs.
 - Fixed Matrix anchors failing when a site row was missing or a new site was enabled, and limited anchor propagation to the owner’s supported sites. ([#373](https://github.com/verbb/vizy/issues/373))

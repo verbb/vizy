@@ -131,7 +131,12 @@ final class MatrixPersistence extends Component
         }
         $priorAnchor = Vizy::$plugin->getAnchors()->getAnchor($owner, $vizyField, $block->uid());
         $referencedAnchor = $block->matrixAnchorUid()
-            ? Vizy::$plugin->getAnchors()->getAnchor($owner, $vizyField, $block->uid(), $block->matrixAnchorUid())
+            ? Vizy::$plugin->getAnchors()->getStoredReferencedAnchor(
+                $owner,
+                $vizyField,
+                $block->uid(),
+                $block->matrixAnchorUid(),
+            )
             : null;
 
         $layout = $block->blockType()?->getFieldLayout();

@@ -2,13 +2,17 @@
 
 declare(strict_types=1);
 
+use craft\db\Query;
+use craft\db\Table;
 use craft\elements\Entry;
 use craft\enums\PropagationMethod;
+use craft\helpers\Json;
 use craft\helpers\StringHelper;
 use Tests\Support\Fixtures\MatrixSupportFixture;
 use Tests\Support\Fixtures\VizyFixtureFactory;
 use verbb\vizy\document\DocumentWalk;
 use verbb\vizy\elements\MatrixAnchor;
+use verbb\vizy\helpers\FieldPlacements;
 use verbb\vizy\Vizy;
 
 it('keeps repeated Matrix blocks independent through reorder delete clear and omitted submissions', function() {
@@ -61,6 +65,113 @@ it('copies Matrix descendants when a Vizy owner is duplicated without reparentin
     expect(Craft::$app->getElements()->saveElement($copiedChild))->toBeTrue()
         ->and(Entry::find()->id($sourceChild->id)->status(null)->one()?->getFieldValue($f->text->handle))->toBe('Inner')
         ->and($f->rows($uid)[0]->id)->toBe($source->id);
+});
+
+it('keeps duplicated Matrix anchors independent across localized owners', function() {
+    [, $siteB] = VizyFixtureFactory::ensureSites(2);
+    $f = new MatrixSupportFixture(fieldTranslationMethod: \craft\base\Field::TRANSLATION_METHOD_NONE);
+
+    $uid = StringHelper::UUID();
+    $sourceA = $f->save([$f->block($uid, $f->payload(['Localized source']))], $f->reload());
+    $sourceB = Entry::find()->id($sourceA->id)->siteId($siteB->id)->status(null)->one();
+    $duplicateA = Craft::$app->getElements()->duplicateElement($sourceA, ['title' => 'Localized copy']);
+    $duplicateA = $f->reload($duplicateA);
+    $duplicateB = Entry::find()->id($duplicateA->id)->siteId($siteB->id)->status(null)->one();
+    $duplicateUid = $duplicateA->getFieldValue($f->field->handle)->blocks()[0]->uid();
+
+    $sourceAnchorA = Vizy::$plugin->getAnchors()->getAnchor($sourceA, $f->field, $uid);
+    $sourceAnchorB = Vizy::$plugin->getAnchors()->getAnchor($sourceB, $f->field, $uid);
+    $duplicateAnchorA = Vizy::$plugin->getAnchors()->getAnchor($duplicateA, $f->field, $duplicateUid);
+    $duplicateAnchorB = Vizy::$plugin->getAnchors()->getAnchor($duplicateB, $f->field, $duplicateUid);
+    expect($duplicateUid)->not->toBe($uid)
+        ->and($sourceAnchorA->id)->toBe($sourceAnchorB->id)
+        ->and($duplicateAnchorA->id)->toBe($duplicateAnchorB->id)
+        ->and($duplicateAnchorA->id)->not->toBe($sourceAnchorA->id);
+
+    $sourceRowB = $f->rows($uid, $sourceB)[0];
+    $duplicateRowB = $f->rows($duplicateUid, $duplicateB)[0];
+    $duplicateRowB->setFieldValue($f->text->handle, 'Localized copy only');
+    expect(Craft::$app->getElements()->saveElement($duplicateRowB))->toBeTrue()
+        ->and($f->rows($uid, $sourceB)[0]->id)->toBe($sourceRowB->id)
+        ->and($f->rows($uid, $sourceB)[0]->getFieldValue($f->text->handle))->toBe('Localized source');
+});
+
+it('repairs a historical duplicate that persisted another owner\'s Matrix anchor reference', function() {
+    $f = new MatrixSupportFixture();
+    $uid = StringHelper::UUID();
+    $sourceOwner = $f->save([$f->block($uid, $f->payload(['Surviving shared row']))]);
+    $sourceDocument = $sourceOwner->getFieldValue($f->field->handle)->toArray();
+    $sourceAnchor = Vizy::$plugin->getAnchors()->getAnchor($sourceOwner, $f->field, $uid);
+    $sourceRow = $f->rows($uid, $sourceOwner)[0];
+
+    $historical = new Entry([
+        'sectionId' => $sourceOwner->sectionId,
+        'typeId' => $sourceOwner->typeId,
+        'siteId' => $sourceOwner->siteId,
+        'title' => 'Historical duplicate',
+    ]);
+    expect(Craft::$app->getElements()->saveElement($historical))->toBeTrue();
+
+    // Recreate the Vizy 3 defect after Craft has cleared its transient
+    // duplicateOf relationship: both persisted owners name the source anchor.
+    $placementUid = FieldPlacements::uid($historical, $f->field);
+    $stored = (new Query())
+        ->select('content')
+        ->from(Table::ELEMENTS_SITES)
+        ->where(['elementId' => $historical->id, 'siteId' => $historical->siteId])
+        ->scalar();
+    $stored = is_string($stored) ? Json::decode($stored) : $stored;
+    $stored[$placementUid] = Json::encode([[
+        'type' => 'vizyBlock',
+        'attrs' => [
+            'id' => $uid,
+            'enabled' => true,
+            'values' => [
+                'type' => 'historical-matrix-block',
+                'matrixAnchorUid' => $sourceAnchor->uid,
+                'content' => ['fields' => []],
+            ],
+        ],
+    ]]);
+    Craft::$app->getDb()->createCommand()
+        ->update(Table::ELEMENTS_SITES, ['content' => $stored], [
+            'elementId' => $historical->id,
+            'siteId' => $historical->siteId,
+        ])
+        ->execute();
+
+    $historical = $f->reload($historical);
+    expect($historical->duplicateOf)->toBeNull();
+    // The migration layer supplies the canonical candidate while the database
+    // still contains the Vizy 3 source used to authorize recovery.
+    $historical->setFieldValue($f->field->handle, $sourceDocument);
+
+    $reject = static function() {
+        throw new RuntimeException('Reject historical anchor repair');
+    };
+    $historical->on(Entry::EVENT_AFTER_PROPAGATE, $reject);
+    expect(fn() => Craft::$app->getElements()->saveElement($historical))
+        ->toThrow(RuntimeException::class, 'Reject historical anchor repair');
+    $historical->off(Entry::EVENT_AFTER_PROPAGATE, $reject);
+    expect(Vizy::$plugin->getAnchors()->getAnchor($historical, $f->field, $uid))->toBeNull()
+        ->and($f->rows($uid, $sourceOwner)[0]->id)->toBe($sourceRow->id);
+
+    $historical = $f->reload($historical);
+    $historical->setFieldValue($f->field->handle, $sourceDocument);
+    expect(Craft::$app->getElements()->saveElement($historical))->toBeTrue();
+
+    $historical = $f->reload($historical);
+    $repairedAnchor = Vizy::$plugin->getAnchors()->getAnchor($historical, $f->field, $uid);
+    $repairedRow = $f->rows($uid, $historical)[0];
+    expect($repairedAnchor)->not->toBeNull()
+        ->and($repairedAnchor->uid)->not->toBe($sourceAnchor->uid)
+        ->and($repairedAnchor->parentOwnerId)->toBe($historical->id)
+        ->and($repairedRow->id)->not->toBe($sourceRow->id)
+        ->and($repairedRow->getFieldValue($f->text->handle))->toBe('Surviving shared row');
+
+    $repairedRow->setFieldValue($f->text->handle, 'Historical owner only');
+    expect(Craft::$app->getElements()->saveElement($repairedRow))->toBeTrue()
+        ->and($f->rows($uid, $sourceOwner)[0]->getFieldValue($f->text->handle))->toBe('Surviving shared row');
 });
 
 it('keeps site-specific Matrix rows separate on the same logical Vizy block', function() {

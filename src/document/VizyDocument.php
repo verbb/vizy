@@ -236,6 +236,20 @@ final class VizyDocument
                 $block->uid(),
                 $block->matrixAnchorUid(),
             );
+            if (!$anchor && $block->matrixAnchorUid()) {
+                // Vizy 3 could persist a duplicate owner with the source
+                // owner's anchor UID. Hydrate that exact stored reference
+                // read-only so validation can repair it onto a new anchor.
+                $storedAnchor = Vizy::$plugin->getAnchors()->getStoredReferencedAnchor(
+                    $this->owner,
+                    $this->field,
+                    $block->uid(),
+                    $block->matrixAnchorUid(),
+                );
+                if ($storedAnchor?->dateDeleted === null) {
+                    $anchor = $storedAnchor;
+                }
+            }
             if ($anchor) {
                 $anchor->setFieldLayout($layout);
                 $element->id = $anchor->id;
