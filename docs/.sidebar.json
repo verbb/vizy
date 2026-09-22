@@ -42,12 +42,12 @@
         "collapsable": false,
         "children": [
             "developers/events",
-            "developers/extending-vizy",
+            "developers/vizy-document",
             "developers/node",
             "developers/node-query",
             "developers/mark",
             "developers/graphql",
-            "developers/vizy-document",
+            "developers/extending-vizy",
             "developers/managing-embedded-content"
         ]
     },
