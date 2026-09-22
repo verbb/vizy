@@ -11,6 +11,7 @@
 - Upgrade verification now compares nested content before committing each owner conversion.
 
 ### Fixed
+- Fixed custom-field conditions on Matrix entry queries inside Vizy Blocks. ([#309](https://github.com/verbb/vizy/issues/309))
 - Fixed empty link options, volume selections, and transform selections reverting to defaults after saving field settings.
 - Fixed unresolved anchors and incomplete Matrix submissions being treated as replacement or empty content.
 - Fixed historical shared anchors being modified or cleaned up while another owner or draft still references them.

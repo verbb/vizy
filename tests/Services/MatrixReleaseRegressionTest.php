@@ -102,6 +102,26 @@ it('keeps newly created unpublished Matrix rows out of saved document reads', fu
     expect(array_map(fn($row) => $row->getFieldValue($f->text->handle), $f->rows($uid)))->toBe(['Published row', 'Now saved']);
 });
 
+it('filters Matrix rows inside Vizy blocks by their custom field values', function() {
+    $f = new MatrixSupportFixture();
+    $firstUid = StringHelper::UUID();
+    $secondUid = StringHelper::UUID();
+    $owner = $f->save([
+        $f->block($firstUid, $f->payload(['Target row', 'Other row'])),
+        $f->block($secondUid, $f->payload(['Target row'])),
+    ]);
+
+    $document = $owner->getFieldValue($f->field->handle);
+    $block = $document->blockElement($document->findBlock($firstUid));
+    $query = $block->getFieldValue($f->matrix->handle);
+    $query->{$f->text->handle}('Target row');
+    $rows = $query->all();
+
+    expect($rows)->toHaveCount(1)
+        ->and($rows[0]->getFieldValue($f->text->handle))->toBe('Target row')
+        ->and($rows[0]->getOwner()?->id)->toBe($block->getMatrixAnchor()?->id);
+});
+
 it('keeps Matrix anchors within owner sites and supports newly enabled custom sites', function() {
     [$siteA, $siteB] = VizyFixtureFactory::ensureSites(2);
     $f = new MatrixSupportFixture();
