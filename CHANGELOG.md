@@ -4,9 +4,9 @@
 
 ### Added
 - Added a new TipTap 3 editor with configurable formatting, tables, links, images, embeds, undo and redo, accessible toolbar controls, Bubble Menus, and structured Blocks in one editing surface.
-- Added named Editor Configs, managed in the control panel or as JSON files in `config/vizy/`, with visual builders for capabilities, toolbars, dropdowns, Bubble Menus, and insertion controls.
+- Added named Editor Configs, managed in the control panel or as JSON files in `config/vizy/`, with visual builders for capabilities, toolbars, dropdowns, Bubble Menus, and insertion controls. ([#183](https://github.com/verbb/vizy/issues/183))
 - Added `EditorManifests::EVENT_MODIFY_EDITOR_CONFIG` for field-scoped runtime changes that participate in config normalization, manifest caching, and server-side validation.
-- Added shared Project Config-backed Block Types with reusable Craft field layouts, icons, preview images, summaries, grouping, per-field availability, and list or grid insertion. ([#60](https://github.com/verbb/vizy/issues/60), [#222](https://github.com/verbb/vizy/issues/222), [#271](https://github.com/verbb/vizy/issues/271))
+- Added shared Project Config-backed Block Types with reusable Craft field layouts, icons, colours, preview images, summaries, grouping, per-field availability, and list or grid insertion. ([#60](https://github.com/verbb/vizy/issues/60), [#222](https://github.com/verbb/vizy/issues/222), [#261](https://github.com/verbb/vizy/issues/261), [#271](https://github.com/verbb/vizy/issues/271))
 - Added toolbar, gutter, and slash insertion for Blocks. ([#296](https://github.com/verbb/vizy/issues/296), [#330](https://github.com/verbb/vizy/issues/330), [#360](https://github.com/verbb/vizy/issues/360))
 - Added responsive Layout and Column nodes with configurable presets, wrapping, resizing, reordering, and GraphQL support. ([#72](https://github.com/verbb/vizy/issues/72))
 - Added Hosted Vizy Editors, allowing Vizy fields to be nested on Block Type field layouts with their own Editor Config and a maximum nesting depth of five. ([#45](https://github.com/verbb/vizy/issues/45), [#125](https://github.com/verbb/vizy/issues/125))
