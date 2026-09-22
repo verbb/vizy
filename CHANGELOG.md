@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 4.0.0-beta.1 - 2026-09-22
 
 ### Added
 - Added a new TipTap 3 editor with configurable formatting, tables, links, images, embeds, undo and redo, accessible toolbar controls, Bubble Menus, and structured Blocks in one editing surface.
