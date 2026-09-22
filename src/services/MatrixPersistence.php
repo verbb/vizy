@@ -11,12 +11,11 @@ use verbb\vizy\helpers\Matrix as MatrixHelper;
 
 use craft\base\Component;
 use craft\fields\Matrix;
-use craft\helpers\Json;
 
 use RuntimeException;
 
 /**
- * Matrix-in-Block grandfather persistence — explicit write boundary.
+ * Matrix-in-Block persistence — explicit write boundary.
  *
  * Canonical serialize/fingerprint stay pure. Owner-save serialization calls
  * {@see syncCanonicalTree()} so Matrix Entries land on MatrixAnchor before the
@@ -157,21 +156,12 @@ final class MatrixPersistence extends Component
                     Vizy::$plugin->getAnchors()->copyMatrixField($field, $source, $anchor);
                 }
             }
+            Vizy::$plugin->getAnchors()->repairDuplicateMatrixEntries($field, $anchor);
             return;
         }
 
         $content = $block->rawFieldValue($placementUid) ?? '';
-        if (is_string($content) && Json::isJsonObject($content)) {
-            $content = Json::decode($content);
-        }
-
-        if (MatrixHelper::isCraft5MatrixContent($content)) {
-            $content = MatrixHelper::ensureSortOrder($content);
-            $fieldValue = $field->normalizeValueFromRequest($content, $anchor);
-        } else {
-            $content = MatrixHelper::sanitizeMatrixContent($field, $content);
-            $fieldValue = $field->normalizeValue($content, $anchor);
-        }
+        $fieldValue = MatrixHelper::normalizeContent($field, $content, $anchor);
 
         Vizy::$plugin->getAnchors()->saveMatrixField($field, $anchor, $fieldValue, false);
 

@@ -31,6 +31,6 @@ export default defineScreenshotScenario({
         width: 280,
         height: 234,
     },
-    caption: 'Vizy’s insertion palette offering rich content and structured Block Types inline.',
-    intent: 'Show the real Vizy 4 slash insertion palette, including the field’s grouped global Block Types.',
+    caption: 'Vizy’s slash insertion menu showing grouped Block Types inline.',
+    intent: 'Show the real Vizy 4 slash insertion menu, including the field’s grouped global Block Types.',
 });

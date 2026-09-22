@@ -182,7 +182,6 @@ it('leaf-promotes a bare Vizy 3 owner list through analyze → apply → verify'
     $promoted = $orchestrator->apply(
         $plan,
         ['complete' => true, 'jobs' => []],
-        \verbb\vizy\legacy\Vizy3PromotionOrchestrator::CONFIRMATION,
     );
     expect($promoted['status'])->toBe('complete', Json::encode($promoted));
 
@@ -364,7 +363,6 @@ it('resumes a persisting checkpoint when live content already matches the candid
     $promoted = $orchestrator->apply(
         $plan,
         ['complete' => true, 'jobs' => []],
-        \verbb\vizy\legacy\Vizy3PromotionOrchestrator::CONFIRMATION,
     );
     expect($promoted['status'])->toBe('complete', Json::encode($promoted));
 

@@ -160,6 +160,10 @@ export function readGenericFieldValue(root: HTMLElement): JsonValue {
     )) {
         if (el.disabled) continue;
         if (!isPostedFieldName(el.name)) continue;
+        // Hyper posts its sibling JSON store. Its temporary authoring controls
+        // must not enter Matrix's field data (numeric row IDs create sparse arrays).
+        const hyperOwner = el.closest('[data-hyper-input]');
+        if (hyperOwner && root.contains(hyperOwner)) continue;
 
         if (el instanceof HTMLInputElement) {
             const type = el.type;

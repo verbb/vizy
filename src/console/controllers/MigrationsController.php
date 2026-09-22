@@ -5,7 +5,6 @@ use verbb\vizy\Vizy;
 use verbb\vizy\fields\VizyField;
 use verbb\vizy\helpers\FieldPlacements;
 use verbb\vizy\legacy\PromotionOperatorMessages;
-use verbb\vizy\legacy\Vizy3PromotionOrchestrator;
 
 use Craft;
 use craft\console\Controller;
@@ -15,7 +14,7 @@ use craft\helpers\Json;
 use yii\console\ExitCode;
 
 /**
- * Operator seam for resumable Vizy 3 → 4 schema promotion and owner-content migration.
+ * User-facing Vizy 3 upgrade and advanced recovery commands.
  *
  * Human-readable summaries print to stdout/stderr; machine JSON follows for scripting.
  */
@@ -25,9 +24,10 @@ final class MigrationsController extends Controller
     // =========================================================================
 
     public bool $apply = false;
-    public ?string $runUid = null;
-    public ?string $confirm = null;
+    public bool $dryRun = false;
+    public bool $force = false;
     public ?string $ownerPlacementUid = null;
+    public ?string $runUid = null;
 
 
     // Public Methods
@@ -35,7 +35,14 @@ final class MigrationsController extends Controller
 
     public function options($actionID): array
     {
-        return [...parent::options($actionID), 'apply', 'runUid', 'confirm', 'ownerPlacementUid'];
+        $actionOptions = match ($actionID) {
+            'owner' => ['apply', 'force', 'ownerPlacementUid', 'runUid'],
+            'resume', 'upgrade-apply', 'upgrade-resume' => ['force'],
+            'upgrade-from-v3' => ['dryRun', 'force'],
+            default => [],
+        };
+
+        return [...parent::options($actionID), ...$actionOptions];
     }
 
     /**
@@ -67,7 +74,7 @@ final class MigrationsController extends Controller
         }
 
         if ($this->apply) {
-            if (!$this->_resolveWriteConfirmation()) {
+            if (!$this->_confirmWrite()) {
                 return ExitCode::USAGE;
             }
             $this->stdout(Craft::t('vizy', 'Owner migration: applying writes for element {id} / field {field}.', [
@@ -109,7 +116,7 @@ final class MigrationsController extends Controller
 
     public function actionResume(int $checkpointId): int
     {
-        if (!$this->_resolveWriteConfirmation()) {
+        if (!$this->_confirmWrite()) {
             return ExitCode::USAGE;
         }
 
@@ -124,12 +131,91 @@ final class MigrationsController extends Controller
     }
 
     /**
+     * Manually inspect, run, or resume the automatic Vizy 3 → 4 upgrade.
+     */
+    public function actionUpgradeFromV3(): int
+    {
+        $orchestrator = Vizy::$plugin->getPromotionOrchestrator();
+        $incomplete = array_values(array_filter(
+            $orchestrator->status(),
+            static fn(array $run): bool => ($run['status'] ?? null) !== 'complete',
+        ));
+
+        if (count($incomplete) > 1) {
+            $this->stderr(Craft::t(
+                'vizy',
+                'Multiple incomplete Vizy 3 upgrades need attention. Inspect them with: php craft vizy/migrations/upgrade-status',
+            ) . PHP_EOL, Console::FG_RED);
+            $this->stdout(Json::encode($incomplete, JSON_PRETTY_PRINT) . PHP_EOL);
+            return ExitCode::DATAERR;
+        }
+
+        if ($incomplete !== []) {
+            $run = $incomplete[0];
+            $this->stdout(Craft::t('vizy', 'Found an incomplete Vizy 3 upgrade at stage “{stage}” ({label}).', [
+                'stage' => (string)($run['stage'] ?? ''),
+                'label' => (string)($run['stageLabel'] ?? ''),
+            ]) . PHP_EOL, Console::FG_YELLOW);
+            if ($this->dryRun) {
+                $this->_printOperatorLine((string)$run['nextStep'], Console::FG_YELLOW);
+                $this->stdout(Json::encode($run, JSON_PRETTY_PRINT) . PHP_EOL);
+                return ExitCode::OK;
+            }
+            if (!$this->_confirmWrite()) {
+                return ExitCode::USAGE;
+            }
+            $result = $orchestrator->resume((string)$run['runUid']);
+            $this->_summarizePromotionRun($result);
+            $this->_printOperatorLine((string)$result['nextStep'], ($result['status'] ?? '') === 'complete' ? Console::FG_GREEN : Console::FG_YELLOW);
+            $this->stdout(Json::encode($result, JSON_PRETTY_PRINT) . PHP_EOL);
+            return ($result['status'] ?? '') === 'complete' ? ExitCode::OK : ExitCode::UNSPECIFIED_ERROR;
+        }
+
+        $this->stdout(Craft::t('vizy', 'Checking this installation for Vizy 3 fields…') . PHP_EOL, Console::FG_CYAN);
+        $plan = $orchestrator->analyze();
+        $this->_summarizeAnalyze($plan);
+
+        if (($plan['status'] ?? null) !== 'ready') {
+            $plan['nextStep'] = PromotionOperatorMessages::nextStepForAnalyze($plan);
+            $this->_printOperatorLine($plan['nextStep'], Console::FG_YELLOW);
+            $this->stdout(Json::encode($plan, JSON_PRETTY_PRINT) . PHP_EOL);
+            return ExitCode::DATAERR;
+        }
+
+        if (($plan['fields'] ?? []) === []) {
+            $this->_printOperatorLine(Craft::t('vizy', 'No Vizy 3 fields need upgrading.'), Console::FG_GREEN);
+            return ExitCode::OK;
+        }
+
+        $fieldCount = count($plan['fields']);
+        $readyMessage = $fieldCount === 1
+            ? Craft::t('vizy', 'Ready to upgrade one Vizy field. Existing content will remain available and will be saved in the Vizy 4 format when its owner is next saved.')
+            : Craft::t('vizy', 'Ready to upgrade {count} Vizy fields. Existing content will remain available and will be saved in the Vizy 4 format when each owner is next saved.', ['count' => $fieldCount]);
+        $this->stdout($readyMessage . PHP_EOL, Console::FG_YELLOW);
+        if ($this->dryRun) {
+            $plan['nextStep'] = Craft::t('vizy', 'Dry run complete. Re-run without --dry-run to apply the Vizy 3 upgrade.');
+            $this->_printOperatorLine($plan['nextStep'], Console::FG_GREEN);
+            $this->stdout(Json::encode($plan, JSON_PRETTY_PRINT) . PHP_EOL);
+            return ExitCode::OK;
+        }
+        if (!$this->_confirmWrite()) {
+            return ExitCode::USAGE;
+        }
+
+        $result = $orchestrator->apply($plan, ['complete' => true, 'jobs' => []]);
+        $this->_summarizePromotionRun($result);
+        $this->_printOperatorLine((string)$result['nextStep'], ($result['status'] ?? '') === 'complete' ? Console::FG_GREEN : Console::FG_YELLOW);
+        $this->stdout(Json::encode($result, JSON_PRETTY_PRINT) . PHP_EOL);
+        return ($result['status'] ?? '') === 'complete' ? ExitCode::OK : ExitCode::UNSPECIFIED_ERROR;
+    }
+
+    /**
      * Analyze every Vizy 3 field in the complete current Project Config.
      */
-    public function actionPromotionAnalyze(?string $targetHandlesFile = null): int
+    public function actionUpgradeAnalyze(?string $targetHandlesFile = null): int
     {
         $handles = $targetHandlesFile ? $this->_readJsonObject($targetHandlesFile) : [];
-        $this->stdout(Craft::t('vizy', 'Analyzing Vizy 3 → 4 schema promotion (no writes)…') . PHP_EOL, Console::FG_CYAN);
+        $this->stdout(Craft::t('vizy', 'Analyzing the Vizy 3 → 4 upgrade (no writes)…') . PHP_EOL, Console::FG_CYAN);
         $result = Vizy::$plugin->getPromotionOrchestrator()->analyze($handles);
         $result['nextStep'] = PromotionOperatorMessages::nextStepForAnalyze($result);
         $this->_summarizeAnalyze($result);
@@ -138,21 +224,19 @@ final class MigrationsController extends Controller
         return $result['status'] === 'ready' ? ExitCode::OK : ExitCode::DATAERR;
     }
 
-    public function actionPromotionDryRun(string $planFile, ?string $ownerScopeFile = null): int
+    public function actionUpgradeDryRun(string $planFile, ?string $ownerScopeFile = null): int
     {
-        $this->stdout(Craft::t('vizy', 'Dry-run Vizy schema promotion (no writes)…') . PHP_EOL, Console::FG_CYAN);
+        $this->stdout(Craft::t('vizy', 'Dry-running an advanced Vizy 3 upgrade plan (no writes)…') . PHP_EOL, Console::FG_CYAN);
         $result = Vizy::$plugin->getPromotionOrchestrator()->dryRun(
             $this->_readJsonObject($planFile),
             $ownerScopeFile ? $this->_readJsonObject($ownerScopeFile) : [],
         );
-        $result['confirmationPhrase'] = PromotionOperatorMessages::confirmationPhrase();
         $result['nextStep'] = Craft::t(
             'vizy',
-            'Dry-run OK. Apply with: php craft vizy/migrations/promotion-apply {plan} {owners} --confirm="{phrase}"',
+            'Dry run OK. Apply with: php craft vizy/migrations/upgrade-apply {plan} {owners}',
             [
                 'plan' => $planFile,
                 'owners' => $ownerScopeFile ?: 'path/to/owners.json',
-                'phrase' => PromotionOperatorMessages::confirmationPhrase(),
             ],
         );
         $this->_printOperatorLine($result['nextStep'], Console::FG_GREEN);
@@ -160,22 +244,20 @@ final class MigrationsController extends Controller
         return ExitCode::OK;
     }
 
-    public function actionPromotionApply(string $planFile, string $ownerScopeFile): int
+    public function actionUpgradeApply(string $planFile, string $ownerScopeFile): int
     {
-        if (!$this->_resolveWriteConfirmation()) {
+        if (!$this->_confirmWrite()) {
             return ExitCode::USAGE;
         }
 
         $this->stdout(Craft::t(
             'vizy',
-            'Applying Vizy 3 → 4 schema promotion. This writes Project Config and may convert owner content. Confirmation: {phrase}',
-            ['phrase' => PromotionOperatorMessages::confirmationPhrase()],
+            'Applying an advanced Vizy 3 → 4 upgrade plan. This writes Project Config and may convert owner content.',
         ) . PHP_EOL, Console::FG_YELLOW);
 
         $result = Vizy::$plugin->getPromotionOrchestrator()->apply(
             $this->_readJsonObject($planFile),
             $this->_readJsonObject($ownerScopeFile),
-            (string)$this->confirm,
         );
         $this->_summarizePromotionRun($result);
         $this->_printOperatorLine((string)$result['nextStep'], ($result['status'] ?? '') === 'complete' ? Console::FG_GREEN : Console::FG_YELLOW);
@@ -183,10 +265,10 @@ final class MigrationsController extends Controller
         return $result['status'] === 'complete' ? ExitCode::OK : ExitCode::UNSPECIFIED_ERROR;
     }
 
-    public function actionPromotionStatus(?string $runUid = null): int
+    public function actionUpgradeStatus(?string $runUid = null): int
     {
         $rows = Vizy::$plugin->getPromotionOrchestrator()->status($runUid);
-        $this->stdout(Craft::t('vizy', 'Schema promotion runs: {count}', ['count' => count($rows)]) . PHP_EOL, Console::FG_CYAN);
+        $this->stdout(Craft::t('vizy', 'Vizy 3 upgrade runs: {count}', ['count' => count($rows)]) . PHP_EOL, Console::FG_CYAN);
         foreach ($rows as $row) {
             $this->stdout(sprintf(
                 "  %s  %s / %s (%s)%s\n",
@@ -204,17 +286,17 @@ final class MigrationsController extends Controller
         return ExitCode::OK;
     }
 
-    public function actionPromotionResume(string $runUid): int
+    public function actionUpgradeResume(string $runUid): int
     {
-        if (!$this->_resolveWriteConfirmation()) {
+        if (!$this->_confirmWrite()) {
             return ExitCode::USAGE;
         }
 
-        $this->stdout(Craft::t('vizy', 'Resuming schema promotion {runUid}…', [
+        $this->stdout(Craft::t('vizy', 'Resuming Vizy 3 upgrade {runUid}…', [
             'runUid' => $runUid,
         ]) . PHP_EOL, Console::FG_CYAN);
 
-        $result = Vizy::$plugin->getPromotionOrchestrator()->resume($runUid, (string)$this->confirm);
+        $result = Vizy::$plugin->getPromotionOrchestrator()->resume($runUid);
         $this->_summarizePromotionRun($result);
         $this->_printOperatorLine((string)$result['nextStep'], ($result['status'] ?? '') === 'complete' ? Console::FG_GREEN : Console::FG_YELLOW);
         $this->stdout(Json::encode($result, JSON_PRETTY_PRINT) . PHP_EOL);
@@ -226,33 +308,19 @@ final class MigrationsController extends Controller
     // =========================================================================
 
     /**
-     * Require --confirm="PROMOTE VIZY 3", or prompt interactively for that exact phrase.
+     * Interactive runs default to no; automation must explicitly pass --force.
      */
-    private function _resolveWriteConfirmation(): bool
+    private function _confirmWrite(): bool
     {
-        $phrase = PromotionOperatorMessages::confirmationPhrase();
-
-        if (is_string($this->confirm) && $this->confirm !== '') {
-            if ($this->confirm !== $phrase) {
-                $this->stderr(PromotionOperatorMessages::confirmationMismatchMessage() . PHP_EOL, Console::FG_RED);
-                return false;
-            }
-
+        if ($this->force) {
             return true;
         }
 
         if ($this->interactive) {
-            $this->stdout(PromotionOperatorMessages::confirmationRequiredMessage() . PHP_EOL, Console::FG_YELLOW);
-            $typed = $this->prompt(Craft::t('vizy', 'Type the confirmation phrase to continue:'));
-            if ($typed !== $phrase) {
-                $this->stderr(PromotionOperatorMessages::confirmationMismatchMessage() . PHP_EOL, Console::FG_RED);
-                return false;
-            }
-            $this->confirm = $typed;
-            return true;
+            return $this->confirm(PromotionOperatorMessages::writeConfirmationMessage(), false);
         }
 
-        $this->stderr(PromotionOperatorMessages::confirmationRequiredMessage() . PHP_EOL, Console::FG_RED);
+        $this->stderr(PromotionOperatorMessages::forceRequiredMessage() . PHP_EOL, Console::FG_RED);
         return false;
     }
 

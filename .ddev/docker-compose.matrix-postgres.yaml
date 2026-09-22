@@ -1,0 +1,15 @@
+services:
+  matrix-pgsql:
+    image: postgres:16-bookworm
+    container_name: ddev-${DDEV_SITENAME}-matrix-pgsql
+    environment:
+      POSTGRES_DB: db
+      POSTGRES_USER: db
+      POSTGRES_PASSWORD: db
+    labels:
+      com.ddev.site-name: ${DDEV_SITENAME}
+      com.ddev.approot: ${DDEV_APPROOT}
+    volumes:
+      - matrix-pgsql:/var/lib/postgresql/data
+volumes:
+  matrix-pgsql:

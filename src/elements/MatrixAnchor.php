@@ -2,12 +2,15 @@
 namespace verbb\vizy\elements;
 
 use verbb\vizy\elements\db\MatrixAnchorQuery;
+use verbb\vizy\helpers\Matrix as MatrixHelper;
 use verbb\vizy\records\MatrixAnchor as MatrixAnchorRecord;
 
 use Craft;
 use craft\base\Element;
 use craft\base\ElementInterface;
 use craft\elements\User;
+use craft\fields\Matrix;
+use craft\helpers\ElementHelper;
 use craft\models\FieldLayout;
 
 /**
@@ -78,6 +81,7 @@ class MatrixAnchor extends Element
     public ?int $parentOwnerId = null;
 
     private ?FieldLayout $_fieldLayout = null;
+    private ?ElementInterface $_parentOwner = null;
 
 
     // Public Methods
@@ -96,15 +100,42 @@ class MatrixAnchor extends Element
     public function setFieldLayout(?FieldLayout $fieldLayout): void
     {
         $this->_fieldLayout = $fieldLayout;
+        foreach ($fieldLayout?->getCustomFields() ?? [] as $field) {
+            if ($field instanceof Matrix) {
+                MatrixHelper::bindToLayout($field);
+            }
+        }
     }
 
     public function getParentOwner(): ?ElementInterface
     {
+        // Include unsaved site enablement on the actual owner being saved.
+        // Drafts and revisions retain their own owner ID in Vizy 4.
+        if ($this->_parentOwner && $this->_parentOwner->id === $this->parentOwnerId) {
+            return $this->_parentOwner;
+        }
         if (!$this->parentOwnerId) {
             return null;
         }
 
-        return Craft::$app->getElements()->getElementById($this->parentOwnerId, null, $this->siteId);
+        return Craft::$app->getElements()->getElementById($this->parentOwnerId, null, $this->siteId)
+            ?? Craft::$app->getElements()->getElementById($this->parentOwnerId);
+    }
+
+    public function setParentOwner(ElementInterface $owner): void
+    {
+        $this->_parentOwner = $owner;
+    }
+
+    public function getSupportedSites(): array
+    {
+        $owner = $this->getParentOwner();
+        if (!$owner) {
+            return [$this->siteId ?? Craft::$app->getSites()->getPrimarySite()->id];
+        }
+        // Custom propagation can expose supported sites before the owner's
+        // site rows exist. Its anchor must be ready for those first saves.
+        return array_map(static fn(array $site): int => (int)$site['siteId'], ElementHelper::supportedSitesForElement($owner, true));
     }
 
     public function canView(User $user): bool

@@ -55,8 +55,8 @@ it('defaults unknown fields to pure and only blocklists nested Element owners', 
         ->and($inventory->classify(new ContentBlock())['capability'])->toBe(FieldLifecycle::MIGRATION_ONLY)
         ->and($inventory->classify(new Addresses())['capability'])->toBe(FieldLifecycle::MIGRATION_ONLY)
         ->and($inventory->canSerialize(new Matrix()))->toBeTrue()
-        ->and($inventory->permitsNewPlacement(new Matrix()))->toBeFalse()
-        ->and($inventory->permitsNewPlacementClass(Matrix::class))->toBeFalse()
+        ->and($inventory->permitsNewPlacement(new Matrix()))->toBeTrue()
+        ->and($inventory->permitsNewPlacementClass(Matrix::class))->toBeTrue()
         ->and($inventory->permitsNewPlacementClass(ContentBlock::class))->toBeFalse()
         ->and($inventory->permitsNewPlacementClass(PlainText::class))->toBeTrue()
         ->and($inventory->permitsNewPlacementClass(VizyField::class))->toBeTrue()
@@ -327,7 +327,6 @@ it('offers Vizy fields for Hosted Vizy Editors on Block Type layouts', function(
         ->and($lifecycle->permitsNewPlacement(new Link()))->toBeTrue()
         ->and($fields)->toContain(PlainText::class)
         ->and($fields)->toContain(VizyField::class)
-        ->and($fields)->not->toContain(Matrix::class)
         ->and($fields)->not->toContain(ContentBlock::class)
         ->and($fields)->not->toContain(Addresses::class);
 });

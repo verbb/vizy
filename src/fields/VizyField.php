@@ -13,6 +13,7 @@ use verbb\vizy\helpers\FieldImageOptions;
 use verbb\vizy\helpers\FieldImagePreviews;
 use verbb\vizy\helpers\FieldLinkOptions;
 use verbb\vizy\helpers\FieldPlacements;
+use verbb\vizy\helpers\Matrix as MatrixHelper;
 use verbb\vizy\models\BlockType;
 use verbb\vizy\services\BlockTypes;
 use verbb\vizy\services\HostedVizy;
@@ -24,6 +25,7 @@ use craft\base\Element;
 use craft\base\ElementInterface;
 use craft\base\Field;
 use craft\elements\Asset;
+use craft\fields\Matrix;
 use craft\fields\conditions\EmptyFieldConditionRule;
 use craft\helpers\Html;
 use craft\helpers\Json;
@@ -428,7 +430,13 @@ class VizyField extends Field
             if ($document instanceof CanonicalVizyDocument) {
                 $element->setFieldValue(
                     $this->handle,
-                    Vizy::$plugin->getMultisiteDocuments()->duplicateForCraftOwner($document, $element),
+                    // Craft has already rebound the cloned field value to the
+                    // destination. Resolve stored Matrix rows against the trusted
+                    // source owner before replacing the block identities.
+                    Vizy::$plugin->getMultisiteDocuments()->duplicateForCraftOwner(
+                        $document->recontextualize($element->duplicateOf, $this),
+                        $element,
+                    ),
                 );
             }
         }
@@ -447,6 +455,23 @@ class VizyField extends Field
             // the only seam allowed to execute file moves.
             Vizy::$plugin->getAssetUploads()->defer($element, $this, $document);
             Vizy::$plugin->getEditorAcknowledgements()->collect($element, $this, $document);
+        }
+    }
+
+    public function afterElementPropagate(ElementInterface $element, bool $isNew): void
+    {
+        parent::afterElementPropagate($element, $isNew);
+
+        // Run once per owner after all localized content has been persisted,
+        // still within Craft's save transaction. Hosted fields are visited by
+        // their containing document rather than as separate synthetic owners.
+        foreach ($element->getFieldLayout()?->getCustomFields() ?? [] as $field) {
+            if ($field instanceof self) {
+                if ($field->id === $this->id && $field->handle === $this->handle) {
+                    Vizy::$plugin->getAnchors()->gcOrphans($element);
+                }
+                break;
+            }
         }
     }
 
@@ -708,8 +733,21 @@ class VizyField extends Field
             }
 
             if ($enabled && $layout) {
-                $blockElement = $block->document()->blockElement($block);
+                $blockElement = clone $block->document()->blockElement($block);
                 $blockElement->setScenario($scenario);
+                // The document's read projection deliberately hydrates saved
+                // Matrix content. Validate the submitted rows on a separate
+                // projection without mutating that cached read value.
+                foreach ($layout->getCustomFieldElements() as $placement) {
+                    $field = $placement->getField();
+                    if ($field instanceof Matrix && $block->hasRawFieldValue($placement->uid)) {
+                        $blockElement->setFieldValue($field->handle, MatrixHelper::normalizeContent(
+                            $field,
+                            $block->rawFieldValue($placement->uid),
+                            $blockElement->getMatrixAnchor() ?? $blockElement,
+                        ));
+                    }
+                }
                 if (!$blockElement->validate()) {
                     $placements = [];
                     foreach ($layout->getCustomFieldElements() as $placement) {

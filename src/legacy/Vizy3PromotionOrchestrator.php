@@ -30,8 +30,6 @@ final class Vizy3PromotionOrchestrator extends Component
     // Constants
     // =========================================================================
 
-    public const CONFIRMATION = 'PROMOTE VIZY 3';
-
     private const STAGES = [
         'planned',
         'globalSchema',
@@ -104,16 +102,15 @@ final class Vizy3PromotionOrchestrator extends Component
         ];
     }
 
-    public function apply(array $plan, array $ownerScope, string $confirmation): array
+    public function apply(array $plan, array $ownerScope): array
     {
-        $this->_assertConfirmation($confirmation);
         $this->_assertPlan($plan);
         $this->_preflight($plan);
 
         $existing = SchemaPromotion::findOne(['planHash' => $plan['planHash']]);
         if ($existing) {
             if (Json::decode((string)$existing->ownerScopeJson) !== $ownerScope) {
-                throw new RuntimeException('This immutable promotion plan is already bound to a different owner scope.');
+                throw new RuntimeException('This immutable upgrade plan is already bound to a different owner scope.');
             }
             return $this->_run($existing);
         }
@@ -130,12 +127,11 @@ final class Vizy3PromotionOrchestrator extends Component
         return $this->_run($record);
     }
 
-    public function resume(string $runUid, string $confirmation): array
+    public function resume(string $runUid): array
     {
-        $this->_assertConfirmation($confirmation);
         $record = SchemaPromotion::findOne(['runUid' => $runUid]);
         if (!$record) {
-            throw new RuntimeException("Unknown Vizy schema promotion {$runUid}.");
+            throw new RuntimeException("Unknown Vizy 3 upgrade {$runUid}.");
         }
         return $this->_run($record);
     }
@@ -163,7 +159,7 @@ final class Vizy3PromotionOrchestrator extends Component
         $ownerScope = Json::decode((string)$record->ownerScopeJson);
         $this->_assertPlan($plan);
         if (!hash_equals((string)$record->planHash, (string)$plan['planHash'])) {
-            throw new RuntimeException('Persisted promotion plan hash is stale or corrupt.');
+            throw new RuntimeException('Persisted upgrade plan hash is stale or corrupt.');
         }
 
         $record->status = 'running';
@@ -172,7 +168,7 @@ final class Vizy3PromotionOrchestrator extends Component
         try {
             $stageIndex = array_search((string)$record->stage, self::STAGES, true);
             if ($stageIndex === false) {
-                throw new RuntimeException("Unknown promotion stage {$record->stage}.");
+                throw new RuntimeException("Unknown Vizy 3 upgrade stage {$record->stage}.");
             }
             for ($index = $stageIndex + 1; $index < count(self::STAGES); $index++) {
                 $stage = self::STAGES[$index];
@@ -207,7 +203,7 @@ final class Vizy3PromotionOrchestrator extends Component
             'canonicalFields' => $this->_applyCanonicalFields($plan),
             'owners' => $this->_applyOwners($plan, $ownerScope, $runUid),
             'verified' => $this->_verifyAll($plan, $ownerScope, $runUid),
-            default => throw new RuntimeException("Unsupported promotion stage {$stage}."),
+            default => throw new RuntimeException("Unsupported Vizy 3 upgrade stage {$stage}."),
         };
     }
 
@@ -220,7 +216,7 @@ final class Vizy3PromotionOrchestrator extends Component
                 continue;
             }
             if (Vizy::$plugin->getEditorConfigs()->getConfig($id) === null) {
-                throw new RuntimeException("Promoted Editor Config {$id} for field {$fieldUid} is missing after the editorConfigs stage.");
+                throw new RuntimeException("Upgraded Editor Config {$id} for field {$fieldUid} is missing after the editorConfigs stage.");
             }
         }
     }
@@ -235,7 +231,7 @@ final class Vizy3PromotionOrchestrator extends Component
                 $uid = $target['uid'];
                 $packed = ProjectConfigHelper::packAssociativeArrays($target['config']);
                 if (isset($candidate[$uid]) && $this->_normalizedBlockTypeConfig($uid, $candidate[$uid]) !== $this->_normalizedBlockTypeConfig($uid, $target['config'])) {
-                    throw new RuntimeException("Target Block Type {$uid} changed outside this promotion plan.");
+                    throw new RuntimeException("Target Block Type {$uid} changed outside this upgrade plan.");
                 }
                 $candidate[$uid] = $packed;
             }
@@ -277,7 +273,7 @@ final class Vizy3PromotionOrchestrator extends Component
             Vizy::$plugin->getLegacySchemaMaps()->saveProvenance($fieldUid, $fieldPlan);
             $loaded = Vizy::$plugin->getLegacySchemaMaps()->getProvenance($fieldUid);
             if (($loaded['sourceFingerprint'] ?? null) !== $fieldPlan['sourceFingerprint']) {
-                throw new RuntimeException("Promotion provenance {$fieldUid} did not reload immutably.");
+                throw new RuntimeException("Vizy 3 upgrade mapping {$fieldUid} did not reload immutably.");
             }
         }
     }
@@ -401,14 +397,7 @@ final class Vizy3PromotionOrchestrator extends Component
             || !is_string($hash)
             || !hash_equals($hash, $this->_hash($this->_stable($copy)))
         ) {
-            throw new RuntimeException('Promotion requires a complete ready plan with a current immutable plan hash.');
-        }
-    }
-
-    private function _assertConfirmation(string $confirmation): void
-    {
-        if ($confirmation !== self::CONFIRMATION) {
-            throw new RuntimeException(PromotionOperatorMessages::confirmationMismatchMessage());
+            throw new RuntimeException('The Vizy 3 upgrade requires a complete ready plan with a current immutable plan hash.');
         }
     }
 
@@ -427,7 +416,7 @@ final class Vizy3PromotionOrchestrator extends Component
     private function _save(SchemaPromotion $record): void
     {
         if (!$record->save(false)) {
-            throw new RuntimeException('Unable to persist Vizy schema promotion state.');
+            throw new RuntimeException('Unable to persist Vizy 3 upgrade state.');
         }
     }
 

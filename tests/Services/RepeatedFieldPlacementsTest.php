@@ -138,7 +138,7 @@ it('promotes repeated owner jobs and selects the same placement through the cons
     $plan = $orchestrator->analyze();
     expect($plan['status'])->toBe('ready', Json::encode($plan))
         ->and($plan['fields'])->toHaveKey($fieldUid);
-    $result = $orchestrator->apply($plan, ['complete' => true, 'jobs' => $jobs], \verbb\vizy\legacy\Vizy3PromotionOrchestrator::CONFIRMATION);
+    $result = $orchestrator->apply($plan, ['complete' => true, 'jobs' => $jobs]);
     expect($result['status'])->toBe('complete', Json::encode($result));
     $checkpoints = \verbb\vizy\records\OwnerMigration::find()->where(['ownerId' => $owner->id, 'fieldUid' => $fieldUid])->all();
     expect($checkpoints)->toHaveCount(2);
@@ -153,12 +153,16 @@ it('promotes repeated owner jobs and selects the same placement through the cons
     file_put_contents($mappingFile, Json::encode($jobs[0]['mapping']));
     try {
         $controller = new \verbb\vizy\console\controllers\MigrationsController('migrations', Vizy::$plugin, ['interactive' => false]);
+        expect($controller->options('owner'))->toContain('force')->not->toContain('confirm');
         expect($controller->actionOwner(Entry::class, (int)$owner->id, (int)$owner->siteId, $fieldUid, $mappingFile))->toBe(\yii\console\ExitCode::DATAERR);
+        $controller->ownerPlacementUid = $checkpoints[0]->ownerPlacementUid;
+        $controller->runUid = $checkpoints[0]->runUid;
+        $controller->apply = true;
+        expect($controller->actionOwner(Entry::class, (int)$owner->id, (int)$owner->siteId, $fieldUid, $mappingFile))->toBe(\yii\console\ExitCode::USAGE);
         foreach ($checkpoints as $checkpoint) {
             $controller->ownerPlacementUid = $checkpoint->ownerPlacementUid;
             $controller->runUid = $checkpoint->runUid;
-            $controller->apply = true;
-            $controller->confirm = \verbb\vizy\legacy\Vizy3PromotionOrchestrator::CONFIRMATION;
+            $controller->force = true;
             expect($controller->actionOwner(Entry::class, (int)$owner->id, (int)$owner->siteId, $fieldUid, $mappingFile))->toBe(\yii\console\ExitCode::OK);
         }
         expect((int)\verbb\vizy\records\OwnerMigration::find()->where(['ownerId' => $owner->id, 'fieldUid' => $fieldUid])->count())->toBe(2);

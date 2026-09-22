@@ -25,7 +25,7 @@ final class RawDocument
         $seen = [];
         if (array_is_list($decoded)) {
             if (!is_array($schema['legacy'] ?? null)) {
-                throw new RuntimeException('Raw Vizy 3 traversal requires captured promotion provenance.');
+                throw new RuntimeException('Raw Vizy 3 traversal requires the captured Vizy 3 upgrade mapping.');
             }
             $this->_nodes($decoded, $schema, $visit, true, [], $seen);
         } elseif (($decoded['type'] ?? null) === 'doc' && in_array($decoded['attrs']['schemaVersion'] ?? null, [1, 2], true) && is_array($decoded['content'] ?? null)) {

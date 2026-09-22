@@ -65,11 +65,11 @@ final class LegacySchemaMaps extends Component
     public function saveProvenance(string $fieldUid, array $fieldPlan): void
     {
         if (($fieldPlan['fieldUid'] ?? null) !== $fieldUid) {
-            throw new \InvalidArgumentException('Promotion provenance field UID does not match its Project Config key.');
+            throw new \InvalidArgumentException('Vizy 3 upgrade mapping field UID does not match its Project Config key.');
         }
         $schemaMap = $fieldPlan['schemaMap'] ?? null;
         if (!is_array($schemaMap)) {
-            throw new \InvalidArgumentException('Promotion provenance requires a complete schemaMap.');
+            throw new \InvalidArgumentException('Vizy 3 upgrade mapping requires a complete schemaMap.');
         }
         $this->_assertSchemaMap($schemaMap);
 
@@ -83,7 +83,7 @@ final class LegacySchemaMaps extends Component
         ];
         $existing = $this->getProvenance($fieldUid);
         if ($existing !== [] && $existing !== $payload) {
-            throw new \RuntimeException("Promotion provenance for Vizy field {$fieldUid} is immutable.");
+            throw new \RuntimeException("Vizy 3 upgrade mapping for Vizy field {$fieldUid} is immutable.");
         }
         if ($existing === []) {
             Craft::$app->getProjectConfig()->set(
@@ -109,11 +109,11 @@ final class LegacySchemaMaps extends Component
                 || $mapping['blockTypeUid'] === ''
                 || !is_array($mapping['placementUids'] ?? null)
             ) {
-                throw new \InvalidArgumentException('Promotion schemaMap contains an incomplete Block Type mapping.');
+                throw new \InvalidArgumentException('Vizy 3 upgrade schemaMap contains an incomplete Block Type mapping.');
             }
             foreach ($mapping['placementUids'] as $legacyKey => $placementUid) {
                 if (!is_string($legacyKey) || $legacyKey === '' || !is_string($placementUid) || $placementUid === '') {
-                    throw new \InvalidArgumentException('Promotion schemaMap contains an incomplete placement mapping.');
+                    throw new \InvalidArgumentException('Vizy 3 upgrade schemaMap contains an incomplete placement mapping.');
                 }
             }
         }

@@ -28,8 +28,7 @@ use craft\fields\MissingField;
  *   Craft and third-party fields. (Name is historical; think “value field”.)
  * - {@see ASSETS} — like pure, plus post-owner Asset finalization.
  * - {@see HOSTED_VIZY} — nested Vizy document envelope.
- * - {@see MATRIX_ANCHOR} — legacy Matrix-in-Block via MatrixAnchor (mount yes,
- *   new placements no).
+ * - {@see MATRIX_ANCHOR} — Matrix-in-Block via a persisted MatrixAnchor.
  * - {@see MIGRATION_ONLY} — nested Element owner (Neo, Super Table, …): cannot
  *   correctly persist under a JSON Block; refuse new placements.
  * - {@see UNSUPPORTED} — missing/broken field types.
@@ -50,8 +49,7 @@ final class FieldLifecycle extends Component
     public const ASSETS = 'assets';
     public const HOSTED_VIZY = 'hostedVizy';
     /**
-     * Existing Matrix-in-Block via MatrixAnchor. Mount/serialize yes; new FLD
-     * placements no.
+     * Matrix-in-Block requires a persisted owner for its nested entries.
      */
     public const MATRIX_ANCHOR = 'matrixAnchor';
     public const MIGRATION_ONLY = 'migrationOnly';
@@ -110,9 +108,8 @@ final class FieldLifecycle extends Component
             $capability = self::HOSTED_VIZY;
             $reason = 'hostedVizyEditor';
         } elseif ($field instanceof Matrix) {
-            // Grandfather: runtime MatrixAnchor path; designer still forbids new.
             $capability = self::MATRIX_ANCHOR;
-            $reason = 'legacyMatrixAnchor';
+            $reason = 'persistedMatrixAnchor';
         } elseif ($this->isPersistedNestedOwner($field)) {
             // Nested Element owners need afterElementPropagate / elements_owners —
             // not document-native on JSON Blocks.
@@ -169,8 +166,6 @@ final class FieldLifecycle extends Component
 
     public function permitsNewPlacement(FieldInterface $field): bool
     {
-        // Split from canSerialize so MatrixAnchor can mount/save without reopening
-        // the Block Type field library.
         return $this->_capabilityAllowsNewPlacement($this->classify($field)['capability']);
     }
 
@@ -187,7 +182,12 @@ final class FieldLifecycle extends Component
             return false;
         }
 
-        // Matrix / nested owners: never offer as *new* Block Type fields.
+        // Matrix has an explicit persistence strategy. Other nested-owner
+        // fields still cannot save correctly on a JSON-owned Vizy block.
+        if (is_a($fieldClass, Matrix::class, true)) {
+            return true;
+        }
+
         if ($this->isPersistedNestedOwnerClass($fieldClass)) {
             return false;
         }
@@ -210,14 +210,6 @@ final class FieldLifecycle extends Component
         }
 
         $typeLabel = $field::displayName();
-
-        if ($inventory['capability'] === self::MATRIX_ANCHOR) {
-            return Craft::t(
-                'vizy',
-                '“{name}” ({type}) can’t be added to Vizy Block Types. Existing Matrix fields on Blocks remain editable; nest new content with a Hosted Vizy field instead.',
-                ['name' => $name, 'type' => $typeLabel],
-            );
-        }
 
         if ($inventory['capability'] === self::MIGRATION_ONLY) {
             return Craft::t(
@@ -292,7 +284,7 @@ final class FieldLifecycle extends Component
     {
         return in_array(
             $capability,
-            [self::PURE, self::ASSETS, self::HOSTED_VIZY],
+            [self::PURE, self::ASSETS, self::HOSTED_VIZY, self::MATRIX_ANCHOR],
             true,
         );
     }

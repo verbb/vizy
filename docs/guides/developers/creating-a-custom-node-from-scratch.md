@@ -119,7 +119,7 @@ field JavaScript.
 
 ## Enable the Toolbar Button
 
-Enable **Emoji** under node capabilities on the field’s Editor Config, then add `emoji` to the toolbar. The `/`, `+`, and Add Block controls list structured Vizy blocks; use the toolbar button for this inline node. See [Choosing Insertion Controls](docs:guides/developers/choosing-insertion-controls).
+Enable **Emoji** under node capabilities on the field’s Editor Config, then add `emoji` to the toolbar. The toolbar's **Add Block** control, the gutter `+`, and `/` insertion list structured Vizy blocks; use the toolbar button for this inline node. See [Choosing Insertion Controls](docs:guides/developers/choosing-insertion-controls).
 
 ## Test the Finished Node
 

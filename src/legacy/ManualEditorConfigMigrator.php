@@ -77,7 +77,7 @@ final class ManualEditorConfigMigrator
                 return $this->_fail(
                     $fieldUid,
                     'manualEditorConfigRequiresAdminChanges',
-                    'Inline manual Editor Config needs a new Project Config artifact, but allowAdminChanges is false. Add an equivalent config/vizy/*.json or run promotion where admin changes are allowed.',
+                    'Inline manual Editor Config needs a new Project Config artifact, but allowAdminChanges is false. Add an equivalent config/vizy/*.json or run the Vizy 3 upgrade where admin changes are allowed.',
                     $fingerprint,
                 );
             }

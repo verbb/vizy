@@ -9,10 +9,14 @@ use craft\fields\PlainText;
 use craft\helpers\StringHelper;
 use craft\helpers\Json;
 use craft\helpers\ProjectConfig as ProjectConfigHelper;
+use verbb\vizy\console\controllers\MigrationsController;
 use verbb\vizy\fields\VizyField;
 use verbb\vizy\legacy\Vizy3DocumentAdapter;
 use verbb\vizy\legacy\Vizy3SchemaPromotion;
+use verbb\vizy\migrations\m260921_000000_vizy3_upgrade;
+use verbb\vizy\records\SchemaPromotion;
 use verbb\vizy\Vizy;
+use yii\console\ExitCode;
 
 /**
  * @return array{fields:array<string,array<string,mixed>>,fieldUid:string,legacyTypeId:string,placementUid:string}
@@ -101,6 +105,47 @@ it('builds stable field-local promotion plans and exact placement maps', functio
         ->and($mapping['placementUids']['heading'])->toBe($fixture['placementUid'])
         ->and($fieldPlan['blockTypes'][$fixture['legacyTypeId']]['config']['fieldLayout']['uid'])
         ->toBe($fixture['fields'][$fixture['fieldUid']]['settings']['fieldData'][0]['blockTypes'][0]['layoutUid']);
+});
+
+it('automatically upgrades Vizy 3 schema during Craft plugin migrations', function() {
+    $fixture = legacyPromotionFixture('automaticUpgrade' . StringHelper::randomString(5));
+    $completedRuns = SchemaPromotion::find()->where(['status' => 'complete'])->count();
+    $projectConfig = Craft::$app->getProjectConfig();
+    foreach ($fixture['fields'] as $uid => $config) {
+        $projectConfig->set("fields.{$uid}", $config);
+    }
+    Craft::$app->getFields()->refreshFields();
+
+    expect((new m260921_000000_vizy3_upgrade())->up(true))->toBeTrue()
+        ->and(Vizy::$plugin->getLegacySchemaMaps()->getProvenance($fixture['fieldUid']))->not->toBe([])
+        ->and(SchemaPromotion::find()->where(['status' => 'complete'])->count())->toBe($completedRuns + 1);
+});
+
+it('provides a dry-runnable and idempotent recovery command for the Vizy 3 upgrade', function() {
+    $fixture = legacyPromotionFixture('guidedUpgrade' . StringHelper::randomString(5));
+    $runCount = SchemaPromotion::find()->count();
+    $projectConfig = Craft::$app->getProjectConfig();
+    foreach ($fixture['fields'] as $uid => $config) {
+        $projectConfig->set("fields.{$uid}", $config);
+    }
+    Craft::$app->getFields()->refreshFields();
+
+    $controller = new MigrationsController('migrations', Vizy::$plugin, ['interactive' => false]);
+    expect($controller->options('upgrade-from-v3'))->toContain('dryRun')->toContain('force');
+
+    $controller->dryRun = true;
+    expect($controller->actionUpgradeFromV3())->toBe(ExitCode::OK)
+        ->and(Vizy::$plugin->getLegacySchemaMaps()->getProvenance($fixture['fieldUid']))->toBe([])
+        ->and(SchemaPromotion::find()->count())->toBe($runCount);
+
+    $controller->dryRun = false;
+    $controller->force = true;
+    expect($controller->actionUpgradeFromV3())->toBe(ExitCode::OK)
+        ->and(Vizy::$plugin->getLegacySchemaMaps()->getProvenance($fixture['fieldUid']))->not->toBe([])
+        ->and(SchemaPromotion::find()->count())->toBe($runCount + 1);
+
+    expect($controller->actionUpgradeFromV3())->toBe(ExitCode::OK)
+        ->and(SchemaPromotion::find()->count())->toBe($runCount + 1);
 });
 
 it('maps explicit root policy and rich-text-only allowances without guessing', function() {
@@ -332,7 +377,6 @@ it('applies global schema provenance and canonical field references through resu
     $failed = $orchestrator->apply(
         $plan,
         ['complete' => true, 'jobs' => []],
-        \verbb\vizy\legacy\Vizy3PromotionOrchestrator::CONFIRMATION,
     );
     $orchestrator->setStageProbeForTesting(null);
 
@@ -342,10 +386,8 @@ it('applies global schema provenance and canonical field references through resu
         ->and(Craft::$app->getProjectConfig()->get("plugins.vizy.blockTypes.{$targetUid}"))->toBeArray()
         ->and(\verbb\vizy\records\BlockType::findOne(['uid' => $targetUid])->fieldLayoutId)->toBeGreaterThan(0);
 
-    $complete = $orchestrator->resume(
-        $failed['runUid'],
-        \verbb\vizy\legacy\Vizy3PromotionOrchestrator::CONFIRMATION,
-    );
+    expect((new m260921_000000_vizy3_upgrade())->up(true))->toBeTrue();
+    $complete = $orchestrator->status($failed['runUid'])[0];
     $fieldConfig = ProjectConfigHelper::unpackAssociativeArrays(
         Craft::$app->getProjectConfig()->get("fields.{$fixture['fieldUid']}")
     );
@@ -375,7 +417,6 @@ it('rejects stale promotion plans before any new stage is recorded', function() 
     expect(fn() => Vizy::$plugin->getPromotionOrchestrator()->apply(
         $plan,
         ['complete' => true, 'jobs' => []],
-        \verbb\vizy\legacy\Vizy3PromotionOrchestrator::CONFIRMATION,
     ))->toThrow(RuntimeException::class, 'changed after analysis');
 });
 

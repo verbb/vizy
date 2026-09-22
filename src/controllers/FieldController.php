@@ -58,8 +58,8 @@ class FieldController extends Controller
             ]);
         }
 
-        // One source of truth with FieldLifecycle — Matrix/Neo/Super Table/
-        // Content Block/Addresses (and registered nested owners) stay out of
+        // One source of truth with FieldLifecycle — unsupported nested owners
+        // such as Neo/Super Table/Content Block/Addresses stay out of
         // “available custom fields” for new Block Type placements.
         $lifecycle = Vizy::$plugin->getFieldLifecycle();
         $availableCustomFields = [];

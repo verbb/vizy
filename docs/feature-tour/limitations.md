@@ -28,4 +28,4 @@ Use a document from the destination configuration as the basis for block imports
 
 ## Nested Fields
 
-Use a Vizy field when a block needs nested rich text or blocks. The editor limits nesting depth; see [Nested Vizy](docs:feature-tour/nested-vizy). Matrix fields cannot be added to Block Type layouts. [Matrix in Blocks](docs:feature-tour/matrix-in-blocks) describes editing content on layouts that already contain one.
+We recommend a Vizy field when a block needs nested rich text or blocks. The editor limits nesting depth; see [Nested Vizy](docs:feature-tour/nested-vizy). Matrix fields are also supported on Block Type layouts, but add storage and processing overhead, particularly with drafts, multiple sites, and deep nesting. [Matrix in Blocks](docs:feature-tour/matrix-in-blocks) explains these tradeoffs and when to use it.

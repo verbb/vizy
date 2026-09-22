@@ -39,7 +39,12 @@ try {
     $updateLock = false;
     $task = null;
     $profile = 'default';
+    $database = 'mysql';
     foreach ($args as $i => $arg) {
+        if (str_starts_with($arg, '--database=')) {
+            $database = substr($arg, 11);
+            unset($args[$i]);
+        }
         if (str_starts_with($arg, '--profile=')) {
             $profile = substr($arg, 10);
             unset($args[$i]);
@@ -63,10 +68,15 @@ try {
     if ($task !== null && !isset($config['tasks'][$task])) {
         throw new RuntimeException('Unknown maintenance task: ' . $task);
     }
+    if (!in_array($database, ['mysql', 'pgsql'], true)) throw new RuntimeException('Unknown test database.');
+    // Both choices name fixed services owned by this dedicated test project.
+    // Never accept an arbitrary database DSN or credentials from the environment.
+    $databaseConfig = ['driver' => $database, 'server' => $database === 'pgsql' ? 'matrix-pgsql' : 'db', 'port' => $database === 'pgsql' ? '5432' : '3306', 'database' => 'db', 'user' => 'db', 'password' => 'db'];
+    file_put_contents($runtime . '/database.json', json_encode($databaseConfig));
     if (!isset($config['suites'][$suite])) {
         throw new RuntimeException('Unknown suite: ' . $suite);
     }
-    if (!in_array($profile, ['default', 'minimum', 'feed-me', 'hyper'], true)) {
+    if (!in_array($profile, ['default', 'minimum', 'feed-me', 'hyper', 'matrix-integrations'], true)) {
         throw new RuntimeException('Unknown runtime profile: ' . $profile);
     }
     if ($profile === 'minimum' && PHP_MAJOR_VERSION . '.' . PHP_MINOR_VERSION !== '8.2') {
@@ -109,6 +119,12 @@ try {
     $requirements = array_merge($dev, [$package['name'] => '*']);
     if ($profile === 'minimum') $requirements['craftcms/cms'] = '5.9.0';
     if ($profile === 'feed-me') $requirements['craftcms/feed-me'] = '^6.0';
+    if ($profile === 'matrix-integrations') {
+        $requirements['spicyweb/craft-neo'] = '^5.0';
+        $requirements['verbb/hyper'] = '^2.0';
+        $requirements['sebastianlenz/linkfield'] = '^3.0';
+        $requirements['verbb/super-table'] = '^4.0';
+    }
     $manifest = [
         'name' => 'verbb/plugin-test-app', 'type' => 'project',
         'require' => $requirements,
@@ -117,7 +133,7 @@ try {
         'autoload-dev' => ['psr-4' => ['Tests\\' => '../../../tests/']],
         'config' => ['allow-plugins' => ['craftcms/plugin-installer' => true, 'pestphp/pest-plugin' => true, 'yiisoft/yii2-composer' => true]],
     ];
-    if ($profile === 'hyper') {
+    if ($profile === 'hyper' || ($profile === 'matrix-integrations' && getenv('HYPER_SOURCE_PATH'))) {
         $source = getenv('HYPER_SOURCE_PATH');
         if (!$source || !is_file($source . '/composer.json')) throw new RuntimeException('Hyper profile requires HYPER_SOURCE_PATH inside DDEV.');
         $manifest['require']['verbb/hyper'] = '*';
@@ -167,16 +183,21 @@ $config['components']['assetManager'] = static fn() => Craft::createObject(\craf
 return $config;
 PHP
     );
-    file_put_contents($app . '/config/db.php', "<?php\nreturn ['driver'=>'mysql','server'=>'db','port'=>'3306','database'=>'db','user'=>'db','password'=>'db'];\n");
+    file_put_contents($app . '/config/db.php', "<?php\nreturn " . var_export($databaseConfig, true) . ";\n");
     // Use the same published-resource directory in console and browser fixtures.
     file_put_contents($app . '/config/general.php', "<?php\nreturn \\craft\\config\\GeneralConfig::create()->devMode(true)->allowAdminChanges(true)->timezone('UTC')->resourceBasePath(CRAFT_WEB_ROOT . '/cpresources')->resourceBaseUrl('/cpresources');\n");
     // DDEV's DB container is unique to the validated project; credentials never come from .env.
-    $db = new PDO('mysql:host=db;port=3306;dbname=db', 'db', 'db', [PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION]);
-    $db->exec('SET FOREIGN_KEY_CHECKS=0');
-    foreach ($db->query('SHOW TABLES')->fetchAll(PDO::FETCH_COLUMN) as $table) {
-        $db->exec('DROP TABLE `' . str_replace('`', '``', $table) . '`');
+    $db = new PDO($database . ':host=' . $databaseConfig['server'] . ';port=' . $databaseConfig['port'] . ';dbname=db', 'db', 'db', [PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION]);
+    if ($database === 'pgsql') {
+        $db->exec('DROP SCHEMA public CASCADE');
+        $db->exec('CREATE SCHEMA public');
+    } else {
+        $db->exec('SET FOREIGN_KEY_CHECKS=0');
+        foreach ($db->query('SHOW TABLES')->fetchAll(PDO::FETCH_COLUMN) as $table) {
+            $db->exec('DROP TABLE `' . str_replace('`', '``', $table) . '`');
+        }
+        $db->exec('SET FOREIGN_KEY_CHECKS=1');
     }
-    $db->exec('SET FOREIGN_KEY_CHECKS=1');
     $run(['php', 'tests/runtime/craft.php', 'install/craft', '--interactive=0', '--username=admin', '--email=admin@example.test', '--password=testing-only-password', '--siteName=Plugin Tests', '--siteUrl=https://' . $project . '.ddev.site', '--language=en-US']);
     $run(['php', 'tests/runtime/craft.php', 'plugin/install', $package['extra']['handle'], '--interactive=0']);
     if ($profile === 'feed-me') {
@@ -205,6 +226,7 @@ PHP
     if ($excluded !== []) $suiteArgs[] = '--exclude-group=' . implode(',', $excluded);
     @unlink($runtime . '/junit.xml');
     if ($profile !== 'hyper') $suiteArgs[] = '--exclude-group=content-api-integration';
+    if ($profile !== 'matrix-integrations') $suiteArgs[] = '--exclude-group=matrix-integrations';
     $run(['php', '-d', 'memory_limit=1G', 'tests/runtime/pest.php', '--fail-on-empty-test-suite', '--fail-on-risky', '--enforce-time-limit', ...(array_filter($args, static fn($arg) => str_starts_with($arg, '--default-time-limit')) ? [] : ['--default-time-limit=60']), '--configuration', 'phpunit.craft.xml', '--log-junit', $runtime . '/junit.xml', ...array_values($suiteArgs), ...array_values($args)]);
     // An application exit(0) inside a test must not masquerade as a completed suite.
     $report = is_file($runtime . '/junit.xml') ? simplexml_load_file($runtime . '/junit.xml') : false;
@@ -216,9 +238,9 @@ PHP
     foreach (['tests', 'assertions', 'errors', 'failures', 'skipped'] as $key) {
         $counts[$key] = (int)$report->testsuite[$key];
     }
-    $versions = ['php' => PHP_VERSION];
+    $versions = ['php' => PHP_VERSION, 'database' => $database, 'databaseVersion' => $db->getAttribute(PDO::ATTR_SERVER_VERSION)];
     foreach (json_decode(file_get_contents($app . '/composer.lock'), true)['packages'] as $dependency) {
-        if (in_array($dependency['name'], ['craftcms/cms', 'craftcms/feed-me', 'pestphp/pest', 'phpunit/phpunit'], true)) {
+        if (in_array($dependency['name'], ['craftcms/cms', 'craftcms/feed-me', 'pestphp/pest', 'phpunit/phpunit', 'spicyweb/craft-neo', 'verbb/hyper', 'verbb/super-table', 'sebastianlenz/linkfield'], true)) {
             $versions[$dependency['name']] = $dependency['version'];
         }
     }

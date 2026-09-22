@@ -247,7 +247,7 @@ final class Vizy3SchemaPromotion
     ): array {
         $layout = $legacyType['layoutConfig'] ?? null;
         if (!is_array($layout)) {
-            $this->_diagnostic($diagnostics, 'missingLayoutConfig', 'error', $location, 'Block Type layoutConfig is required for promotion.');
+            $this->_diagnostic($diagnostics, 'missingLayoutConfig', 'error', $location, 'Block Type layoutConfig is required for the Vizy 3 upgrade.');
             $layout = ['tabs' => []];
         }
 
@@ -359,13 +359,13 @@ final class Vizy3SchemaPromotion
         } else {
             $fieldType = $fieldConfig['type'] ?? null;
             if (is_string($fieldType) && ($fieldType === 'craft\\fields\\Matrix' || str_ends_with($fieldType, '\\fields\\Matrix'))) {
-                // Existing Matrix-in-Block is grandfathered via MatrixAnchor; do not block promote.
+                // Matrix placements retain their persisted anchors through promotion.
                 $this->_diagnostic(
                     $diagnostics,
                     'matrixAnchorGrandfathered',
                     'info',
                     $location,
-                    'Existing Matrix placements remain editable via MatrixAnchor; do not add new Matrix fields to Block Types.',
+                    'Matrix placements remain supported. Nested Vizy is recommended for new nested content to reduce storage and processing overhead.',
                 );
             } elseif (!is_string($fieldType) || $fieldType === '') {
                 $this->_diagnostic($diagnostics, 'unsupportedField', 'error', $location, 'The placed field type cannot be interpreted.');

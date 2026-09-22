@@ -143,7 +143,7 @@ Craft.Vizy.registerControl('abbr', {
 });
 ```
 
-The Add Block, `/`, and `+` controls list Vizy blocks. Use a toolbar control for custom rich-text nodes and actions. [Choosing Insertion Controls](docs:guides/developers/choosing-insertion-controls) explains which route fits your feature.
+The toolbar's **Add Block** control, the gutter `+`, and `/` insertion list Vizy Block Types. Use a toolbar control for custom rich-text nodes and actions. [Choosing Insertion Controls](docs:guides/developers/choosing-insertion-controls) explains which route fits your feature.
 
 ## Common Mistakes
 

@@ -36,6 +36,18 @@ async function save(page: Page, expectedText = 'Root after') {
     await expect.poll(() => persisted().document.content[0].content[0].text).toBe(expectedText);
 }
 
+test('opening Matrix and Hosted Vizy does not create an unsolicited autosave draft', async ({ page }) => {
+    await login(page, 'editor');
+    const before = persisted();
+    await openOwner(page);
+    await expect(page.locator(`vizy-block[data-block-uid="${fixture.matrix.blockUid}"] input[name$="[${fixture.matrix.labelHandle}]"]`)).toHaveValue('Matrix before');
+    await expect(page.locator(`vizy-block[data-block-uid="${fixture.blockUid}"] vizy-editor .ProseMirror`)).toContainText('Nested before');
+    await checkAutosave(page);
+    expect(persisted().drafts).toEqual(before.drafts);
+    expect(persisted().document).toEqual(before.document);
+    expect(persisted().matrixRows).toEqual(before.matrixRows);
+});
+
 test('real Craft fields flush root, hosted text and a required block field through save and reopen', async ({ page }) => {
     await login(page, 'editor');
     await openOwner(page);
@@ -120,7 +132,7 @@ for (const username of ['admin', 'editor']) {
     });
 }
 
-test('grandfathered Matrix row edits survive the real widget flush and reopen with their identity intact', async ({ page }) => {
+test('Matrix row edits survive the real widget flush and reopen with their identity intact', async ({ page }) => {
     await login(page, 'editor');
     await openOwner(page);
     const before = persisted();
@@ -134,6 +146,30 @@ test('grandfathered Matrix row edits survive the real widget flush and reopen wi
     expect(Object.keys(block.attrs.fieldSlots)).toEqual([]);
     await openOwner(page);
     await expect(label).toHaveValue('Matrix after');
+});
+
+test('failed owner validation retains pending Matrix edits and leaves saved rows untouched', async ({ page }) => {
+    await login(page, 'editor');
+    await openOwner(page);
+    const before = persisted();
+    const label = page.locator(`vizy-block[data-block-uid="${fixture.matrix.blockUid}"] input[name$="[${fixture.matrix.labelHandle}]"]`);
+    const heading = page.locator(`vizy-block[data-block-uid="${fixture.blockUid}"] input[name$="[cardHeading]"]`);
+    const originalHeading = await heading.inputValue();
+    await label.fill('Matrix validation recovery');
+    await heading.fill('');
+    await Promise.all([
+        page.waitForEvent('framenavigated', { predicate: (frame) => frame === page.mainFrame() }),
+        page.keyboard.press('ControlOrMeta+S'),
+    ]);
+    await page.waitForLoadState('domcontentloaded');
+    await expect(page.getByRole('link', { name: 'Card heading cannot be blank.', exact: true })).toBeVisible();
+    await expect(label).toHaveValue('Matrix validation recovery');
+    expect(persisted().matrixRows).toEqual(before.matrixRows);
+    await heading.fill(originalHeading);
+    await save(page, before.document.content[0].content[0].text);
+    expect(persisted().matrixRows.map((row: any) => row.label)).toEqual(['Matrix validation recovery']);
+    await openOwner(page);
+    await expect(label).toHaveValue('Matrix validation recovery');
 });
 
 test('removing a relation through Craft’s real widget saves an empty selection without changing its target', async ({ page }) => {

@@ -226,6 +226,29 @@ describe('typed field adapters', () => {
         expect(getFieldAdapter('craft.matrix').read(root)).toEqual({ entries: { new1: { enabled: '1' } } });
     });
 
+    it('captures nested Hyper stores without their temporary authoring inputs', () => {
+        const root = document.createElement('div');
+        const prefix = 'vizyHost[n][b][fields][fields][matrix]';
+        root.innerHTML = `
+            <input name="${prefix}[entries][new1][type]" value="row">
+            <input data-hyper-store name="${prefix}[entries][new1][fields][links]" value='[{"linkTypeHandle":"url","linkValue":"https://example.test/current"}]'>
+            <div data-hyper-input>
+                <input name="${prefix}[entries][new1][fields][hyperData][1000000000][linkValue]" value="authoring">
+            </div>
+        `;
+        const value = getFieldAdapter('craft.matrix').read(root) as any;
+        // Assert the key first: formatting a billion-slot sparse array can itself fail.
+        expect(Object.hasOwn(value.entries.new1.fields, 'hyperData')).toBe(false);
+        expect(value.entries.new1.fields.links).toBe('[{"linkTypeHandle":"url","linkValue":"https://example.test/current"}]');
+        expect(JSON.stringify(value).length).toBeLessThan(250);
+
+        // A Matrix hosted inside Hyper still owns its native fields and child stores.
+        const outerHyper = document.createElement('div');
+        outerHyper.dataset.hyperInput = '';
+        outerHyper.append(root);
+        expect(getFieldAdapter('craft.matrix').read(root)).toEqual(value);
+    });
+
     it('parses Craft JSON field textareas into structured values', () => {
         const root = document.createElement('div');
         root.innerHTML = '<textarea name="fields[jsonField]">{"test":"www"}</textarea>';

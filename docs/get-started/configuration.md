@@ -103,3 +103,5 @@ not declared as free-form objects inside the JSON.
 
 
 Save the config and open an entry using that field to check that its toolbar and content choices match your settings.
+
+Modules can adjust a field's selected config at runtime with `EditorManifests::EVENT_MODIFY_EDITOR_CONFIG`. Vizy normalizes and hashes the effective config without writing those changes back to Project Config or its JSON file. See [Events](docs:developers/events#the-modifyeditorconfig-event).

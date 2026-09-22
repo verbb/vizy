@@ -4,8 +4,8 @@ namespace verbb\vizy\deprecations;
 /**
  * Vizy 3 runtime editor-config mutation — never triggered in Vizy 4.
  *
- * Named Editor Configs (Project Config / `config/vizy/*.json`) replace
- * `EVENT_DEFINE_VIZY_CONFIG`. Removed in Vizy 5.
+ * Use `EditorManifests::EVENT_MODIFY_EDITOR_CONFIG` with the Vizy 4 config shape.
+ * `EVENT_DEFINE_VIZY_CONFIG` remains inert because its listeners expect Vizy 3 keys.
  */
 trait VizyFieldConfigDeprecations
 {
@@ -13,7 +13,7 @@ trait VizyFieldConfigDeprecations
     // =========================================================================
 
     /**
-     * @deprecated Named Editor Configs replace runtime config mutation. This event is never triggered. Removed in Vizy 5.
+     * @deprecated Use EditorManifests::EVENT_MODIFY_EDITOR_CONFIG. This event is never triggered. Removed in Vizy 5.
      */
     public const EVENT_DEFINE_VIZY_CONFIG = 'defineVizyConfig';
 }

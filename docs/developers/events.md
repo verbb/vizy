@@ -1,5 +1,33 @@
 # Events
+
 Vizy provides a collection of events for extending its functionality. Modules and plugins can register event listeners, typically in their `init()` methods, to modify Vizy’s behaviour.
+
+## The `modifyEditorConfig` Event
+
+Use this event to adjust a named Editor Config for a particular Vizy field at runtime. The event receives the field, the selected Config ID, and a mutable config containing the same authorable keys used by Project Config and `config/vizy/*.json` files.
+
+Vizy normalizes the result, resolves capability dependencies, and includes the effective config in the editor manifest's revision and cache identity. The same manifest is used for server-side content validation. Runtime changes do not write to Project Config or the source JSON file.
+
+```php
+use verbb\vizy\events\ModifyEditorConfigEvent;
+use verbb\vizy\services\EditorManifests;
+use yii\base\Event;
+
+Event::on(EditorManifests::class, EditorManifests::EVENT_MODIFY_EDITOR_CONFIG, function(ModifyEditorConfigEvent $event) {
+    if ($event->field?->handle !== 'summary') {
+        return;
+    }
+
+    $event->config['capabilities']['marks'] = ['bold', 'italic'];
+    $event->config['toolbar'] = ['bold', 'italic'];
+    $event->config['bubble'] = [
+        'enabled' => true,
+        'items' => ['bold', 'italic'],
+    ];
+});
+```
+
+This event is field-scoped. It does not receive an element owner, site, or current user; use separate named Editor Configs when those contexts need different schemas.
 
 ## The `registerExtensions` Event
 Use this event to tell Vizy about a custom mark, node, or behaviour extension. Register each PHP class in the matching list: `$event->marks`, `$event->nodes`, or `$event->extensions`. The example below assumes you have created the `Abbr` class from the [Abbreviation mark guide](docs:guides/developers/creating-a-custom-mark-from-scratch). Put the imports at the top of your module file and the event listener in its `init()` method.

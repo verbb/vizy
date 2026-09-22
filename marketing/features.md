@@ -23,9 +23,9 @@ Blocks stay visible where they will matter in the finished piece. Move, collapse
 
 Embed structured blocks directly between paragraphs — much like having Matrix blocks inline with your content. Each Block Type can reuse Craft fields, UI elements and tabs, then render through its own focused Twig template.
 
-Add one from the toolbar, the gutter beside the document or a `/` shortcut on a blank line. The searchable palette keeps the choices approachable even as the project grows.
+Add one from the toolbar, the gutter beside the document or a `/` shortcut on a blank line. Available Block Types remain searchable and grouped so the choices stay approachable as the project grows.
 
-![The Vizy insertion palette grouped into Components and Editorial Block Types.](../screenshots/output/feature-tour/vizy-commands.png)
+![The Vizy Block Type chooser grouped into Components and Editorial Block Types.](../screenshots/output/feature-tour/vizy-commands.png)
 <!-- feature-media-end -->
 
 <!-- feature-media -->
@@ -60,6 +60,6 @@ Rather than treating generated HTML as the source of truth, Vizy stores a struct
 - :icon[columns-3] **Layouts and columns** Arrange prose, media and Blocks into responsive column structures inside the document.
 - :icon[network] **Ready for headless builds** Query the document, its nodes and the Craft fields inside Blocks through structural GraphQL types.
 - :icon[database-import] **Bring content with you** Import Vizy content through Feed Me and move Vizy 3 projects forward with resumable, verified migrations.
-- :icon[plug-connected] **Built to be extended** Register project-specific nodes, marks, controls, insertion choices and rendering behaviour through documented PHP and JavaScript APIs.
+- :icon[plug-connected] **Built to be extended** Register project-specific nodes, marks, controls and rendering behaviour through documented PHP and JavaScript APIs.
 - :icon[heart-handshake] **Supporting open source** Every Vizy licence contributes funding to [Tiptap](https://tiptap.dev/) and [ProseMirror](https://prosemirror.net/), the open-source projects behind the editor.
 <!-- feature-grid-end -->

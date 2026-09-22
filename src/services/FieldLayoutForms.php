@@ -5,10 +5,12 @@ use verbb\vizy\Vizy;
 use verbb\vizy\elements\Block;
 use verbb\vizy\fields\VizyField;
 use verbb\vizy\helpers\FieldSlotValues;
+use verbb\vizy\helpers\Matrix as MatrixHelper;
 
 use Craft;
 use craft\base\Component;
 use craft\base\ElementInterface;
+use craft\fieldlayoutelements\CustomField;
 use craft\fields\Assets;
 use craft\fields\Categories;
 use craft\fields\Entries;
@@ -21,6 +23,7 @@ use craft\fields\Tags;
 use craft\fields\Users;
 use craft\helpers\Html;
 use craft\helpers\Json;
+use craft\models\FieldLayout;
 use craft\web\View;
 
 /**
@@ -146,6 +149,7 @@ final class FieldLayoutForms extends Component
 
         $blockHash = $this->blockHash($blockObject);
         $layoutHash = hash('sha256', $this->_stableJson($layout->getConfig() ?? []));
+        $layout = $this->_matrixInputLayout($layout);
         $namespace = sprintf('vizyHost[%s][%s][fields]', $context['nonce'], $attrs['blockUid']);
 
         $block = new Block();
@@ -200,9 +204,16 @@ final class FieldLayoutForms extends Component
                 ]);
             }
             if ($craftField instanceof Matrix) {
-                // Matrix values come from the anchor, never from fieldSlots blobs.
-                if ($anchor) {
-                    $block->setFieldValue($craftField->handle, $anchor->getFieldValue($craftField->handle));
+                // Redisplay submitted values after failed validation. Loading
+                // the saved anchor alone would silently replace the user's edits.
+                if (array_key_exists($placement->uid, $attrs['fieldSlots'])) {
+                    $block->setFieldValue($craftField->handle, MatrixHelper::normalizeContent(
+                        $craftField,
+                        $attrs['fieldSlots'][$placement->uid],
+                        $anchor ?? $block,
+                    ));
+                } elseif ($anchor) {
+                    $block->setFieldValue($craftField->handle, MatrixHelper::nestedEntryQuery($craftField, $anchor));
                 }
             } elseif (array_key_exists($placement->uid, $attrs['fieldSlots'])) {
                 $block->setFieldValue(
@@ -321,6 +332,41 @@ final class FieldLayoutForms extends Component
             'fields' => $placements,
             'tabLabels' => $tabLabels,
         ]];
+    }
+
+    private function _matrixInputLayout(FieldLayout $layout): FieldLayout
+    {
+        if (!Vizy::$plugin->getAnchors()->blockHasMatrixFields($layout)) {
+            return $layout;
+        }
+
+        // Cards/indexes save through Craft's independent owner/draft endpoints.
+        // Embedded Vizy blocks submit Matrix with their containing document.
+        // Clone the render layout so a shared field retains its configured mode.
+        $renderLayout = clone $layout;
+        $tabs = [];
+        foreach ($layout->getTabs() as $tab) {
+            $renderTab = clone $tab;
+            $renderTab->setLayout($renderLayout);
+            $elements = [];
+            foreach ($tab->getElements() as $element) {
+                $renderElement = clone $element;
+                if ($renderElement instanceof CustomField) {
+                    $renderElement->setField($element->getField());
+                    $field = $renderElement->getField();
+                    if ($field instanceof Matrix) {
+                        $field->viewMode = Matrix::VIEW_MODE_BLOCKS;
+                        $field->showCardsInGrid = false;
+                        MatrixHelper::bindToLayout($field);
+                    }
+                }
+                $elements[] = $renderElement;
+            }
+            $renderTab->setElements($elements);
+            $tabs[] = $renderTab;
+        }
+        $renderLayout->setTabs($tabs);
+        return $renderLayout;
     }
 
     /**

@@ -356,11 +356,8 @@ final class BlockTypes extends Component
                 $fieldClass = $field::class;
                 $lifecycle = \verbb\vizy\Vizy::$plugin->getFieldLifecycle();
                 $inventory = $lifecycle->classify($field);
-                // New placements follow permitsNewPlacement (MatrixAnchor + nested
-                // owners stay out of the library). Unchanged Project Config baselines
-                // may keep Matrix (runtime grandfather) and other legacy placements.
-                // Vizy 3 → 4 schema promotion also imports Matrix onto brand-new global
-                // Block Types (empty baseline) — that is grandfather, not a new authoring placement.
+                // Matrix is supported through anchors. Other nested-owner fields
+                // may remain in unchanged legacy schemas, but cannot be added.
                 if (!$lifecycle->permitsNewPlacement($field)) {
                     $grandfatherImport = $allowMatrixGrandfatherImport
                         && ($inventory['capability'] ?? null) === \verbb\vizy\services\FieldLifecycle::MATRIX_ANCHOR;

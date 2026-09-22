@@ -1,48 +1,16 @@
 # Upgrading from v3
 
-
-This guide covers upgrading from Vizy 3 to Vizy 4. Review the breaking changes before updating a site, then follow the preparation and content-conversion steps below. Test the upgrade on a staging copy before applying it to your live site.
+This guide covers upgrading from Vizy 3 to Vizy 4. Craft’s normal plugin migrations convert Vizy 3 field configuration to Vizy 4’s shared Block Types and record how existing content should be read. Test the complete upgrade on a staging copy before applying it to your live site.
 
 ## Breaking Changes
 
-Vizy 4 changes the field value returned to Twig, the GraphQL schema, and the editor extension APIs. Custom templates, headless queries, and modules using those APIs need to be reviewed. Existing field layouts and content also need **schema promotion**, which records how Vizy 3’s block definitions map to Vizy 4’s shared Block Types.
-
-Do not open and save every entry before promotion and any required content-conversion jobs finish. A field without the required mapping cannot load its old content through the new field API. The sections below explain the affected code, followed by the upgrade procedure.
-
-### Content API
-
-Update migrations and modules that call `Content::modifyFieldContent()` to use the [Content API](docs:developers/managing-embedded-content).
-
-| Vizy 3 | Vizy 4 |
-| --- | --- |
-| `Content::modifyFieldContent()` | `captureFieldLocations()` followed by `modifyFieldValues()` |
-| Field handle matching | Captured field and layout placement UIDs |
-| Truthy callback result replaces a value | Explicit `Change::replace()`, `Change::remove()` or `Change::unchanged()` result |
-
-This is not a method rename. Capture source identities before removing or replacing field configuration, update the callback to return an explicit operation, and run writes inside the caller's transaction. Follow the linked example to preview and apply a conversion.
-
-### Extensibility APIs
-
-| Vizy 3 | Vizy 4 |
-| --- | --- |
-| `Craft.Vizy.Config.registerExtensions` | `Craft.Vizy.registerModule` |
-| `Craft.Vizy.Config.registerButtons` | Editor Config toolbar + optional `registerControl` |
-| `Craft.Vizy.Config.registerCommands` | Use toolbar controls for custom rich-text actions; Add Block, `/`, and `+` list Vizy blocks |
-| `plugins: ["handle"]` in JSON | Editor Config **capabilities** |
-| `onVizyConfigReady` | `vizy:register` (or call APIs if `Craft.Vizy` already exists) |
-| `EVENT_REGISTER_MARKS` / `NODES` for the editor schema | `EVENT_REGISTER_EXTENSIONS` (`$marks[]` / `$nodes[]` / `$extensions[]` class lists) |
-| `EVENT_DEFINE_VIZY_CONFIG` | Never fires — named Editor Configs only |
+Vizy 4 changes the field value returned to Twig, the GraphQL schema, and the editor extension APIs. Custom templates, headless queries, and modules using those APIs need to be reviewed. Craft’s plugin migrations handle existing field layouts automatically and record how Vizy 3’s block definitions map to Vizy 4’s shared Block Types.
 
 ### Twig Templates
 
 The field value is a **`VizyDocument`**, not a Node Collection.
 
-| Vizy 3 | Vizy 4 |
-| --- | --- |
-| `{{ entry.vizyField }}` (string cast / HTML) | `{{ entry.vizyField.render() }}` |
-| `entry.vizyField.renderHtml({ paragraph: { attrs: … } })` | Attribute-map rendering configuration is unsupported |
-| `entry.vizyField.query().where(…)` | Same consumer API — still works on `VizyDocument` |
-| Eager TipTap node objects in Twig | Query rows are `VizyBlock` / thin content projections; prefer `render()`, `query()`, or `content().nodes()` |
+Passing an attribute map to `renderHtml()` or `renderStaticHtml()` is no longer supported. Use node render events or Block Type templates when output needs custom attributes or markup.
 
 For example, update automatic output in an entry template by calling `render()` explicitly. Replace `vizyField` with your field’s handle:
 
@@ -78,21 +46,247 @@ Block Type templates receive the current block as `block`. If a template used a 
 
 Render an entry containing each affected Block Type and check that its field values appear. See [Querying Nodes](docs:template-guides/querying-nodes) and [Rendering Content](docs:template-guides/rendering-content).
 
-### Enabled Content in Queries
+### Content API
 
-Vizy 3’s `where()` could replace the default enabled filter. Queries now preserve their enabled scope when you add or replace ordinary conditions. If your template relied on a type-only filter also returning disabled blocks, request both states explicitly:
+Update migrations and modules that call `Content::modifyFieldContent()` to use the [Content API](docs:developers/managing-embedded-content). This is a different migration workflow, not a method rename.
 
-::: code-group
-```twig [Vizy 3]
-{% set blocks = entry.vizyField.query().where({ type: 'vizyBlock' }).all() %}
+Vizy 3 discovered matching fields from each Vizy field's block configuration and passed the callback an entire block payload. The callback had to locate and update the nested value itself, and Vizy only saved a truthy return value. In this simplified shape, `updateMatchingValue()` represents the integration's existing block traversal:
+
+```php
+$content->modifyFieldContent(
+    $field->uid,
+    $field->handle,
+    static function(string $handle, array $block): array {
+        return updateMatchingValue($block, $handle);
+    },
+    $this->db,
+);
 ```
 
-```twig [Vizy 4]
-{% set blocks = entry.vizyField.query().where({ type: 'vizyBlock', enabled: null }).all() %}
+Vizy 4 separates schema discovery from value conversion. Capture the field's locations before removing or replacing its configuration. The resulting map records field, layout, and placement UIDs, so the later conversion does not depend on a handle or on the destination configuration still resembling the source:
+
+```php
+use verbb\vizy\Vizy;
+
+$content = Vizy::$plugin->getContent();
+$locations = $content->captureFieldLocations($field->uid);
+```
+
+Pass that map to `modifyFieldValues()`. Its callback receives the exact raw field value rather than the whole block and must return an explicit operation, including for empty replacement values:
+
+```php
+use verbb\vizy\content\Change;
+
+$transform = static function(mixed $raw, array $location): array {
+    if ($raw !== 'https://old.example.test/contact') {
+        return Change::unchanged();
+    }
+
+    return Change::replace('https://example.test/contact');
+};
+
+$result = $content->modifyFieldValues($locations, $transform, [
+    'db' => $this->db,
+]);
+```
+
+Preview the conversion with the `dryRun` option before applying it. Write mode requires the caller's active transaction; a Craft migration's `safeUp()` already provides one. `Change::remove()` deletes the embedded key, while `Change::replace(null)`, `Change::replace('')`, and other empty replacements store those values deliberately. The full [Content API guide](docs:developers/managing-embedded-content) covers batching, scope filters, saved location maps, and verification.
+
+### Editor Configs
+
+Vizy 3 fields either selected a JSON file from `config/vizy/` or stored custom JSON directly on the field. Vizy 4 keeps the file option, but every field now references a named Editor Config.
+
+The upgrade handles the two Vizy 3 sources differently:
+
+- Custom JSON stored on a field is converted into a named Project Config entry and the field is updated to use it. Creating that entry requires `allowAdminChanges` during the upgrade.
+- A selected file remains selected. Vizy translates supported Vizy 3 settings when it loads the file, but does not rewrite the file on disk.
+
+You do not have to rewrite a selected file before the upgrade can complete, but the compatibility translation is a bridge rather than a completed file migration. Open **Settings → Vizy → Editor Configs** afterward, confirm that each field still allows the intended content and shows the intended controls, then rewrite the file in the Vizy 4 shape.
+
+When updating a file, do not treat the change as a list of renamed keys. In Vizy 3, `buttons` both enabled editor behaviour and positioned its controls. Vizy 4 separates those decisions: `capabilities` defines what the document may contain, `toolbar` places controls, and `dropdowns` selects members of the Formatting, Alignment, or Table menus.
+
+::: code-group
+```json [Vizy 3]
+{
+    "buttons": ["formatting", "bold", "italic", "unordered-list", "align-left"],
+    "formatting": ["paragraph", "h2", "h3"]
+}
+```
+
+```json [Vizy 4]
+{
+    "label": "Article",
+    "capabilities": {
+        "nodes": ["heading", "bulletList"],
+        "marks": ["bold", "italic"]
+    },
+    "headings": {
+        "levels": [2, 3]
+    },
+    "toolbar": ["dropdown:formatting", "bold", "italic", "bulletList", "dropdown:alignment"],
+    "dropdowns": {
+        "formatting": ["paragraph", "heading2", "heading3"]
+    }
+}
 ```
 :::
 
-For public output, omit `enabled: null` to keep disabled content hidden. Use `enabled: false` when you specifically need disabled blocks. Check a field containing one enabled and one disabled block to confirm the intended output.
+Identifiers such as `h2`, `unordered-list`, and `align-left` are accepted as temporary aliases for `heading2`, `bulletList`, and `alignLeft`. Vizy reports their use through Craft’s Deprecator; replace them with the current IDs when rewriting the file.
+
+Vizy 3’s `toolbarFixed` and `commands` settings have no Vizy 4 config equivalent. Remove them. JSON objects that defined custom buttons or Formatting items must be rebuilt with the [Extensions APIs](docs:developers/extending-vizy); they cannot be represented by a Vizy 4 Editor Config alone.
+
+### Extensibility APIs
+
+Vizy 4 replaces Vizy 3's JavaScript-only plugin registry with PHP extension definitions, JavaScript modules, and named Editor Configs. These parts work together; the new APIs are not drop-in renames for the old ones.
+
+#### JavaScript Modules
+
+Vizy 3 registered a TipTap extension and its button through callbacks on `Craft.Vizy.Config`. Vizy 4 registers the TipTap factory by the module ID declared by its PHP class. Standard mark and node controls come from that PHP definition and the field's Editor Config rather than a JavaScript button registration.
+
+::: code-group
+```js [Vizy 3]
+document.addEventListener('onVizyConfigReady', () => {
+    const { Mark, mergeAttributes } = Craft.Vizy.Config.tiptap.core;
+
+    const Abbr = Mark.create({
+        name: 'abbr',
+        parseHTML: () => [{ tag: 'abbr' }],
+        renderHTML: ({ HTMLAttributes }) => ['abbr', mergeAttributes(HTMLAttributes), 0],
+    });
+
+    Craft.Vizy.Config.registerExtensions(() => [
+        { plugin: 'custom-vizy', extension: Abbr },
+    ]);
+
+    Craft.Vizy.Config.registerButtons(() => [{
+        name: 'abbr',
+        title: 'Abbreviation',
+        action: (editor) => editor.chain().focus().toggleMark('abbr').run(),
+        isActive: (editor) => editor.isActive('abbr'),
+    }]);
+});
+```
+
+```js [Vizy 4]
+function register() {
+    const { Mark, mergeAttributes } = Craft.Vizy.tiptap.core;
+
+    const Abbr = Mark.create({
+        name: 'abbr',
+        parseHTML: () => [{ tag: 'abbr' }],
+        renderHTML: ({ HTMLAttributes }) => ['abbr', mergeAttributes(HTMLAttributes), 0],
+    });
+
+    Craft.Vizy.registerModule('acme/mark/abbr', () => Abbr);
+}
+
+if (window.Craft?.Vizy?.registerModule) {
+    register();
+} else {
+    document.addEventListener('vizy:register', register);
+}
+```
+:::
+
+The `acme/mark/abbr` module ID must match the PHP extension's `moduleId()`. There is deliberately no `registerButtons()` replacement in the Vizy 4 example: the standard abbreviation control is enabled and positioned through the Editor Config below. Use `Craft.Vizy.registerControl()` only when the control needs a custom action such as a dialog or multi-step flow. The PHP registration is covered under [Registering Nodes and Marks](#registering-nodes-and-marks); see [Extending Vizy](docs:developers/extending-vizy) for the complete extension contract.
+
+#### Enabling Extensions in Editor Configs
+
+Vizy 3 enabled an entire JavaScript plugin by handle. Vizy 4 enables each PHP-registered node, mark, or behaviour extension explicitly, while `toolbar` controls where an author can use it.
+
+::: code-group
+```json [Vizy 3]
+{
+    "buttons": ["abbr"],
+    "plugins": ["custom-vizy"]
+}
+```
+
+```json [Vizy 4]
+{
+    "label": "Article",
+    "capabilities": {
+        "marks": ["abbr"]
+    },
+    "toolbar": ["abbr"]
+}
+```
+:::
+
+Save the Vizy 4 example as a named config such as `config/vizy/article.json`, select it on the field, and save the field. Behaviour-only extensions belong under `capabilities.extensions` rather than `capabilities.marks`; the Editor Config screen shows the capabilities registered by PHP.
+
+#### Removing Registered Commands
+
+Vizy 3's `Craft.Vizy.Config.registerCommands()` API has no direct replacement. Vizy 4 does not provide an equivalent general action launcher.
+
+Create a Block Type for structured content. Editors can insert it through the toolbar's **Add Block** control, the gutter `+`, or `/` on an empty line; all three surfaces use the field's configured Block Types. For a custom rich-text action, register a toolbar control with `Craft.Vizy.registerControl()` and add its ID to the field's Editor Config.
+
+#### Registering Nodes and Marks
+
+Replace listeners for `Nodes::EVENT_REGISTER_NODES` and `Nodes::EVENT_REGISTER_MARKS` with `Extensions::EVENT_REGISTER_EXTENSIONS`. The new event collects node, mark, and behaviour-extension classes separately.
+
+For an existing custom mark class called `Abbr`, update the event listener in your module's `init()` method. Put the imports at the top of the PHP file and retain your existing import for `Abbr`:
+
+::: code-group
+```php [Vizy 3]
+use verbb\vizy\events\RegisterMarksEvent;
+use verbb\vizy\services\Nodes;
+use yii\base\Event;
+
+Event::on(Nodes::class, Nodes::EVENT_REGISTER_MARKS, function(RegisterMarksEvent $event) {
+    $event->marks[] = Abbr::class;
+});
+```
+
+```php [Vizy 4]
+use verbb\vizy\events\RegisterExtensionsEvent;
+use verbb\vizy\services\Extensions;
+use yii\base\Event;
+
+Event::on(Extensions::class, Extensions::EVENT_REGISTER_EXTENSIONS, function(RegisterExtensionsEvent $event) {
+    $event->marks[] = Abbr::class;
+});
+```
+:::
+
+The equivalent node change adds the class to `$event->nodes`; behaviour-only TipTap extensions use `$event->extensions`. A Vizy 4 class also declares the type ID and the JavaScript module ID. The old Nodes service still has deprecated lookup methods that can trigger the old events, but that compatibility behaviour does not register a type with the editor. After updating, reload the control panel, enable the type in the field's Editor Config, and check both editing and frontend rendering.
+
+#### Replacing the Config Event
+
+`VizyField::EVENT_DEFINE_VIZY_CONFIG` does not fire because its mutable Vizy 3 config shape no longer describes the Vizy 4 editor. If the config can be static, move it into the named Editor Config selected by the field. If a module needs to adjust that config for a particular field at runtime, listen for `EditorManifests::EVENT_MODIFY_EDITOR_CONFIG`:
+
+::: code-group
+```php [Vizy 3]
+use verbb\vizy\events\ModifyVizyConfigEvent;
+use verbb\vizy\fields\VizyField;
+use yii\base\Event;
+
+Event::on(VizyField::class, VizyField::EVENT_DEFINE_VIZY_CONFIG, function(ModifyVizyConfigEvent $event) {
+    $event->config['buttons'] = ['bold', 'italic'];
+});
+```
+
+```php [Vizy 4]
+use verbb\vizy\events\ModifyEditorConfigEvent;
+use verbb\vizy\services\EditorManifests;
+use yii\base\Event;
+
+Event::on(EditorManifests::class, EditorManifests::EVENT_MODIFY_EDITOR_CONFIG, function(ModifyEditorConfigEvent $event) {
+    if ($event->field?->handle !== 'summary') {
+        return;
+    }
+
+    $event->config['capabilities']['marks'] = ['bold', 'italic'];
+    $event->config['toolbar'] = ['bold', 'italic'];
+});
+```
+:::
+
+The event starts with the selected named config's authorable values. Vizy normalizes the result, resolves its dependencies, and uses the effective config for manifest caching and server-side validation. It does not write the runtime changes to Project Config or the source JSON file. See [Events](docs:developers/events#the-modifyeditorconfig-event) for the complete contract and [Configuration](docs:get-started/configuration#editor-configuration) for the available settings.
+
+#### Removed Hooks
+
+Remove listeners for `VizyField::EVENT_MODIFY_PURIFIER_CONFIG`; the event does not fire. Use [Modify Nodes](docs:template-guides/modify-nodes) for output changes. PHP calls to `VizyField::registerPlugin()` also do not register editor behaviour. Register the extension through the PHP event and JavaScript module described above, then check both the editor and rendered output.
 
 ### GraphQL Queries
 
@@ -100,12 +294,9 @@ The field type is **`VizyDocument`** (field-scoped name `{handle}_VizyDocument` 
 
 #### Root Fields
 
-| Vizy 3 (`NodeCollection`) | Vizy 4 (`VizyDocument`) |
-| --- | --- |
-| `nodes(where, limit, orderBy)` | Accepts filtering, limits, and ordering; **`where` is a JSON object**, not a JSON-encoded **string** |
-| `rawNodes` | Prefer `raw` (full envelope) or `nodes { raw }`; `rawNodes` remains as a deprecated alias of root node arrays |
-| `renderHtml` | Prefer `renderedHtml`; `renderHtml` remains as a deprecated alias |
-| — | `schemaVersion`, `blocks(where, limit, orderBy)`, `block(uid:)` |
+The `nodes(where, limit, orderBy)` field remains available, but `where` now accepts a GraphQL input object instead of a JSON-encoded string. Use `renderedHtml` for the rendered document. The new `raw` field returns the full document envelope; use `nodes { raw }` for individual nodes. This is not a direct replacement for Vizy 3's `rawNodes`, so update the consuming code for the structure you select. The old `rawNodes` and `renderHtml` names remain as deprecated aliases.
+
+Vizy 4 also adds `schemaVersion`, `blocks(where, limit, orderBy)`, and `block(uid:)` to the document type.
 
 Example `where` migration:
 
@@ -127,9 +318,7 @@ nodes(where: { type: "paragraph" }) {
 ```
 :::
 
-
-Defaults still match Twig `query()`: enabled Blocks + prose. Use
-`where: { enabled: null }` to include disabled Blocks.
+Defaults still match Twig `query()`: enabled Blocks + prose. Use `where: { enabled: null }` to include disabled Blocks.
 
 #### Node and Mark Fragments
 
@@ -138,103 +327,32 @@ Defaults still match Twig `query()`: enabled Blocks + prose. Use
 | `... on VizyNode_Paragraph` | `... on VizyParagraph` |
 | `... on VizyNode_Heading` | `... on VizyHeading` |
 | `... on VizyNode_Image` | `... on VizyImage` |
-| `... on VizyNode_*` (other prose) | `... on Vizy*` (PascalCase TipTap type, e.g. `VizyBulletList`) |
+| `... on VizyNode_*` | `... on Vizy*` |
 | `... on VizyMark_Bold` | `... on VizyBold` |
 | `... on VizyMark_Link` | `... on VizyLink` |
 | `... on VizyMark_*` | `... on Vizy*` |
 
-Unknown installed types use `VizyUnknownNode` / `VizyUnknownMark` with `raw`.
+Other node and mark names follow the same PascalCase pattern, such as `VizyBulletList`. Unknown installed types use `VizyUnknownNode` or `VizyUnknownMark` with `raw`.
 
 #### Block Fragments and Fields
 
-| Vizy 3 | Vizy 4 |
-| --- | --- |
-| `... on {fieldHandle}_{blockHandle}_BlockType` | `... on {BlockHandle}_{shortUid}_VizyBlock` (UID segment is stable; introspect the schema for the exact name) |
-| `blockTypeId` | `blockTypeUid` (canonical) + `blockTypeHandle` (convenience) |
-| `collapsed` | Removed from the Block GraphQL type |
-| `values` | Prefer generated Craft fields; escape hatch `rawFieldValues` |
-| Craft field handles on the fragment | Unchanged pattern — still first-class fields on the Block Type object |
+Generated Block Type fragment names change from `{fieldHandle}_{blockHandle}_BlockType` to `{BlockHandle}_{shortUid}_VizyBlock`. The UID segment is stable; introspect the schema for the exact name.
 
-Also on Blocks: `uid` (instance), `enabled`, `resolved`.
+The numeric `blockTypeId` field is replaced by the stable `blockTypeUid`; `blockTypeHandle` is also available as a convenience. The old `collapsed` field has been removed because editor presentation state is not part of the Block GraphQL contract.
+
+Vizy 3's `values` field is not renamed directly. Craft field handles remain first-class fields on the Block Type object and should be selected normally. Use `rawFieldValues` only as an escape hatch when the generated fields are not suitable.
+
+Blocks also expose `uid`, `enabled`, and `resolved`.
 
 #### Per-Node Fields
 
-| Vizy 3 | Vizy 4 |
-| --- | --- |
-| `html` on every node | Restored on `VizyNodeInterface` (same emit path as `renderedHtml`) |
-| `tagName` | Use `type` or your templates to determine the tag |
-| `content` (JSON blob) / `contentNodes` | `children` (typed recursive nodes) |
-| `rawNode` | `raw` |
-| Image `asset` | Still `asset` on `VizyImage` |
-| Link mark `element` | Still `element` on `VizyLink`; also `url` convenience from semantic attrs |
+Vizy 3's `content` field returned a JSON blob and `contentNodes` returned child nodes. Vizy 4 replaces both with `children`, which returns typed nodes recursively. Rename `rawNode` to `raw` when you need the stored node data.
+
+The `tagName` field has been removed; use `type` or your templates when the element name matters. The `html` field remains available on every node, `asset` remains on `VizyImage`, and `element` remains on `VizyLink`. Link marks also expose a `url` convenience field.
 
 New structural types: `VizyLayout` (`stack`, `columns`), `VizyColumn` (`span`, `proportion`, `children`). Nested composition is **Hosted Vizy** Craft fields on Blocks (nested `VizyDocument`), not Content Areas.
 
 Full current contract: [GraphQL](docs:developers/graphql).
-
-### Registering Nodes and Marks
-
-Replace listeners for `Nodes::EVENT_REGISTER_NODES` and `Nodes::EVENT_REGISTER_MARKS` with `Extensions::EVENT_REGISTER_EXTENSIONS`. Register PHP classes in `$event->nodes` or `$event->marks`, and register their editor modules in JavaScript as described in [Extending Vizy](docs:developers/extending-vizy).
-
-For an existing custom mark class called `MyMark`, update the event listener in your module’s `init()` method. Put the imports at the top of the PHP file and retain your existing import for `MyMark`:
-
-::: code-group
-```php [Vizy 3]
-use verbb\vizy\events\RegisterMarksEvent;
-use verbb\vizy\services\Nodes;
-use yii\base\Event;
-
-Event::on(Nodes::class, Nodes::EVENT_REGISTER_MARKS, function(RegisterMarksEvent $event) {
-    $event->marks[] = MyMark::class;
-});
-```
-
-```php [Vizy 4]
-use verbb\vizy\events\RegisterExtensionsEvent;
-use verbb\vizy\services\Extensions;
-use yii\base\Event;
-
-Event::on(Extensions::class, Extensions::EVENT_REGISTER_EXTENSIONS, function(RegisterExtensionsEvent $event) {
-    $event->marks[] = MyMark::class;
-});
-```
-:::
-
-The equivalent node change uses `RegisterNodesEvent` and `EVENT_REGISTER_NODES` on the source side, and the same `RegisterExtensionsEvent` on the destination side. Add the node class to `$event->nodes` rather than `$event->marks`.
-
-The old Nodes service still has deprecated lookup methods that can trigger these old events. That compatibility behaviour does not register a type in the editor’s supported extension system. Update your listener rather than relying on those methods. After updating, reload the control panel, enable the type in the field’s Editor Config, and check both editing and frontend rendering.
-
-### Replacing the Config Event
-
-`VizyField::EVENT_DEFINE_VIZY_CONFIG` does not fire. Remove listeners for it and use a named Editor Config. For example, move a toolbar choice into the config selected by the field:
-
-::: code-group
-```php [Vizy 3]
-use verbb\vizy\events\ModifyVizyConfigEvent;
-use verbb\vizy\fields\VizyField;
-use yii\base\Event;
-
-Event::on(VizyField::class, VizyField::EVENT_DEFINE_VIZY_CONFIG, function(ModifyVizyConfigEvent $event) {
-    $event->config['buttons'] = ['bold', 'italic'];
-});
-```
-
-```json [Vizy 4]
-{
-    "label": "Simple Text",
-    "capabilities": {
-        "marks": ["bold", "italic"]
-    },
-    "toolbar": ["bold", "italic"]
-}
-```
-:::
-
-Save the destination example as `config/vizy/simple-text.json`, select that config on the Vizy field, and save the field. Reload an entry using it and check the toolbar. See [Configuration](docs:get-started/configuration#editor-configuration) for the other settings available in a named config.
-
-### Purifier and Plugin Hooks
-
-Remove listeners for `VizyField::EVENT_MODIFY_PURIFIER_CONFIG`; the event does not fire. Use [Modify Nodes](docs:template-guides/modify-nodes) for output changes. PHP calls to `VizyField::registerPlugin()` also do not register editor behaviour. Register the extension and its JavaScript through [Extensibility](docs:developers/extending-vizy), then check both the editor and rendered output.
 
 ## Deprecated Changes
 
@@ -242,185 +360,54 @@ The following aliases continue to work while you update your code. Use the suppo
 
 | Vizy 3 Usage | Recommended Vizy 4 Usage |
 | --- | --- |
-| `entry.vizyField.renderHtml()` without an attribute map | `entry.vizyField.render()` |
-| `entry.vizyField.renderStaticHtml()` without a configuration argument | `entry.vizyField.render()` |
-| `entry.vizyField.getRawNodes()` | `entry.vizyField.content().nodes()` |
+| `entry.vizyField.renderHtml()` | `entry.vizyField.render()` |
+| `entry.vizyField.renderStaticHtml()` | `entry.vizyField.render()` |
+| `entry.vizyField.getRawNodes()` | `entry.vizyField.content().toArray()` |
 | `entry.vizyField.getField()` | `entry.vizyField.field()` |
 | GraphQL `renderHtml` | GraphQL `renderedHtml` |
-| GraphQL `rawNodes` | `raw` for the full document, or `nodes { raw }` for individual nodes |
 
-The raw GraphQL replacements return different structures, so update the consuming code as well as the selected field name. Older editor toolbar tokens also have compatibility conversions; update the JSON file as described under Editor Config Files. Both `renderHtml()` and `renderStaticHtml()` reject non-empty configuration arguments. Those calls require an update; the no-argument forms continue to work with a deprecation warning.
+GraphQL `rawNodes` is also deprecated, but its alternatives return different structures and are covered under [Root Fields](#root-fields) rather than presented as a direct replacement. Older editor toolbar tokens have compatibility conversions; update the JSON file as described under Editor Config Files. Both `renderHtml()` and `renderStaticHtml()` reject non-empty configuration arguments. Those calls require an update; the no-argument forms continue to work with a deprecation warning.
 
 ## Changes at a Glance
 
-| Area | Vizy 3 | Vizy 4 |
-| --- | --- | --- |
-| Field storage | Bare node list / `fieldData` layouts | Canonical `doc` + global `vizy.blockTypes` |
-| Nested composition | Nested Vizy / Matrix on Blocks | **Hosted Vizy** on Block layouts; existing Matrix **grandfathered** (editable, not newly placeable) |
-| Editor Config | Files + per-field inline JSON | Named configs (CP or `config/vizy/*.json`); inline configs are saved to Project Config during promotion when admin changes are allowed |
-| GraphQL | `VizyNode_*` / per-field Block fragments on `NodeCollection` | Structural `VizyDocument` (`VizyParagraph`, `{Handle}_{uid}_VizyBlock`, …) + `nodes(where/limit/orderBy)` |
-| Extensibility | `Craft.Vizy.Config`, `registerPlugin`, define-config events | `EVENT_REGISTER_EXTENSIONS` + `Craft.Vizy.registerModule` / `registerControl` |
-| Twig field value | Node Collection (string cast, eager objects) | **`VizyDocument`** — `render()`, `query()` / `all()`, `blocks()`, `content()`, `traverse()`, `isEmpty()` |
+- Vizy fields now store a versioned `doc` and return a `VizyDocument` in Twig instead of a bare Node Collection.
+- Block definitions are shared Block Types rather than field-owned `fieldData`.
+- Hosted Vizy is recommended for nested composition. Matrix remains supported through Inline Blocks inside Vizy.
+- Fields now select named Editor Configs instead of carrying file or per-field JSON configuration.
+- GraphQL exposes a `VizyDocument` instead of a `NodeCollection`.
+- Editor integrations use the `Craft.Vizy` Extensions API instead of `Craft.Vizy.Config`.
 
 See also [Matrix in Blocks](../feature-tour/matrix-in-blocks.md) and [Configuration](configuration.md).
 
-## Before You Start
+## Advanced Migration and Recovery
 
-1. Take a **database + Project Config** backup.
-2. Deploy on a staging copy first.
-3. Confirm Craft `allowAdminChanges` is on for environments that must save inline Editor Configs into Project Config.
-4. Plan downtime or a content freeze while promotion runs.
-
-## Write Confirmation
-
-Any command that **writes** Project Config or owner content requires the exact confirmation phrase:
-
-```text
-PROMOTE VIZY 3
-```
-
-Pass it as a flag:
+Craft’s plugin migration is the supported path for normal upgrades. The following commands expose its underlying plans and checkpoints for diagnosis, custom deployments, eager bulk conversion, or recovery work:
 
 ```shell
---confirm="PROMOTE VIZY 3"
+php craft vizy/migrations/upgrade-from-v3 --dry-run
+php craft vizy/migrations/upgrade-from-v3 --force
+php craft vizy/migrations/upgrade-analyze
+php craft vizy/migrations/upgrade-dry-run path/to/plan.json path/to/owners.json
+php craft vizy/migrations/upgrade-apply path/to/plan.json path/to/owners.json
+php craft vizy/migrations/upgrade-status
+php craft vizy/migrations/upgrade-resume {runUid}
 ```
 
-Or omit `--confirm` in an interactive terminal and type the phrase when prompted. Wrong confirmation never writes.
+These advanced commands emit machine-readable details after their human summary. Write commands ask for confirmation and default to no; pass `--force` only in a reviewed non-interactive deployment. Upgrade runs are resumable because Project Config handlers and owner saves cannot be wrapped in one database transaction.
 
-Applies to:
+An owner-scope file is only needed when you deliberately want to convert selected content during the upgrade. It must contain `"complete": true` and a `jobs` array. Each job identifies an exact element, site, Vizy field, and approved mapping. When the same Vizy field appears more than once in an owner’s layout, include the Custom Field layout element’s `ownerPlacementUid` and create one job per placement.
 
-- `vizy/migrations/promotion-apply`
-- `vizy/migrations/promotion-resume`
-- `vizy/migrations/owner … --apply=1`
-- `vizy/migrations/resume` (owner checkpoint)
+### Converting a Single Owner
 
-Analysis, dry-run, and status commands do **not** require confirmation.
-
-## Schema Promotion
-
-All write commands print a short human summary and a `nextStep`, then emit **JSON** for scripting. Machine fields remain authoritative.
-
-### 1. Analyse Without Writing
-
-```shell
-php craft vizy/migrations/promotion-analyze
-```
-
-Optional: pass a JSON file of target Block Type handles, keyed by `<fieldUid>:<legacyBlockTypeId>`, to resolve handle conflicts. This changes the resulting Block Type handles; analysis still includes all eligible Vizy 3 fields.
-
-- Status **`ready`** — save the printed plan JSON.
-- Status **`blocked`** — fix every **error** diagnostic and re-run. **Info** diagnostics (for example Matrix grandfather) do not block.
-
-### 2. Prepare an Owner-Scope File
-
-Owner scope must be a JSON object with `"complete": true` and a `jobs` array (may be empty if you only promote schema):
-
-```json
-{
-  "complete": true,
-  "jobs": []
-}
-```
-
-Populate `jobs` when the analyze plan (or your own inventory) lists owner conversions to run with apply.
-
-Each job identifies the owner, field and approved mapping. When the same field appears more than once in an owner's layout, include its `ownerPlacementUid` from that layout's Custom Field element and add a separate job for each placement:
-
-```json
-{
-  "elementType": "craft\\elements\\Entry",
-  "elementId": 123,
-  "siteId": 1,
-  "fieldUid": "<field UID>",
-  "ownerPlacementUid": "<field layout element UID>",
-  "mapping": { "revision": "1" }
-}
-```
-
-Omit `ownerPlacementUid` only when the owner's layout contains one placement of the field. Checkpoints retain the selected placement so resume converts the same value.
-
-### 3. Preview the Upgrade
-
-```shell
-php craft vizy/migrations/promotion-dry-run path/to/plan.json path/to/owners.json
-```
-
-### 4. Apply the Upgrade
-
-```shell
-php craft vizy/migrations/promotion-apply path/to/plan.json path/to/owners.json --confirm="PROMOTE VIZY 3"
-```
-
-Stages (in order): plan → global Block Types → provenance → Editor Configs → canonical field settings → owners → verified.
-
-### 5. Check Status and Resume
-
-```shell
-php craft vizy/migrations/promotion-status
-php craft vizy/migrations/promotion-status {runUid}
-
-php craft vizy/migrations/promotion-resume {runUid} --confirm="PROMOTE VIZY 3"
-```
-
-Resume continues from the last durable stage.
-
-## Converting a Single Entry
-
-Use when you need an explicit analysis and conversion for one owner outside a full promotion owner-scope file:
+Use these low-level commands when you need to analyse and convert one owner explicitly:
 
 ```shell
 php craft vizy/migrations/owner {elementType} {elementId} {siteId} {fieldUid} path/to/mapping.json
-php craft vizy/migrations/owner … --apply=1 --confirm="PROMOTE VIZY 3"
+php craft vizy/migrations/owner … --apply=1
 php craft vizy/migrations/status
-php craft vizy/migrations/resume {checkpointId} --confirm="PROMOTE VIZY 3"
+php craft vizy/migrations/resume {checkpointId}
 ```
 
 Default mapping is map-only: `{ "revision": "1", "schemaMap": { … } }`. The revision must be a non-empty string. If `schemaMap` is omitted, the migrator uses the map saved when that field was upgraded.
 
 For a repeated field, pass `--ownerPlacementUid={fieldLayoutElementUid}` to both analysis and apply. In PHP, pass the field instance returned by the selected Custom Field layout element to `analyzeOwner()` or `migrateOwner()`.
-
-## After Promotion
-
-1. Open CP entries that use Vizy and confirm editors load.
-2. Spot-check Hosted nested fields and any grandfathered Matrix-in-Block content.
-3. Update Twig, GraphQL, and front-end code using the maps below
-   ([Rendering Content](docs:template-guides/rendering-content),
-   [Querying Nodes](docs:template-guides/querying-nodes),
-   [GraphQL](docs:developers/graphql),
-   [Extending Vizy](docs:developers/extending-vizy)).
-4. Leave older `fieldData` in place — promotion does **not** delete it, and Vizy
-   does not ship a retirement command. Treat leftover source as inert after a
-   successful upgrade.
-
-## Editor Config Files
-
-Older JSON used keys such as `buttons`, `formatting`, and `table`, plus kebab-case control ids (`h2`, `align-left`). Convert to the current keys (`capabilities`, `toolbar`, `dropdowns`, `bubble`, …) and ids (`heading2`, `alignLeft`, …), or recreate the config in the CP.
-
-On load, some legacy toolbar tokens are rewritten and logged through Craft’s Deprecator — update files so those shims can be removed later. Inline “custom config” on the field no longer exists; every field references a named config. Promotion mints or retargets named configs when admin changes are allowed.
-
-## Nested Content
-
-Older nested Vizy often stored bare node lists (or JSON strings of lists). After the nested field is upgraded, Vizy converts them on load; the next save persists the canonical object shape in `fieldSlots`.
-
-When using the raw Content API on Vizy 3 storage, the captured location map must include the schema mapping recorded during promotion. This also applies to a Vizy 4 document containing a nested Vizy 3 document. A raw field replacement preserves the stored representation; it does not upgrade the whole document. Missing mapping information causes an exception. Integrations that also support installations running Vizy 3 must retain their Vizy 3 integration, because that release does not expose this API.
-
-## Common Diagnostics
-
-| Signal | Meaning |
-| --- | --- |
-| “has not been upgraded … yet” | Field still has older JSON and the upgrade hasn’t been run for that field — run analyze/apply first |
-| Matrix grandfather (info) | Existing Matrix on Block Types stays editable; you still cannot add new Matrix to Blocks |
-| Nested Vizy list in a Hosted slot | Converts on nested normalize after the nested field is upgraded; next save persists a canonical nested doc |
-| Inline Editor Config blocked | `allowAdminChanges` off — add a file config or promote where admin changes are allowed |
-| Confirmation mismatch | Phrase must be exactly `PROMOTE VIZY 3` |
-| GraphQL unknown type / missing fragment | Rewrite Vizy 3 `VizyNode_*` / `{field}_{block}_BlockType` names — see GraphQL breaking changes above |
-
-## Known Limitations
-
-Promotion retains the older `fieldData`; leave it in place after verification. Vizy does not provide a command to retire it or a Matrix-to-Vizy content converter.
-
-Nested content can convert when its upgraded field loads and persist on the next save, as described under [Nested Content](#nested-content). Plan that separately from any explicit owner conversion jobs.
-
-Feed Me does not promote Vizy 3 block identities. Promote existing entries before importing document JSON that uses the destination Block Types and field placements.
-
-For limitations that also apply to new installations, including element relationships, GraphQL data access, and image transforms, see [Limitations](docs:feature-tour/limitations).

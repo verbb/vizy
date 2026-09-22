@@ -263,6 +263,14 @@ final class EditorConfigs extends Component
         return $payload;
     }
 
+    /**
+     * Normalize a runtime event's authorable config through the same contract as a stored config.
+     */
+    public function normalizeRuntimeConfig(string $id, array $config): array
+    {
+        return $this->_normalize($id, $config, null);
+    }
+
     public function ensureStandardConfig(): void
     {
         if (Craft::$app->getProjectConfig()->get(self::PROJECT_CONFIG_PATH . '.' . self::DEFAULT_ID) === null) {

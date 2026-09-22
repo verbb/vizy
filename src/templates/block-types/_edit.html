@@ -69,6 +69,7 @@
 
 <h2>{{ 'Layout' | t('vizy') }}</h2>
 <p class="light">{{ 'Define what type of fields this block type has.' | t('vizy') }}</p>
+<p class="light">{{ 'For nested content, we recommend a Vizy field. Matrix uses Inline Blocks here and adds storage and processing overhead, particularly with drafts and multiple sites.' | t('vizy') }}</p>
 {{ vizyFieldLayoutDesigner(blockType.getFieldLayout(), {
     id: 'block-type-field-layout-' ~ blockType.uid,
 })|raw }}

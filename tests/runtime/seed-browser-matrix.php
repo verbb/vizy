@@ -4,7 +4,6 @@ use craft\elements\Entry;
 use craft\fieldlayoutelements\CustomField;
 use craft\fields\Matrix;
 use craft\fields\PlainText;
-use craft\helpers\ProjectConfig;
 use craft\helpers\StringHelper;
 use craft\models\EntryType;
 use craft\models\FieldLayout;
@@ -12,24 +11,24 @@ use craft\models\FieldLayoutTab;
 use verbb\vizy\elements\Block;
 use verbb\vizy\fields\VizyField;
 use verbb\vizy\models\BlockType;
-use verbb\vizy\services\BlockTypes;
 use verbb\vizy\Vizy;
 
-function seedBrowserMatrix(VizyField $field, Entry $owner, callable $save): array
+function seedBrowserMatrix(VizyField $field, Entry $owner, callable $save, string $mode = 'blocks'): array
 {
-    $label = new PlainText(['name' => 'Row label', 'handle' => 'browserRowLabel']);
+    $suffix = $mode === 'blocks' ? '' : str_replace('-', '', ucfirst($mode));
+    $label = new PlainText(['name' => 'Row label', 'handle' => 'browserRowLabel' . $suffix]);
     $save($label, Craft::$app->getFields()->saveField(...));
-    $rowType = new EntryType(['name' => 'Browser row', 'handle' => 'browserRow']);
+    $rowType = new EntryType(['name' => 'Browser row', 'handle' => 'browserRow' . $suffix]);
     $rowLayout = new FieldLayout(['type' => Entry::class]);
     $rowTab = new FieldLayoutTab(['name' => 'Content', 'layout' => $rowLayout]);
     $rowTab->setElements([new CustomField($label)]);
     $rowLayout->setTabs([$rowTab]);
     $rowType->setFieldLayout($rowLayout);
     $save($rowType, Craft::$app->getEntries()->saveEntryType(...));
-    $matrix = new Matrix(['name' => 'Existing rows', 'handle' => 'browserRows', 'viewMode' => 'blocks']);
+    $matrix = new Matrix(['name' => 'Existing rows', 'handle' => 'browserRows' . $suffix, 'viewMode' => $mode]);
     $matrix->setEntryTypes([$rowType]);
     $save($matrix, Craft::$app->getFields()->saveField(...));
-    $type = new BlockType(['uid' => StringHelper::UUID(), 'name' => 'Existing Matrix', 'handle' => 'existingMatrix']);
+    $type = new BlockType(['uid' => StringHelper::UUID(), 'name' => 'Existing Matrix', 'handle' => 'existingMatrix' . $suffix]);
     $layout = new FieldLayout(['uid' => StringHelper::UUID(), 'type' => Block::class]);
     $tab = new FieldLayoutTab(['name' => 'Content', 'layout' => $layout]);
     $placement = new CustomField($matrix);
@@ -37,9 +36,7 @@ function seedBrowserMatrix(VizyField $field, Entry $owner, callable $save): arra
     $tab->setElements([$placement]);
     $layout->setTabs([$tab]);
     $type->setFieldLayout($layout);
-    // Seed the already-existing V3 layout baseline. The normal save below must
-    // accept this same placement; creating a new Matrix placement stays forbidden.
-    Craft::$app->getProjectConfig()->set(BlockTypes::PROJECT_CONFIG_PATH . '.' . $type->uid, ProjectConfig::packAssociativeArrays($type->toConfig()));
+    // Use normal configuration saves so the CP journeys cover new placements.
     $save($type, Vizy::$plugin->getBlockTypes()->saveBlockType(...));
     $field->blockTypePickerGroups[0]['blockTypeUids'][] = $type->uid;
     $save($field, Craft::$app->getFields()->saveField(...));
@@ -64,7 +61,7 @@ function seedBrowserMatrix(VizyField $field, Entry $owner, callable $save): arra
     ]];
     $owner->setFieldValue($field->handle, $document);
     $save($owner, Craft::$app->getElements()->saveElement(...));
-    $unplaced = new Matrix(['name' => 'Unplaced rows', 'handle' => 'browserUnplacedRows']);
+    $unplaced = new Matrix(['name' => 'Unplaced rows', 'handle' => 'browserUnplacedRows' . $suffix]);
     $unplaced->setEntryTypes([$rowType]);
     $save($unplaced, Craft::$app->getFields()->saveField(...));
     return ['fieldId' => $matrix->id, 'entryTypeId' => $rowType->id, 'anchorId' => $anchor->id, 'vizyFieldId' => $field->id, 'unplacedFieldId' => $unplaced->id, 'foreignEntryTypeId' => $owner->typeId, 'blockUid' => $blockUid, 'rowId' => $row->id, 'anchorUid' => $anchor->uid, 'fieldHandle' => $matrix->handle, 'labelHandle' => $label->handle];

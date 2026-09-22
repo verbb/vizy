@@ -15,6 +15,9 @@ foreach (['.cache', '.cache/verbb-tests', '.cache/verbb-tests/app'] as $relative
     }
 }
 $appRoot = $runtimeRoot . '/app';
+$database = json_decode((string)@file_get_contents($runtimeRoot . '/database.json'), true);
+$driver = ($database['driver'] ?? 'mysql');
+if (!in_array($driver, ['mysql', 'pgsql'], true)) throw new RuntimeException('Unknown owned test database.');
 foreach (getenv() as $key => $value) {
     if (str_starts_with($key, 'CRAFT_') || in_array($key, ['DOTENV_FILE', 'ENVIRONMENT', 'PRIMARY_SITE_URL'], true)) {
         putenv($key);
@@ -23,7 +26,7 @@ foreach (getenv() as $key => $value) {
 }
 foreach ([
     'ENVIRONMENT' => 'testing', 'CRAFT_ENVIRONMENT' => 'testing',
-    'CRAFT_DB_DRIVER' => 'mysql', 'CRAFT_DB_SERVER' => 'db', 'CRAFT_DB_PORT' => '3306',
+    'CRAFT_DB_DRIVER' => $driver, 'CRAFT_DB_SERVER' => $driver === 'pgsql' ? 'matrix-pgsql' : 'db', 'CRAFT_DB_PORT' => $driver === 'pgsql' ? '5432' : '3306',
     'CRAFT_DB_DATABASE' => 'db', 'CRAFT_DB_USER' => 'db', 'CRAFT_DB_PASSWORD' => 'db',
     'CRAFT_SECURITY_KEY' => 'verbb-disposable-test-runtime-not-for-production',
     'CRAFT_APP_ID' => 'VerbbTests-' . $owner['project'],

@@ -6,6 +6,7 @@ use verbb\vizy\deprecations\VizyDocumentNodeCollectionDeprecations;
 use verbb\vizy\elements\Block as BlockElement;
 use verbb\vizy\fields\VizyField;
 use verbb\vizy\helpers\FieldSlotValues;
+use verbb\vizy\helpers\Matrix as MatrixHelper;
 use verbb\vizy\models\BlockType;
 
 use craft\base\ElementInterface;
@@ -248,7 +249,7 @@ final class VizyDocument
             $craftField = $placement->getField();
             if ($craftField instanceof \craft\fields\Matrix) {
                 if ($anchor) {
-                    $element->setFieldValue($craftField->handle, $anchor->getFieldValue($craftField->handle));
+                    $element->setFieldValue($craftField->handle, MatrixHelper::nestedEntryQuery($craftField, $anchor));
                 }
                 continue;
             }

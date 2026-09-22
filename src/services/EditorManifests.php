@@ -3,6 +3,7 @@ namespace verbb\vizy\services;
 
 use verbb\vizy\Vizy;
 use verbb\vizy\document\VizyDocument;
+use verbb\vizy\events\ModifyEditorConfigEvent;
 use verbb\vizy\fields\VizyField;
 use verbb\vizy\helpers\EditorConfigPresentation;
 use verbb\vizy\helpers\ToolbarIcons;
@@ -19,6 +20,12 @@ use RuntimeException;
  */
 final class EditorManifests extends Component
 {
+    // Constants
+    // =========================================================================
+
+    public const EVENT_MODIFY_EDITOR_CONFIG = 'modifyEditorConfig';
+
+
     // Properties
     // =========================================================================
 
@@ -31,9 +38,27 @@ final class EditorManifests extends Component
     public function build(VizyField $field): array
     {
         $configId = $field->editorConfig !== '' ? $field->editorConfig : EditorConfigs::DEFAULT_ID;
-        $config = \verbb\vizy\Vizy::$plugin->getEditorConfigs()->getConfig($configId);
+        $editorConfigs = Vizy::$plugin->getEditorConfigs();
+        $config = $editorConfigs->getConfig($configId);
+        if ($config !== null && $this->hasEventHandlers(self::EVENT_MODIFY_EDITOR_CONFIG)) {
+            // Runtime changes are authorable input, never mutations of Project Config or a
+            // finished manifest. Resolve them here so dependencies, validation, revisions and
+            // cache identity all describe the same effective editor schema.
+            $storedDiagnostics = $config['diagnostics'] ?? [];
+            $event = new ModifyEditorConfigEvent([
+                'config' => $editorConfigs->authorablePayload($config),
+                'field' => $field,
+                'configId' => $configId,
+            ]);
+            $this->trigger(self::EVENT_MODIFY_EDITOR_CONFIG, $event);
+            $config = $editorConfigs->normalizeRuntimeConfig($configId, $event->config);
+            $config['diagnostics'] = [
+                ...$storedDiagnostics,
+                ...($config['diagnostics'] ?? []),
+            ];
+        }
         $diagnostics = [
-            ...\verbb\vizy\Vizy::$plugin->getEditorConfigs()->getFieldDiagnostics($field),
+            ...$editorConfigs->getFieldDiagnostics($field),
             ...\verbb\vizy\Vizy::$plugin->getBlockTypes()->getSchemaDiagnostics(),
             ...($config['diagnostics'] ?? []),
         ];

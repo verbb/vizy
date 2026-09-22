@@ -12,6 +12,6 @@ Follow [Blocks and Block Types](docs:feature-tour/blocks-and-block-types) to con
 
 For an inline feature, register a node or mark and place its control on the field’s Editor Config toolbar. [Creating a Custom Node from Scratch](docs:guides/developers/creating-a-custom-node-from-scratch) walks through an emoji button, and [Creating a Custom Mark from Scratch](docs:guides/developers/creating-a-custom-mark-from-scratch) adds abbreviation formatting.
 
-The `/`, `+`, and Add Block lists are restricted to blocks. Registering a custom node or a JavaScript insertion action does not make it appear in those lists. Use `Craft.Vizy.registerControl()` when your toolbar button needs a custom action, as shown in the node guide.
+The toolbar's **Add Block** control, the gutter `+`, and `/` insertion are restricted to Block Types; they are not general action launchers. Register a rich-text node or action on the toolbar instead. Use `Craft.Vizy.registerControl()` when its toolbar button needs custom behaviour, as shown in the node guide.
 
 After enabling the control, test it from the toolbar, save the entry, and inspect the rendered HTML. A working editor button needs both its JavaScript action and its PHP rendering definition.

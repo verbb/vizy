@@ -24,15 +24,14 @@ use verbb\vizy\services\FieldLifecycle;
 use verbb\vizy\Vizy;
 
 /**
- * Matrix-in-Block Option 1 grandfather: existing Matrix mounts + round-trips via
- * MatrixAnchor; new Matrix placements stay forbidden.
+ * Legacy Matrix content keeps its anchor-backed persistence through upgrades.
  */
-it('splits Matrix serialize from new placement', function() {
+it('allows existing and new Matrix placements through the anchor persistence strategy', function() {
     $lifecycle = Vizy::$plugin->getFieldLifecycle();
     $matrix = new Matrix(['handle' => 'gfMatrix']);
     expect($lifecycle->classify($matrix)['capability'])->toBe(FieldLifecycle::MATRIX_ANCHOR)
         ->and($lifecycle->canSerialize($matrix))->toBeTrue()
-        ->and($lifecycle->permitsNewPlacement($matrix))->toBeFalse();
+        ->and($lifecycle->permitsNewPlacement($matrix))->toBeTrue();
 });
 
 it('converts V3 matrixAnchorUid, hydrates Matrix from anchor, and serializes without Matrix blobs', function() {
@@ -284,7 +283,7 @@ it('converts V3 matrixAnchorUid, hydrates Matrix from anchor, and serializes wit
 
 });
 
-it('rejects newly added Matrix placements on Block Types while keeping designer forbid', function() {
+it('saves newly added Matrix placements on Block Types and offers them in the designer', function() {
     $suffix = StringHelper::randomString(6);
     $matrix = new Matrix(['name' => 'New Matrix', 'handle' => 'newMatrix' . $suffix]);
     $entryType = new EntryType(['name' => "T {$suffix}", 'handle' => 't' . $suffix]);
@@ -305,6 +304,16 @@ it('rejects newly added Matrix placements on Block Types while keeping designer 
     $layout->setTabs([$tab]);
     $type->setFieldLayout($layout);
 
-    expect(Vizy::$plugin->getBlockTypes()->saveBlockType($type))->toBeFalse()
-        ->and($type->getErrors('fieldLayout'))->not->toBeEmpty();
+    expect(Vizy::$plugin->getBlockTypes()->saveBlockType($type))->toBeTrue()
+        ->and($type->getErrors('fieldLayout'))->toBeEmpty();
+    $available = [];
+    foreach ($layout->getAvailableCustomFields() as $group) {
+        foreach ($group as $element) {
+            if ($element instanceof CustomField) {
+                $available[] = $element->getField()->uid;
+            }
+        }
+    }
+    expect($available)->toContain($matrix->uid)
+        ->and(Vizy::$plugin->getFieldLifecycle()->permitsNewPlacementClass(Matrix::class))->toBeTrue();
 });

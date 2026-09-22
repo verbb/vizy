@@ -6,10 +6,11 @@ use verbb\vizy\fields\VizyField;
 
 use Craft;
 use craft\console\Controller;
-use craft\elements\Entry;
 use craft\helpers\Console;
 
 use yii\console\ExitCode;
+
+use Throwable;
 
 /**
  * Manages Vizy matrix anchors.
@@ -22,6 +23,9 @@ class AnchorsController extends Controller
     public ?int $elementId = null;
     public ?int $limit = null;
     public int $batchSize = 100;
+    public ?string $site = null;
+    public bool $drafts = false;
+    public bool $dryRun = false;
 
 
     // Public Methods
@@ -33,6 +37,9 @@ class AnchorsController extends Controller
         $options[] = 'elementId';
         $options[] = 'limit';
         $options[] = 'batchSize';
+        $options[] = 'site';
+        $options[] = 'drafts';
+        $options[] = 'dryRun';
 
         return $options;
     }
@@ -50,20 +57,6 @@ class AnchorsController extends Controller
             return ExitCode::OK;
         }
 
-        $query = Entry::find()
-            ->status(null)
-            ->drafts(null)
-            ->trashed(false);
-
-        if ($this->elementId) {
-            $query->id($this->elementId);
-        }
-
-        if ($this->limit) {
-            $query->limit($this->limit);
-        }
-
-        $total = (clone $query)->count();
         $elementsService = Craft::$app->getElements();
         $anchors = Vizy::$plugin->getAnchors();
         $saved = 0;
@@ -71,41 +64,59 @@ class AnchorsController extends Controller
         $failed = 0;
         $position = 0;
 
-        $this->stdout("Checking $total elements for Vizy matrix anchor migration...\n\n");
+        $this->stdout('Site scope: ' . ($this->site ?: 'all sites') . ". Counts refer to element/site rows.\n");
+        $this->stdout('Drafts: ' . ($this->drafts ? 'included' : 'excluded') . ($this->dryRun ? " · Dry run\n" : "\n"));
 
-        foreach ($query->each($this->batchSize) as $element) {
-            $position++;
-
-            $needsBackfill = false;
-
-            foreach ($vizyFields as $field) {
-                if ($anchors->elementNeedsMatrixAnchorBackfill($element, $field)) {
-                    $needsBackfill = true;
-                    break;
+        // Enumerate installed content owners, including global sets and nested
+        // plugin elements, rather than assuming Vizy is only placed on entries.
+        foreach ($elementsService->getAllElementTypes() as $elementType) {
+            $query = $elementType::find()->site($this->site ?: '*')->unique(false)
+                ->status(null)->drafts($this->drafts ? null : false)
+                ->provisionalDrafts(false)->revisions(false)->trashed(false)
+                ->orderBy(['elements.id' => SORT_ASC, 'elements_sites.siteId' => SORT_ASC]);
+            if ($this->elementId) {
+                $query->id($this->elementId);
+            }
+            foreach ($query->each($this->batchSize) as $element) {
+                if ($this->limit !== null && $position >= $this->limit) {
+                    break 2;
                 }
-            }
-
-            if (!$needsBackfill) {
-                $skipped++;
-                continue;
-            }
-
-            $this->stdout("  [$position/$total] Saving {$element->id} ... ");
-
-            if ($elementsService->saveElement($element)) {
-                $saved++;
-                $this->stdout("done\n", Console::FG_GREEN);
-            } else {
-                $failed++;
-                $this->stdout("failed\n", Console::FG_RED);
-
-                foreach ($element->getErrorSummary(true) as $error) {
-                    $this->stdout("    - $error\n", Console::FG_RED);
+                $position++;
+                try {
+                    $needsBackfill = false;
+                    foreach ($element->getFieldLayout()?->getCustomFields() ?? [] as $field) {
+                        if ($field instanceof VizyField && $anchors->elementNeedsMatrixAnchorBackfill($element, $field)) {
+                            $needsBackfill = true;
+                            break;
+                        }
+                    }
+                    if (!$needsBackfill) {
+                        $skipped++;
+                        continue;
+                    }
+                    $this->stdout("  {$elementType} #{$element->id}, site {$element->siteId}: ");
+                    if ($this->dryRun) {
+                        $saved++;
+                        $this->stdout("would save\n");
+                        continue;
+                    }
+                    // Each locale is processed independently. Resave semantics
+                    // preserve editorial dates and avoid search-index work.
+                    $element->resaving = true;
+                    if (!$elementsService->saveElement($element, true, false, false)) {
+                        throw new \RuntimeException(implode(', ', $element->getErrorSummary(true)));
+                    }
+                    $saved++;
+                    $this->stdout("done\n", Console::FG_GREEN);
+                } catch (Throwable $e) {
+                    $failed++;
+                    $this->stdout("failed: {$e->getMessage()}\n", Console::FG_RED);
                 }
             }
         }
 
-        $this->stdout("\nSaved: $saved, Skipped: $skipped, Failed: $failed\n");
+        $label = $this->dryRun ? 'Would save' : 'Saved';
+        $this->stdout("\n$label: $saved, Skipped: $skipped, Failed: $failed\n");
 
         return $failed ? ExitCode::UNSPECIFIED_ERROR : ExitCode::OK;
     }

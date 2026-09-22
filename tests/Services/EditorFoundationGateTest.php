@@ -9,11 +9,13 @@ use craft\helpers\StringHelper;
 use RuntimeException;
 use verbb\vizy\document\DocumentParser;
 use verbb\vizy\elements\Block;
+use verbb\vizy\events\ModifyEditorConfigEvent;
 use verbb\vizy\events\RegisterExtensionsEvent;
 use verbb\vizy\fields\VizyField;
 use verbb\vizy\helpers\EditorConfigPresentation;
 use verbb\vizy\helpers\ToolbarIcons;
 use verbb\vizy\services\EditorConfigs;
+use verbb\vizy\services\EditorManifests;
 use verbb\vizy\services\Extensions;
 use verbb\vizy\models\BlockType;
 use verbb\vizy\Vizy;
@@ -360,6 +362,86 @@ it('persists gutter and slash insertion chrome flags on Editor Config and manife
         ->and($manifest['slashInsert'])->toBeFalse();
 
     $service->removeConfig($id);
+});
+
+it('normalizes runtime Editor Config changes into manifest identity and save validation', function() {
+    $configs = Vizy::$plugin->getEditorConfigs();
+    $id = 'runtime' . strtolower(StringHelper::randomString(8));
+    $handle = 'runtimeConfig' . StringHelper::randomString(5);
+    $configs->saveConfig($id, [
+        'label' => 'Runtime base',
+        'capabilities' => [
+            'nodes' => ['paragraph'],
+            'marks' => ['bold'],
+        ],
+        'headings' => ['levels' => []],
+        'toolbar' => ['bold', 'addBlock'],
+        'bubble' => ['enabled' => true, 'items' => ['bold']],
+    ]);
+
+    $field = new VizyField([
+        'uid' => StringHelper::UUID(),
+        'name' => 'Runtime config',
+        'handle' => $handle,
+        'editorConfig' => $id,
+    ]);
+    $modify = true;
+    $eventSawAuthorableConfig = false;
+    $handler = function(ModifyEditorConfigEvent $event) use (&$modify, &$eventSawAuthorableConfig, $handle, $id): void {
+        if ($event->field?->handle !== $handle) {
+            return;
+        }
+
+        $eventSawAuthorableConfig = !isset($event->config['schema'], $event->config['modules'])
+            && $event->configId === $id;
+        if (!$modify) {
+            return;
+        }
+
+        $event->config['capabilities']['marks'][] = 'italic';
+        $event->config['toolbar'][] = 'italic';
+        $event->config['gutterInsert'] = false;
+    };
+    Event::on(EditorManifests::class, EditorManifests::EVENT_MODIFY_EDITOR_CONFIG, $handler);
+
+    try {
+        $manifests = Vizy::$plugin->getEditorManifests();
+        $manifests->invalidate();
+        $runtime = $manifests->build($field);
+
+        $modify = false;
+        $stored = $manifests->build($field);
+
+        expect($eventSawAuthorableConfig)->toBeTrue()
+            ->and($runtime['enabledMarks'])->toContain('italic')
+            ->and(array_column($runtime['toolbar']['controls'], 'id'))->toContain('italic')
+            ->and($runtime['gutterInsert'])->toBeFalse()
+            ->and($stored['enabledMarks'])->not->toContain('italic')
+            ->and($stored['gutterInsert'])->toBeTrue()
+            ->and($runtime['hash'])->not->toBe($stored['hash']);
+
+        $document = (new DocumentParser())->parse([
+            'type' => 'doc',
+            'attrs' => ['schemaVersion' => 2],
+            'content' => [[
+                'type' => 'paragraph',
+                'content' => [[
+                    'type' => 'text',
+                    'text' => 'Runtime',
+                    'marks' => [['type' => 'italic']],
+                ]],
+            ]],
+        ]);
+
+        $modify = true;
+        expect($manifests->validateCapabilities($document, $field, null))->toBe([]);
+        $modify = false;
+        expect($manifests->validateCapabilities($document, $field, null)[0]['code'] ?? null)->toBe('disallowedMark');
+    } finally {
+        Event::off(EditorManifests::class, EditorManifests::EVENT_MODIFY_EDITOR_CONFIG, $handler);
+        $configs->removeConfig($id);
+        Vizy::$plugin->getEditorManifests()->invalidate();
+    }
 });
 
 it('renders toolbar and bubble controls as icons, and a dropdown as its registration', function() {
