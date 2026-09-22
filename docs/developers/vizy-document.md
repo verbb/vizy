@@ -2,6 +2,43 @@
 
 Reading a Vizy field in Twig returns a **`VizyDocument`**, which represents that field’s saved content. It provides methods for rendering HTML, checking whether content exists, and reading individual nodes or blocks.
 
+## Understanding a Document
+
+Vizy stores a document as structured JSON. Its `content` list contains nodes such as paragraphs, headings, images, layouts, and Vizy blocks. Nodes can contain other nodes: a paragraph contains text, while a list contains list items. Marks add formatting or links to part of a text node.
+
+For example, the text “Read our guide” with a link on the final word has this document shape:
+
+```json
+{
+    "type": "doc",
+    "attrs": { "schemaVersion": 2 },
+    "content": [
+        {
+            "type": "paragraph",
+            "content": [
+                { "type": "text", "text": "Read our " },
+                {
+                    "type": "text",
+                    "text": "guide",
+                    "marks": [
+                        {
+                            "type": "link",
+                            "attrs": {
+                                "type": "url",
+                                "value": "https://example.com/guide",
+                                "newWindow": false
+                            }
+                        }
+                    ]
+                }
+            ]
+        }
+    ]
+}
+```
+
+The document retains the paragraph, text, and semantic link destination without storing finished frontend markup. Rendering resolves that structure into HTML, while queries let templates work with selected root nodes.
+
 ## Rendering a Field
 
 In an entry template, replace `vizyField` with your Vizy field’s handle:
@@ -36,4 +73,4 @@ For a content fragment, `content().blocks(recursive, enabled)` keeps the recursi
 {{ dump(entry.vizyField.toArray()) }}
 ```
 
-This exposes stored data rather than rendered HTML. For changes to embedded custom fields from a module or migration, see [Managing Embedded Content](docs:developers/managing-embedded-content).
+This exposes stored data rather than rendered HTML. For changes to embedded custom fields from a module or migration, see [Embedded Content](docs:developers/embedded-content).

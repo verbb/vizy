@@ -11,4 +11,5 @@ abstract class Table
     public const ASSET_UPLOAD_BATCHES = '{{%vizy_asset_upload_batches}}';
     public const OWNER_MIGRATIONS = '{{%vizy_owner_migrations}}';
     public const SCHEMA_PROMOTIONS = '{{%vizy_schema_promotions}}';
+    public const CONTENT_RECOVERY = '{{%vizy_content_recovery}}';
 }

@@ -14,7 +14,7 @@ Vizy is a content editor field for Craft CMS. Editors can combine rich text with
 - GraphQL queries and Feed Me imports.
 - Custom editor nodes, marks, and toolbar controls.
 
-See [Limitations](./docs/feature-tour/limitations.md) when planning integrations. For an existing installation, review [Upgrading from v3](./docs/get-started/upgrading-from-v3.md) before updating.
+See [Planning Vizy Content](./docs/feature-tour/planning-vizy-content.md) when designing fields and integrations. For an existing installation, review [Upgrading from v3](./docs/get-started/upgrading-from-v3.md) before updating.
 
 ## Documentation
 

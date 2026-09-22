@@ -31,6 +31,7 @@ final class DocumentSerializer
         }
 
         $canonical = $document->toArray();
+        unset($canonical['attrs']['_storageToken']);
         if ($persistMatrix) {
             Vizy::$plugin->getMatrixPersistence()->syncCanonicalTree($document, $canonical);
             // Re-bind so nested Hosted sync mutations are visible to projection.
@@ -76,6 +77,11 @@ final class DocumentSerializer
                             continue;
                         }
 
+                        // Only the persistence pass may resolve or replace an
+                        // anchor reference, or consume its submitted payload.
+                        if ($field instanceof Matrix) {
+                            continue;
+                        }
                         $blockElement ??= $document->blockElement($block);
                         $hasRawValue = $block->hasRawFieldValue($placementUid);
                         if (!$hasRawValue && !$placement->showInForm($blockElement) && !$field instanceof Matrix) {
@@ -95,20 +101,6 @@ final class DocumentSerializer
                             // Nested serialize is always pure here — Matrix sync
                             // already ran across the tree when persistMatrix was set.
                             $node['attrs']['fieldSlots'][$placementUid] = $this->serialize($nested, false);
-                            continue;
-                        }
-
-                        // V3 can omit an empty Matrix anchor UID on one site even
-                        // though the ownership row exists. Resolve it read-only so
-                        // migration fingerprints match the subsequent owner save.
-                        if ($field instanceof Matrix) {
-                            unset($node['attrs']['fieldSlots'][$placementUid]);
-                            $existingUid = is_string($node['attrs']['matrixAnchorUid'] ?? null)
-                                ? $node['attrs']['matrixAnchorUid']
-                                : $blockElement->getMatrixAnchor()?->uid;
-                            if ($existingUid) {
-                                $node['attrs']['matrixAnchorUid'] = $existingUid;
-                            }
                             continue;
                         }
 

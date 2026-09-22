@@ -354,6 +354,7 @@ class VizyField extends Field
             // Craft calls general serialization during reads and copies too.
             // Only this hook runs while persisting the owner's content row.
             $value = $value->recontextualize($element, $this);
+            Vizy::$plugin->getContentVersions()->check($element, $this, $value->toArray()['attrs']['_storageToken'] ?? null);
             $serialized = Vizy::$plugin->getDocuments()->serializeForPersistence($value);
             // After-save acknowledgements and upload finalization must observe
             // the exact snapshot written to the content row, including anchor UIDs.
@@ -418,6 +419,7 @@ class VizyField extends Field
 
     public function beforeElementSave(ElementInterface $element, bool $isNew): bool
     {
+        Vizy::$plugin->getContentRecovery()->capture($element, $this);
         // Craft uses duplication internally for drafts, revisions, and restores.
         // Only a true canonical-owner duplicate receives new document identity.
         if (
@@ -880,8 +882,10 @@ class VizyField extends Field
         $manifest = Vizy::$plugin->getEditorManifests()->build($this);
         $context = Vizy::$plugin->getEditorContexts()->issue($element, $this);
         $document = $value->toArray();
+        $storageToken = Vizy::$plugin->getContentVersions()->issue($element, $this);
         $bootstrap = [
             'document' => $document,
+            'storageToken' => $storageToken,
             'manifest' => $manifest,
             'editorContextToken' => $context['token'],
             'finalization' => Vizy::$plugin->getEditorAcknowledgements()->initialFinalization($value, $editorId),
@@ -910,7 +914,7 @@ class VizyField extends Field
         // One hidden control is the complete persisted field value. FieldLayout
         // widget controls use isolated vizyHost names and are stripped client-side.
         return Html::tag('vizy-editor',
-            Html::hiddenInput($this->handle, $value->toJson(), [
+            Html::hiddenInput($this->handle, Json::encode([...$document, 'attrs' => [...$document['attrs'], '_storageToken' => $storageToken]]), [
                 'id' => $inputId,
                 'data-vizy-document' => true,
             ])

@@ -279,6 +279,7 @@ export interface EditorBootstrap {
     document: CanonicalNode;
     manifest: EditorManifest;
     editorContextToken: string;
+    storageToken?: string;
     finalization?: FinalizationResult;
     /** Real server-rendered FieldLayout forms for Blocks already in the document. */
     initialFieldLayouts?: InitialFieldLayoutEntry[];

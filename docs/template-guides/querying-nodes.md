@@ -139,6 +139,6 @@ See [Node Query](docs:developers/node-query) for the full method and operator re
 
 ## Reading Content Without a Query
 
-Use `blocks()` for enabled blocks throughout the outer node tree, including layouts. Use `blocks(false)` for disabled blocks or `blocks(null)` for both states. `findBlock(uid)` is an identity lookup and can return a disabled block. To read the root nodes as arrays, use `content().nodes()`; `traverse()` follows node children. These methods do not enter fields nested inside blocks. Read an inner Vizy field through its block field handle, as shown in [Nested Vizy](docs:feature-tour/nested-vizy#displaying-the-nested-field).
+Use `blocks()` for enabled blocks throughout the outer node tree, including layouts. Use `blocks(false)` for disabled blocks or `blocks(null)` for both states. `findBlock(uid)` is an identity lookup and can return a disabled block. To read the root nodes as arrays, use `content().nodes()`; `traverse()` follows node children. These methods do not enter fields nested inside blocks. Read an inner Vizy field through its block field handle, as explained in [Nested Content](docs:feature-tour/nested-content#add-a-vizy-field-to-a-block).
 
 See [Rendering Content](docs:template-guides/rendering-content) for examples of these approaches. GraphQL’s `nodes` and `blocks` fields also support filtering, limits, and ordering; see [GraphQL](docs:developers/graphql).

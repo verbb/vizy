@@ -55,7 +55,7 @@ class Vizy extends Plugin
     // =========================================================================
 
     public bool $hasCpSettings = true;
-    public string $schemaVersion = '1.0.3';
+    public string $schemaVersion = '1.0.4';
 
 
     // Public Methods
@@ -140,6 +140,7 @@ class Vizy extends Plugin
             // commit. Reload persisted validation state in long-lived callers.
             if (in_array('element', $event->tags, true)) {
                 $this->getContentBaselines()->clear();
+                $this->getContentVersions()->clear();
             }
         });
         Event::on(Elements::class, Elements::EVENT_AFTER_SAVE_ELEMENT, [$this->getAssetUploads(), 'handleAfterSave']);

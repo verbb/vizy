@@ -6,7 +6,7 @@ Vizy provides different controls for inserting structured blocks and editing ric
 
 Create a Block Type and include it in the Vizy field’s Block Configuration. Editors can choose it from **Add Block**, the `+` beside the content, or `/` in an empty paragraph. These controls list Vizy Block Types, including their groups and preview images.
 
-Follow [Blocks and Block Types](docs:feature-tour/blocks-and-block-types) to configure the type. Open an entry using the field, insert the block, fill in its fields, and save. Reopen the entry to check its content, then check its [Block Type template](docs:template-guides/block-type-templates) on the frontend.
+Follow [Block Types and Groups](docs:feature-tour/block-types-and-groups) to configure the type. Open an entry using the field, insert the block, fill in its fields, and save. Reopen the entry to check its content, then check its [Block Type template](docs:template-guides/block-type-templates) on the frontend.
 
 ## Adding a Rich-Text Control
 

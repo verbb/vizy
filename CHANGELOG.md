@@ -1,6 +1,13 @@
 # Changelog
 
+## Unreleased
+
+### Changed
+- Reorganised the Feature Tour around the editor, Vizy blocks, field configuration, editor capabilities, Block Types, nested content, and content-planning guidance.
+
 ## 4.0.0-beta.1 - 2026-09-22
+
+> {warning} Before upgrading to Vizy 4, review the [Upgrading from v3](https://verbb.io/craft-plugins/vizy/docs/v4/get-started/upgrading-from-v3) guide for breaking changes and required migration steps.
 
 ### Added
 - Added a new TipTap 3 editor with configurable formatting, tables, links, images, embeds, undo and redo, accessible toolbar controls, Bubble Menus, and structured Blocks in one editing surface.

@@ -121,21 +121,18 @@ final class FieldLayoutController extends Controller
     }
 
 
-    // Private Methods
-    // =========================================================================
-
     /**
      * Verifies the signed editor context and reauthorizes the owner for save.
      * Returns null when the context no longer matches the owner's placement of
      * the field, which callers surface as a `staleField` conflict.
      */
-    private function _verifiedRequest(): ?array
+    public function resolveEditorContext(string $token): ?array
     {
         // Craft action URLs can route outside the CP path. Check CP access
         // explicitly as well as permission to edit this particular owner.
         $this->requirePermission('accessCp');
         $context = Vizy::$plugin->getEditorContexts()->verify(
-            (string)$this->request->getRequiredBodyParam('editorContextToken'),
+            $token,
         );
         $owner = $this->_resolveOwner($context);
         $user = static::currentUser();
@@ -147,6 +144,16 @@ final class FieldLayoutController extends Controller
             return null;
         }
         return [$context, $owner, $field];
+    }
+
+
+
+    // Private Methods
+    // =========================================================================
+
+    private function _verifiedRequest(): ?array
+    {
+        return $this->resolveEditorContext((string)$this->request->getRequiredBodyParam('editorContextToken'));
     }
 
     private function _rejected(Throwable $exception): Response

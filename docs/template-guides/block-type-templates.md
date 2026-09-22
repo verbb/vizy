@@ -32,6 +32,18 @@ Create `templates/_vizy/blocks/image-text.twig` in your Craft project:
 
 The template receives the current block as `block` and its Block Type as `type`. Access each field through `block` using its handle. The image is resolved once and only rendered when one has been selected. Style the two classes in your site’s stylesheet to suit the design.
 
+## Render a Nested Vizy Field
+
+When the Block Type contains a Vizy field, read it through `block` like any other custom field and call `render()`. For a nested field with the handle `body`, place this in the Block Type’s Twig template where its content should appear:
+
+```twig
+{% if not block.body.isEmpty() %}
+    {{ block.body.render() }}
+{% endif %}
+```
+
+The nested field uses its own Editor Config and renders any Block Types configured within it. [Nested Content](docs:feature-tour/nested-content) explains how to plan the editing structure.
+
 ## Render and Check the Result
 
 Open an entry, insert Image & Text, enter a description, choose an image with suitable alternative text, and save. In the entry’s Twig template, place the following where the article body should appear, replacing `vizyField` with your Vizy field’s handle:

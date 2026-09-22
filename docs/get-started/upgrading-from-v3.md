@@ -48,7 +48,7 @@ Render an entry containing each affected Block Type and check that its field val
 
 ### Content API
 
-Update migrations and modules that call `Content::modifyFieldContent()` to use the [Content API](docs:developers/managing-embedded-content). This is a different migration workflow, not a method rename.
+Update migrations and modules that call `Content::modifyFieldContent()` to use the [Content API](docs:developers/embedded-content). This is a different migration workflow, not a method rename.
 
 Vizy 3 discovered matching fields from each Vizy field's block configuration and passed the callback an entire block payload. The callback had to locate and update the nested value itself, and Vizy only saved a truthy return value. In this simplified shape, `updateMatchingValue()` represents the integration's existing block traversal:
 
@@ -90,7 +90,7 @@ $result = $content->modifyFieldValues($locations, $transform, [
 ]);
 ```
 
-Preview the conversion with the `dryRun` option before applying it. Write mode requires the caller's active transaction; a Craft migration's `safeUp()` already provides one. `Change::remove()` deletes the embedded key, while `Change::replace(null)`, `Change::replace('')`, and other empty replacements store those values deliberately. The full [Content API guide](docs:developers/managing-embedded-content) covers batching, scope filters, saved location maps, and verification.
+Preview the conversion with the `dryRun` option before applying it. Write mode requires the caller's active transaction; a Craft migration's `safeUp()` already provides one. `Change::remove()` deletes the embedded key, while `Change::replace(null)`, `Change::replace('')`, and other empty replacements store those values deliberately. The full [Content API guide](docs:developers/embedded-content) covers batching, scope filters, saved location maps, and verification.
 
 ### Editor Configs
 
@@ -350,7 +350,7 @@ Vizy 3's `content` field returned a JSON blob and `contentNodes` returned child 
 
 The `tagName` field has been removed; use `type` or your templates when the element name matters. The `html` field remains available on every node, `asset` remains on `VizyImage`, and `element` remains on `VizyLink`. Link marks also expose a `url` convenience field.
 
-New structural types: `VizyLayout` (`stack`, `columns`), `VizyColumn` (`span`, `proportion`, `children`). Nested composition is **Hosted Vizy** Craft fields on Blocks (nested `VizyDocument`), not Content Areas.
+New structural types: `VizyLayout` (`stack`, `columns`), `VizyColumn` (`span`, `proportion`, `children`). Nested composition uses Vizy fields on Blocks (nested `VizyDocument`), not Content Areas.
 
 Full current contract: [GraphQL](docs:developers/graphql).
 
@@ -372,12 +372,12 @@ GraphQL `rawNodes` is also deprecated, but its alternatives return different str
 
 - Vizy fields now store a versioned `doc` and return a `VizyDocument` in Twig instead of a bare Node Collection.
 - Block definitions are shared Block Types rather than field-owned `fieldData`.
-- Hosted Vizy is recommended for nested composition. Matrix remains supported through Inline Blocks inside Vizy.
+- Nested Vizy fields are recommended for nested composition. Matrix remains supported through Inline Blocks inside Vizy.
 - Fields now select named Editor Configs instead of carrying file or per-field JSON configuration.
 - GraphQL exposes a `VizyDocument` instead of a `NodeCollection`.
 - Editor integrations use the `Craft.Vizy` Extensions API instead of `Craft.Vizy.Config`.
 
-See also [Matrix in Blocks](../feature-tour/matrix-in-blocks.md) and [Configuration](configuration.md).
+See also [Matrix in Vizy Blocks](../developers/matrix-in-vizy-blocks.md) and [Configuration](configuration.md).
 
 ## Advanced Migration and Recovery
 

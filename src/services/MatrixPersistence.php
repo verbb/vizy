@@ -137,7 +137,7 @@ final class MatrixPersistence extends Component
             $vizyField,
             $block->uid(),
             $layout,
-            null,
+            $block->matrixAnchorUid(),
         );
         if (!$anchor) {
             throw new RuntimeException('Unable to persist the Vizy Matrix anchor.');

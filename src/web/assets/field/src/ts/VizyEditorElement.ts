@@ -60,6 +60,7 @@ export interface ServerDocumentResult extends FinalizationResult {
     requestKind: 'save' | 'autosave' | 'livePreview' | 'validation';
     submittedClientRevision: number;
     canonicalDocument: CanonicalNode;
+    storageToken?: string;
     success: boolean;
 }
 type SubmissionMetadata = {
@@ -260,7 +261,7 @@ export class VizyEditorElement extends HTMLElement {
         }
         this.#flushMountedFields();
         const canonical = this.#canonicalProjection();
-        const encoded = stable(canonical);
+        const encoded = this.#encodeSubmission(canonical);
         this.#input.value = encoded;
         return encoded;
     }
@@ -274,6 +275,7 @@ export class VizyEditorElement extends HTMLElement {
         ) return;
         if (result.requestKind === 'livePreview') return;
         if (!result.success) return;
+        if (this.#bootstrap && result.storageToken) this.#bootstrap.storageToken = result.storageToken;
         this.#acceptFinalization(result);
         // The accepted server document is the content persistence fact. Reuse
         // UID-keyed hosts while adapting any normalization back into TipTap.
@@ -823,7 +825,7 @@ export class VizyEditorElement extends HTMLElement {
         // Publish to the hidden input immediately rather than waiting for the first
         // capture hook to fire, so the input is correct for any serializer — including
         // Craft paths Vizy does not hook.
-        this.#input.value = loaded;
+        this.#input.value = this.#encodeSubmission(this.#canonicalProjection());
         // Hosted nested editors do not own Craft ElementEditor — the outer Vizy does.
         if (!this.#bootstrap.hosted) {
             this.#registerCaptureHooks();
@@ -1151,6 +1153,11 @@ export class VizyEditorElement extends HTMLElement {
         return this.#projectDocument(this.#editor.getJSON() as CanonicalNode);
     }
 
+    #encodeSubmission(document: CanonicalNode): string {
+        const token = this.#bootstrap?.storageToken;
+        return stable(token ? { ...document, attrs: { ...document.attrs, _storageToken: token } } : document);
+    }
+
     /** Same restore+collapse pipeline used by flush / dirty — never compare raw TipTap JSON. */
     #projectDocument(document: CanonicalNode): CanonicalNode {
         if (!this.#bootstrap) throw new Error('editorNotReady');
@@ -1172,7 +1179,7 @@ export class VizyEditorElement extends HTMLElement {
     #publishDocumentToInput(): void {
         if (!this.#input || !this.#editor || !this.#writesEnabled) return;
         try {
-            const encoded = stable(this.#canonicalProjection());
+            const encoded = this.#encodeSubmission(this.#canonicalProjection());
             if (this.#input.value === encoded) return;
             this.#input.value = encoded;
             this.#input.dispatchEvent(new Event('input', { bubbles: true }));

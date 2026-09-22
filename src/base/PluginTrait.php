@@ -13,6 +13,8 @@ use verbb\vizy\services\BlockTypes;
 use verbb\vizy\services\Cache;
 use verbb\vizy\services\Content;
 use verbb\vizy\services\ContentBaselines;
+use verbb\vizy\services\ContentRecovery;
+use verbb\vizy\services\ContentVersions;
 use verbb\vizy\services\Documents;
 use verbb\vizy\services\EditorAcknowledgements;
 use verbb\vizy\services\EditorConfigs;
@@ -54,6 +56,8 @@ trait PluginTrait
                 'cache' => Cache::class,
                 'content' => Content::class,
                 'contentBaselines' => ContentBaselines::class,
+                'contentRecovery' => ContentRecovery::class,
+                'contentVersions' => ContentVersions::class,
                 'documents' => Documents::class,
                 'editorConfigs' => EditorConfigs::class,
                 'editorAcknowledgements' => EditorAcknowledgements::class,
@@ -148,6 +152,16 @@ trait PluginTrait
     public function getContentBaselines(): ContentBaselines
     {
         return $this->get('contentBaselines');
+    }
+
+    public function getContentRecovery(): ContentRecovery
+    {
+        return $this->get('contentRecovery');
+    }
+
+    public function getContentVersions(): ContentVersions
+    {
+        return $this->get('contentVersions');
     }
 
     public function getDocuments(): Documents

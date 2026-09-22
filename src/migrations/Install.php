@@ -13,6 +13,7 @@ class Install extends Migration
 
     public function safeUp(): bool
     {
+        (new m260920_000000_content_recovery())->safeUp();
         $this->_createSchemaPromotionsTable();
         $this->_createOwnerMigrationsTable();
         $this->_createAssetUploadBatchesTable();

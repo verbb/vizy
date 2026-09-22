@@ -4,6 +4,12 @@ Use GraphQL to read Vizy content in a frontend that fetches data from Craft. Eac
 
 The examples below assume your schema permits access to entries in a `blog` section with a Vizy field named `vizyField`. Replace those handles and the entry type fragment with the names in your GraphQL schema.
 
+## Data Access and Permissions
+
+GraphQL’s document `raw`, node and mark `raw` and `attrs`, and block `rawFieldValues` expose stored data without filtering it by individual embedded-field permissions. Access follows the enclosing Vizy field’s schema access. Grant that access only to clients allowed to read the complete document; choosing typed fields in one query does not prevent an authorised client from requesting raw fields in another.
+
+Use typed fields and rendered HTML for normal frontend output. Registered custom nodes have generated types, such as `VizyEmoji` for an `emoji` node, with the common node interface fields. Nodes without an installed extension definition use the unknown-node fallback. Vizy’s GraphQL API reads documents but does not provide mutations.
+
 ## Rendered HTML and JSON
 
 Ask for HTML or the full JSON envelope when you do not need fragments:
@@ -118,7 +124,7 @@ blocks(where: { handle: "textBlock", enabled: true }) {
 
 `nodes` and `blocks` accept `where: ArrayType`, `limit: Int`, and `orderBy: String`. `where` accepts inline JSON-shaped object and list literals. A `!` marks a non-null value; square brackets mark a list. `ArrayType` has no nested GraphQL selection. Its output is a JSON-encoded string: decode `raw`, `attrs`, and `rawFieldValues` values in your client before accessing their properties, for example with `JSON.parse()` in JavaScript.
 
-Before granting schema access, read [GraphQL Data Access](docs:feature-tour/limitations#graphql-data-access). For public image URLs, see [Image Transforms](docs:feature-tour/limitations#image-transforms).
+For public image URLs, apply the transform required by the frontend rather than relying on the editor preview transform. [Planning Vizy Content](docs:feature-tour/planning-vizy-content#treat-editor-previews-as-authoring-aids) explains that distinction.
 
 <span id="node-interface"></span>
 
@@ -137,7 +143,7 @@ Every prose, layout, block, and unknown node implements this interface. Select t
 | `raw` | `ArrayType!` | The node’s canonical TipTap JSON. |
 | `isUnknown` | `Boolean!` | Whether the node type has no installed extension definition. |
 
-`html` uses the same rendering rules as document `renderedHtml`. Read [GraphQL Data Access](docs:feature-tour/limitations#graphql-data-access) before exposing raw content or rendered HTML.
+`html` uses the same rendering rules as document `renderedHtml`. Review [Data Access and Permissions](#data-access-and-permissions) before exposing raw content or rendered HTML.
 
 ## The `VizyMarkInterface` Interface
 
@@ -165,4 +171,4 @@ Blocks expose all fields from `VizyNodeInterface`, plus these block-specific fie
 | `resolved` | `Boolean!` | Whether the Block Type and field layout can be resolved. |
 | `rawFieldValues` | `ArrayType!` | Raw field values keyed by placement UID, including nested Vizy envelopes. |
 
-Use a fragment on the generated `{Handle}_{shortUid}_VizyBlock` type for custom Craft fields, as shown in [Querying Individual Nodes](#querying-individual-nodes). Those fields depend on the block layout and the active schema. Read [Limitations](docs:feature-tour/limitations#graphql-data-access) for raw data access, custom node types, and write operations.
+Use a fragment on the generated `{Handle}_{shortUid}_VizyBlock` type for custom Craft fields, as shown in [Querying Individual Nodes](#querying-individual-nodes). Those fields depend on the block layout and the active schema. [Data Access and Permissions](#data-access-and-permissions) explains the raw-data boundary and unsupported write operations.

@@ -124,7 +124,7 @@ templates, not `tag()`.
 | `layout` | `<div class="vizy-layout">` | Storage `layoutUid`, `stack` (`never` / `small` / …) → `data-stack`; CSS `--vizy-cols:12` |
 | `column` | `<div class="vizy-column">` | Storage `columnUid`, `span` (1–12) → `data-span` + `--vizy-col`; **internal** (pulled in by Layout) |
 
-See [Layout and Columns](docs:feature-tour/layout-and-columns).
+See [Layouts](docs:feature-tour/editor-capabilities#layouts) for authoring and [Styling Layouts](docs:template-guides/styling-layouts) for frontend CSS.
 
 ### Media
 
@@ -146,6 +146,6 @@ See [Layout and Columns](docs:feature-tour/layout-and-columns).
 
 | Type | HTML | Notable attrs |
 | --- | --- | --- |
-| `vizyBlock` | Block Type Twig template (or empty) | `blockTypeUid`, instance `blockUid`, `enabled`, `fieldSlots` (placement UID → values). Nested Vizy slots are Hosted documents (objects). Matrix slots refer to their owning anchor through `matrixAnchorUid` |
+| `vizyBlock` | Block Type Twig template (or empty) | `blockTypeUid`, instance `blockUid`, `enabled`, `fieldSlots` (placement UID → values). Nested Vizy slots contain document objects. Matrix slots refer to their owning anchor through `matrixAnchorUid` |
 
 The default renderer removes event-handler attributes such as `onclick`, and removes `srcdoc`, before producing HTML.

@@ -165,20 +165,24 @@ final class FieldLayoutForms extends Component
         $anchor = null;
         $anchorUid = is_string($attrs['matrixAnchorUid'] ?? null) ? $attrs['matrixAnchorUid'] : null;
         if (Vizy::$plugin->getAnchors()->blockHasMatrixFields($layout)) {
+            // Bind native Matrix's subsequent render-only row requests to this
+            // authorized placement. The namespace travels with every widget,
+            // including default rows created during Craft's initialization.
+            $matrixContext = $context;
+            unset($matrixContext['token']);
+            $matrixContext['matrixBlockUid'] = $attrs['blockUid'];
+            $matrixContext['matrixBlockTypeUid'] = $attrs['blockTypeUid'];
+            $matrixContext['matrixAnchorUid'] = $anchorUid;
+            $token = rtrim(strtr(base64_encode(Craft::$app->getSecurity()->hashData(Json::encode($matrixContext))), '+/', '-_'), '=');
+            $namespace = sprintf('vizyHost[%s][%s][fields]', $token, $attrs['blockUid']);
             $anchor = Vizy::$plugin->getAnchors()->getAnchor(
                 $owner,
                 $field,
                 $attrs['blockUid'],
                 $anchorUid,
             );
-            if (!$anchor && $owner->id) {
-                $anchor = Vizy::$plugin->getAnchors()->ensureAnchor(
-                    $owner,
-                    $field,
-                    $attrs['blockUid'],
-                    $layout,
-                    $anchorUid,
-                );
+            if (!$anchor && $anchorUid) {
+                return $this->_fail('unresolvedMatrixContent');
             }
             if ($anchor) {
                 // Anchors loaded by UID have no FieldLayout until we attach the
@@ -187,6 +191,11 @@ final class FieldLayoutForms extends Component
                 $block->id = $anchor->id;
                 $block->setMatrixAnchor($anchor);
                 $anchorUid = $anchor->uid;
+            } else {
+                // Native inline Matrix requires a non-null owner identity to
+                // render. This sentinel is only a form projection; row requests
+                // authenticate the signed namespace and never persist it.
+                $block->id = -1;
             }
         }
 
@@ -407,6 +416,7 @@ final class FieldLayoutForms extends Component
     private function _authorMessage(string $error, array $extra): string
     {
         return match ($error) {
+            'unresolvedMatrixContent' => Craft::t('vizy', 'This Block’s stored Matrix content could not be resolved. Its reference and your edits have been preserved. Ask an administrator to restore the missing content before saving.'),
             'unsupportedFieldCapability' => Craft::t(
                 'vizy',
                 'This Block could not render “{name}” ({type}). That field cannot run inside Vizy Blocks (nested Craft elements or missing field).',

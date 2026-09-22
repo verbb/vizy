@@ -13,6 +13,7 @@ use craft\helpers\Json;
 use craft\helpers\StringHelper;
 
 use Closure;
+use RuntimeException;
 
 class Matrix
 {
@@ -68,12 +69,23 @@ class Matrix
             return $block->handle;
         }, array_merge(...$entryTypeFields));
 
-        if (!is_array($content)) {
+        if ($content === '') {
             $content = [];
+        }
+        if (!is_array($content)) {
+            throw new RuntimeException('Matrix content is incomplete or malformed. The stored content and submitted values have been retained.');
         }
 
         // Craft 5 Matrix fields post `{ entries: ..., sortOrder: ... }`.
         if (self::isCraft5MatrixContent($content)) {
+            if (!is_array($content['entries']) || !array_key_exists('sortOrder', $content) || !is_array($content['sortOrder'])) {
+                throw new RuntimeException('The Matrix submission is missing its entries or complete ordering. Reload the field before retrying; stored content has not been cleared.');
+            }
+            foreach ($content['entries'] as $row) {
+                if (!is_array($row)) {
+                    throw new RuntimeException('A Matrix row could not be resolved. No rows have been discarded.');
+                }
+            }
             return self::ensureSortOrder($content);
         }
 
@@ -283,9 +295,7 @@ class Matrix
         }
         foreach ($content as $blockKey => $block) {
             if (!is_array($block)) {
-                unset($content[$blockKey]);
-
-                continue;
+                throw new RuntimeException("Matrix row {$blockKey} is malformed. No rows have been discarded.");
             }
 
             $type = $block['type'] ?? '';
@@ -295,14 +305,14 @@ class Matrix
             $content[$blockKey]['uid'] = $blockKey;
 
             // Filter block types against those available
-            if ($type && !in_array($type, $entryTypes)) {
-                unset($content[$blockKey]);
+            if (!$type || !in_array($type, $entryTypes)) {
+                throw new RuntimeException("Matrix row {$blockKey} has an unavailable entry type. Restore its type before saving.");
             }
 
             // Filter fields within valid blocks against those available
             foreach ($fields as $fieldKey => $field) {
                 if (!in_array($fieldKey, $blockFields)) {
-                    unset($content[$blockKey]['fields'][$fieldKey]);
+                    throw new RuntimeException("Matrix row {$blockKey} contains an unresolved field {$fieldKey}. Restore its field before saving.");
                 }
             }
         }

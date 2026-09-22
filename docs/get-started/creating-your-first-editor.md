@@ -12,4 +12,4 @@ Open the entry and write “Read our studio guide.” Link the words “studio g
 
 Open the public page and check the paragraph and link. Change the sentence in the editor, save and refresh to confirm the output follows the saved content. The site's CSS supplies its appearance.
 
-When you need structured content alongside paragraphs, add [Blocks and Block Types](docs:feature-tour/blocks-and-block-types). Each custom block needs the appropriate template for automatic rendering. [Rendering Content](docs:template-guides/rendering-content) explains that relationship and how to handle empty content.
+When you need structured content alongside paragraphs, add [Vizy Blocks](docs:feature-tour/vizy-blocks) and configure their [Block Types and Groups](docs:feature-tour/block-types-and-groups). Each custom block needs the appropriate template for automatic rendering. [Rendering Content](docs:template-guides/rendering-content) explains that relationship and how to handle empty content.

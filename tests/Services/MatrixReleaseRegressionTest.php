@@ -219,15 +219,14 @@ it('saves Matrix through a layout cloned from a warmed global field manager', fu
     expect($f->rows($uid)[0]->getFieldValue($f->text->handle))->toBe('Cloned field');
 });
 
-it('ignores malformed legacy Matrix row values while preserving valid row data', function() {
+it('rejects malformed legacy Matrix rows without discarding submitted data', function() {
     $f = new MatrixSupportFixture();
     $uid = StringHelper::UUID();
-    $f->save([$f->block($uid, ['blocks' => [
+    expect(fn() => $f->save([$f->block($uid, ['blocks' => [
         'broken' => 'not a row',
         'new1' => ['type' => $f->rowType->handle, 'fields' => [$f->text->handle => 'Valid legacy row']],
-    ]])]);
-    expect($f->rows($uid))->toHaveCount(1)
-        ->and($f->rows($uid)[0]->getFieldValue($f->text->handle))->toBe('Valid legacy row');
+    ]])]))->toThrow(RuntimeException::class, 'malformed');
+    expect(Vizy::$plugin->getAnchors()->getAnchor($f->owner, $f->field, $uid))->toBeNull();
 });
 
 it('reports a rejected Matrix anchor save without masking it with a logging type error', function() {

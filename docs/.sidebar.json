@@ -14,16 +14,14 @@
         "title": "Feature Tour",
         "collapsable": false,
         "children": [
-            "feature-tour/what-is-vizy",
-            "feature-tour/block-based-editor",
+            "feature-tour/the-vizy-editor",
+            "feature-tour/vizy-blocks",
             "feature-tour/field-settings",
             "feature-tour/editor-configs",
-            "feature-tour/blocks-and-block-types",
-            "feature-tour/rich-text",
-            "feature-tour/layout-and-columns",
-            "feature-tour/nested-vizy",
-            "feature-tour/matrix-in-blocks",
-            "feature-tour/limitations"
+            "feature-tour/editor-capabilities",
+            "feature-tour/block-types-and-groups",
+            "feature-tour/nested-content",
+            "feature-tour/planning-vizy-content"
         ]
     },
     {
@@ -31,6 +29,7 @@
         "collapsable": false,
         "children": [
             "template-guides/rendering-content",
+            "template-guides/styling-layouts",
             "template-guides/modify-nodes",
             "template-guides/modular-templates",
             "template-guides/block-type-templates",
@@ -48,7 +47,8 @@
             "developers/mark",
             "developers/graphql",
             "developers/extending-vizy",
-            "developers/managing-embedded-content"
+            "developers/embedded-content",
+            "developers/matrix-in-vizy-blocks"
         ]
     },
     {

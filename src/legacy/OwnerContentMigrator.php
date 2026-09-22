@@ -71,6 +71,7 @@ final class OwnerContentMigrator extends Component
         $identity = $this->_identity($owner, $field, $runUid);
         $mappingHash = $this->_hashValue($this->_stable($mapping));
         $source = $this->_readRawValue($owner, $field);
+        Vizy::$plugin->getContentRecovery()->capture($owner, $field, 'owner-migration');
         $sourceHash = $this->_hashSnapshot($source);
 
         $checkpoint = OwnerMigration::findOne($identity);
@@ -115,6 +116,7 @@ final class OwnerContentMigrator extends Component
             $checkpoint->verificationJson = Json::encode([
                 'transform' => $transformVerification,
                 'candidate' => $profile,
+                'contentHash' => Vizy::$plugin->getContentRecovery()->contentHash($candidate),
                 'strictCanonicalParse' => true,
                 'schemaValidated' => true,
                 'sourceSnapshotRetained' => true,
@@ -253,6 +255,7 @@ final class OwnerContentMigrator extends Component
         $checkpoint->state = 'persisting';
         $this->_saveCheckpoint($checkpoint);
         $this->saving[$key] = true;
+        $transaction = Craft::$app->getDb()->beginTransaction();
         try {
             $candidateArray = Json::decode((string)$checkpoint->candidateJson);
             $candidate = (new DocumentParser())->parse($candidateArray, $owner, $field);
@@ -263,18 +266,28 @@ final class OwnerContentMigrator extends Component
             // revision duplication cannot reject those same preserved nodes.
             if (!Craft::$app->getElements()->saveElement($owner, true, false)) {
                 $errors = Json::encode($owner->getErrors());
-                return $this->_fail($checkpoint, 'ownerSaveFailed', "Owner save failed validation: {$errors}");
+                throw new RuntimeException("Owner save failed validation: {$errors}");
             }
             $checkpoint->state = 'persisted';
             $checkpoint->persistedAt = $this->_now();
             $this->_saveCheckpoint($checkpoint);
+            $verified = $this->_verifyCheckpoint($checkpoint);
+            if ($verified['state'] !== 'verified') {
+                throw new RuntimeException(Json::encode($verified['errors']));
+            }
+            $transaction->commit();
+            return $verified;
         } catch (InvalidElementException $exception) {
+            $transaction->rollBack();
+            $checkpoint->persistedAt = null;
             return $this->_fail(
                 $checkpoint,
                 'ownerSaveFailed',
                 $exception->getMessage() . ' :: ' . Json::encode($exception->element->getErrors()),
             );
         } catch (Throwable $exception) {
+            $transaction->rollBack();
+            $checkpoint->persistedAt = null;
             return $this->_fail($checkpoint, 'ownerSaveFailed', $exception->getMessage());
         } finally {
             Vizy::$plugin->getContentBaselines()->forget($owner, $field);
@@ -306,7 +319,10 @@ final class OwnerContentMigrator extends Component
             }
             $raw = $this->_readRawValue($owner, $field);
             $document = $this->_persistedDocument($raw, $owner, $field);
-            return $this->_hashValue($this->_canonicalArray($document)) === $checkpoint->candidateHash;
+            $verification = Json::decode((string)$checkpoint->verificationJson);
+            return isset($verification['contentHash'])
+                ? Vizy::$plugin->getContentRecovery()->contentHash($document) === $verification['contentHash']
+                : $this->_hashValue($this->_canonicalArray($document)) === $checkpoint->candidateHash;
         } catch (Throwable) {
             return false;
         }
@@ -330,7 +346,11 @@ final class OwnerContentMigrator extends Component
             $persistedHash = $this->_hashValue($canonical);
             $expectedProfile = $this->_profile(Json::decode((string)$checkpoint->candidateJson));
             $actualProfile = $this->_profile($canonical);
-            if ($persistedHash !== $checkpoint->candidateHash || $actualProfile !== $expectedProfile) {
+            $verification = Json::decode((string)$checkpoint->verificationJson);
+            $matches = isset($verification['contentHash'])
+                ? Vizy::$plugin->getContentRecovery()->contentHash($persisted) === $verification['contentHash']
+                : $persistedHash === $checkpoint->candidateHash;
+            if (!$matches || $actualProfile !== $expectedProfile) {
                 throw new RuntimeException('Persisted canonical checksum/profile does not match the analyzed candidate.');
             }
 

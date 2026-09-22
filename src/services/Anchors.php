@@ -22,6 +22,7 @@ use craft\models\FieldLayout;
 
 use yii\base\Event;
 use yii\db\IntegrityException;
+use yii\db\Expression;
 
 use RuntimeException;
 
@@ -60,6 +61,14 @@ class Anchors extends Component
         ]);
 
         if (!$record) {
+            // Historical V3 drafts can still point at their canonical anchor.
+            // Read that exact trusted relationship without creating ownership.
+            if ($anchorUid && $parentOwner->getIsDerivative()) {
+                $canonical = $parentOwner->getCanonical();
+                if ($canonical && $canonical->id !== $parentOwner->id) {
+                    return $this->getAnchor($canonical, $vizyField, $blockInstanceId, $anchorUid);
+                }
+            }
             return null;
         }
 
@@ -90,6 +99,8 @@ class Anchors extends Component
         if (!$parentOwner->id) {
             return null;
         }
+
+        $this->assertResolvableReference($parentOwner, $vizyField, $blockInstanceId, $anchorUid);
 
         // Find by ownership only — stale/forged client UIDs must not block sync
         // or create a second row for the same tuple.
@@ -203,6 +214,9 @@ class Anchors extends Component
         mixed $fieldValue,
         bool $isNew,
     ): void {
+        if ($this->hasExternalReferences($anchor)) {
+            throw new RuntimeException('This Matrix content is still referenced by another owner or historical draft. Run vizy/anchors/backfill --drafts to give derivatives independent content before editing it. No content has been replaced.');
+        }
         if ($fieldLayout = $anchor->getFieldLayout()) {
             $anchor->setFieldLayout($fieldLayout);
         }
@@ -236,6 +250,9 @@ class Anchors extends Component
 
     public function deleteAnchor(MatrixAnchor $anchor, bool $hardDelete = false): void
     {
+        if ($this->hasExternalReferences($anchor)) {
+            throw new RuntimeException('Cannot delete Matrix content while another owner or historical draft still references it. Run vizy/anchors/backfill --drafts first.');
+        }
         $anchor->hardDelete = $hardDelete;
         // Loaded anchors have no persisted FieldLayout. Discover the fields from
         // their actual children so cleanup also works after schema removal.
@@ -307,7 +324,7 @@ class Anchors extends Component
             if (!isset($references[$record->vizyFieldId . ':' . $record->blockInstanceId])) {
                 $anchor = Craft::$app->getElements()->getElementById($record->id, MatrixAnchor::class, $parentOwner->siteId);
 
-                if ($anchor instanceof MatrixAnchor && !isset($rawAnchorUids[$anchor->uid])) {
+                if ($anchor instanceof MatrixAnchor && !isset($rawAnchorUids[$anchor->uid]) && !$this->hasExternalReferences($anchor)) {
                     $this->deleteAnchor($anchor);
                 }
             }
@@ -318,6 +335,11 @@ class Anchors extends Component
     {
         if (!$owner->id) {
             return;
+        }
+        foreach ($owner->getFieldLayout()?->getCustomFields() ?? [] as $field) {
+            if ($field instanceof VizyField) {
+                Vizy::$plugin->getContentRecovery()->capture($owner, $field, 'owner-deletion');
+            }
         }
 
         // Capture before a hard delete cascades the ownership rows, but wait for
@@ -331,6 +353,11 @@ class Anchors extends Component
             ->status(null)
             ->trashed(null)
             ->all();
+        foreach ($anchors as $anchor) {
+            if ($this->hasExternalReferences($anchor)) {
+                throw new RuntimeException('Cannot delete this owner while its Matrix content is referenced by another owner or historical draft. Run vizy/anchors/backfill --drafts first.');
+            }
+        }
         $handler = [$this, 'handleOwnerDeleted'];
         $owner->off(Element::EVENT_AFTER_DELETE, $handler);
         if ($anchors !== []) {
@@ -383,6 +410,43 @@ class Anchors extends Component
         }
 
         return false;
+    }
+
+    /** Raw storage includes trash, derivatives and unresolved historical schemas. */
+    public function hasExternalReferences(MatrixAnchor $anchor): bool
+    {
+        return (new Query())->from(Table::ELEMENTS_SITES)
+            ->where(['not', ['elementId' => $anchor->parentOwnerId]])
+            ->andWhere(['like', new Expression('CAST([[content]] AS ' . (Craft::$app->getDb()->getIsPgsql() ? 'TEXT' : 'CHAR') . ')'), $anchor->uid])
+            ->exists();
+    }
+
+    public function assertResolvableReference(ElementInterface $owner, VizyField $field, string $blockUid, ?string $uid): void
+    {
+        if (!$uid) {
+            return;
+        }
+        $owners = [$owner];
+        if ($owner->duplicateOf) {
+            $owners[] = $owner->duplicateOf;
+        }
+        if ($owner->getIsDerivative()) {
+            $owners[] = $owner->getCanonical();
+        }
+        foreach ($owners as $candidate) {
+            if (!$candidate?->id) {
+                continue;
+            }
+            // A missing locale or trashed anchor can be repaired on save, but
+            // only when its exact original ownership and identity still exist.
+            if ((new Query())->from(['a' => MatrixAnchorRecord::tableName()])
+                ->innerJoin(['e' => Table::ELEMENTS], '[[e.id]] = [[a.id]]')
+                ->where(['a.parentOwnerId' => $candidate->id, 'a.vizyFieldId' => $field->id, 'a.blockInstanceId' => $blockUid, 'e.uid' => $uid])
+                ->exists()) {
+                return;
+            }
+        }
+        throw new RuntimeException("Matrix content for block {$blockUid} could not be resolved (anchor {$uid}). The stored reference and submitted content have been retained. Restore the missing content before saving.");
     }
 
     public function elementNeedsMatrixAnchorBackfill(ElementInterface $element, VizyField $vizyField): bool

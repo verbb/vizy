@@ -396,6 +396,9 @@ final class InternalDocumentBuilder
             }
 
             if (!$anchor) {
+                if ($oldAnchorUid) {
+                    throw new DocumentMutationException("Cannot copy Matrix content for block {$oldBlockUid}: its stored anchor could not be resolved. Restore the missing content before copying this block.");
+                }
                 continue;
             }
 

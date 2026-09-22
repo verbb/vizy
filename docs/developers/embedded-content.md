@@ -1,4 +1,4 @@
-# Managing Embedded Content
+# Embedded Content
 
 Vizy blocks store their custom fields inside a document. A block is not an independently persisted Craft element. Use the Content API when a migration or module needs to inspect or replace those embedded values without opening the editor or interpreting them through the current field type.
 

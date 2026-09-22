@@ -118,6 +118,7 @@ final class EditorAcknowledgements extends Component
                 'requestKind' => $metadata['requestKind'],
                 'submittedClientRevision' => $metadata['clientRevision'],
                 'canonicalDocument' => $item['document']->toArray(),
+                'storageToken' => Vizy::$plugin->getContentVersions()->issue($item['owner'], $item['field']),
                 'success' => true,
                 ...$this->_finalization($assetResult, $metadata),
             ];

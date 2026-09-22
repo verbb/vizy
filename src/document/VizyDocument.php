@@ -240,6 +240,8 @@ final class VizyDocument
                 $anchor->setFieldLayout($layout);
                 $element->id = $anchor->id;
                 $element->setMatrixAnchor($anchor);
+            } elseif ($block->matrixAnchorUid()) {
+                throw new LogicException("Matrix content for block {$block->uid()} could not be resolved. Its stored reference and submitted values have been retained; restore the missing content before saving.");
             }
         }
 

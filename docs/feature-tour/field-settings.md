@@ -12,7 +12,7 @@ The mode determines which kinds of content editors can add. Use the Editor Confi
 
 Block Types define reusable sets of Craft fields. They are global: editing a type changes its definition for every Vizy field using it. This field’s Block Configuration chooses which of those types editors can insert and how they appear in the picker.
 
-Create or edit types through **Settings → Vizy → Block Types**, or from the field’s Block Configuration. Use a separate type when a field needs a different layout without changing other fields. [Blocks and Block Types](docs:feature-tour/blocks-and-block-types) explains the setup.
+Create or edit types through **Settings → Vizy → Block Types**, or from the field’s Block Configuration. Use a separate type when a field needs a different layout without changing other fields. [Block Types and Groups](docs:feature-tour/block-types-and-groups) explains the setup.
 
 ### Groups
 
@@ -20,7 +20,7 @@ Groups organise the choices within this field. For example, place Callout and Qu
 
 ### Block Type Fields and Templates
 
-Give each type a name and handle, choose an icon, and arrange its Craft fields into tabs. You can include field layout elements such as headings and instructions. A nested Vizy field gives the block its own rich text or structured content; see [Nested Vizy](docs:feature-tour/nested-vizy).
+Give each type a name and handle, choose an icon, and arrange its Craft fields into tabs. You can include field layout elements such as headings and instructions. A nested Vizy field gives the block its own rich text or structured content; see [Nested Content](docs:feature-tour/nested-content).
 
 Set **Template** to the path of the Twig template that renders the block. [Block Type Templates](docs:template-guides/block-type-templates) walks through creating the fields and template together.
 
@@ -52,10 +52,12 @@ Set **Default Upload Location** to the location where files uploaded directly th
 
 **Show unpermitted volumes** and **Show unpermitted files** control whether the picker shows sources and files the editor would otherwise lack permission to view. Review those choices using an editor account with the permissions intended for the site.
 
-**Available Transforms** controls the image transforms offered when inserting images, and **Default Transform** selects the initial choice. See [Image Transforms](docs:feature-tour/limitations#image-transforms) for the distinction between editor previews and frontend output.
+**Available Transforms** controls the image transforms offered when inserting images, and **Default Transform** selects the initial choice. These transforms configure the editor preview rather than a durable frontend image URL. Apply the transform required by your site when rendering or querying the Asset; [Planning Vizy Content](docs:feature-tour/planning-vizy-content#treat-editor-previews-as-authoring-aids) explains that boundary.
 
 ## Link Settings
 
 Under **Enabled Link Settings**, choose whether the link dialog offers **Link Text**, **New Window**, **Site**, **Title**, and **Classes**. For example, keep Classes hidden when your templates supply the site’s link styling. Enable Site when editors need to choose which site an element link targets.
+
+The Link capability must also be enabled and placed by the field’s Editor Config. [Editor Capabilities](docs:feature-tour/editor-capabilities#inline-formatting-and-links) explains the difference between permitting links and configuring their dialog.
 
 Save the field, add it to an entry type’s field layout, and open an entry using that type. Check the editing tools, insert a block if the mode allows it, and save the entry. [Rendering Content](docs:template-guides/rendering-content) shows how to display the result.

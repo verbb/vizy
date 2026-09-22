@@ -169,12 +169,12 @@ it('converts V3 matrixAnchorUid, hydrates Matrix from anchor, and serializes wit
     expect($labels)->toContain('Hello Matrix');
 
     // Legacy site variants may omit the reference while the ownership row
-    // already exists. Pure projection must resolve it without saving rows.
+    // already exists. Pure projection must retain the original reference state.
     $missingReference = $canonical;
     unset($missingReference['content'][0]['attrs']['matrixAnchorUid']);
     $withoutReference = Vizy::$plugin->getDocuments()->normalizeValue($missingReference, $owner, $vizyField);
     $projected = json_decode($vizyField->serializeValue($withoutReference, $owner), true);
-    expect($projected['content'][0]['attrs']['matrixAnchorUid'])->toBe($anchor->uid)
+    expect($projected['content'][0]['attrs'])->not->toHaveKey('matrixAnchorUid')
         ->and(Craft::$app->getElements()->getElementById($nested->id, Entry::class, $owner->siteId)->getFieldValue($plain->handle))->toBe('Hello Matrix');
 
     $forms = Vizy::$plugin->getFieldLayoutForms();
