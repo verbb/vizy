@@ -72,6 +72,15 @@ class NodeCollection extends Markup
         parent::__construct(null, null);
     }
 
+    public function __clone()
+    {
+        // Craft shallow-clones field values when duplicating an element. Rebuild the
+        // nodes so stamping the duplicate's anchor cannot mutate the source's blocks
+        // or reuse its cached synthetic elements and normalized Matrix queries.
+        $this->nodes = $this->_normalizeNodes($this->_populateNodes($this->getRawNodes()), $this->element);
+        $this->_content = null;
+    }
+
     public function __toString(): string
     {
         if (!$this->_content) {

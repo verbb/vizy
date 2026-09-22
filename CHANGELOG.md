@@ -3,6 +3,7 @@
 ## Unreleased
 
 ### Fixed
+- Fix historical duplicated entries losing access to Matrix-in-Vizy content; recover surviving shared references on save/backfill into independent anchors, preserve source blocks during duplication, and roll back failed copies. ([#376](https://github.com/verbb/vizy/issues/376))
 - Fix saves failing with an invalid field handle error when required Matrix fields inside Vizy blocks propagate across sites.
 
 ## 3.2.9 - 2026-09-20

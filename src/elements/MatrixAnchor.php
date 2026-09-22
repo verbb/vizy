@@ -102,7 +102,7 @@ class MatrixAnchor extends Element
     {
         // Prefer the in-memory owner element being saved. A freshly-loaded canonical won't know about
         // site enablement that only exists on the element currently being saved (e.g. "custom" propagation).
-        if ($this->_parentOwner && (!$this->parentOwnerId || (int)$this->_parentOwner->getCanonicalId() === (int)$this->parentOwnerId)) {
+        if ($this->_parentOwner && (!$this->parentOwnerId || (int)$this->_parentOwner->id === (int)$this->parentOwnerId)) {
             return $this->_parentOwner;
         }
 
@@ -188,17 +188,6 @@ class MatrixAnchor extends Element
         }
 
         parent::afterSave($isNew);
-    }
-
-    public function afterDelete(): void
-    {
-        $record = MatrixAnchorRecord::findOne($this->id);
-
-        if ($record) {
-            $record->delete();
-        }
-
-        parent::afterDelete();
     }
 
     public function beforeSave(bool $isNew): bool

@@ -271,6 +271,8 @@ class VizyBlock extends Node
 
         // Create a fake element with the same fieldtype as our block
         $block = $this->getBlockElement($element);
+        $this->_syncBlockElementAnchor($element, $block, true);
+        $this->_syncBlockElementMatrixValues($block);
 
         // Trigger the before-save event (on the element service) to prep the element. Preparse requires this to work.
         Craft::$app->getElements()->trigger(Elements::EVENT_BEFORE_SAVE_ELEMENT, new ElementEvent([
@@ -384,7 +386,9 @@ class VizyBlock extends Node
                 }
 
                 // Ensure each field's content is serialized properly. Use the `layoutElementUid`
-                $serializedFieldValues = $field->serializeValue($fieldValue, $block);
+                $serializedFieldValues = $field instanceof VizyField
+                    ? $field->serializeValueForDb($fieldValue, $block)
+                    : $field->serializeValue($fieldValue, $block);
 
                 // Content Blocks are special in that they require an ID, which they'll never had
                 if ($field instanceof ContentBlockField && $fieldValue instanceof ContentBlock) {
@@ -742,13 +746,6 @@ class VizyBlock extends Node
         return !Matrix::isEmptyMatrixContent($content);
     }
 
-    private function _canPersistMatrixAnchors(): bool
-    {
-        $request = Craft::$app->getRequest();
-
-        return $request->getIsConsoleRequest() || $request->getIsCpRequest();
-    }
-
     private function _resolveMatrixAnchor(
         ?ElementInterface $parent,
         ?FieldLayout $fieldLayout = null,
@@ -782,7 +779,7 @@ class VizyBlock extends Node
         );
     }
 
-    private function _syncBlockElementAnchor(?ElementInterface $parent, ?BlockElement $block = null): void
+    private function _syncBlockElementAnchor(?ElementInterface $parent, ?BlockElement $block = null, bool $create = false): void
     {
         $block ??= $this->_blockElement;
 
@@ -790,12 +787,14 @@ class VizyBlock extends Node
             return;
         }
 
-        $anchor = $this->_resolveMatrixAnchor($parent, null, $this->_canPersistMatrixAnchors());
+        $anchor = $this->_resolveMatrixAnchor($parent, null, $create);
 
         if ($anchor) {
             $block->setMatrixAnchor($anchor);
             $block->id = $anchor->id;
-            $this->setMatrixAnchorUid($anchor->uid);
+            if ($create) {
+                $this->setMatrixAnchorUid($anchor->uid);
+            }
 
             return;
         }

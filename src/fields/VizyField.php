@@ -250,6 +250,13 @@ class VizyField extends Field
 
     public function serializeValue(mixed $value, ElementInterface $element = null): mixed
     {
+        // Craft also serializes for comparisons, validation and editor initialization.
+        // Those callers must never migrate or persist nested Matrix content.
+        return $value instanceof NodeCollection ? Json::encode($value->getRawNodes()) : $value;
+    }
+
+    public function serializeValueForDb(mixed $value, ElementInterface $element): mixed
+    {
         if ($value instanceof NodeCollection) {
             $value = $value->serializeValues($element);
 
