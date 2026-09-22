@@ -1,17 +1,33 @@
 <?php
 
 use craft\db\Query;
+use craft\console\controllers\FieldsController;
+use craft\elements\Entry;
 use craft\fieldlayoutelements\CustomField;
 use craft\fields\Lightswitch;
 use craft\fields\PlainText;
+use craft\helpers\FileHelper;
 use craft\helpers\Json;
+use craft\helpers\ProjectConfig as ProjectConfigHelper;
 use craft\helpers\StringHelper;
 use craft\models\FieldLayout;
 use craft\models\FieldLayoutTab;
 use Tests\Support\Fixtures\VizyFixtureFactory;
-use verbb\vizy\fields\VizyField;
 use verbb\vizy\models\BlockType;
+use verbb\vizy\services\BlockTypes;
+use verbb\vizy\fields\VizyField;
 use verbb\vizy\Vizy;
+use yii\console\ExitCode;
+
+final class DeterministicFieldMergeController extends FieldsController
+{
+    public string $persistingHandle = '';
+
+    public function select($prompt, $options = [], $default = null)
+    {
+        return $this->persistingHandle;
+    }
+}
 
 function fieldMergePlanFixture(): array
 {
@@ -32,7 +48,11 @@ function fieldMergePlanFixture(): array
     $blockType->setFieldLayout($blockLayout);
     expect(Vizy::$plugin->getBlockTypes()->saveBlockType($blockType))->toBeTrue();
 
-    $root = new VizyField(['name' => 'Merge root', 'handle' => 'mergeRoot' . $suffix]);
+    $root = new VizyField([
+        'name' => 'Merge root',
+        'handle' => 'mergeRoot' . $suffix,
+        'blockTypePickerGroups' => [['name' => 'Content', 'blockTypeUids' => [$blockType->uid]]],
+    ]);
     expect(Craft::$app->fields->saveField($root))->toBeTrue();
     $owner = VizyFixtureFactory::entry('Field merge analysis');
     $ownerLayout = $owner->getFieldLayout();
@@ -109,4 +129,53 @@ it('blocks a plan when Craft considers the field types incompatible', function()
         ->and(array_intersect(array_column($plan['diagnostics'], 'code'), ['cannotMergeInto', 'cannotMergeFrom']))->not->toBeEmpty()
         ->and($plan['content']['samples'])->toBe([])
         ->and($plan['content']['samplesTruncated'])->toBeTrue();
+});
+
+it('preserves canonical Vizy content through Crafts actual field merge lifecycle', function() {
+    $fixture = fieldMergePlanFixture();
+    $before = ($fixture['read'])();
+    $migrator = Craft::$app->getContentMigrator();
+    $originalMigrationPath = $migrator->migrationPath;
+    $migrationPath = Craft::$app->getPath()->getTempPath() . DIRECTORY_SEPARATOR . 'vizy-field-merge-' . StringHelper::randomString(12);
+    FileHelper::createDirectory($migrationPath);
+    $migrator->migrationPath = $migrationPath;
+
+    try {
+        $controller = new DeterministicFieldMergeController('fields', Craft::$app, [
+            'persistingHandle' => $fixture['persisting']->handle,
+        ]);
+        $controller->interactive = true;
+        $result = $controller->actionMerge($fixture['outgoing']->handle, $fixture['persisting']->handle);
+    } finally {
+        $migrator->migrationPath = $originalMigrationPath;
+        FileHelper::removeDirectory($migrationPath);
+    }
+
+    $config = Craft::$app->getProjectConfig()->get(BlockTypes::PROJECT_CONFIG_PATH . '.' . $fixture['blockType']->uid);
+    $reloadedBlockType = BlockType::fromConfig($fixture['blockType']->uid, ProjectConfigHelper::unpackAssociativeArrays($config));
+    $placements = $reloadedBlockType->getFieldLayout()?->getElementsByType(CustomField::class) ?? [];
+    $placement = $placements[0] ?? null;
+    $afterMerge = ($fixture['read'])();
+
+    expect($result)->toBe(ExitCode::OK)
+        ->and(Craft::$app->getFields()->getFieldByUid($fixture['outgoing']->uid))->toBeNull()
+        ->and(Json::encode($config))->not->toContain($fixture['outgoing']->uid)
+        ->and(Json::encode($config))->toContain($fixture['persisting']->uid)
+        ->and($placement)->toBeInstanceOf(CustomField::class)
+        ->and($placement->uid)->toBe($fixture['embeddedPlacement']->uid)
+        ->and($placement->getFieldUid())->toBe($fixture['persisting']->uid)
+        ->and($afterMerge)->toBe($before);
+
+    $content = is_string($afterMerge) ? Json::decode($afterMerge) : $afterMerge;
+    $document = Json::decodeIfJson($content[$fixture['rootPlacement']->uid]);
+    $owner = Entry::find()->id($fixture['owner']->id)->siteId($fixture['owner']->siteId)->status(null)->one();
+    $owner->setFieldValue($fixture['root']->handle, $document);
+    $saved = Craft::$app->getElements()->saveElement($owner);
+    expect($saved)->toBeTrue(Json::encode($owner->getErrors()));
+
+    $persisted = ($fixture['read'])();
+    $persisted = is_string($persisted) ? Json::decode($persisted) : $persisted;
+    $persistedDocument = Json::decodeIfJson($persisted[$fixture['rootPlacement']->uid]);
+    expect($persistedDocument['content'][0]['attrs']['fieldSlots'][$fixture['embeddedPlacement']->uid])
+        ->toBe('Preserve this value');
 });

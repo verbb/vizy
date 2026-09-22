@@ -143,6 +143,7 @@ class Vizy extends Plugin
                 $this->getContentVersions()->clear();
             }
         });
+        Event::on(Fields::class, Fields::EVENT_AFTER_SAVE_FIELD_LAYOUT, [$this->getBlockTypes(), 'handleAfterSaveFieldLayout']);
         Event::on(Elements::class, Elements::EVENT_AFTER_SAVE_ELEMENT, [$this->getAssetUploads(), 'handleAfterSave']);
         Event::on(Response::class, Response::EVENT_BEFORE_SEND, [$this->getEditorAcknowledgements(), 'augmentResponse']);
         $db = Craft::$app->getDb();

@@ -9,6 +9,7 @@ use verbb\vizy\records\BlockType as BlockTypeRecord;
 use Craft;
 use craft\base\Component;
 use craft\events\ConfigEvent;
+use craft\events\FieldLayoutEvent;
 use craft\helpers\Json;
 use craft\helpers\ProjectConfig as ProjectConfigHelper;
 use craft\helpers\StringHelper;
@@ -266,6 +267,41 @@ final class BlockTypes extends Component
             }
         }
         $this->_resetCache();
+    }
+
+    /**
+     * Keeps embedded Block Type layouts in Project Config aligned when Craft
+     * deliberately mutes config events, including its field-merge workflow.
+     */
+    public function handleAfterSaveFieldLayout(FieldLayoutEvent $event): void
+    {
+        $layout = $event->layout;
+        $projectConfig = Craft::$app->getProjectConfig();
+        if ($event->isNew || $layout->type !== Block::class || !$projectConfig->muteEvents) {
+            return;
+        }
+
+        $configs = $projectConfig->get(self::PROJECT_CONFIG_PATH) ?? [];
+        foreach ($configs as $uid => $packedConfig) {
+            if (!is_string($uid) || !is_array($packedConfig)) {
+                continue;
+            }
+            $config = ProjectConfigHelper::unpackAssociativeArrays($packedConfig);
+            if (($config['fieldLayout']['uid'] ?? null) !== $layout->uid) {
+                continue;
+            }
+
+            $config['fieldLayout'] = [
+                'uid' => $layout->uid,
+                'type' => Block::class,
+            ] + $layout->getConfig();
+            $projectConfig->set(
+                self::PROJECT_CONFIG_PATH . '.' . $uid,
+                ProjectConfigHelper::packAssociativeArrays($config),
+            );
+            $this->_resetCache();
+            return;
+        }
     }
 
     public function getSchemaDiagnostics(): array

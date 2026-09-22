@@ -12,6 +12,7 @@
 
 ### Fixed
 - Fixed custom-field conditions on Matrix entry queries inside Vizy Blocks. ([#309](https://github.com/verbb/vizy/issues/309))
+- Fixed Craft field merges leaving Vizy Block Type layouts pointed at the deleted outgoing field, which could remove embedded values on a later entry save. ([#346](https://github.com/verbb/vizy/issues/346))
 - Fixed empty link options, volume selections, and transform selections reverting to defaults after saving field settings.
 - Fixed unresolved anchors and incomplete Matrix submissions being treated as replacement or empty content.
 - Fixed historical shared anchors being modified or cleaned up while another owner or draft still references them.
