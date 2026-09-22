@@ -1,8 +1,8 @@
 <?php
 namespace verbb\vizy\console\controllers;
 
-use verbb\vizy\fields\VizyField;
 use verbb\vizy\Vizy;
+use verbb\vizy\fields\VizyField;
 
 use Craft;
 use craft\base\Element;
@@ -10,11 +10,13 @@ use craft\base\ElementInterface;
 use craft\base\FieldInterface;
 use craft\base\NestedElementInterface;
 use craft\console\Controller;
+use craft\db\Query;
 use craft\elements\db\ElementQueryInterface;
 use craft\elements\Entry;
 use craft\elements\GlobalSet;
 use craft\errors\InvalidFieldException;
 use craft\helpers\Console;
+use craft\helpers\Json;
 use craft\models\Section;
 
 use Throwable;
@@ -35,6 +37,7 @@ class AnchorsController extends Controller
     public bool $verbose = false;
     public bool $dryRun = false;
     public bool $drafts = false;
+    public bool $apply = false;
 
     private array $_pluginOrigins = [];
 
@@ -52,8 +55,44 @@ class AnchorsController extends Controller
         $options[] = 'verbose';
         $options[] = 'dryRun';
         $options[] = 'drafts';
+        $options[] = 'apply';
 
         return $options;
+    }
+
+    public function actionSnapshots(?string $ownerUid = null): int
+    {
+        $query = (new Query())->from('{{%vizy_matrix_recovery}}')
+            ->select(['id', 'kind', 'ownerUid', 'siteId', 'reason', 'dateCreated'])
+            ->orderBy(['id' => SORT_DESC])->limit($this->limit ?? 50);
+        if ($ownerUid) {
+            $query->where(['ownerUid' => $ownerUid]);
+        }
+        foreach ($query->all() as $row) {
+            $this->stdout(implode(' | ', $row) . "\n");
+        }
+        return ExitCode::OK;
+    }
+
+    public function actionShowSnapshot(int $id): int
+    {
+        $snapshot = Vizy::$plugin->getMatrixRecovery()->getSnapshot($id);
+        $this->stdout(Json::encode($snapshot, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE) . "\n");
+        return ExitCode::OK;
+    }
+
+    public function actionRestoreSnapshot(int $id): int
+    {
+        $snapshot = Vizy::$plugin->getMatrixRecovery()->getSnapshot($id);
+        $this->stdout(sprintf("Snapshot #%d: %s %s, site %d, recorded %s.\n",
+            $id, $snapshot['kind'], $snapshot['ownerUid'], $snapshot['siteId'], $snapshot['dateCreated']));
+        if (!$this->apply || $this->dryRun) {
+            $this->stdout("No content changed. Use --apply to restore this snapshot. Restoration preserves the current content in the recovery archive.\n");
+            return ExitCode::OK;
+        }
+        Vizy::$plugin->getMatrixRecovery()->restore($id);
+        $this->stdout("Snapshot restored. Reload the entry to verify its content.\n");
+        return ExitCode::OK;
     }
 
     public function optionAliases(): array
@@ -67,7 +106,7 @@ class AnchorsController extends Controller
      * Creates matrix anchors for Vizy blocks that still rely on JSON matrix content.
      *
      * Defaults to all sites (`site('*')`) and live elements only. Pass `--site=` to target
-     * one site, `--drafts` to include drafts (usually unsafe — anchors are canonical-keyed),
+     * one site, `--drafts` to include drafts with independently owned anchors,
      * `--verbose` for per-element context, and `--dry-run` to inspect without saving.
      *
      * Counts are per site-element row (not unique element IDs). `--limit` applies the same way.
@@ -191,8 +230,7 @@ class AnchorsController extends Controller
             ->status(null)
             ->trashed(false);
 
-        // Drafts share MatrixAnchors keyed by canonical owner id — migrating draft JSON can
-        // overwrite live nested Matrix content. Opt in only with --drafts.
+        // Derivative backfill is an explicit scope choice. Each draft owns its own anchors.
         if (method_exists($query, 'drafts')) {
             $query->drafts($this->drafts ? null : false);
         }
@@ -286,7 +324,7 @@ class AnchorsController extends Controller
 
         if ($this->drafts) {
             $this->stdout(
-                "Warning: --drafts included. Matrix anchors are keyed by canonical owner id — draft JSON can overwrite live nested Matrix content.\n",
+                "Drafts included: historical references will be copied into independently owned draft anchors.\n",
                 Console::FG_YELLOW,
             );
         }

@@ -257,6 +257,8 @@ class VizyField extends Field
 
     public function serializeValueForDb(mixed $value, ElementInterface $element): mixed
     {
+        Vizy::$plugin->getMatrixRecovery()->captureField($this, $element);
+
         if ($value instanceof NodeCollection) {
             $value = $value->serializeValues($element);
 

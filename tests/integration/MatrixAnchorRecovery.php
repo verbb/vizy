@@ -34,6 +34,18 @@ function historicalReference(Entry $target, Entry $source): void
         ['elementId' => $target->id, 'siteId' => $target->siteId])->execute();
 }
 
+function contentFingerprint(mixed $value): mixed
+{
+    if (!is_array($value)) {
+        return $value;
+    }
+    unset($value['sourceId'], $value['sourceUid']);
+    foreach ($value as &$child) {
+        $child = contentFingerprint($child);
+    }
+    return $value;
+}
+
 echo 'Craft ' . Craft::$app->getVersion() . ', Vizy ' . Vizy::$plugin->getVersion() . ", PHP " . PHP_VERSION . "\n";
 $transaction = Craft::$app->getDb()->beginTransaction();
 try {
@@ -141,6 +153,100 @@ try {
     $publishedAnchor = $anchors->getAnchor($published, $vizy, $source->blockInstanceId);
     check(rows($publishedAnchor, $matrix)[0]->title === 'Isolated draft edit', 'publication promotes the draft Matrix content');
 
+    $recovery = Vizy::$plugin->getMatrixRecovery();
+    $snapshotId = $recovery->captureAnchor($target, 'regression-restore');
+    check((bool)$snapshotId, 'durable recovery snapshot is stored');
+    check($recovery->captureAnchor($target, 'repeat-capture') === $snapshotId, 'identical content is deduplicated in the archive');
+    $snapshotJson = (new craft\db\Query())->select('payload')->from('{{%vizy_matrix_recovery}}')->where(['id' => $snapshotId])->scalar();
+    Craft::$app->getDb()->createCommand()->update('{{%vizy_matrix_recovery}}', ['payload' => $snapshotJson . ' '], ['id' => $snapshotId])->execute();
+    try {
+        $recovery->restore($snapshotId);
+        throw new RuntimeException('Corrupt snapshot was accepted');
+    } catch (RuntimeException $e) {
+        check(str_contains($e->getMessage(), 'integrity check'), 'corrupt snapshots are refused before recovery writes');
+    } finally {
+        Craft::$app->getDb()->createCommand()->update('{{%vizy_matrix_recovery}}', ['payload' => $snapshotJson], ['id' => $snapshotId])->execute();
+    }
+    $beforeRestore = rows($target, $matrix)[0]->title;
+    $emptyValue = $matrix->normalizeValueFromRequest(['entries' => [], 'sortOrder' => []], $target);
+    $anchors->saveMatrixField($matrix, $target, $emptyValue, false, true);
+    check(rows($target, $matrix) === [], 'intentional clearing is allowed after preserving a snapshot');
+    $recovery->restore((int)$snapshotId);
+    check(rows($target, $matrix)[0]->title === $beforeRestore, 'targeted recovery restores cleared content without a database restore');
+
+    $pureOwner = Craft::$app->getElements()->duplicateElement($owner, ['fieldValues' => $emptyValues]);
+    historicalReference($pureOwner, $owner);
+    $pureOwner->setFieldValue($vizy->handle, $owner->getFieldValue($vizy->handle)->getRawNodes());
+    $beforeAnchors = MatrixAnchor::find()->site('*')->trashed(null)->count();
+    $beforeSnapshots = (new craft\db\Query())->from('{{%vizy_matrix_recovery}}')->count();
+    $pureValue = $pureOwner->getFieldValue($vizy->handle);
+    $beforeJson = $pureValue->getRawNodes();
+    $vizy->serializeValue($pureValue, $pureOwner);
+    foreach ($pureValue->getNodes() as $node) {
+        if ($node instanceof verbb\vizy\nodes\VizyBlock) {
+            $node->getBlockElement($pureOwner);
+        }
+    }
+    check(MatrixAnchor::find()->site('*')->trashed(null)->count() === $beforeAnchors, 'opening and serializing a historical block creates no anchors');
+    check((new craft\db\Query())->from('{{%vizy_matrix_recovery}}')->count() === $beforeSnapshots, 'read-only access creates no recovery records');
+    check($pureValue->getRawNodes() === $beforeJson, 'read-only access preserves stored references');
+
+    // Preserve a complete document before it is removed, then restore it through Craft.
+    $rootField = $emptyOwner->getFieldLayout()->getFieldByHandle($vizy->handle);
+    $savedDocument = $emptyOwner->getFieldValue($vizy->handle)->getRawNodes();
+    $recovery->captureField($rootField, $emptyOwner);
+    $fieldSnapshotId = (new craft\db\Query())->select('id')->from('{{%vizy_matrix_recovery}}')
+        ->where(['kind' => 'field', 'ownerUid' => $emptyOwner->uid, 'siteId' => $emptyOwner->siteId])
+        ->orderBy(['id' => SORT_DESC])->scalar();
+    $emptyOwner->setFieldValue($vizy->handle, []);
+    check(Craft::$app->getElements()->saveElement($emptyOwner, false, false), 'intentional block removal saves');
+    check($anchors->getAnchor($emptyOwner, $vizy, $source->blockInstanceId) !== null, 'block removal retains its detached anchor for recovery');
+    $recovery->restore((int)$fieldSnapshotId);
+    $restoredOwner = Craft::$app->getElements()->getElementById($emptyOwner->id, $emptyOwner::class, $emptyOwner->siteId);
+    check(count($restoredOwner->getFieldValue($vizy->handle)->getRawNodes()) === count($savedDocument), 'document recovery restores the removed block');
+    check(count(rows($anchors->getAnchor($restoredOwner, $vizy, $source->blockInstanceId), $matrix)) === count($originalRows), 'document recovery restores nested Matrix content');
+
+    $cancel = static function($event): void { $event->isValid = false; };
+    $restoredOwner->on(craft\base\Element::EVENT_BEFORE_DELETE, $cancel);
+    check(!Craft::$app->getElements()->deleteElement($restoredOwner), 'owner deletion can be canceled');
+    check($anchors->getAnchor($restoredOwner, $vizy, $source->blockInstanceId) !== null, 'canceled deletion preserves anchors');
+    $restoredOwner->off(craft\base\Element::EVENT_BEFORE_DELETE, $cancel);
+    check(Craft::$app->getElements()->deleteElement($restoredOwner), 'owner can be trashed');
+    check((new craft\db\Query())->from('{{%vizy_matrix_anchors}}')->where(['parentOwnerId' => $restoredOwner->id])->exists(), 'trash preserves anchor ownership metadata');
+    check(Craft::$app->getElements()->restoreElement($restoredOwner), 'owner can be restored from trash');
+    $afterTrash = $anchors->getAnchor($restoredOwner, $vizy, $source->blockInstanceId);
+    check($afterTrash && count(rows($afterTrash, $matrix)) === count($originalRows), 'restoring the owner restores its Matrix content');
+
+    $hardDeleteSnapshot = $recovery->captureAnchor($afterTrash, 'before-hard-delete-test');
+    $archivedUid = $afterTrash->uid;
+    $archivedTitle = rows($afterTrash, $matrix)[0]->title;
+    $anchors->deleteAnchor($afterTrash, true);
+    check(!MatrixAnchor::find()->uid($archivedUid)->trashed(null)->exists(), 'test anchor is permanently deleted');
+    $recovery->restore($hardDeleteSnapshot);
+    $recreated = MatrixAnchor::find()->uid($archivedUid)->siteId($afterTrash->siteId)->one();
+    check($recreated && rows($recreated, $matrix)[0]->title === $archivedTitle, 'journal restores permanently deleted anchor content and its UID');
+
+    $archiveFailure = new class extends verbb\vizy\services\MatrixRecovery {
+        public function captureAnchor(MatrixAnchor $anchor, string $reason): int
+        {
+            throw new RuntimeException('Injected archive write failure');
+        }
+    };
+    Vizy::$plugin->set('matrixRecovery', $archiveFailure);
+    try {
+        $emptyValue = $matrix->normalizeValueFromRequest(['entries' => [], 'sortOrder' => []], $recreated);
+        $anchors->saveMatrixField($matrix, $recreated, $emptyValue, false, true);
+        throw new RuntimeException('Archive failure was ignored');
+    } catch (RuntimeException $e) {
+        check($e->getMessage() === 'Injected archive write failure', 'archive failure blocks a destructive save');
+    } finally {
+        Vizy::$plugin->set('matrixRecovery', $recovery);
+    }
+    check(rows($recreated, $matrix)[0]->title === $archivedTitle, 'archive failure leaves the original content intact');
+
+    check(Craft::$app->getElements()->deleteElement($restoredOwner, true), 'owner can be permanently deleted');
+    check((new craft\db\Query())->from('{{%vizy_matrix_recovery}}')->where(['ownerUid' => $archivedUid])->exists(), 'recovery archive survives permanent owner deletion');
+
     foreach (Craft::$app->getSites()->getAllSites() as $site) {
         if ($site->id === $owner->siteId) {
             continue;
@@ -161,6 +267,28 @@ try {
         $healed = $anchors->ensureAnchor($siteOwner, $vizy, $source->blockInstanceId, $layout, $siteAnchor->uid);
         check($healed->id === $siteAnchor->id && $healed->siteId === $site->id, 'owned anchor with a missing site is localized rather than replaced');
     }
+    $qualifiedOwner = Craft::$app->getElements()->duplicateElement(
+        Craft::$app->getElements()->getElementById($owner->id, $owner::class, $owner->siteId),
+    );
+    $qualified = $anchors->getAnchor($qualifiedOwner, $vizy, $source->blockInstanceId);
+    $extra = Craft::$app->getElements()->duplicateElement(rows($qualified, $matrix)[0], [
+        'enabled' => false, 'title' => 'Disabled recovery row',
+        'primaryOwner' => $qualified, 'owner' => $qualified, 'sortOrder' => 2,
+    ]);
+    foreach (MatrixAnchor::find()->id($qualified->id)->site('*')->unique(false)->all() as $locale) {
+        $row = rows($locale, $matrix)[0];
+        $row->title = "Site {$locale->siteId}: <rich> & Unicode — preserved";
+        check(Craft::$app->getElements()->saveElement($row, false, false, false), "localized fixture saves on site {$locale->siteId}");
+    }
+    $completeSnapshot = $recovery->captureAnchor($qualified, 'complete-content-test');
+    $before = contentFingerprint($recovery->getSnapshot($completeSnapshot)['payload']['sites']);
+    $anchors->deleteAnchor($qualified, true);
+    $recovery->restore($completeSnapshot);
+    $qualified = MatrixAnchor::find()->uid($qualified->uid)->siteId($qualified->siteId)->one();
+    $afterSnapshot = $recovery->captureAnchor($qualified, 'complete-content-result');
+    $after = contentFingerprint($recovery->getSnapshot($afterSnapshot)['payload']['sites']);
+    check($before === $after, 'recovery preserves all serialized field values, order, disabled rows and distinct site content');
+    require __DIR__ . '/MatrixPreservationNested.php';
 } finally {
     $transaction->rollBack();
     echo "Database changes rolled back.\n";

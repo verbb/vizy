@@ -13,6 +13,7 @@ class Install extends Migration
     public function safeUp(): bool
     {
         $this->_createMatrixAnchorsTable();
+        (new m260922_000000_matrix_recovery())->safeUp();
 
         return true;
     }

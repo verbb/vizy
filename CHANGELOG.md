@@ -2,7 +2,12 @@
 
 ## Unreleased
 
+### Added
+- Add durable Matrix content recovery snapshots and console commands to inspect and restore individual snapshots.
+
 ### Fixed
+- Preserve Matrix content before changes and deletions, retain detached anchors, and roll back writes when recovery snapshots cannot be recorded.
+- Keep draft Matrix content independent until publication, avoid anchor writes during rendering, and preserve anchor ownership through trash and restore.
 - Fix historical duplicated entries losing access to Matrix-in-Vizy content; recover surviving shared references on save/backfill into independent anchors, preserve source blocks during duplication, and roll back failed copies. ([#376](https://github.com/verbb/vizy/issues/376))
 - Fix saves failing with an invalid field handle error when required Matrix fields inside Vizy blocks propagate across sites.
 

@@ -6,6 +6,7 @@ use verbb\vizy\services\Anchors;
 use verbb\vizy\services\Cache;
 use verbb\vizy\services\Content;
 use verbb\vizy\services\Icons;
+use verbb\vizy\services\MatrixRecovery;
 use verbb\vizy\services\Nodes;
 use verbb\vizy\services\Service;
 use verbb\vizy\web\assets\field\VizyAsset;
@@ -41,6 +42,7 @@ trait PluginTrait
         return [
             'components' => [
                 'anchors' => Anchors::class,
+                'matrixRecovery' => MatrixRecovery::class,
                 'cache' => Cache::class,
                 'content' => Content::class,
                 'icons' => Icons::class,
@@ -68,6 +70,11 @@ trait PluginTrait
     public function getAnchors(): Anchors
     {
         return $this->get('anchors');
+    }
+
+    public function getMatrixRecovery(): MatrixRecovery
+    {
+        return $this->get('matrixRecovery');
     }
 
     public function getCache(): Cache

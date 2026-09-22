@@ -12,10 +12,12 @@ use verbb\vizy\integrations\feedme\fields\Vizy as FeedMeVizyField;
 use verbb\vizy\models\Settings;
 
 use Craft;
+use craft\base\Element;
 use craft\base\Plugin;
 use craft\elements\ContentBlock;
 use craft\elements\Entry;
 use craft\events\CreateFieldLayoutFormEvent;
+use craft\events\ElementEvent;
 use craft\events\ModelEvent;
 use craft\events\RegisterComponentTypesEvent;
 use craft\events\RegisterGqlTypesEvent;
@@ -40,7 +42,7 @@ class Vizy extends Plugin
     // =========================================================================
 
     public bool $hasCpSettings = true;
-    public string $schemaVersion = '0.10.0';
+    public string $schemaVersion = '0.11.0';
 
 
     // Traits
@@ -164,9 +166,31 @@ class Vizy extends Plugin
             }
         });
 
+        Event::on(Element::class, Element::EVENT_BEFORE_DELETE, function(ModelEvent $event) {
+            Vizy::$plugin->getAnchors()->prepareOwnerDelete($event->sender);
+        });
+
+        Event::on(Element::class, Element::EVENT_AFTER_RESTORE, function(Event $event) {
+            Vizy::$plugin->getAnchors()->restoreAnchorsForOwner($event->sender);
+        });
+
+        Event::on(Elements::class, Elements::EVENT_BEFORE_SAVE_ELEMENT, function(ElementEvent $event) {
+            Vizy::$plugin->getMatrixRecovery()->captureNestedChange($event->element);
+        });
         Event::on(Entry::class, Entry::EVENT_BEFORE_DELETE, function(ModelEvent $event) {
-            $entry = $event->sender;
-            Vizy::$plugin->getAnchors()->deleteAnchorsForOwner($entry);
+            Vizy::$plugin->getMatrixRecovery()->captureNestedChange($event->sender);
+        });
+        Event::on(Element::class, Element::EVENT_AFTER_PROPAGATE, function(ModelEvent $event) {
+            // Record the completed state inside Craft's save transaction too. Overlapping
+            // writers must not make a briefly committed content version unrecoverable.
+            $element = $event->sender;
+            $recovery = Vizy::$plugin->getMatrixRecovery();
+            $recovery->captureNestedChange($element, 'after-nested-save');
+            foreach ($element->getFieldLayout()?->getCustomFields() ?? [] as $field) {
+                if ($field instanceof VizyField) {
+                    $recovery->captureField($field, $element, 'after-save');
+                }
+            }
         });
 
         // Handle an issue with Matrix fields in Vizy blocks, that have relation fields that are also eager-loaded. More noticable in GQL.
