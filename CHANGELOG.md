@@ -6,14 +6,14 @@
 - Added a new TipTap 3 editor with configurable formatting, tables, links, images, embeds, undo and redo, accessible toolbar controls, Bubble Menus, and structured Blocks in one editing surface.
 - Added named Editor Configs, managed in the control panel or as JSON files in `config/vizy/`, with visual builders for capabilities, toolbars, dropdowns, Bubble Menus, and insertion controls.
 - Added `EditorManifests::EVENT_MODIFY_EDITOR_CONFIG` for field-scoped runtime changes that participate in config normalization, manifest caching, and server-side validation.
-- Added shared Project Config-backed Block Types with reusable Craft field layouts, icons, preview images, summaries, grouping, per-field availability, and list or grid insertion.
-- Added toolbar, gutter, and slash insertion for Blocks.
-- Added responsive Layout and Column nodes with configurable presets, wrapping, resizing, reordering, and GraphQL support.
-- Added Hosted Vizy Editors, allowing Vizy fields to be nested on Block Type field layouts with their own Editor Config and a maximum nesting depth of five.
-- Added a structural GraphQL API for documents, nodes, marks, layouts, Blocks, and generated Block Type fields, including filtering, ordering, limits, rendered HTML, and raw escape hatches.
-- Added PHP and JavaScript extension APIs for registering TipTap nodes, marks, behaviour modules, toolbar controls, dropdowns, and rendering behaviour.
+- Added shared Project Config-backed Block Types with reusable Craft field layouts, icons, preview images, summaries, grouping, per-field availability, and list or grid insertion. ([#60](https://github.com/verbb/vizy/issues/60), [#222](https://github.com/verbb/vizy/issues/222), [#271](https://github.com/verbb/vizy/issues/271))
+- Added toolbar, gutter, and slash insertion for Blocks. ([#296](https://github.com/verbb/vizy/issues/296), [#330](https://github.com/verbb/vizy/issues/330), [#360](https://github.com/verbb/vizy/issues/360))
+- Added responsive Layout and Column nodes with configurable presets, wrapping, resizing, reordering, and GraphQL support. ([#72](https://github.com/verbb/vizy/issues/72))
+- Added Hosted Vizy Editors, allowing Vizy fields to be nested on Block Type field layouts with their own Editor Config and a maximum nesting depth of five. ([#45](https://github.com/verbb/vizy/issues/45), [#125](https://github.com/verbb/vizy/issues/125))
+- Added a structural GraphQL API for documents, nodes, marks, layouts, Blocks, and generated Block Type fields, including filtering, ordering, limits, rendered HTML, and raw escape hatches. ([#52](https://github.com/verbb/vizy/issues/52), [#124](https://github.com/verbb/vizy/issues/124), [#129](https://github.com/verbb/vizy/issues/129))
+- Added PHP and JavaScript extension APIs for registering TipTap nodes, marks, behaviour modules, toolbar controls, dropdowns, and rendering behaviour. ([#93](https://github.com/verbb/vizy/issues/93), [#137](https://github.com/verbb/vizy/issues/137))
 - Added an automatic, resumable Vizy 3 upgrade to Craft’s plugin migrations, with durable checkpoints, verification, and advanced diagnostic and recovery commands.
-- Added a raw content API for inspecting and migrating embedded field values using captured placement identities, explicit changes, dry runs, and caller-owned transactions.
+- Added a raw content API for inspecting and migrating embedded field values using captured placement identities, explicit changes, dry runs, and caller-owned transactions. ([#313](https://github.com/verbb/vizy/issues/313), [#371](https://github.com/verbb/vizy/issues/371))
 - Added canonical Vizy document support to Feed Me.
 - Added search indexing for document text, image details, link values, Block fields, and nested Hosted Vizy content.
 
@@ -22,25 +22,25 @@
 - Vizy field values are now immutable `VizyDocument` objects backed by versioned canonical JSON. Render fields explicitly with `render()`; use `query()`, `all()`, `blocks()`, `content()`, or `traverse()` for structured access.
 - Block definitions are now global Block Types referenced by UID instead of field-owned definitions, while Block values remain embedded in the Vizy document rather than loading as separate Craft elements.
 - Block query filters now preserve the existing enabled-only default. Request `enabled: false` for disabled Blocks or `enabled: null` for both states.
-- Matrix fields remain supported on existing and new Block Type layouts. Nested Vizy is recommended for new nested content to avoid Matrix’s additional storage and processing overhead.
+- Matrix fields remain supported on existing and new Block Type layouts. Nested Vizy is recommended for new nested content to avoid Matrix’s additional storage and processing overhead. ([#314](https://github.com/verbb/vizy/issues/314))
 - Matrix fields use Inline Blocks inside Vizy so edits follow the containing entry’s save and draft workflow. Cards, card grids, and element indexes retain their configured appearance outside Vizy.
 - The GraphQL contract now uses structural `VizyDocument`, `Vizy*` node and mark types, and UID-qualified generated Block types. Existing Vizy 3 fragments and JSON-encoded `where` arguments must be updated.
 - The control-panel editor has moved from Vue 3 to Web Components built with Plugin Kit. Integrations that mounted Vue components or targeted the legacy editor DOM must migrate to the supported Extensions APIs.
 - Editor integrations now use named Editor Configs and the Extensions registry instead of per-field inline config, `Craft.Vizy.Config`, or Vizy 3 plugin registration hooks.
 - Block Type templates now receive field values through the `block` variable, and automatic field string rendering has been replaced by explicit document rendering.
 - Asset uploads and nested field values are finalized with the owning element save, with recoverable status for deferred or failed uploads.
-- Documentation has been rewritten for Vizy 4 field setup, authoring, rendering, querying, GraphQL, extensions, limitations, and Vizy 3 upgrades.
+- Documentation has been rewritten for Vizy 4 field setup, authoring, rendering, querying, GraphQL, extensions, limitations, and Vizy 3 upgrades. ([#283](https://github.com/verbb/vizy/issues/283))
 
 ### Fixed
-- Fixed Hyper 3 fields preventing Matrix content inside Vizy from loading or saving.
-- Fixed duplicated entries losing Matrix content inside Vizy blocks.
+- Fixed Hyper 3 fields preventing Matrix content inside Vizy from loading or saving. ([#377](https://github.com/verbb/vizy/issues/377))
+- Fixed duplicated entries losing Matrix content inside Vizy blocks. ([#376](https://github.com/verbb/vizy/issues/376))
 - Fixed Matrix validation checking saved rows instead of submitted changes, and preserved pending Matrix edits when an entry fails validation.
 - Fixed duplicate Matrix rows and changing row identities when saving legacy content, including temporary row identifiers on PostgreSQL; saving or backfilling also repairs duplicate stored row UIDs.
-- Fixed Matrix anchors failing when a site row was missing or a new site was enabled, and limited anchor propagation to the owner’s supported sites.
+- Fixed Matrix anchors failing when a site row was missing or a new site was enabled, and limited anchor propagation to the owner’s supported sites. ([#373](https://github.com/verbb/vizy/issues/373))
 - Fixed Matrix saves failing when Craft reused a cached field manager from outside the block layout.
 - Reduced repeated Matrix owner lookups when reading and resaving Vizy content.
 - Fixed competing standalone Matrix anchor creation attempts failing to resolve the winning anchor after a database collision.
-- Fixed Matrix backfill missing nested Vizy, global sets, and non-primary sites, and restored dry-run, site selection, draft opt-in, and timestamp-preserving saves.
+- Fixed Matrix backfill missing nested Vizy, global sets, and non-primary sites, and restored dry-run, site selection, draft opt-in, and timestamp-preserving saves. ([#364](https://github.com/verbb/vizy/issues/364))
 - Fixed removed Vizy blocks leaving their Matrix content active, including site-specific rows. Restoring a removed block restores its owned content.
 - Fixed a moderate-severity cross-site scripting vulnerability in Tiptap ([GHSA-cp6q-959q-f8rh](https://github.com/advisories/GHSA-cp6q-959q-f8rh)).
 
