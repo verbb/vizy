@@ -11,6 +11,7 @@
 - Upgrade verification now compares nested content before committing each owner conversion.
 
 ### Fixed
+- Fixed Entry fields inside Vizy Blocks resolving relations against the wrong site in multi-site installs. ([#319](https://github.com/verbb/vizy/issues/319))
 - Fixed custom-field conditions on Matrix entry queries inside Vizy Blocks. ([#309](https://github.com/verbb/vizy/issues/309))
 - Fixed Craft field merges leaving Vizy Block Type layouts pointed at the deleted outgoing field, which could remove embedded values on a later entry save. ([#346](https://github.com/verbb/vizy/issues/346))
 - Fixed empty link options, volume selections, and transform selections reverting to defaults after saving field settings.

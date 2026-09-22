@@ -115,6 +115,9 @@ it('filters Matrix rows inside Vizy blocks by their custom field values', functi
     $block = $document->blockElement($document->findBlock($firstUid));
     $query = $block->getFieldValue($f->matrix->handle);
     $query->{$f->text->handle}('Target row');
+    // This synthetic field is added after Craft generates CustomFieldBehavior,
+    // so explicitly invalidate Matrix's preload as the next web request would.
+    $query->clearCachedResult();
     $rows = $query->all();
 
     expect($rows)->toHaveCount(1)
