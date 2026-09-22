@@ -55,11 +55,17 @@
         "title": "User Guides",
         "collapsable": false,
         "children": [
-            "guides/developers/creating-a-custom-mark-from-scratch",
-            "guides/developers/creating-a-custom-node-from-scratch",
-            "guides/developers/modifying-the-toolbar-buttons",
-            "guides/developers/creating-your-own-formatting-buttons-and-dropdown",
-            "guides/developers/choosing-insertion-controls"
+            {
+                "title": "Developer Guides",
+                "path": "guides/developers/index",
+                "children": [
+                    "guides/developers/creating-a-custom-mark-from-scratch",
+                    "guides/developers/creating-a-custom-node-from-scratch",
+                    "guides/developers/modifying-the-toolbar-buttons",
+                    "guides/developers/creating-your-own-formatting-buttons-and-dropdown",
+                    "guides/developers/choosing-insertion-controls"
+                ]
+            }
         ]
     }
 ]
