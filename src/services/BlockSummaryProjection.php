@@ -1,6 +1,7 @@
 <?php
 namespace verbb\vizy\services;
 
+use verbb\vizy\fields\VizyField;
 use verbb\vizy\models\BlockSummaryInference;
 use verbb\vizy\models\BlockSummaryMedia;
 use verbb\vizy\models\BlockSummaryTexts;
@@ -45,7 +46,11 @@ final class BlockSummaryProjection
                 }
                 $placementUid = (string)$element->uid;
                 $field = $element->getField();
-                if ($field instanceof PlainText) {
+                // Hosted Vizy is another authored text surface. Keep it in the same
+                // FieldLayout-ordered inference as Plain Text rather than requiring a
+                // separate summary setting; the raw document projector below already
+                // bounds its text and refuses to descend into nested Blocks.
+                if ($field instanceof PlainText || $field instanceof VizyField) {
                     $title[] = $placementUid;
                     continue;
                 }

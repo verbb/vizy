@@ -22,6 +22,11 @@ async function openOwner(page: Page) {
     await expect(page.locator('vizy-editor').first().locator('.ProseMirror').first()).toBeVisible();
 }
 
+async function openNestedPreviewOwner(page: Page) {
+    await page.goto(fixture.nestedPreview.editPath);
+    await expect(page.locator(`vizy-block[data-block-uid="${fixture.nestedPreview.blockUid}"]`)).toBeVisible();
+}
+
 async function openConditionOwner(page: Page) {
     await page.goto(fixture.conditions.editPath);
     await expect(page.locator(`vizy-block[data-block-uid="${fixture.conditions.blockUid}"]`)).toBeVisible();
@@ -139,6 +144,29 @@ test('real Craft fields flush root, hosted text and a required block field throu
     await openOwner(page);
     await expect(heading).toHaveValue('Heading after');
     await expect(hosted).toContainText('Nested after');
+});
+
+test('a Hosted Vizy field automatically supplies its Block’s live collapsed summary', async ({ page }) => {
+    await login(page, 'editor');
+    await openNestedPreviewOwner(page);
+    const block = page.locator(`vizy-block[data-block-uid="${fixture.nestedPreview.blockUid}"]`);
+    const hosted = block.locator('vizy-editor .ProseMirror');
+    const summary = block.locator('.summary-preview');
+
+    await expect(hosted).toContainText('Nested preview before');
+    await expect(summary).toHaveText('Nested preview before');
+    await hosted.fill('Nested preview after');
+    await expect(summary).toHaveText('Nested preview after');
+
+    await block.getByRole('button', { name: 'Block actions' }).click();
+    await block.getByRole('menuitem', { name: 'Collapse', exact: true }).click();
+    await expect(block).toHaveAttribute('collapsed');
+    await expect(summary).toBeVisible();
+    await expect(summary).toHaveText('Nested preview after');
+
+    await saveCurrentOwner(page);
+    await openNestedPreviewOwner(page);
+    await expect(summary).toHaveText('Nested preview after');
 });
 
 test('a dismissible Craft Tip inside a Block dismisses and stays dismissed after save and reopen', async ({ page }) => {

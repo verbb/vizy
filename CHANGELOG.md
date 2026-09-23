@@ -3,6 +3,7 @@
 ## Unreleased
 
 ### Added
+- Added automatic collapsed Block summaries from Hosted Vizy field content. ([#140](https://github.com/verbb/vizy/issues/140))
 - Added Editor Config icon overrides for toolbar, dropdown, and Bubble Menu controls. ([#342](https://github.com/verbb/vizy/issues/342))
 - Added field settings for choosing the available Block picker displays, their default, and whether search is shown. ([#341](https://github.com/verbb/vizy/issues/341))
 - Added durable Vizy content recovery records and commands to restore a field’s saved document, nested Matrix values, ownership, order, enabled states, and relations across sites. See [Content Recovery](https://verbb.io/craft-plugins/vizy/docs/v4/developers/content-recovery).

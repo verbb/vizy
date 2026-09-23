@@ -1,8 +1,9 @@
 import type { BlockSummaryData, BlockSummaryInferenceManifest, FieldSlots } from './types';
-import type { BlockTypeManifest } from '../types';
+import type { BlockTypeManifest, JsonValue } from '../types';
 
 const TITLE_MAX = 120;
 const SUBTITLE_MAX = 160;
+const DOCUMENT_DEPTH_MAX = 8;
 const MISSING_TYPE = 'Missing Block Type';
 
 function boundText(value: string | null | undefined, max: number): string | null {
@@ -17,7 +18,32 @@ function textFromSlot(slots: FieldSlots, placementUid: string): string | null {
     if (raw == null) return null;
     if (typeof raw === 'string') return raw;
     if (typeof raw === 'number' || typeof raw === 'boolean') return String(raw);
+    if (!Array.isArray(raw) && typeof raw === 'object') {
+        return textFromRichDocument(raw, 0);
+    }
     return null;
+}
+
+/**
+ * Project a Hosted Vizy document without mounting fields or following its Blocks.
+ *
+ * PHP uses the same depth bound and `vizyBlock` boundary. That keeps collapsed
+ * summaries cheap and deterministic while still treating layouts and ordinary
+ * rich-text descendants as one readable stream.
+ */
+function textFromRichDocument(value: Record<string, JsonValue>, depth: number): string | null {
+    if (depth > DOCUMENT_DEPTH_MAX) return null;
+    if (value.type === 'text' && typeof value.text === 'string') return value.text;
+    if (!Array.isArray(value.content)) return null;
+
+    const parts: string[] = [];
+    for (const child of value.content) {
+        if (child == null || Array.isArray(child) || typeof child !== 'object') continue;
+        if (child.type === 'vizyBlock') continue;
+        const text = textFromRichDocument(child, depth + 1);
+        if (text) parts.push(text);
+    }
+    return parts.length ? parts.join(' ') : null;
 }
 
 function assetReference(slots: FieldSlots, placementUid: string): string | number | null {

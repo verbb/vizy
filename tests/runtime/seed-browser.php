@@ -65,10 +65,23 @@ $placements[7]->setElementCondition($condition);
 $type = new BlockType(['uid' => StringHelper::UUID(), 'name' => 'Card', 'handle' => 'card']);
 $type->setFieldLayout($layout);
 $save($type, Vizy::$plugin->getBlockTypes()->saveBlockType(...));
+$nestedPreviewLayout = new FieldLayout(['uid' => StringHelper::UUID(), 'type' => Block::class]);
+$nestedPreviewPlacement = new CustomField($nested);
+$nestedPreviewPlacement->uid = StringHelper::UUID();
+$nestedPreviewTab = new FieldLayoutTab(['name' => 'Content', 'layout' => $nestedPreviewLayout]);
+$nestedPreviewTab->setElements([$nestedPreviewPlacement]);
+$nestedPreviewLayout->setTabs([$nestedPreviewTab]);
+$nestedPreviewType = new BlockType([
+    'uid' => StringHelper::UUID(),
+    'name' => 'Nested preview',
+    'handle' => 'nestedPreview',
+]);
+$nestedPreviewType->setFieldLayout($nestedPreviewLayout);
+$save($nestedPreviewType, Vizy::$plugin->getBlockTypes()->saveBlockType(...));
 $rootField = VizyFixtureFactory::vizyField();
 $rootField->editorMode = VizyField::MODE_COMBINED;
 $rootField->rootContentType = VizyField::ROOT_CONTENT_RICH;
-$rootField->blockTypePickerGroups = [['name' => 'Content', 'blockTypeUids' => [$type->uid]]];
+$rootField->blockTypePickerGroups = [['name' => 'Content', 'blockTypeUids' => [$type->uid, $nestedPreviewType->uid]]];
 $save($rootField, Craft::$app->getFields()->saveField(...));
 $section = VizyFixtureFactory::section();
 $section->enableVersioning = true;
@@ -93,6 +106,19 @@ $doc['content'][] = ['type' => 'vizyBlock', 'attrs' => [
     ],
 ]];
 $owner = VizyFixtureFactory::entry('Browser owner', json_encode($doc));
+$nestedPreviewBlockUid = StringHelper::UUID();
+$nestedPreviewDocument = ['type' => 'doc', 'attrs' => ['schemaVersion' => 2], 'content' => [[
+    'type' => 'vizyBlock',
+    'attrs' => [
+        'blockUid' => $nestedPreviewBlockUid,
+        'blockTypeUid' => $nestedPreviewType->uid,
+        'enabled' => true,
+        'fieldSlots' => [
+            $nestedPreviewPlacement->uid => json_decode(VizyFixtureFactory::paragraphDocument('Nested preview before'), true),
+        ],
+    ],
+]]];
+$nestedPreviewOwner = VizyFixtureFactory::entry('Nested preview browser owner', json_encode($nestedPreviewDocument));
 $peer = VizyFixtureFactory::entry('Peer owner');
 $actor = new User(['username' => 'editor', 'email' => 'editor@example.test', 'active' => true, 'pending' => false]);
 $actor->newPassword = 'testing-only-password';
@@ -130,6 +156,8 @@ $conditionOwner->setAuthorIds([$actor->id]);
 $save($conditionOwner, Craft::$app->getElements()->saveElement(...));
 $owner->setAuthorIds([$actor->id]);
 $save($owner, Craft::$app->getElements()->saveElement(...));
+$nestedPreviewOwner->setAuthorIds([$actor->id]);
+$save($nestedPreviewOwner, Craft::$app->getElements()->saveElement(...));
 $peer->setAuthorIds([$admin->id]);
 $save($peer, Craft::$app->getElements()->saveElement(...));
 require __DIR__ . '/seed-browser-matrix.php';
@@ -189,6 +217,10 @@ $metadata = [
     'editPath' => '/index.php?p=admin/entries/' . $section->handle . '/' . $owner->id,
     'fieldId' => $rootField->id, 'fieldHandle' => $rootField->handle, 'fieldUid' => $rootField->uid,
     'blockUid' => $doc['content'][1]['attrs']['blockUid'],
+    'nestedPreview' => [
+        'editPath' => '/index.php?p=admin/entries/' . $section->handle . '/' . $nestedPreviewOwner->id,
+        'blockUid' => $nestedPreviewBlockUid,
+    ],
     'dismissibleTip' => ['uid' => $dismissibleTip->uid, 'text' => $dismissibleTip->tip],
     'headingPlacement' => $placements[0]->uid, 'relatedPlacement' => $placements[1]->uid,
     'uploadPlacement' => $placements[3]->uid, 'uploadVolumeId' => AssetSpikeFixture::volume()->id,

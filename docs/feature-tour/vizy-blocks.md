@@ -20,6 +20,8 @@ Choose a type and complete its fields. The block stays in the same content order
 
 Blocks can be collapsed to make a long document easier to scan, reordered with the surrounding content, disabled, or deleted. Disabling a block keeps its content but excludes it from ordinary rendered and queried output. This is useful when an editor wants to retain a seasonal callout without publishing it.
 
+Collapsed Blocks automatically preview their first text-capable FieldLayout content. Plain Text and Hosted Vizy fields follow their existing layout order, with later text content used when the earlier field is empty. Hosted Vizy previews use bounded plain text from that field’s rich-text document and do not recursively inspect Blocks inside it.
+
 A field can require a minimum number of blocks, set a maximum, or ask for confirmation before deletion. Configure those rules in [Field Settings](docs:feature-tour/field-settings#block-limits-and-deletion), then test the field with content at either limit.
 
 ## Add Content inside a Block

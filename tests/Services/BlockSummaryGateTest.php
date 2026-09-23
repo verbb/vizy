@@ -11,8 +11,10 @@ use craft\models\FieldLayoutTab;
 use verbb\vizy\document\VizyDocument;
 use verbb\vizy\elements\Block;
 use verbb\vizy\events\RegisterBlockSummaryProvidersEvent;
+use verbb\vizy\fields\VizyField;
 use verbb\vizy\models\BlockSummaryTexts;
 use verbb\vizy\models\BlockType;
+use verbb\vizy\services\BlockSummaryProjection;
 use verbb\vizy\services\BlockSummaries;
 use verbb\vizy\Vizy;
 use yii\base\Event;
@@ -116,6 +118,65 @@ it('falls back to Block Type name and infers the first textual placement', funct
     $summary = Vizy::$plugin->getBlockSummaries()->getSummary($document->blocks()[0]);
     expect($summary->title)->toBe('Inferred title');
     expect($summary->subtitle)->toBeNull();
+});
+
+it('infers Hosted Vizy in FieldLayout order and projects only its direct rich text', function() {
+    $nested = new VizyField([
+        'name' => 'Nested body',
+        'handle' => 'nestedBody' . StringHelper::randomString(5),
+        'editorMode' => VizyField::MODE_RICH_TEXT,
+    ]);
+    $plain = new PlainText([
+        'name' => 'Supporting copy',
+        'handle' => 'supportingCopy' . StringHelper::randomString(5),
+    ]);
+    $nestedPlacement = new CustomField($nested);
+    $nestedPlacement->uid = StringHelper::UUID();
+    $plainPlacement = new CustomField($plain);
+    $plainPlacement->uid = StringHelper::UUID();
+    $layout = new FieldLayout(['uid' => StringHelper::UUID(), 'type' => Block::class]);
+    $layout->setTabs([new FieldLayoutTab([
+        'layout' => $layout,
+        'name' => 'Content',
+        'elements' => [$nestedPlacement, $plainPlacement],
+    ])]);
+    $type = new BlockType([
+        'uid' => StringHelper::UUID(),
+        'name' => 'Rich card',
+        'handle' => 'richCard' . StringHelper::randomString(5),
+    ]);
+    $type->setFieldLayout($layout);
+    $projection = new BlockSummaryProjection();
+    $inference = $projection->inferenceFor($type);
+    $hosted = [
+        'type' => 'doc',
+        'attrs' => ['schemaVersion' => 2],
+        'content' => [
+            ['type' => 'heading', 'attrs' => ['level' => 2], 'content' => [
+                ['type' => 'text', 'text' => 'Nested heading'],
+            ]],
+            ['type' => 'paragraph', 'content' => [
+                ['type' => 'text', 'text' => 'and supporting copy'],
+            ]],
+            ['type' => 'vizyBlock', 'attrs' => [
+                'blockUid' => StringHelper::UUID(),
+                'blockTypeUid' => StringHelper::UUID(),
+                'enabled' => true,
+                'fieldSlots' => [],
+            ], 'content' => [
+                ['type' => 'text', 'text' => 'must not leak from a nested Block'],
+            ]],
+        ],
+    ];
+
+    expect($inference->titleCandidates)->toBe([$nestedPlacement->uid])
+        ->and($inference->subtitleCandidates)->toBe([$plainPlacement->uid])
+        ->and($projection->titleFromSlots($type, [
+            $nestedPlacement->uid => $hosted,
+        ], null, $inference))->toBe('Nested heading and supporting copy')
+        ->and($projection->subtitleFromSlots([
+            $plainPlacement->uid => 'Plain subtitle',
+        ], null, $inference))->toBe('Plain subtitle');
 });
 
 it('returns a safe summary for unresolved Block Types', function() {

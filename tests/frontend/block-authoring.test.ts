@@ -49,4 +49,49 @@ describe('block summary projection', () => {
         expect(summary.title).toBe('Missing Block Type');
         expect(summary.resolved).toBe(false);
     });
+
+    it('automatically projects bounded Hosted Vizy text without descending into its Blocks', () => {
+        const type: BlockTypeManifest = {
+            uid: 'type-hosted',
+            name: 'Rich card',
+            handle: 'richCard',
+            fieldSlotKinds: { 'placement-hosted': 'hosted' },
+            summaryInference: {
+                titlePlacementUids: ['placement-hosted'],
+                subtitlePlacementUids: [],
+                mediaPlacementUids: [],
+            },
+        };
+        const summary = projectBlockSummary({
+            blockUid: 'block-hosted',
+            blockTypeUid: type.uid,
+            enabled: true,
+            fieldSlots: {
+                'placement-hosted': {
+                    type: 'doc',
+                    attrs: { schemaVersion: 2 },
+                    content: [
+                        { type: 'heading', attrs: { level: 2 }, content: [{ type: 'text', text: 'Nested heading' }] },
+                        { type: 'paragraph', content: [{ type: 'text', text: 'and supporting copy' }] },
+                        {
+                            type: 'vizyBlock',
+                            attrs: {
+                                blockUid: 'deeper-block',
+                                blockTypeUid: 'deeper-type',
+                                enabled: true,
+                                fieldSlots: {},
+                            },
+                            content: [{ type: 'text', text: 'must not leak from a nested Block' }],
+                        },
+                    ],
+                },
+            },
+            type,
+            inference: type.summaryInference,
+            revision: 2,
+        });
+
+        expect(summary.title).toBe('Nested heading and supporting copy');
+        expect(summary.title).not.toContain('must not leak');
+    });
 });
