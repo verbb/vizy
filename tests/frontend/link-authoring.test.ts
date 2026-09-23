@@ -9,7 +9,10 @@ import {
     applySemanticLinkToEditor,
     attrsFromUrlDialog,
     getSemanticLinkEditState,
+    normalizeUrlDialogValue,
+    seedInsertLinkDialog,
     unsetSemanticLinkFromEditor,
+    urlDialogValidationError,
 } from '../../src/web/assets/field/src/ts/semantic/link-apply';
 import { urlLinkAttrs } from '../../src/web/assets/field/src/ts/semantic/attrs';
 import { restoreCanonicalFromEditor } from '../../src/web/assets/field/src/ts/transport/opaque';
@@ -69,7 +72,10 @@ function makeEditor(text = 'Hello world'): Editor {
         })),
         content: {
             type: 'doc',
-            content: [{ type: 'paragraph', content: [{ type: 'text', text }] }],
+            content: [{
+                type: 'paragraph',
+                ...(text ? { content: [{ type: 'text', text }] } : {}),
+            }],
         },
     });
     insertion = createInsertionRegistry({
@@ -97,6 +103,22 @@ describe('semantic link apply (dialog path)', () => {
             type: 'tel',
             value: '+123',
         });
+        expect(attrsFromUrlDialog('www.example.com/path', false)).toMatchObject({
+            type: 'url',
+            value: 'https://www.example.com/path',
+        });
+    });
+
+    it('normalizes schemeless www links and rejects unsafe schemes before insertion', () => {
+        expect(normalizeUrlDialogValue('  WWW.Example.com/path  '))
+            .toBe('https://WWW.Example.com/path');
+        expect(urlDialogValidationError('www.example.com')).toBeNull();
+        expect(urlDialogValidationError('https://example.com')).toBeNull();
+        expect(urlDialogValidationError('/relative/path')).toBeNull();
+        expect(urlDialogValidationError('mailto:author@example.com')).toBeNull();
+        expect(urlDialogValidationError('javascript:alert(1)')).not.toBeNull();
+        expect(urlDialogValidationError('data:text/html,unsafe')).not.toBeNull();
+        expect(urlDialogValidationError('ftp://example.com/file')).not.toBeNull();
     });
 
     it('applies a url link mark over the selection without persisting href', () => {
@@ -120,6 +142,23 @@ describe('semantic link apply (dialog path)', () => {
         expect(mark?.type).toBe('link');
         expect(mark?.attrs).not.toHaveProperty('href');
         expect(mark?.attrs).toMatchObject({ type: 'url', value: 'https://example.com' });
+    });
+
+    it('inserts fallback link text into an empty production editor', () => {
+        const editor = makeEditor('');
+        const seed = seedInsertLinkDialog(editor);
+        expect(seed).toMatchObject({ from: 1, to: 1 });
+        applySemanticLinkToEditor(editor, {
+            ...seed,
+            attrs: urlLinkAttrs('https://example.com'),
+            focus: true,
+        });
+
+        expect(editor.getJSON().content?.[0]?.content?.[0]).toMatchObject({
+            type: 'text',
+            text: 'https://example.com',
+            marks: [expect.objectContaining({ type: 'link' })],
+        });
     });
 
     it('applies an entry semantic link from dialog seed', () => {

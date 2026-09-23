@@ -11,6 +11,7 @@
 - Upgrade verification now compares nested content before committing each owner conversion.
 
 ### Fixed
+- Fixed link insertion at an empty caret and schemeless `www.` URLs, added authoring validation for unsafe URL schemes, and added coverage confirming mixed-format links render once in native Vizy output. ([#262](https://github.com/verbb/vizy/issues/262), [#290](https://github.com/verbb/vizy/issues/290))
 - Fixed Craft field and tab conditions inside Vizy Blocks not updating as sibling field values change, including hidden required fields and retained hidden values. ([#64](https://github.com/verbb/vizy/issues/64), [#233](https://github.com/verbb/vizy/issues/233))
 - Fixed GraphQL queries for resolver-backed fields in Vizy Blocks, including Matrix rows containing Assets, and ensured full schema dumps include concrete Vizy node types. ([#214](https://github.com/verbb/vizy/issues/214), [#268](https://github.com/verbb/vizy/issues/268))
 - Fixed legacy or unsupported TipTap nodes blanking the editor or appearing to lose content. Vizy now repairs Vizy 1 `list_item` nodes and visibly preserves other unsupported content without exposing its payload. ([#231](https://github.com/verbb/vizy/issues/231))

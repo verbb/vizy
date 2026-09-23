@@ -1,4 +1,5 @@
 import { getMarkRange, type Editor } from '@tiptap/core';
+import { isAllowedUri } from '@tiptap/extension-link';
 import {
     defaultLinkAttrs,
     normalizeSemanticLinkAttrs,
@@ -49,8 +50,10 @@ export function seedInsertLinkDialog(editor: Editor): LinkDialogSeed {
         url: '',
         text: selectedText(editor),
         openInNewTab: false,
-        from: from !== to ? from : undefined,
-        to: from !== to ? to : undefined,
+        // Keep collapsed selections too. Dialog focus can move the live
+        // selection to a root gap cursor before submit in an empty editor.
+        from,
+        to,
     };
 }
 
@@ -89,11 +92,11 @@ export function applySemanticLinkToEditor(
         return;
     }
 
-    chain().setTextSelection(from).insertContent([{
+    chain().insertContentAt(from, {
         type: 'text',
         text,
         marks: [mark],
-    }]).run();
+    }).run();
 }
 
 export function unsetSemanticLinkFromEditor(editor: Editor, options?: { focus?: boolean }): void {
@@ -102,9 +105,31 @@ export function unsetSemanticLinkFromEditor(editor: Editor, options?: { focus?: 
     chain.extendMarkRange('link').unsetSemanticLink().run();
 }
 
+/** Convert the common schemeless host form into a durable absolute URL. */
+export function normalizeUrlDialogValue(url: string): string {
+    const trimmed = url.trim();
+    return /^www\./i.test(trimmed) ? `https://${trimmed}` : trimmed;
+}
+
+/**
+ * Reject schemes the PHP renderer cannot emit before they enter the document.
+ * Relative URLs remain valid; the server is still authoritative at render time.
+ */
+export function urlDialogValidationError(url: string): string | null {
+    const normalized = normalizeUrlDialogValue(url);
+    if (!normalized) return null;
+
+    const scheme = normalized.match(/^([a-z][a-z\d+.-]*):/i)?.[1]?.toLowerCase();
+    if (scheme && !['http', 'https', 'mailto', 'tel', 'sms'].includes(scheme)) {
+        return 'Enter a safe link URL.';
+    }
+
+    return isAllowedUri(normalized) ? null : 'Enter a safe link URL.';
+}
+
 /** Build attrs from dialog URL submit (plain URL / mailto / tel). */
 export function attrsFromUrlDialog(url: string, openInNewTab: boolean): SemanticLinkAttrs {
-    const trimmed = url.trim();
+    const trimmed = normalizeUrlDialogValue(url);
     if (trimmed.toLowerCase().startsWith('mailto:')) {
         return defaultLinkAttrs({
             type: 'email',

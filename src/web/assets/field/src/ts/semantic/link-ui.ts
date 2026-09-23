@@ -98,6 +98,7 @@ export function openCraftElementLink(
     const prefix = config.linkSelectorStorageKeyPrefix
         || `VizyInput.LinkTo.${config.elementSiteId ?? 'site'}`;
     const host = craftElementSelectorHost();
+    const { from, to } = editor.state.selection;
 
     host.openElementSelector(option.elementType, {
         storageKey: `${prefix}.${option.elementType}`,
@@ -122,6 +123,8 @@ export function openCraftElementLink(
                     url: element.url || '',
                     text,
                     openInNewTab: false,
+                    from,
+                    to,
                     semantic: defaultLinkAttrs({
                         type: linkType,
                         targetUid: uid,
@@ -137,6 +140,8 @@ export function openCraftElementLink(
                 url: buildCraftElementLinkUrl(element, option.refHandle),
                 text,
                 openInNewTab: false,
+                from,
+                to,
             }, options);
         },
     });

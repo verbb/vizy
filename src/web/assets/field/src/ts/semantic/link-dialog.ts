@@ -1,5 +1,5 @@
 import { LitElement, css, html } from 'lit';
-import { customElement, property, query } from 'lit/decorators.js';
+import { customElement, property, query, state } from 'lit/decorators.js';
 import '@verbb/plugin-kit-web/components/button/pk-button.js';
 import '@verbb/plugin-kit-web/components/checkbox/pk-checkbox.js';
 import '@verbb/plugin-kit-web/components/field/pk-field.js';
@@ -10,6 +10,8 @@ import type { LinkDialogSeed } from './link-apply';
 import {
     applySemanticLinkToEditor,
     attrsFromUrlDialog,
+    normalizeUrlDialogValue,
+    urlDialogValidationError,
 } from './link-apply';
 import type { Editor } from '@tiptap/core';
 import type { SemanticLinkAttrs } from './attrs';
@@ -24,7 +26,7 @@ type PkDialogEl = HTMLElement & {
     updateComplete?: Promise<unknown>;
 };
 
-type PkInputEl = HTMLElement & { value: string };
+type PkInputEl = HTMLElement & { value: string; invalid: boolean; focus: () => void };
 type PkCheckboxEl = HTMLElement & { checked: boolean };
 type PkButtonEl = HTMLElement & { disabled: boolean };
 
@@ -45,6 +47,7 @@ export function setEditorLinkSettings(editor: Editor, settings?: readonly string
 export class VizyLinkDialogElement extends LitElement {
     @property() accessor dialogTitle = 'Insert Link';
     @property() accessor submitLabel = 'Insert';
+    @state() accessor urlError: string | null = null;
 
     #editor: Editor | null = null;
     #seed: LinkDialogSeed = { url: '', text: '', openInNewTab: false };
@@ -109,7 +112,13 @@ export class VizyLinkDialogElement extends LitElement {
                 @keydown=${this.#onKeyDown}
             >
                 <div class="link-dialog__fields">
-                    <pk-field label="URL" required .for=${this.#urlInputId}>
+                    <pk-field
+                        class="link-dialog__url-field"
+                        label="URL"
+                        required
+                        .for=${this.#urlInputId}
+                        .errors=${this.urlError ? [this.urlError] : []}
+                    >
                         <pk-input
                             id=${this.#urlInputId}
                             class="link-dialog__url-input"
@@ -163,12 +172,18 @@ export class VizyLinkDialogElement extends LitElement {
         if (this.newTabCheckbox) this.newTabCheckbox.checked = Boolean(this.#seed.openInNewTab);
         if (this.titleInput) this.titleInput.value = this.#seed.semantic?.title ?? '';
         if (this.classesInput) this.classesInput.value = this.#seed.semantic?.class ?? '';
+        this.urlError = null;
+        if (this.urlInput) this.urlInput.invalid = false;
         this.#updateSubmitState();
     }
 
     #updateSubmitState(): void {
         // Element picks may leave a display-only URL; semantic payload is enough to submit.
-        const canSubmit = Boolean(this.urlInput?.value.trim() || (!this.#urlChanged && this.#seed.semantic));
+        const semanticReady = Boolean(!this.#urlChanged && this.#seed.semantic);
+        const url = this.urlInput?.value.trim() ?? '';
+        this.urlError = semanticReady || !url ? null : urlDialogValidationError(url);
+        if (this.urlInput) this.urlInput.invalid = this.urlError !== null;
+        const canSubmit = semanticReady || Boolean(url && !this.urlError);
         if (this.submitButton) this.submitButton.disabled = !canSubmit;
     }
 
@@ -195,8 +210,18 @@ export class VizyLinkDialogElement extends LitElement {
 
     #onSubmit = (): void => {
         const editor = this.#editor;
-        const url = this.urlInput?.value.trim() ?? '';
+        let url = this.urlInput?.value.trim() ?? '';
         if (!editor || (!url && (this.#urlChanged || !this.#seed.semantic))) return;
+        if (this.#urlChanged || !this.#seed.semantic) {
+            this.urlError = urlDialogValidationError(url);
+            if (this.urlInput) this.urlInput.invalid = this.urlError !== null;
+            if (this.urlError) {
+                this.urlInput?.focus();
+                return;
+            }
+            url = normalizeUrlDialogValue(url);
+            if (this.urlInput) this.urlInput.value = url;
+        }
 
         const openInNewTab = this.newTabCheckbox?.checked ?? this.#seed.openInNewTab;
         const text = this.textInput?.value ?? this.#seed.text;

@@ -259,6 +259,63 @@ test('applies each editor’s Enabled Link Settings and preserves hidden attribu
     expect(retained).toMatchObject({ type: 'entry', siteMode: 'fixed', siteUid: '22222222-2222-4222-8222-222222222222', title: 'Retained', newWindow: true });
 });
 
+test('normalizes www links, supplies empty-selection text and blocks unsafe URLs', async ({ page }) => {
+    const linkManifest = {
+        ...editorManifest,
+        enabledMarks: [...editorManifest.enabledMarks, 'link'],
+        modules: [...editorManifest.modules, 'vizy/core/mark/link'],
+    };
+    await mount(page, {
+        type: 'doc',
+        attrs: { schemaVersion: 2 },
+        content: [{ type: 'paragraph' }],
+    }, { manifest: linkManifest });
+    await page.evaluate(async () => {
+        const editor = (document.querySelector('vizy-editor') as any).editor;
+        editor.commands.setTextSelection(1);
+        editor.commands.focus();
+        const dialog = document.createElement('vizy-link-dialog') as any;
+        document.body.append(dialog);
+        await dialog.openForEditor(editor, {
+            url: '', text: '', openInNewTab: false,
+            from: editor.state.selection.from,
+            to: editor.state.selection.to,
+        });
+    });
+
+    const dialog = page.locator('vizy-link-dialog');
+    const url = dialog.locator('.link-dialog__url-input input');
+    const submit = dialog.locator('.link-dialog__submit');
+    await url.fill('javascript:alert(1)');
+    await expect(submit).toHaveAttribute('disabled', '');
+    await expect(dialog.locator('.link-dialog__url-field')).toContainText('Enter a safe link URL.');
+
+    await url.fill('www.example.com/path');
+    await expect(submit).not.toHaveAttribute('disabled', '');
+    await submit.click();
+    await expect(dialog.getByRole('dialog')).not.toBeVisible();
+
+    const state = await page.evaluate(() => {
+        const editor = (document.querySelector('vizy-editor') as any).editor;
+        return { text: editor.getText(), attrs: editor.getAttributes('link'), document: editor.getJSON() };
+    });
+    expect(state).toMatchObject({
+        text: 'https://www.example.com/path',
+        document: {
+            content: [{
+                content: [{
+                    type: 'text',
+                    text: 'https://www.example.com/path',
+                    marks: [expect.objectContaining({
+                        type: 'link',
+                        attrs: expect.objectContaining({ type: 'url', value: 'https://www.example.com/path' }),
+                    })],
+                }],
+            }],
+        },
+    });
+});
+
 test('applies Enabled Link Settings Site to semantic and fallback element links', async ({ page }) => {
     const sites = [
         { id: 1, uid: '11111111-1111-4111-8111-111111111111', name: 'Site A' },
