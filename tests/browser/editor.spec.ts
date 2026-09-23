@@ -188,6 +188,43 @@ async function mount(
     await expect(page.locator('.ProseMirror')).toBeVisible();
 }
 
+test('preserves embedded CKEditor markup through canonical JSON instead of legacy HTML mutation', async ({ page }) => {
+    const ckeditor = '<p><strong>Bold text</strong> and <em>italic text</em>.</p>';
+    await mount(page, {
+        type: 'doc',
+        attrs: { schemaVersion: 2 },
+        content: [leafBlock('ckeditor-block', { 'placement-ckeditor': ckeditor })],
+    });
+
+    const result = await page.evaluate(() => {
+        const editor = (document.querySelector('vizy-editor') as any).editor;
+        const original = editor.getJSON();
+        const html = editor.getHTML();
+
+        editor.commands.setContent(original);
+        const jsonRoundTrip = editor.getJSON();
+
+        // Block fieldSlots are intentionally JSON-only; HTML cannot carry an
+        // opaque Craft field payload back through TipTap's parser.
+        editor.commands.setContent(html);
+        const htmlRoundTrip = editor.getJSON();
+
+        return {
+            legacyConfigPresent: Object.prototype.hasOwnProperty.call((window as any).Craft.Vizy, 'Config'),
+            original,
+            jsonRoundTrip,
+            html,
+            htmlRoundTrip,
+        };
+    });
+
+    expect(result.legacyConfigPresent).toBe(false);
+    expect(result.jsonRoundTrip).toEqual(result.original);
+    expect(result.original.content[0].attrs.fieldSlots['placement-ckeditor']).toBe(ckeditor);
+    expect(result.html).not.toContain('Bold text');
+    expect(result.htmlRoundTrip.content ?? []).not.toContainEqual(expect.objectContaining({ type: 'vizyBlock' }));
+});
+
 test('applies each editor’s Enabled Link Settings and preserves hidden attributes', async ({ page }) => {
     const linkManifest = {
         ...editorManifest,

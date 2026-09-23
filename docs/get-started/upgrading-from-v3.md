@@ -190,6 +190,22 @@ if (window.Craft?.Vizy?.registerModule) {
 
 The `acme/mark/abbr` module ID must match the PHP extension's `moduleId()`. There is deliberately no `registerButtons()` replacement in the Vizy 4 example: the standard abbreviation control is enabled and positioned through the Editor Config below. Use `Craft.Vizy.registerControl()` only when the control needs a custom action such as a dialog or multi-step flow. The PHP registration is covered under [Registering Nodes and Marks](#registering-nodes-and-marks); see [Extending Vizy](docs:developers/extending-vizy) for the complete extension contract.
 
+#### Replacing Whole-Document HTML Round-Trips
+
+Some Vizy 3 integrations received `vizyInput` from `Craft.Vizy.Config.registerExtensions()`, read the complete editor with `getHTML()`, and passed that HTML back to `setContent()`. Do not port this pattern. A Vizy Block is a structured JSON node whose `fieldSlots` hold its Craft field values. HTML serialization does not carry CKEditor markup, relations, Matrix rows, nested Vizy documents, or other values from those slots, so feeding the HTML back to the editor can remove the Blocks and make their content appear lost.
+
+When an integration needs an exact in-memory copy of the complete document, keep it as JSON:
+
+```js
+const document = structuredClone(editor.getJSON());
+
+editor.commands.setContent(document);
+```
+
+Use the `editor` supplied to `Craft.Vizy.registerControl()` for a focused command, or define a TipTap command in a module registered with `Craft.Vizy.registerModule()`. These schema-aware paths change the intended nodes or marks without flattening Block field data into HTML. Treat `fieldSlots` as Vizy-owned content rather than a public field-editing API.
+
+After migrating an integration, test it with a Block that contains a CKEditor field: apply formatting inside that field, run the custom action, save the owner, and reopen it. The Block and its CKEditor formatting should both remain present.
+
 #### Enabling Extensions in Editor Configs
 
 Vizy 3 enabled an entire JavaScript plugin by handle. Vizy 4 enables each PHP-registered node, mark, or behaviour extension explicitly, while `toolbar` controls where an author can use it.
