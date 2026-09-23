@@ -5,6 +5,7 @@ require __DIR__ . '/verify.php';
 use craft\elements\Entry;
 use craft\elements\User;
 use craft\fieldlayoutelements\CustomField;
+use craft\fieldlayoutelements\Tip;
 use craft\fields\Entries;
 use craft\fields\Json as JsonField;
 use craft\fields\Lightswitch;
@@ -38,6 +39,11 @@ $uploads = AssetSpikeFixture::assetsField('browser-uploads');
 $uploads->name = 'Uploaded files';
 $save($uploads, Craft::$app->getFields()->saveField(...));
 $layout = new FieldLayout(['uid' => StringHelper::UUID(), 'type' => Block::class]);
+$dismissibleTip = new Tip([
+    'uid' => StringHelper::UUID(),
+    'tip' => 'Browser dismissible block tip',
+    'dismissible' => true,
+]);
 $placements = [];
 foreach ([$plain, $related, $nested, $uploads, $json, $jsonText, $showDetails, $details] as $field) {
     $placement = new CustomField($field);
@@ -46,7 +52,7 @@ foreach ([$plain, $related, $nested, $uploads, $json, $jsonText, $showDetails, $
 }
 $placements[0]->required = true;
 $tab = new FieldLayoutTab(['name' => 'Content', 'layout' => $layout]);
-$tab->setElements($placements);
+$tab->setElements([$dismissibleTip, ...$placements]);
 $layout->setTabs([$tab]);
 $condition = Block::createCondition();
 $condition->setFieldLayouts([$layout]);
@@ -171,6 +177,7 @@ $metadata = [
     'editPath' => '/index.php?p=admin/entries/' . $section->handle . '/' . $owner->id,
     'fieldHandle' => $rootField->handle, 'fieldUid' => $rootField->uid,
     'blockUid' => $doc['content'][1]['attrs']['blockUid'],
+    'dismissibleTip' => ['uid' => $dismissibleTip->uid, 'text' => $dismissibleTip->tip],
     'headingPlacement' => $placements[0]->uid, 'relatedPlacement' => $placements[1]->uid,
     'uploadPlacement' => $placements[3]->uid, 'uploadVolumeId' => AssetSpikeFixture::volume()->id,
     'nestedPlacement' => $placements[2]->uid, 'relatedId' => $relatedEntry->id,

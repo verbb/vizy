@@ -107,6 +107,34 @@ test('real Craft fields flush root, hosted text and a required block field throu
     await expect(hosted).toContainText('Nested after');
 });
 
+test('a dismissible Craft Tip inside a Block dismisses and stays dismissed after save and reopen', async ({ page }) => {
+    const pageErrors: string[] = [];
+    const failedActionResponses: string[] = [];
+    page.on('pageerror', (error) => pageErrors.push(error.message));
+    page.on('response', (response) => {
+        if (response.status() >= 400 && response.url().includes('action=')) {
+            failedActionResponses.push(`${response.status()} ${response.url()}`);
+        }
+    });
+
+    await login(page, 'editor');
+    await openOwner(page);
+    const block = page.locator(`vizy-block[data-block-uid="${fixture.blockUid}"]`);
+    const tip = block.locator(`[data-vizy-tip-uid="${fixture.dismissibleTip.uid}"]`);
+    await expect(tip).toContainText(fixture.dismissibleTip.text);
+    await tip.getByRole('button', { name: 'Dismiss', exact: true }).click();
+    await expect(tip).toHaveCount(0);
+    await expect.poll(() => page.evaluate((uid) => (
+        (window as any).Craft.getLocalStorage('dismissedTips', []).includes(uid)
+    ), fixture.dismissibleTip.uid)).toBe(true);
+
+    await saveCurrentOwner(page);
+    await openOwner(page);
+    await expect(tip).toHaveCount(0);
+    expect(pageErrors).toEqual([]);
+    expect(failedActionResponses).toEqual([]);
+});
+
 test('Craft-native Block conditions reveal, hide, preserve and reopen sibling field values', async ({ page }) => {
     await login(page, 'editor');
     await openConditionOwner(page);
