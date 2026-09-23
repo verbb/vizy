@@ -163,22 +163,27 @@ test('Craft-native Block conditions reveal, hide, preserve and reopen sibling fi
     await expect(details).toHaveCount(0);
 });
 
-test('JSON fields and JSON-looking Plain Text load, save, reopen and autosave independently', async ({ page }) => {
+test('root and Block JSON fields load beside Vizy, save, reopen and autosave independently', async ({ page }) => {
     await login(page, 'editor');
     const pageErrors: string[] = [];
     page.on('pageerror', (error) => pageErrors.push(error.message));
     await openJsonOwner(page);
     expect(pageErrors.filter((message) => /defineSimpleMode|CodeMirror/i.test(message))).toEqual([]);
+    await expect(page.locator('vizy-editor').first().locator('.ProseMirror').first()).toBeVisible();
 
     const block = page.locator(`vizy-block[data-block-uid="${fixture.json.blockUid}"]`);
     const json = block.locator(`textarea[name$="[${fixture.json.fieldHandle}]"]`);
+    const rootJson = page.locator(`textarea[name="fields[${fixture.json.rootFieldHandle}]"]`);
     const jsonText = block.locator(`textarea[name$="[${fixture.json.textHandle}]"]`);
     expect(JSON.parse(await json.inputValue())).toEqual(fixture.json.value);
+    expect(JSON.parse(await rootJson.inputValue())).toEqual(fixture.json.rootValue);
     await expect(jsonText).toHaveValue(fixture.json.textValue);
 
     const savedJson = { enabled: false, count: 3, nested: { colors: ['green'], literal: '{"still":"data"}' } };
+    const savedRootJson = { scope: 'entry', enabled: false, items: [{ id: 1 }, { id: 2 }] };
     const savedText = '[{"kept":"as text"},{"count":3}]';
     await setJsonValue(json, savedJson);
+    await setJsonValue(rootJson, savedRootJson);
     await jsonText.fill(savedText);
     await Promise.all([
         page.waitForEvent('framenavigated', { predicate: (frame) => frame === page.mainFrame() }),
@@ -188,24 +193,33 @@ test('JSON fields and JSON-looking Plain Text load, save, reopen and autosave in
     const canonicalSlots = () => persisted().jsonOwner.document.content
         .find((node: any) => node.attrs?.blockUid === fixture.json.blockUid).attrs.fieldSlots;
     await expect.poll(() => canonicalSlots()[fixture.json.placement]).toEqual(savedJson);
+    expect(persisted().jsonOwner.rootJson).toEqual(savedRootJson);
     expect(canonicalSlots()[fixture.json.textPlacement]).toBe(savedText);
 
     await openJsonOwner(page);
     expect(JSON.parse(await json.inputValue())).toEqual(savedJson);
+    expect(JSON.parse(await rootJson.inputValue())).toEqual(savedRootJson);
     await expect(jsonText).toHaveValue(savedText);
     const canonical = persisted().jsonOwner.document;
     const draftJson = { draft: true, items: [{ id: 1 }, { id: 2 }] };
+    const draftRootJson = { scope: 'draft', settings: { enabled: true } };
     const draftText = '{"draft":true,"still":"plain text"}';
     await setJsonValue(json, draftJson);
+    await setJsonValue(rootJson, draftRootJson);
     await jsonText.fill(draftText);
     const draftId = await checkAutosave(page);
     expect(draftId).toBeGreaterThan(0);
     const draftSlots = () => persisted().jsonOwner.drafts
         .find((draft: any) => draft.draftId === draftId)?.document.content
         .find((node: any) => node.attrs?.blockUid === fixture.json.blockUid)?.attrs.fieldSlots;
+    const draftRoot = () => persisted().jsonOwner.drafts
+        .find((draft: any) => draft.draftId === draftId)?.rootJson;
     await expect.poll(() => draftSlots()?.[fixture.json.placement]).toEqual(draftJson);
+    expect(draftRoot()).toEqual(draftRootJson);
     expect(draftSlots()[fixture.json.textPlacement]).toBe(draftText);
     expect(persisted().jsonOwner.document).toEqual(canonical);
+    expect(persisted().jsonOwner.rootJson).toEqual(savedRootJson);
+    expect(pageErrors).toEqual([]);
 });
 
 test('real HTTP middleware refuses a CP action without CSRF', async ({ page }) => {

@@ -7,6 +7,8 @@ $jsonEntry = craft\elements\Entry::find()->id($metadata['json']['entryId'])->sta
 if (!$jsonEntry) throw new RuntimeException('JSON browser fixture owner not found');
 $document = $entry->getFieldValue($metadata['fieldHandle']);
 $jsonDocument = $jsonEntry->getFieldValue($metadata['fieldHandle']);
+$rootJsonField = Craft::$app->getFields()->getFieldByHandle($metadata['json']['rootFieldHandle']);
+if (!$rootJsonField) throw new RuntimeException('Root JSON browser fixture field not found');
 $matrix = $metadata['matrix'];
 $block = $document->findBlock($matrix['blockUid']);
 $rows = $document->blockElement($block)->getFieldValue($matrix['fieldHandle'])->all();
@@ -18,10 +20,18 @@ file_put_contents(dirname(__DIR__, 2) . '/.cache/verbb-tests/browser-state.json'
     ], craft\elements\Entry::find()->drafts()->provisionalDrafts(null)->draftOf($entry->id)->status(null)->all()),
     'jsonOwner' => [
         'document' => $jsonDocument->toArray(),
+        'rootJson' => $rootJsonField->serializeValue(
+            $jsonEntry->getFieldValue($metadata['json']['rootFieldHandle']),
+            $jsonEntry,
+        ),
         'drafts' => array_map(fn($draft) => [
             'id' => $draft->id,
             'draftId' => $draft->draftId,
             'document' => $draft->getFieldValue($metadata['fieldHandle'])->toArray(),
+            'rootJson' => $rootJsonField->serializeValue(
+                $draft->getFieldValue($metadata['json']['rootFieldHandle']),
+                $draft,
+            ),
         ], craft\elements\Entry::find()->drafts()->provisionalDrafts(null)->draftOf($jsonEntry->id)->status(null)->all()),
     ],
     'uploads' => array_map(static function($asset) {

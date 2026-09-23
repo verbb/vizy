@@ -29,10 +29,11 @@ $plain = new PlainText(['name' => 'Card heading', 'handle' => 'cardHeading']);
 $related = new Entries(['name' => 'Related pages', 'handle' => 'relatedPages']);
 $nested = new VizyField(['name' => 'Nested body', 'handle' => 'nestedBody', 'editorConfig' => 'standard']);
 $json = new JsonField(['name' => 'Structured JSON', 'handle' => 'structuredJson']);
+$rootJson = new JsonField(['name' => 'Entry JSON', 'handle' => 'entryJson']);
 $jsonText = new PlainText(['name' => 'JSON-looking text', 'handle' => 'jsonLookingText', 'multiline' => true]);
 $showDetails = new Lightswitch(['name' => 'Show details', 'handle' => 'showDetails']);
 $details = new PlainText(['name' => 'Conditional details', 'handle' => 'conditionalDetails']);
-foreach ([$plain, $related, $nested, $json, $jsonText, $showDetails, $details] as $field) {
+foreach ([$plain, $related, $nested, $json, $rootJson, $jsonText, $showDetails, $details] as $field) {
     $save($field, Craft::$app->getFields()->saveField(...));
 }
 $uploads = AssetSpikeFixture::assetsField('browser-uploads');
@@ -72,6 +73,15 @@ $save($rootField, Craft::$app->getFields()->saveField(...));
 $section = VizyFixtureFactory::section();
 $section->enableVersioning = true;
 $save($section, Craft::$app->getEntries()->saveSection(...));
+$entryType = $section->getEntryTypes()[0];
+$entryLayout = $entryType->getFieldLayout();
+$entryTabs = $entryLayout->getTabs();
+$rootJsonPlacement = new CustomField($rootJson);
+$rootJsonPlacement->uid = StringHelper::UUID();
+$entryTabs[0]->setElements([...$entryTabs[0]->getElements(), $rootJsonPlacement]);
+$entryLayout->setTabs($entryTabs);
+$entryType->setFieldLayout($entryLayout);
+$save($entryType, Craft::$app->getEntries()->saveEntryType(...));
 $relatedEntry = VizyFixtureFactory::entry('Related target');
 $doc = json_decode(VizyFixtureFactory::paragraphDocument('Root before'), true);
 $doc['content'][] = ['type' => 'vizyBlock', 'attrs' => [
@@ -94,6 +104,7 @@ $conditionDocument['content'][1]['attrs']['fieldSlots'][$placements[6]->uid] = f
 $conditionOwner = VizyFixtureFactory::entry('Condition browser owner', json_encode($conditionDocument));
 $jsonBlockUid = StringHelper::UUID();
 $jsonValue = ['enabled' => true, 'count' => 2, 'nested' => ['colors' => ['red', 'blue']]];
+$rootJsonValue = ['scope' => 'entry', 'enabled' => true, 'nested' => ['colors' => ['amber', 'violet']]];
 $jsonTextValue = '{"nested":{"count":2},"list":["red","blue"],"enabled":true}';
 $jsonDocument = ['type' => 'doc', 'attrs' => ['schemaVersion' => 2], 'content' => [[
     'type' => 'vizyBlock',
@@ -109,6 +120,7 @@ $jsonDocument = ['type' => 'doc', 'attrs' => ['schemaVersion' => 2], 'content' =
     ],
 ]]];
 $jsonOwner = VizyFixtureFactory::entry('JSON browser owner', json_encode($jsonDocument));
+$jsonOwner->setFieldValue($rootJson->handle, $rootJsonValue);
 Craft::$app->getUserPermissions()->saveUserPermissions($actor->id, [
     'accessCp', "viewEntries:$section->uid", "saveEntries:$section->uid", "viewPeerEntries:$section->uid",
 ]);
@@ -199,6 +211,8 @@ $metadata = [
         'placement' => $placements[4]->uid,
         'textPlacement' => $placements[5]->uid,
         'value' => $jsonValue,
+        'rootFieldHandle' => $rootJson->handle,
+        'rootValue' => $rootJsonValue,
         'textValue' => $jsonTextValue,
     ],
     'siteId' => $owner->siteId, 'sectionUid' => $section->uid,
