@@ -125,6 +125,7 @@ export class VizyEditorElement extends HTMLElement {
     #finalizationDeferredReason: string | null = null;
     #finalizationVersion = 0;
     #uploadNotice: HTMLDivElement | null = null;
+    #unsupportedNotice: HTMLDivElement | null = null;
     #retryingUploads = false;
     #showUploadSuccess = false;
     #generation = 0;
@@ -317,6 +318,7 @@ export class VizyEditorElement extends HTMLElement {
     #teardown(): void {
         this.#finalizationVersion++;
         this.#uploadNotice = null;
+        this.#unsupportedNotice = null;
         this.#retryingUploads = false;
         for (const dispose of this.#disposals.splice(0)) dispose();
         this.#hosts.destroy();
@@ -587,7 +589,21 @@ export class VizyEditorElement extends HTMLElement {
         this.#uploadNotice.dataset.vizyUploadStatus = '';
         this.#uploadNotice.setAttribute('role', 'status');
         this.#uploadNotice.tabIndex = -1;
-        shell.append(this.#uploadNotice, this.#mount);
+        this.#unsupportedNotice = document.createElement('div');
+        this.#unsupportedNotice.className = 'vizy-unsupported-status';
+        this.#unsupportedNotice.dataset.vizyUnsupportedStatus = '';
+        this.#unsupportedNotice.setAttribute('role', 'status');
+        this.#unsupportedNotice.hidden = true;
+        const unsupportedTitle = document.createElement('strong');
+        unsupportedTitle.textContent = window.Craft?.t?.('vizy', 'Some content can’t be edited here.')
+            ?? 'Some content can’t be edited here.';
+        const unsupportedBody = document.createElement('span');
+        unsupportedBody.textContent = window.Craft?.t?.(
+            'vizy',
+            'Vizy has preserved it and will keep it unchanged when you save.',
+        ) ?? 'Vizy has preserved it and will keep it unchanged when you save.';
+        this.#unsupportedNotice.append(unsupportedTitle, unsupportedBody);
+        shell.append(this.#uploadNotice, this.#unsupportedNotice, this.#mount);
         this.prepend(shell);
         this.#acceptFinalization(this.#bootstrap.finalization ?? { finalizationStatus: 'complete' });
         let editor!: Editor;
@@ -672,6 +688,7 @@ export class VizyEditorElement extends HTMLElement {
                 }
                 this.#updateBlockRevisions(transaction.before, transaction.doc);
                 this.#reconcileLiveUids();
+                this.#syncUnsupportedNotice();
             },
         });
         this.#editor = editor;
@@ -815,6 +832,7 @@ export class VizyEditorElement extends HTMLElement {
         // Preview URLs are session-only — hydrate before NodeViews paint.
         hydrateImagePreviews(this.#bootstrap.imagePreviews);
         this.#setAcceptedCanonical(this.#adaptForEditor(this.#bootstrap.document, manifest));
+        this.#syncUnsupportedNotice();
         this.#adoptInitialFieldLayouts();
         // Compare like with like: the baseline is the projection of what was just
         // loaded, not the raw bootstrap. Content Area materialization can legitimately
@@ -1223,6 +1241,18 @@ export class VizyEditorElement extends HTMLElement {
             .setMeta('vizyAcceptedCanonical', true)
             .setMeta('addToHistory', false);
         if (transaction.docChanged) this.#editor.view.dispatch(transaction);
+    }
+
+    /** Tell authors that opaque nodes are safe without exposing their raw payload. */
+    #syncUnsupportedNotice(): void {
+        if (!this.#unsupportedNotice || !this.#editor) return;
+        let unsupported = false;
+        this.#editor.state.doc.descendants((node) => {
+            if (node.type.name !== 'unsupportedNode' && node.type.name !== 'unsupportedInlineNode') return;
+            unsupported = true;
+            return false;
+        });
+        this.#unsupportedNotice.hidden = !unsupported;
     }
 
     #updateBlockRevisions(

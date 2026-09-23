@@ -70,6 +70,28 @@ describe('opaque canonical transport', () => {
         expect(restoreCanonicalFromEditor(adapted)).toEqual(input);
     });
 
+    it('quarantines the #231 list_item subtree when server repair is bypassed', () => {
+        const input: CanonicalNode = {
+            type: 'doc',
+            content: [{
+                type: 'bulletList',
+                content: [{
+                    type: 'list_item',
+                    content: [{ type: 'paragraph', content: [{ type: 'text', text: 'Legacy item' }] }],
+                }],
+            }],
+        };
+        const adapted = adaptCanonicalForEditor(input, schema(), {
+            nodes: ['doc', 'bulletList', 'listItem', 'paragraph', 'text'],
+            marks: [],
+        });
+
+        // A bulletList cannot contain the block fallback, so the safe boundary
+        // expands to the list and the rest of the editor remains usable.
+        expect(adapted.content?.[0].type).toBe('unsupportedNode');
+        expect(restoreCanonicalFromEditor(adapted)).toEqual(input);
+    });
+
     it('makes an unknown mark leaf opaque', () => {
         const input: CanonicalNode = {
             type: 'doc',

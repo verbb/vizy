@@ -310,6 +310,9 @@ export function validateOpaqueSlice(input: unknown, overrides: Partial<Limits> =
 }
 
 function transportNode(name: string, inline: boolean) {
+    const label = inline
+        ? 'Unsupported formatting — preserved but not editable'
+        : 'Unsupported content — preserved but not editable';
     return Node.create({
         name, inline, group: inline ? 'inline' : 'block', atom: true, selectable: true, draggable: !inline,
         addAttributes: () => ({
@@ -322,8 +325,8 @@ function transportNode(name: string, inline: boolean) {
         renderHTML: () => [inline ? 'span' : 'div', {
             class: inline ? 'vizy-unsupported-inline' : 'vizy-unsupported-block',
             contenteditable: 'false',
-            'aria-label': inline ? 'Unsupported formatting' : 'Unsupported content',
-        }, inline ? 'Unsupported formatting' : 'Unsupported content'],
+            'aria-label': label,
+        }, label],
     });
 }
 

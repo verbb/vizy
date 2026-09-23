@@ -137,11 +137,11 @@ it('accepts a cleared editor payload that omitted empty content', function() {
         ->and($document->content()->nodes())->toBe([]);
 });
 
-it('sanitizes Vizy 3 listItem quirks on convert and on canonical upgrade', function() {
+it('repairs issue #231 list_item nodes and Vizy 3 listItem quirks on every read path', function() {
     $legacy = [[
         'type' => 'bulletList',
         'content' => [[
-            'type' => 'listItem',
+            'type' => 'list_item',
             'content' => [['type' => 'text', 'text' => 'Bullet item']],
             'text' => '',
         ]],
@@ -150,7 +150,8 @@ it('sanitizes Vizy 3 listItem quirks on convert and on canonical upgrade', funct
     $canonical = (new Vizy3DocumentAdapter())->convert($legacy, []);
     $item = $canonical['content'][0]['content'][0];
 
-    expect($item)->not->toHaveKey('text')
+    expect($item['type'])->toBe('listItem')
+        ->and($item)->not->toHaveKey('text')
         ->and($item['content'][0]['type'])->toBe('paragraph')
         ->and($item['content'][0]['content'][0]['text'])->toBe('Bullet item');
 
@@ -163,11 +164,18 @@ it('sanitizes Vizy 3 listItem quirks on convert and on canonical upgrade', funct
     $healed = (new DocumentUpgrader())->upgrade($promoted);
     $healedItem = $healed['content'][0]['content'][0];
 
-    expect($healedItem)->not->toHaveKey('text')
+    expect($healedItem['type'])->toBe('listItem')
+        ->and($healedItem)->not->toHaveKey('text')
         ->and($healedItem['content'][0]['type'])->toBe('paragraph');
 
     $document = (new DocumentParser())->parse($promoted);
-    expect($document->toArray()['content'][0]['content'][0])->not->toHaveKey('text');
+    expect($document->toArray()['content'][0]['content'][0]['type'])->toBe('listItem')
+        ->and($document->toArray()['content'][0]['content'][0])->not->toHaveKey('text');
+
+    // The spelling is only legacy in TipTap list grammar. A third-party Vizy 4
+    // extension may legitimately own the same name elsewhere.
+    $custom = (new DocumentUpgrader())->upgrade(canonicalDocument([['type' => 'list_item']]));
+    expect($custom['content'][0]['type'])->toBe('list_item');
 });
 
 it('converts strict Vizy 3 blocks only with complete explicit mappings', function() {

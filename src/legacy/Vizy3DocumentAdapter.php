@@ -8,6 +8,10 @@ use verbb\vizy\document\VizyDocument;
  */
 final class Vizy3DocumentAdapter
 {
+    private const LEGACY_NODE_TYPES = [
+        'list_item' => 'listItem',
+    ];
+
     // Public Methods
     // =========================================================================
 
@@ -20,7 +24,7 @@ final class Vizy3DocumentAdapter
         $seenBlockUids = [];
         $content = [];
         foreach ($legacyNodes as $index => $node) {
-            $content[] = $this->_convertNode($node, $schemaMap, $seenBlockUids, "content.{$index}");
+            $content[] = $this->_convertNode($node, $schemaMap, $seenBlockUids, "content.{$index}", null);
         }
 
         return [
@@ -34,10 +38,23 @@ final class Vizy3DocumentAdapter
     // Private Methods
     // =========================================================================
 
-    private function _convertNode(mixed $node, array $schemaMap, array &$seenBlockUids, string $path): array
+    private function _convertNode(
+        mixed $node,
+        array $schemaMap,
+        array &$seenBlockUids,
+        string $path,
+        ?string $parentType,
+    ): array
     {
         if (!is_array($node) || !is_string($node['type'] ?? null) || $node['type'] === '') {
             throw new LegacyDocumentConversionException("Malformed legacy node at {$path}.");
+        }
+
+        if (
+            in_array($parentType, ['bulletList', 'orderedList'], true)
+            && isset(self::LEGACY_NODE_TYPES[$node['type']])
+        ) {
+            $node['type'] = self::LEGACY_NODE_TYPES[$node['type']];
         }
 
         if ($node['type'] === 'vizyBlock') {
@@ -49,7 +66,13 @@ final class Vizy3DocumentAdapter
                 throw new LegacyDocumentConversionException("Malformed legacy child content at {$path}.");
             }
             foreach ($node['content'] as $index => $child) {
-                $node['content'][$index] = $this->_convertNode($child, $schemaMap, $seenBlockUids, "{$path}.content.{$index}");
+                $node['content'][$index] = $this->_convertNode(
+                    $child,
+                    $schemaMap,
+                    $seenBlockUids,
+                    "{$path}.content.{$index}",
+                    $node['type'],
+                );
             }
         }
 

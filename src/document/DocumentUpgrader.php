@@ -8,6 +8,13 @@ namespace verbb\vizy\document;
  */
 final class DocumentUpgrader
 {
+    // Vizy 1 persisted TipTap's snake-case ListItem name. TipTap 2+ calls the
+    // same node listItem and refuses to construct the whole document when the
+    // old spelling reaches its schema.
+    private const LEGACY_NODE_TYPES = [
+        'list_item' => 'listItem',
+    ];
+
     // Public Methods
     // =========================================================================
 
@@ -59,11 +66,20 @@ final class DocumentUpgrader
     // Private Methods
     // =========================================================================
 
-    private function _sanitizeContent(array $nodes): array
+    private function _sanitizeContent(array $nodes, ?string $parentType = null): array
     {
         foreach ($nodes as $index => $node) {
             if (!is_array($node)) {
                 continue;
+            }
+
+            $type = $node['type'] ?? null;
+            if (
+                is_string($type)
+                && in_array($parentType, ['bulletList', 'orderedList'], true)
+                && isset(self::LEGACY_NODE_TYPES[$type])
+            ) {
+                $node['type'] = self::LEGACY_NODE_TYPES[$type];
             }
 
             if (($node['type'] ?? null) !== 'text' && array_key_exists('text', $node)) {
@@ -91,7 +107,8 @@ final class DocumentUpgrader
             if (($node['type'] ?? null) === 'vizyBlock') {
                 unset($node['content']);
             } elseif (isset($node['content']) && is_array($node['content']) && array_is_list($node['content'])) {
-                $node['content'] = $this->_sanitizeContent($node['content']);
+                $childParentType = is_string($node['type'] ?? null) ? $node['type'] : null;
+                $node['content'] = $this->_sanitizeContent($node['content'], $childParentType);
             }
 
             $nodes[$index] = $node;

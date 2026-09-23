@@ -602,17 +602,33 @@ test('large documents batch-mount every FieldLayout when bootstrap is empty', as
     expect(await page.evaluate(() => (window as any).__layoutRequests)).toBe(20);
 });
 
-test('renders unsupported content as payload-free fixed UI', async ({ page }) => {
-    await mount(page, {
+test('preserves unsupported content while other editor content remains editable', async ({ page }) => {
+    const original = {
         type: 'doc',
         attrs: { schemaVersion: 2 },
-        content: [{ type: 'futureNode', attrs: { secret: 'RAW_SENTINEL', html: '<script>bad()</script>' } }],
-    });
+        content: [
+            { type: 'paragraph', content: [{ type: 'text', text: 'Before' }] },
+            { type: 'futureNode', attrs: { secret: 'RAW_SENTINEL', html: '<script>bad()</script>' } },
+            { type: 'paragraph', content: [{ type: 'text', text: 'After' }] },
+        ],
+    };
+    await mount(page, original);
     const placeholder = page.locator('.vizy-unsupported-block');
-    await expect(placeholder).toHaveText('Unsupported content');
+    await expect(placeholder).toHaveText('Unsupported content — preserved but not editable');
     await expect(placeholder).not.toHaveAttribute('data-raw');
     await expect(page.locator('.ProseMirror')).not.toContainText('RAW_SENTINEL');
+    await expect(page.locator('[data-vizy-unsupported-status]')).toContainText(
+        'Vizy has preserved it and will keep it unchanged when you save.',
+    );
     expect(await page.evaluate(() => (window as any).bad)).toBeUndefined();
+
+    const flushed = await page.locator('vizy-editor').evaluate((element: any) => JSON.parse(element.flush('submit')));
+    expect(flushed).toEqual(original);
+
+    await page.locator('.ProseMirror p').first().fill('Before, edited');
+    const edited = await page.locator('vizy-editor').evaluate((element: any) => JSON.parse(element.flush('submit')));
+    expect(edited.content[0].content[0].text).toBe('Before, edited');
+    expect(edited.content[1]).toEqual(original.content[1]);
 });
 
 test('reopened upload failures can retry without resaving or replacing new edits', async ({ page }) => {

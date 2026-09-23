@@ -11,6 +11,7 @@
 - Upgrade verification now compares nested content before committing each owner conversion.
 
 ### Fixed
+- Fixed legacy or unsupported TipTap nodes blanking the editor or appearing to lose content. Vizy now repairs Vizy 1 `list_item` nodes and visibly preserves other unsupported content without exposing its payload. ([#231](https://github.com/verbb/vizy/issues/231))
 - Fixed JSON fields inside Vizy Blocks failing to load or persist, and JSON-looking Plain Text values being decoded as arrays. ([#352](https://github.com/verbb/vizy/issues/352))
 - Fixed Entry fields inside Vizy Blocks resolving relations against the wrong site in multi-site installs. ([#319](https://github.com/verbb/vizy/issues/319))
 - Fixed custom-field conditions on Matrix entry queries inside Vizy Blocks. ([#309](https://github.com/verbb/vizy/issues/309))

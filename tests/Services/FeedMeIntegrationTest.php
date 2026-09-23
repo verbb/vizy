@@ -38,6 +38,19 @@ it('imports mapped Feed Me content through the registered field and saves canoni
         '{"type":"doc","attrs":{"schemaVersion":2},"content":[{"type":"paragraph","content":[{"type":"text","text":"Imported JSON"}]}]}',
         [['type' => 'paragraph', 'content' => [['type' => 'text', 'text' => 'Imported JSON']]]],
     ],
+    'issue #231 legacy list_item JSON is repaired at ingress' => [
+        '[{"type":"bulletList","content":[{"type":"list_item","text":"","content":[{"type":"text","text":"Imported legacy item"}]}]}]',
+        [[
+            'type' => 'bulletList',
+            'content' => [[
+                'type' => 'listItem',
+                'content' => [[
+                    'type' => 'paragraph',
+                    'content' => [['type' => 'text', 'text' => 'Imported legacy item']],
+                ]],
+            ]],
+        ]],
+    ],
 ])->group('feed-me');
 
 

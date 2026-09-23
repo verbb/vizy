@@ -51,6 +51,20 @@ vizy-editor:not(:has(.vizy-editor-shell)) {
     color: var(--vizy-text);
 }
 
+.vizy-unsupported-status:not([hidden]) {
+    display: flex;
+    flex-direction: column;
+    gap: 0.2rem;
+    padding: var(--pk-space-3, 0.75rem);
+    margin-bottom: var(--pk-space-2, 0.5rem);
+    border: 1px solid var(--warning-color, #cf6d17);
+    border-radius: var(--vizy-radius);
+    background: var(--pk-color-orange-50, #fff7ed);
+    color: var(--vizy-text);
+    font-size: 13px;
+    line-height: 1.4;
+}
+
 /* Boot failure — replaces a blank frame when the editor module or initialize() throws. */
 .vizy-field-boot-failure {
     box-sizing: border-box;
