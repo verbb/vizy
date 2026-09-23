@@ -12,7 +12,7 @@ class AbbrAsset extends AssetBundle
         $this->sourcePath = dirname(__DIR__) . '/web';
         $this->depends = [
             CpAsset::class,
-            // Ensures Craft.Vizy.registerModule / tiptap.* exist before abbr.js
+            // The example consumes Vizy's shared TipTap registry rather than bundling another copy.
             VizyAsset::class,
         ];
         $this->js = ['abbr.js'];

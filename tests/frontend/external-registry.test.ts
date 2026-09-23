@@ -1,4 +1,6 @@
-import { Mark } from '@tiptap/core';
+import { readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
+import { Mark, mergeAttributes } from '@tiptap/core';
 import { afterEach, describe, expect, it } from 'vitest';
 import {
     applyModuleReplacers,
@@ -22,6 +24,27 @@ describe('partner TipTap module registry', () => {
 
         expect(getExternalModuleFactory('acme/mark/abbr')).toBeTypeOf('function');
         expect(resolveTrustedModules(['acme/mark/abbr']).map((ext) => ext.name)).toEqual(['abbr']);
+    });
+
+    it('executes the copyable Abbreviation asset against the public registry', () => {
+        const script = readFileSync(resolve(process.cwd(), 'examples/vizy-abbr-module/src/web/abbr.js'), 'utf8');
+        const previousCraft = window.Craft;
+        const craft = {
+            Vizy: {
+                registerModule,
+                tiptap: { core: { Mark, mergeAttributes } },
+            },
+        };
+
+        try {
+            (window as unknown as { Craft: typeof craft }).Craft = craft;
+            Function('window', 'document', 'Craft', script)(window, document, craft);
+
+            expect(resolveTrustedModules(['acme/mark/abbr']).map((extension) => extension.name))
+                .toEqual(['abbr']);
+        } finally {
+            window.Craft = previousCraft;
+        }
     });
 
     it('refuses to overwrite the vizy/core namespace via registerModule', () => {

@@ -7,15 +7,7 @@ understands the new content, wiring it up in PHP so Vizy knows how to render it
 on the front end, and enabling it on an Editor Config so authors can actually
 use it.
 
-You don’t need to be a TipTap expert to get started. If you’d rather follow a
-full copy-paste example first, jump to
-[Creating a Custom Mark from Scratch](docs:guides/developers/creating-a-custom-mark-from-scratch),
-which walks through an Abbreviation (`abbr`) mark from a Craft module all the
-way to the toolbar and front-end HTML. The matching
-[node guide](docs:guides/developers/creating-a-custom-node-from-scratch) covers
-the same pattern for something like an emoji, including a toolbar button. There’s
-also a ready-to-copy Craft module under `examples/vizy-abbr-module/` in the
-plugin repo if you prefer starting from files rather than the docs alone.
+You don’t need to be a TipTap expert to get started. [Creating a Custom Mark from Scratch](docs:guides/developers/creating-a-custom-mark-from-scratch) builds an Abbreviation (`abbr`) mark from an empty Craft module through to the toolbar and frontend HTML. It includes Composer autoloading, Craft application bootstrap, a CLI-safe AssetBundle, and troubleshooting. The matching [node guide](docs:guides/developers/creating-a-custom-node-from-scratch) builds an inline emoji with saved attributes and a custom toolbar action. A ready-to-copy mark module is also available under `examples/vizy-abbr-module/` in the Vizy repository.
 
 This page is the overview: what’s involved, which APIs to call, and where the
 common pitfalls are. The snippets below are the shape of each call — not a

@@ -7,6 +7,7 @@
 
 ### Changed
 - Reorganised the Feature Tour around the editor, Vizy blocks, field configuration, editor capabilities, Block Types, nested content, and content-planning guidance.
+- Expanded the custom mark and node guides with complete, CLI-safe Craft module setup, AssetBundle loading, Editor Config steps, end-to-end verification, and troubleshooting. ([#269](https://github.com/verbb/vizy/issues/269))
 - Documented Media Embed provider support, safe fallback behaviour, and rendered-output customisation. ([#230](https://github.com/verbb/vizy/issues/230))
 - Pasting from Word and other rich-text sources now normalizes lists and unsupported structures according to the field’s Editor Config capabilities, preserving readable text when source HTML cannot be represented. ([#134](https://github.com/verbb/vizy/issues/134))
 - Opening block forms and creating Matrix rows now keep changes in the editor until the owner is saved.

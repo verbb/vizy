@@ -1,30 +1,27 @@
 # Developer Guides
 
-Guides for custom nodes, marks, toolbar options, and editor extensions.
+These guides take you from a Craft project to working Vizy extensions, including module bootstrap, Editor Config setup, authoring, persistence, rendering, and troubleshooting.
 
-Start with [Extending Vizy](docs:developers/extending-vizy) for the API
-overview, then
-[Creating a Custom Mark from Scratch](docs:guides/developers/creating-a-custom-mark-from-scratch)
-for a full Abbreviation walkthrough. A copy-paste Craft module is available at
-`examples/vizy-abbr-module/` in the plugin repo.
+Start with [Creating a Custom Mark from Scratch](docs:guides/developers/creating-a-custom-mark-from-scratch) when you want a complete first extension. It creates an Abbreviation mark from an empty `modules/` folder and includes Composer autoloading, `config/app.php`, a CLI-safe AssetBundle, JavaScript registration, and end-to-end testing. A matching copyable module is available at `examples/vizy-abbr-module/` in the Vizy repository.
+
+[Extending Vizy](docs:developers/extending-vizy) is the shorter API overview to use once you understand the complete module structure.
 
 ## [Creating a Custom Mark from Scratch](docs:guides/developers/creating-a-custom-mark-from-scratch)
 
-Abbreviation (`abbr`) from PHP through TipTap JavaScript, Editor Config, and
-front-end HTML.
+Build an Abbreviation (`abbr`) mark from an empty Craft module through TipTap JavaScript, Editor Config, saved content, and frontend HTML.
 
 ## [Creating a Custom Node from Scratch](docs:guides/developers/creating-a-custom-node-from-scratch)
 
-An inline emoji node with a PHP rendering definition and toolbar button.
+Build an inline emoji node from an empty Craft module, including its attribute schema, custom toolbar action, save/reopen checks, and PHP renderer.
 
 ## [Modifying the Toolbar Buttons](docs:guides/developers/modifying-the-toolbar-buttons)
 
-Editor Config placement, `registerControl`, and dropdowns.
+Choose Editor Config placement and use `registerControl`, module replacement, and dropdowns when ordinary mark or node controls are not enough.
 
 ## [Choosing Insertion Controls](docs:guides/developers/choosing-insertion-controls)
 
-Choosing between structured blocks and toolbar controls for rich-text features.
+Choose between structured Vizy Blocks and toolbar controls for rich-text extensions.
 
 ## [Creating Your Own Formatting Buttons and Dropdown](docs:guides/developers/creating-your-own-formatting-buttons-and-dropdown)
 
-Formatting dropdown roster and your own capabilities for brand styles.
+Combine formatting controls and your own capabilities into a named dropdown.

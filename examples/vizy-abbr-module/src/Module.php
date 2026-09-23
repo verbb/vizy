@@ -17,6 +17,10 @@ class Module extends BaseModule
 {
     public function init(): void
     {
+        // Yii's console help inspects every module's controller path. Supplying
+        // the physical path avoids requiring a global @modules namespace alias.
+        $this->setControllerPath(__DIR__ . '/controllers');
+
         parent::init();
 
         Event::on(
