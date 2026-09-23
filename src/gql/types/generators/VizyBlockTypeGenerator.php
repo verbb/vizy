@@ -4,6 +4,7 @@ namespace verbb\vizy\gql\types\generators;
 use verbb\vizy\Vizy;
 use verbb\vizy\fields\VizyField;
 use verbb\vizy\gql\GqlHelpers;
+use verbb\vizy\gql\GqlNode;
 use verbb\vizy\gql\interfaces\VizyBlockInterface;
 use verbb\vizy\gql\types\VizyBlockType;
 use verbb\vizy\models\BlockType;
@@ -13,6 +14,8 @@ use craft\gql\base\Generator;
 use craft\gql\base\GeneratorInterface;
 use craft\gql\base\SingleGeneratorInterface;
 use craft\gql\GqlEntityRegistry;
+
+use GraphQL\Type\Definition\ResolveInfo;
 
 class VizyBlockTypeGenerator extends Generator implements GeneratorInterface, SingleGeneratorInterface
 {
@@ -38,7 +41,7 @@ class VizyBlockTypeGenerator extends Generator implements GeneratorInterface, Si
 
     public static function generateType(mixed $context): mixed
     {
-                $typeName = GqlHelpers::blockTypeName($context);
+        $typeName = GqlHelpers::blockTypeName($context);
 
         if ($entity = GqlEntityRegistry::getEntity($typeName)) {
             return $entity;
@@ -47,11 +50,26 @@ class VizyBlockTypeGenerator extends Generator implements GeneratorInterface, Si
         $layout = $context->getFieldLayout();
         $contentFields = $layout ? self::getContentFields($layout) : [];
 
-        // Nested Vizy field placements recurse to the same structural document type.
-        foreach ($contentFields as $handle => $gqlType) {
-            // getContentGqlType on VizyField already returns VizyDocument — leave as-is.
-            unset($handle, $gqlType);
+        foreach ($contentFields as &$definition) {
+            if (!is_array($definition) || !isset($definition['resolve'])) {
+                continue;
+            }
+
+            $resolver = $definition['resolve'];
+            $definition['resolve'] = static function(mixed $source, array $arguments, mixed $resolverContext, ResolveInfo $resolveInfo) use ($resolver): mixed {
+                // Craft field resolvers expect the field-owning Element. Vizy's
+                // GraphQL object is backed by a GqlNode, so hydrate the ephemeral
+                // Block before delegating Matrix, Assets, Entries, and third-party
+                // field resolvers. Fields without an explicit resolver continue
+                // through VizyBlockType::resolve().
+                if ($source instanceof GqlNode && ($block = $source->block()) !== null) {
+                    $source = $source->document()->blockElement($block);
+                }
+
+                return call_user_func($resolver, $source, $arguments, $resolverContext, $resolveInfo);
+            };
         }
+        unset($definition);
 
         $fields = array_merge(VizyBlockInterface::getFieldDefinitions(), $contentFields);
         $prepared = Craft::$app->getGql()->prepareFieldDefinitions($fields, $typeName);
