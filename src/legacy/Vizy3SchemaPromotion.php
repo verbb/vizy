@@ -251,12 +251,20 @@ final class Vizy3SchemaPromotion
             $layout = ['tabs' => []];
         }
 
-        $outsideUid = $legacyType['layoutUid'] ?? null;
-        $insideUid = $layout['uid'] ?? null;
-        if (is_string($outsideUid) && is_string($insideUid) && $outsideUid !== $insideUid) {
+        $outsideUid = $this->_normalizeLayoutUid(
+            $legacyType['layoutUid'] ?? null,
+            $diagnostics,
+            "{$location}.layoutUid",
+        );
+        $insideUid = $this->_normalizeLayoutUid(
+            $layout['uid'] ?? null,
+            $diagnostics,
+            "{$location}.layoutConfig.uid",
+        );
+        if ($outsideUid !== null && $insideUid !== null && $outsideUid !== $insideUid) {
             $this->_diagnostic($diagnostics, 'ambiguousLayoutUid', 'error', $location, 'layoutUid disagrees with layoutConfig.uid.');
         }
-        $candidate = is_string($outsideUid) ? $outsideUid : (is_string($insideUid) ? $insideUid : null);
+        $candidate = $outsideUid ?? $insideUid;
         $layout['uid'] = $this->_claimUid(
             $this->_validUuid($candidate) ? $candidate : null,
             $factory,
@@ -281,6 +289,55 @@ final class Vizy3SchemaPromotion
             "{$location}.layout",
         );
         return [$layout, $placementMap];
+    }
+
+    /**
+     * Recover only array wrappers that carry one explicit UUID. Wider coercion
+     * could silently bind a Block Type to the wrong historical layout.
+     */
+    private function _normalizeLayoutUid(
+        mixed $value,
+        array &$diagnostics,
+        string $location,
+    ): ?string {
+        if ($value === null) {
+            return null;
+        }
+        if (is_string($value)) {
+            return $value;
+        }
+
+        $candidate = null;
+        $shape = null;
+        if (is_array($value)) {
+            if (array_is_list($value) && count($value) === 1 && is_string($value[0])) {
+                $candidate = $value[0];
+                $shape = 'one-value list';
+            } elseif (array_keys($value) === ['uid'] && is_string($value['uid'])) {
+                $candidate = $value['uid'];
+                $shape = 'uid object';
+            }
+        }
+
+        if ($candidate === null || !$this->_validUuid($candidate)) {
+            $this->_diagnostic(
+                $diagnostics,
+                'invalidLayoutUidShape',
+                'error',
+                $location,
+                'Layout identity must be a UUID string or a one-value legacy UUID wrapper. Restore this Block Type’s layoutUid in Project Config, then re-run the upgrade.',
+            );
+            return null;
+        }
+
+        $this->_diagnostic(
+            $diagnostics,
+            'normalizedLayoutUidShape',
+            'warning',
+            $location,
+            "Normalized legacy layout identity from a {$shape} to its UUID.",
+        );
+        return $candidate;
     }
 
     private function _promoteLayoutNodes(

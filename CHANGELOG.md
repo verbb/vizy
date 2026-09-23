@@ -15,6 +15,7 @@
 - Upgrade verification now compares nested content before committing each owner conversion.
 
 ### Fixed
+- Fixed Vizy 3 upgrades failing when historical Block Type layout identities are array-wrapped, and added actionable diagnostics for ambiguous layout identity data. ([#353](https://github.com/verbb/vizy/issues/353))
 - Fixed custom Entry sources being omitted from link pickers and sections hidden from the current user being shown. ([#226](https://github.com/verbb/vizy/issues/226))
 - Fixed private Asset volumes being omitted from Vizy’s available-volume settings and asset picker, including default-transform previews and output for private originals. ([#256](https://github.com/verbb/vizy/issues/256))
 - Fixed link insertion at an empty caret and schemeless `www.` URLs, added authoring validation for unsafe URL schemes, and added coverage confirming mixed-format links render once in native Vizy output. ([#262](https://github.com/verbb/vizy/issues/262), [#290](https://github.com/verbb/vizy/issues/290))

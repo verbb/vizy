@@ -25,7 +25,7 @@ function legacyPromotionFixture(
     string $handle = 'card',
     string $mode = VizyField::MODE_COMBINED,
     string $placedFieldType = PlainText::class,
-    ?string $layoutUid = null,
+    mixed $layoutUid = null,
     ?string $placementUid = null,
 ): array {
     $fieldUid = StringHelper::UUID();
@@ -105,6 +105,88 @@ it('builds stable field-local promotion plans and exact placement maps', functio
         ->and($mapping['placementUids']['heading'])->toBe($fixture['placementUid'])
         ->and($fieldPlan['blockTypes'][$fixture['legacyTypeId']]['config']['fieldLayout']['uid'])
         ->toBe($fixture['fields'][$fixture['fieldUid']]['settings']['fieldData'][0]['blockTypes'][0]['layoutUid']);
+});
+
+it('normalizes unambiguous array-wrapped layout identities through the supported upgrader', function(string $shape, string $source) {
+    $fixture = legacyPromotionFixture('wrappedLayout' . StringHelper::randomString(5));
+    $legacyType = &$fixture['fields'][$fixture['fieldUid']]['settings']['fieldData'][0]['blockTypes'][0];
+    $layoutUid = $legacyType['layoutUid'];
+    $wrapper = $shape === 'list' ? [$layoutUid] : ['uid' => $layoutUid];
+    if ($source === 'layoutUid') {
+        $legacyType['layoutUid'] = $wrapper;
+        unset($legacyType['layoutConfig']['uid']);
+    } else {
+        unset($legacyType['layoutUid']);
+        $legacyType['layoutConfig']['uid'] = $wrapper;
+    }
+    unset($legacyType);
+
+    $projectConfig = Craft::$app->getProjectConfig();
+    foreach ($fixture['fields'] as $uid => $config) {
+        $projectConfig->set("fields.{$uid}", $config);
+    }
+    Craft::$app->getFields()->refreshFields();
+
+    $plan = Vizy::$plugin->getPromotionOrchestrator()->analyze();
+    $fieldPlan = $plan['fields'][$fixture['fieldUid']];
+    $targetUid = $fieldPlan['schemaMap'][$fixture['legacyTypeId']]['blockTypeUid'];
+    $normalized = array_values(array_filter(
+        $plan['diagnostics'],
+        static fn(array $diagnostic): bool => ($diagnostic['code'] ?? null) === 'normalizedLayoutUidShape'
+            && str_starts_with((string)($diagnostic['location'] ?? ''), $fixture['fieldUid']),
+    ));
+
+    expect($plan['status'])->toBe('ready', Json::encode($plan['diagnostics']))
+        ->and($fieldPlan['blockTypes'][$fixture['legacyTypeId']]['config']['fieldLayout']['uid'])->toBe($layoutUid)
+        ->and($normalized)->toHaveCount(1)
+        ->and((new m260921_000000_vizy3_upgrade())->up(true))->toBeTrue();
+
+    $global = ProjectConfigHelper::unpackAssociativeArrays(
+        $projectConfig->get("plugins.vizy.blockTypes.{$targetUid}"),
+    );
+    expect($global['fieldLayout']['uid'])->toBe($layoutUid);
+})->with([
+    'layoutUid one-value list' => ['list', 'layoutUid'],
+    'layoutUid UID object' => ['object', 'layoutUid'],
+    'layoutConfig.uid one-value list' => ['list', 'layoutConfig'],
+    'layoutConfig.uid UID object' => ['object', 'layoutConfig'],
+]);
+
+it('blocks ambiguous layout identity arrays before the upgrader writes anything', function() {
+    $fixture = legacyPromotionFixture('ambiguousLayout' . StringHelper::randomString(5));
+    $legacyType = &$fixture['fields'][$fixture['fieldUid']]['settings']['fieldData'][0]['blockTypes'][0];
+    $legacyType['layoutUid'] = [StringHelper::UUID(), StringHelper::UUID()];
+    unset($legacyType['layoutConfig']['uid'], $legacyType);
+
+    $projectConfig = Craft::$app->getProjectConfig();
+    foreach ($fixture['fields'] as $uid => $config) {
+        $projectConfig->set("fields.{$uid}", $config);
+    }
+    Craft::$app->getFields()->refreshFields();
+    $runsBefore = SchemaPromotion::find()->count();
+    $globalBefore = $projectConfig->get('plugins.vizy.blockTypes');
+
+    try {
+        $orchestrator = Vizy::$plugin->getPromotionOrchestrator();
+        $plan = $orchestrator->analyze();
+        $diagnostic = collect($plan['diagnostics'])->first(
+            static fn(array $item): bool => ($item['code'] ?? null) === 'invalidLayoutUidShape'
+                && ($item['location'] ?? null) === "{$fixture['fieldUid']}.groups.0.blockTypes.0.layoutUid",
+        );
+
+        expect($plan['status'])->toBe('blocked')
+            ->and($diagnostic)->not->toBeNull()
+            ->and($diagnostic['message'])->toContain('Restore this Block Type’s layoutUid in Project Config')
+            ->and(fn() => $orchestrator->apply($plan, ['complete' => true, 'jobs' => []]))
+            ->toThrow(RuntimeException::class, 'complete ready plan')
+            ->and(SchemaPromotion::find()->count())->toBe($runsBefore)
+            ->and($projectConfig->get('plugins.vizy.blockTypes'))->toBe($globalBefore);
+    } finally {
+        foreach (array_keys($fixture['fields']) as $uid) {
+            $projectConfig->remove("fields.{$uid}");
+        }
+        Craft::$app->getFields()->refreshFields();
+    }
 });
 
 it('automatically upgrades Vizy 3 schema during Craft plugin migrations', function() {
