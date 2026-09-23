@@ -259,7 +259,7 @@ test('applies each editor’s Enabled Link Settings and preserves hidden attribu
     expect(retained).toMatchObject({ type: 'entry', siteMode: 'fixed', siteUid: '22222222-2222-4222-8222-222222222222', title: 'Retained', newWindow: true });
 });
 
-test('normalizes www links, supplies empty-selection text and blocks unsafe URLs', async ({ page }) => {
+test('normalizes www and email links, supplies empty-selection text and blocks unsafe URLs', async ({ page }) => {
     const linkManifest = {
         ...editorManifest,
         enabledMarks: [...editorManifest.enabledMarks, 'link'],
@@ -288,7 +288,7 @@ test('normalizes www links, supplies empty-selection text and blocks unsafe URLs
     const submit = dialog.locator('.link-dialog__submit');
     await url.fill('javascript:alert(1)');
     await expect(submit).toHaveAttribute('disabled', '');
-    await expect(dialog.locator('.link-dialog__url-field')).toContainText('Enter a safe link URL.');
+    await expect(dialog.locator('.link-dialog__url-field')).toContainText('Enter a safe URL or email address.');
 
     await url.fill('www.example.com/path');
     await expect(submit).not.toHaveAttribute('disabled', '');
@@ -313,6 +313,26 @@ test('normalizes www links, supplies empty-selection text and blocks unsafe URLs
                 }],
             }],
         },
+    });
+
+    await page.evaluate(async () => {
+        const editor = (document.querySelector('vizy-editor') as any).editor;
+        editor.commands.clearContent();
+        editor.commands.setTextSelection(1);
+        await (document.querySelector('vizy-link-dialog') as any).openForEditor(editor, {
+            url: '', text: '', openInNewTab: false, from: 1, to: 1,
+        });
+    });
+    await url.fill('author@example.com');
+    await expect(submit).not.toHaveAttribute('disabled', '');
+    await submit.click();
+    const email = await page.evaluate(() => {
+        const editor = (document.querySelector('vizy-editor') as any).editor;
+        return { text: editor.getText(), attrs: editor.getAttributes('link') };
+    });
+    expect(email).toMatchObject({
+        text: 'author@example.com',
+        attrs: { type: 'email', value: 'author@example.com' },
     });
 });
 

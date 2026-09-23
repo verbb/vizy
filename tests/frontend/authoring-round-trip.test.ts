@@ -37,6 +37,19 @@ it.each(['email', 'tel', 'sms'] as const)('editing %s links keeps their intent',
     } finally { editor.destroy(); }
 });
 
+it('parses pasted mailto anchors into semantic email links', () => {
+    const editor = new Editor({
+        extensions: [StarterKit.configure({ link: false }), createSemanticLink()],
+        content: '<p><a href="mailto:pasted@example.com">Pasted email</a></p>',
+    });
+    try {
+        expect(editor.getJSON().content?.[0].content?.[0].marks?.[0]).toMatchObject({
+            type: 'link',
+            attrs: { type: 'email', value: 'pasted@example.com' },
+        });
+    } finally { editor.destroy(); }
+});
+
 
 it('inserts fallback link text at an empty caret', () => {
     const editor = new Editor({ extensions: [StarterKit.configure({ link: false }), createSemanticLink()], content: '<p></p>' });

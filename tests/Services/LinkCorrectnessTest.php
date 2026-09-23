@@ -35,6 +35,33 @@ it('normalizes historic schemeless www links at every resolved output boundary',
         ->and($textNode->marks()[0]->linkUrl())->toBe('https://www.example.com/path');
 });
 
+it('renders semantic email links consistently through HTML and GraphQL', function() {
+    $attrs = [
+        'type' => 'email',
+        'value' => 'author@example.com',
+        'siteMode' => 'current',
+        'newWindow' => false,
+    ];
+    $data = [
+        'type' => 'doc',
+        'attrs' => ['schemaVersion' => VizyDocument::CURRENT_SCHEMA_VERSION],
+        'content' => [[
+            'type' => 'paragraph',
+            'content' => [[
+                'type' => 'text',
+                'text' => 'Email us',
+                'marks' => [['type' => 'link', 'attrs' => $attrs]],
+            ]],
+        ]],
+    ];
+    $document = (new DocumentParser())->parse($data);
+    $textNode = GqlNode::fromRaw($document, $data['content'][0], 'content.0')->children()[0];
+
+    expect(Link::resolveHref($attrs))->toBe('mailto:author@example.com')
+        ->and((string)$document->render())->toContain('href="mailto:author@example.com"')
+        ->and($textNode->marks()[0]->linkUrl())->toBe('mailto:author@example.com');
+});
+
 it('round-trips and renders linked bold italic text exactly once', function() {
     $data = [
         'type' => 'doc',

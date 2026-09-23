@@ -114,7 +114,7 @@ export class VizyLinkDialogElement extends LitElement {
                 <div class="link-dialog__fields">
                     <pk-field
                         class="link-dialog__url-field"
-                        label="URL"
+                        label="URL or email address"
                         required
                         .for=${this.#urlInputId}
                         .errors=${this.urlError ? [this.urlError] : []}
@@ -122,8 +122,8 @@ export class VizyLinkDialogElement extends LitElement {
                         <pk-input
                             id=${this.#urlInputId}
                             class="link-dialog__url-input"
-                            type="url"
-                            placeholder="https://"
+                            type="text"
+                            placeholder="https:// or name@example.com"
                             autofocus
                             @input=${this.#onUrlInput}
                         ></pk-input>

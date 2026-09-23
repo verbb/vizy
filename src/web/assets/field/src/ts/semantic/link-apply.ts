@@ -105,10 +105,15 @@ export function unsetSemanticLinkFromEditor(editor: Editor, options?: { focus?: 
     chain.extendMarkRange('link').unsetSemanticLink().run();
 }
 
-/** Convert the common schemeless host form into a durable absolute URL. */
+const PLAIN_EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/u;
+
+/** Normalize common author-friendly inputs into explicit link schemes. */
 export function normalizeUrlDialogValue(url: string): string {
     const trimmed = url.trim();
-    return /^www\./i.test(trimmed) ? `https://${trimmed}` : trimmed;
+    if (/^www\./i.test(trimmed)) return `https://${trimmed}`;
+    if (/^[a-z][a-z\d+.-]*:/i.test(trimmed)) return trimmed;
+    if (PLAIN_EMAIL_RE.test(trimmed)) return `mailto:${trimmed}`;
+    return trimmed;
 }
 
 /**
@@ -121,10 +126,10 @@ export function urlDialogValidationError(url: string): string | null {
 
     const scheme = normalized.match(/^([a-z][a-z\d+.-]*):/i)?.[1]?.toLowerCase();
     if (scheme && !['http', 'https', 'mailto', 'tel', 'sms'].includes(scheme)) {
-        return 'Enter a safe link URL.';
+        return 'Enter a safe URL or email address.';
     }
 
-    return isAllowedUri(normalized) ? null : 'Enter a safe link URL.';
+    return isAllowedUri(normalized) ? null : 'Enter a safe URL or email address.';
 }
 
 /** Build attrs from dialog URL submit (plain URL / mailto / tel). */

@@ -89,7 +89,7 @@ function makeEditor(text = 'Hello world'): Editor {
 }
 
 describe('semantic link apply (dialog path)', () => {
-    it('attrsFromUrlDialog maps mailto/tel and plain URLs', () => {
+    it('attrsFromUrlDialog maps plain email, mailto, tel and plain URLs', () => {
         expect(attrsFromUrlDialog('https://example.com', true)).toMatchObject({
             type: 'url',
             value: 'https://example.com',
@@ -98,6 +98,10 @@ describe('semantic link apply (dialog path)', () => {
         expect(attrsFromUrlDialog('mailto:a@b.c', false)).toMatchObject({
             type: 'email',
             value: 'a@b.c',
+        });
+        expect(attrsFromUrlDialog('person@example.com', false)).toMatchObject({
+            type: 'email',
+            value: 'person@example.com',
         });
         expect(attrsFromUrlDialog('tel:+123', false)).toMatchObject({
             type: 'tel',
@@ -115,6 +119,7 @@ describe('semantic link apply (dialog path)', () => {
         expect(urlDialogValidationError('www.example.com')).toBeNull();
         expect(urlDialogValidationError('https://example.com')).toBeNull();
         expect(urlDialogValidationError('/relative/path')).toBeNull();
+        expect(urlDialogValidationError('author@example.com')).toBeNull();
         expect(urlDialogValidationError('mailto:author@example.com')).toBeNull();
         expect(urlDialogValidationError('javascript:alert(1)')).not.toBeNull();
         expect(urlDialogValidationError('data:text/html,unsafe')).not.toBeNull();

@@ -6,6 +6,7 @@ import {
     type SemanticLinkAttrs,
     type SemanticLinkType,
 } from './attrs';
+import { attrsFromUrlDialog } from './link-apply';
 
 declare module '@tiptap/core' {
     interface Commands<ReturnType> {
@@ -92,8 +93,8 @@ export function createSemanticLink() {
                     if (!href || href.startsWith('#vizy-link:')) {
                         return false;
                     }
-                    // Paste/external HTML becomes a url link; canonical save strips href.
-                    return normalizeLinkAttrs({ type: 'url', value: href });
+                    // External HTML enters the same semantic lanes as the Link dialog.
+                    return normalizeLinkAttrs({ ...attrsFromUrlDialog(href, false) });
                 },
             }];
         },
