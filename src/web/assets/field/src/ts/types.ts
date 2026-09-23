@@ -119,6 +119,12 @@ export interface EditorManifest {
         allowedBlockTypeUids: string[];
         /** Insertion surface: referenced types minus field-locally disabled ones. */
         insertableBlockTypeUids: string[];
+        /** Available Add Block displays. Missing on older manifests means both. */
+        blockPickerDisplay?: 'both' | 'list' | 'grid';
+        /** Initial display before a per-user preference. Missing means list. */
+        defaultBlockPickerView?: 'list' | 'grid';
+        /** Shared search visibility for list and grid. Missing means shown. */
+        showBlockSearch?: boolean;
         minBlocks: number | null;
         maxBlocks: number | null;
         pasteAsPlainText?: boolean;

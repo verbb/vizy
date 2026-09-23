@@ -11,8 +11,10 @@ import { InsertionPopover } from './popover';
 import { BlockBrowseHost } from './browse-host';
 import { contextStillValid, executeInsertion } from './surface-helpers';
 import {
-    readBlockInsertView,
+    resolveBlockInsertView,
     writeBlockInsertView,
+    type BlockInsertView,
+    type BlockPickerDisplay,
 } from './insert-view-storage';
 import type { InsertionContext } from './types';
 
@@ -84,7 +86,16 @@ function openSlashAddPanel(
     const getClientRect = (): DOMRect | null => caretClientRect(services.editor, insertPos);
     const anchor = getClientRect() ?? new DOMRect();
     const fieldHandle = services.manifest.field.fieldHandle?.trim() || '';
-    const preferred = readBlockInsertView(fieldHandle);
+    const configuredDisplay = services.manifest.field.blockPickerDisplay;
+    const display: BlockPickerDisplay = configuredDisplay === 'list' || configuredDisplay === 'grid'
+        ? configuredDisplay
+        : 'both';
+    const defaultView: BlockInsertView = services.manifest.field.defaultBlockPickerView === 'grid'
+        ? 'grid'
+        : 'list';
+    const preferred = resolveBlockInsertView(fieldHandle, display, defaultView);
+    const filterable = services.manifest.field.showBlockSearch !== false;
+    const showViewToggle = display === 'both';
 
     const onSelect = (id: string): Promise<boolean> => {
         const fresh = services.insertion.buildContext('slash', insertPos);
@@ -94,12 +105,15 @@ function openSlashAddPanel(
         return executeInsertion(services, fresh, id);
     };
 
-    const onViewChange = (view: 'list' | 'grid'): void => {
+    const onViewChange = (view: BlockInsertView): void => {
+        if (!showViewToggle) return;
         writeBlockInsertView(fieldHandle, view);
         const freshItems = [...services.insertion.query({ context, kinds })];
         if (view === 'grid') {
             slashPalette.close({ restoreFocus: false, animate: false });
             slashBrowse.open(services, context, freshItems, {
+                filterable,
+                showViewToggle,
                 onView: (next) => {
                     writeBlockInsertView(fieldHandle, next);
                     if (next === 'list') {
@@ -117,7 +131,9 @@ function openSlashAddPanel(
 
     if (preferred === 'grid') {
         slashBrowse.open(services, context, items, {
-            onView: onViewChange,
+            filterable,
+            showViewToggle,
+            onView: showViewToggle ? onViewChange : undefined,
             onSelect,
         });
         return;
@@ -128,12 +144,14 @@ function openSlashAddPanel(
         getClientRect,
         // Same UI as gutter `+`: in-panel Search…, autofocus.
         filterMode: 'panel',
-        autofocusFilter: true,
+        filterable,
+        showViewToggle,
+        autofocusFilter: filterable,
         holdFieldFocus: true,
         onRestoreFocus: () => {
             services.editor.commands.focus(undefined, { scrollIntoView: false });
         },
-        onViewChange,
+        onViewChange: showViewToggle ? onViewChange : undefined,
         onSelect,
     });
 }

@@ -30,6 +30,12 @@ An icon helps editors identify a type in the picker. Choose a bundled icon or pr
 
 Choose a preview image to show what a completed block looks like. The image comes from **Block Preview Images Path** (`blockPreviewImagesPath`). Its path is stored relative to that folder, such as `blocks/image-text.png`, so deploy the image folder with your project. Vizy uses it in the Add Block grid and hover preview.
 
+### Block Picker
+
+Use **Picker Display** to offer the compact List, the visual Grid, or both. When both are available, **Default Display** controls what authors see initially. After an author switches display, Vizy remembers that choice for this field in their browser.
+
+Turn off **Show Search** for a small, easily scanned set of Block Types. This is one setting for the picker: it hides search from both List and Grid displays without changing which Block Types are available.
+
 ## Editor Config
 
 Choose a named **Editor Config** to set the available content, toolbar, and Bubble Menu. You can reuse a config across fields with the same editing needs or create a separate one for a field that needs fewer tools.

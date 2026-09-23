@@ -706,6 +706,34 @@ describe('slash insertion UI', () => {
         fieldBody.remove();
     });
 
+    it('applies the shared search and display-switch policy to the list picker', async () => {
+        const { editor, insertion } = createHarness();
+        const services = nodeViewServices({
+            editor,
+            manifest: testManifest(),
+            ui: new BlockUiStateRegistry(),
+            hosts: new FieldHostRegistry(),
+            insertion,
+        });
+        const popover = new InsertionPopover();
+        const context = insertion.buildContext('inline', 1);
+        expect(context).not.toBeNull();
+
+        popover.open(services, context!, new DOMRect(0, 0, 20, 20), {
+            filterable: false,
+            showViewToggle: false,
+        });
+        const list = document.querySelector('vizy-insertion-list') as VizyInsertionListElement;
+        await list.updateComplete;
+
+        expect(list.filterable).toBe(false);
+        expect(list.showViewToggle).toBe(false);
+        expect(list.shadowRoot?.querySelector('input[type="search"]')).toBeNull();
+        expect(list.shadowRoot?.querySelector('.view-toggle')).toBeNull();
+
+        popover.close({ restoreFocus: false, animate: false });
+    });
+
     it('toggles the same gutter chip closed and hard-switches without orphan panels', async () => {
         const { editor, insertion } = createHarness();
         const services = nodeViewServices({

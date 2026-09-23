@@ -227,9 +227,29 @@ it('renders only canonical field schema settings', function() {
     expect($html)->toContain('name="editorMode"')
         ->and($html)->toContain('editorConfig')
         ->and($html)->toContain('blockTypePickerGroups')
+        ->and($html)->toContain('name="blockPickerDisplay"')
+        ->and($html)->toContain('name="defaultBlockPickerView"')
+        ->and($html)->toContain('name="showBlockSearch"')
         ->and($html)->not->toContain('name="rootContentType')
         ->and($html)->not->toContain('name="fieldData')
         ->and($html)->not->toContain('name="vizyConfig');
+});
+
+it('defaults Block pickers to both displays, list first, with one shared search setting', function() {
+    $field = new VizyField([
+        'name' => 'Picker Defaults',
+        'handle' => 'pickerDefaults',
+    ]);
+
+    expect($field->blockPickerDisplay)->toBe(VizyField::BLOCK_PICKER_DISPLAY_BOTH)
+        ->and($field->defaultBlockPickerView)->toBe(VizyField::BLOCK_PICKER_DISPLAY_LIST)
+        ->and($field->showBlockSearch)->toBeTrue();
+
+    $field->blockPickerDisplay = 'cards';
+    $field->defaultBlockPickerView = 'cards';
+    expect($field->validate())->toBeFalse()
+        ->and($field->getErrors('blockPickerDisplay'))->not->toBeEmpty()
+        ->and($field->getErrors('defaultBlockPickerView'))->not->toBeEmpty();
 });
 
 it('projects editor mode onto the stored root policy losslessly', function() {

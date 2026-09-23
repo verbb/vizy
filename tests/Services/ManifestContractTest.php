@@ -41,3 +41,24 @@ it('transports Initial Rows without sharing another field instance height', func
     }
     expect(array_unique($hashes))->toHaveCount(3);
 });
+
+it('transports Block picker presentation policy and invalidates its manifest', function() {
+    $field = new \verbb\vizy\fields\VizyField([
+        'uid' => \craft\helpers\StringHelper::UUID(),
+        'handle' => 'pickerPolicy',
+    ]);
+    $service = \verbb\vizy\Vizy::$plugin->getEditorManifests();
+    $defaults = $service->build($field);
+    $field->blockPickerDisplay = \verbb\vizy\fields\VizyField::BLOCK_PICKER_DISPLAY_GRID;
+    $field->defaultBlockPickerView = \verbb\vizy\fields\VizyField::BLOCK_PICKER_DISPLAY_GRID;
+    $field->showBlockSearch = false;
+    $configured = $service->build($field);
+
+    expect($defaults['field']['blockPickerDisplay'])->toBe('both')
+        ->and($defaults['field']['defaultBlockPickerView'])->toBe('list')
+        ->and($defaults['field']['showBlockSearch'])->toBeTrue()
+        ->and($configured['field']['blockPickerDisplay'])->toBe('grid')
+        ->and($configured['field']['defaultBlockPickerView'])->toBe('grid')
+        ->and($configured['field']['showBlockSearch'])->toBeFalse()
+        ->and($configured['hash'])->not->toBe($defaults['hash']);
+});

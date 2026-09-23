@@ -32,6 +32,24 @@ async function openJsonOwner(page: Page) {
     await expect(page.locator(`vizy-block[data-block-uid="${fixture.json.blockUid}"]`)).toBeVisible();
 }
 
+test('field settings expose one Block picker display policy and one shared search switch', async ({ page }) => {
+    await login(page);
+    await page.goto(`/index.php?p=admin/settings/fields/edit/${fixture.fieldId}`);
+
+    const display = page.locator('select[name$="[blockPickerDisplay]"]');
+    const defaultDisplay = page.locator('select[name$="[defaultBlockPickerView]"]');
+    const search = page.locator('input[name$="[showBlockSearch]"][value="1"]');
+    await expect(display).toHaveValue('both');
+    await expect(defaultDisplay).toHaveValue('list');
+    await expect(defaultDisplay).toBeVisible();
+    await expect(search).toHaveCount(1);
+
+    await display.selectOption('grid');
+    await expect(defaultDisplay).toBeHidden();
+    await display.selectOption('both');
+    await expect(defaultDisplay).toBeVisible();
+});
+
 async function setJsonValue(textarea: Locator, value: unknown) {
     await textarea.evaluate((control, nextValue) => {
         const input = control as HTMLTextAreaElement & {

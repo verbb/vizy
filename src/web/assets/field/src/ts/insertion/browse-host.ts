@@ -23,7 +23,9 @@ export class BlockBrowseHost {
         options: {
             query?: string;
             kinds?: readonly InsertionKind[];
-            onView: (view: BlockInsertView) => void;
+            filterable?: boolean;
+            showViewToggle?: boolean;
+            onView?: (view: BlockInsertView) => void;
             onClose?: () => void;
             onSelect?: (id: string) => Promise<boolean> | boolean;
         },
@@ -34,6 +36,8 @@ export class BlockBrowseHost {
         panel.open({
             items,
             query: options.query,
+            filterable: options.filterable,
+            showViewToggle: options.showViewToggle,
             onSelect: (id) => {
                 const handler = options.onSelect
                     ?? ((itemId: string) => executeInsertion(services, context, itemId));
@@ -45,7 +49,7 @@ export class BlockBrowseHost {
                 });
             },
             onView: (view) => {
-                options.onView(view);
+                options.onView?.(view);
             },
             onClose: () => {
                 if (this.#panel === panel) this.#panel = null;

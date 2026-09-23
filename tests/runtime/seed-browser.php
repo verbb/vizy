@@ -187,7 +187,7 @@ $metadata = [
     'url' => 'https://' . getenv('DDEV_SITENAME') . '.ddev.site',
     'entryId' => $owner->id, 'peerId' => $peer->id, 'actorId' => $actor->id,
     'editPath' => '/index.php?p=admin/entries/' . $section->handle . '/' . $owner->id,
-    'fieldHandle' => $rootField->handle, 'fieldUid' => $rootField->uid,
+    'fieldId' => $rootField->id, 'fieldHandle' => $rootField->handle, 'fieldUid' => $rootField->uid,
     'blockUid' => $doc['content'][1]['attrs']['blockUid'],
     'dismissibleTip' => ['uid' => $dismissibleTip->uid, 'text' => $dismissibleTip->tip],
     'headingPlacement' => $placements[0]->uid, 'relatedPlacement' => $placements[1]->uid,

@@ -1,7 +1,7 @@
 {
     "uid": "<request-local-uuid>",
-    "revision": "1:761b612fc0bc8d68d2b36cabd4d4ff26d3449953ac734ea3ef559b5d06c673a3",
-    "hash": "761b612fc0bc8d68d2b36cabd4d4ff26d3449953ac734ea3ef559b5d06c673a3",
+    "revision": "1:80a71592924e42ecfe47a14a523adc145df7571705226ae4a8dbe7d137430821",
+    "hash": "80a71592924e42ecfe47a14a523adc145df7571705226ae4a8dbe7d137430821",
     "manifestVersion": 1,
     "registryRevision": "2b27076d016672d373b6a95308d8472199a5aca2c5f1401e13d38bcec9c8d35e",
     "editorConfig": {
@@ -9,7 +9,7 @@
         "revision": "1:6da0b016e1ad8080e5554bea35f1241db7d136b281d5402699fb46958f0c17fe",
         "hash": "6da0b016e1ad8080e5554bea35f1241db7d136b281d5402699fb46958f0c17fe"
     },
-    "schemaRevision": "21281568c0c07b3c5efe7fbcfbbf4517b1cbcdb56cb88ba184ecb2206c6592ce",
+    "schemaRevision": "8f3cd9bab4a722a182d2731c4813d5d51ca5dbbdd34abff04c291a5b468c6586",
     "enabledNodes": [
         "bulletList",
         "doc",
@@ -53,6 +53,9 @@
         "blockTypePickerGroups": [],
         "allowedBlockTypeUids": [],
         "insertableBlockTypeUids": [],
+        "blockPickerDisplay": "both",
+        "defaultBlockPickerView": "list",
+        "showBlockSearch": true,
         "minBlocks": null,
         "maxBlocks": null,
         "pasteAsPlainText": false,

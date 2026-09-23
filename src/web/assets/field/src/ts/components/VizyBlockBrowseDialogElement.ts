@@ -28,6 +28,8 @@ export class VizyBlockBrowseDialogElement extends LitElement {
     @property({ attribute: false }) accessor items: readonly AvailableInsertion[] = [];
     @property() accessor query = '';
     @property() accessor view: BlockInsertView = 'grid';
+    @property({ type: Boolean }) accessor filterable = true;
+    @property({ type: Boolean, attribute: 'show-view-toggle' }) accessor showViewToggle = true;
     @property({ attribute: 'active-tab' }) accessor activeTab = 'all';
     @state() accessor activeId: string | null = null;
 
@@ -173,17 +175,21 @@ export class VizyBlockBrowseDialogElement extends LitElement {
     open(options: {
         items: readonly AvailableInsertion[];
         query?: string;
+        filterable?: boolean;
+        showViewToggle?: boolean;
         onSelect: (id: string) => void;
-        onView: (view: BlockInsertView) => void;
+        onView?: (view: BlockInsertView) => void;
         onClose?: () => void;
     }): void {
         this.items = options.items;
-        this.query = options.query ?? '';
+        this.filterable = options.filterable !== false;
+        this.showViewToggle = options.showViewToggle !== false;
+        this.query = this.filterable ? options.query ?? '' : '';
         this.view = 'grid';
         this.activeTab = 'all';
         this.activeId = null;
         this.#onSelect = options.onSelect;
-        this.#onView = options.onView;
+        this.#onView = options.onView ?? null;
         this.#onClose = options.onClose ?? null;
         void this.#mountOpen();
     }
@@ -193,7 +199,7 @@ export class VizyBlockBrowseDialogElement extends LitElement {
         // pk-dialog focuses light-DOM [autofocus], then a shadow input/textarea/select/button.
         this.setAttribute('autofocus', '');
         this.#ensureDialog();
-        // Paint the search field before showModal’s rAF focus pass.
+        // Paint the configured toolbar before showModal’s rAF focus pass.
         await this.updateComplete;
         if (this.#dialog) {
             this.#dialog.open = true;
@@ -201,11 +207,14 @@ export class VizyBlockBrowseDialogElement extends LitElement {
         // Belt-and-suspenders if the dialog focus pass ran before the input existed.
         await this.updateComplete;
         await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
-        this.focusFilter();
+        if (!this.focusFilter()) {
+            this.focusFirstBlock();
+        }
     }
 
     /** Focus the in-dialog Search field (Add Block grid). */
     focusFilter(): boolean {
+        if (!this.filterable) return false;
         const field = this.shadowRoot?.querySelector('pk-input');
         const input = field?.shadowRoot?.querySelector<HTMLInputElement>('input')
             ?? this.shadowRoot?.querySelector<HTMLInputElement>('input[type="search"]');
@@ -215,6 +224,14 @@ export class VizyBlockBrowseDialogElement extends LitElement {
             || this.shadowRoot?.activeElement === field
             || document.activeElement === field
             || document.activeElement === this);
+    }
+
+    /** Focus the first Block when the field intentionally has no Search. */
+    focusFirstBlock(): boolean {
+        const button = this.shadowRoot?.querySelector<HTMLButtonElement>('button.card');
+        if (!button) return false;
+        button.focus({ preventScroll: true });
+        return this.shadowRoot?.activeElement === button;
     }
 
     close(): void {
@@ -257,9 +274,11 @@ export class VizyBlockBrowseDialogElement extends LitElement {
     render() {
         const tabs = this.#tabs();
         const showTabs = tabs.length > 1;
+        const showToolbar = this.filterable || this.showViewToggle;
         return html`
             <div class="dialog-bar">
-                <div class="toolbar">
+                ${showToolbar ? html`<div class="toolbar">
+                    ${this.filterable ? html`
                     <pk-input
                         type="search"
                         placeholder="Search Blocks…"
@@ -269,6 +288,8 @@ export class VizyBlockBrowseDialogElement extends LitElement {
                     >
                         <pk-icon slot="start" icon="magnifying-glass" label=""></pk-icon>
                     </pk-input>
+                    ` : null}
+                    ${this.showViewToggle ? html`
                     <pk-toggle-group
                         class="view-toggle"
                         variant="outline"
@@ -284,7 +305,8 @@ export class VizyBlockBrowseDialogElement extends LitElement {
                             <pk-icon icon="grid-2" label=""></pk-icon>
                         </pk-toggle>
                     </pk-toggle-group>
-                </div>
+                    ` : null}
+                </div>` : null}
                 ${showTabs ? html`
                     <pk-tabs
                         class="browse-tabs"

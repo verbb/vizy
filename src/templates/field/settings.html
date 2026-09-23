@@ -35,6 +35,43 @@
         errors: field.getErrors('blockTypePickerGroups'),
     }, blockConfigurationInput) }}
 
+    {{ forms.selectField({
+        label: 'Picker Display' | t('vizy'),
+        instructions: 'Choose which displays authors can use when adding a block.' | t('vizy'),
+        name: 'blockPickerDisplay',
+        value: field.blockPickerDisplay,
+        options: [
+            { label: 'List and Grid' | t('vizy'), value: 'both' },
+            { label: 'List Only' | t('vizy'), value: 'list' },
+            { label: 'Grid Only' | t('vizy'), value: 'grid' },
+        ],
+        toggle: true,
+        targetPrefix: '.vizy-picker-display-',
+        errors: field.getErrors('blockPickerDisplay'),
+    }) }}
+
+    <div class="vizy-picker-display-both {{ field.blockPickerDisplay != 'both' ? 'hidden' }}">
+        {{ forms.selectField({
+            label: 'Default Display' | t('vizy'),
+            instructions: 'Choose the display authors see before they set their own preference.' | t('vizy'),
+            name: 'defaultBlockPickerView',
+            value: field.defaultBlockPickerView,
+            options: [
+                { label: 'List' | t('vizy'), value: 'list' },
+                { label: 'Grid' | t('vizy'), value: 'grid' },
+            ],
+            errors: field.getErrors('defaultBlockPickerView'),
+        }) }}
+    </div>
+
+    {{ forms.lightswitchField({
+        label: 'Show Search' | t('vizy'),
+        instructions: 'Whether the block picker includes a search field.' | t('vizy'),
+        name: 'showBlockSearch',
+        on: field.showBlockSearch,
+        errors: field.getErrors('showBlockSearch'),
+    }) }}
+
     <hr>
 </div>
 

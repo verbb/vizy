@@ -137,6 +137,10 @@ export type InsertionPopoverOpenOptions = {
     skipEnterMotion?: boolean;
     /** Restrict catalog (production → Blocks only). */
     kinds?: readonly InsertionKind[];
+    /** Whether the shared Search field is rendered. Default true. */
+    filterable?: boolean;
+    /** Whether authors can switch from list to grid. Default true. */
+    showViewToggle?: boolean;
     /** Fired when the author picks list/grid in the panel UI. */
     onViewChange?: (view: BlockInsertView) => void;
 };
@@ -182,9 +186,10 @@ export class InsertionPopover {
         list.listId = list.listId || `vizy-popover-${context.surface}-${context.from}`;
         list.items = results.length ? results : list.items;
         list.query = search;
-        list.filterable = true;
+        const filterable = options.filterable !== false;
+        list.filterable = filterable;
         list.view = 'list';
-        list.showViewToggle = true;
+        list.showViewToggle = options.showViewToggle !== false;
         // No highlight until arrows (pk-combobox autoHighlight=false).
         list.activeId = null;
         list.revealActive = false;
@@ -193,7 +198,7 @@ export class InsertionPopover {
         const skipEnterMotion = options.skipEnterMotion === true;
         // Panel defaults: autofocus Search + hold Craft ring. Callers (cold
         // toolbar Add Block) opt out so appearance matches Formatting menus.
-        const autofocusFilter = options.autofocusFilter !== false;
+        const autofocusFilter = filterable && options.autofocusFilter !== false;
         const holdFieldFocus = options.holdFieldFocus !== false;
         this.#mountList(services, {
             context,

@@ -14,9 +14,10 @@ import { resolveEditorBody, setEditorFieldHasFocus } from '../editor-field-focus
 import { findBlockNode } from '../blocks/actions';
 import { BLOCK_INSERT_KINDS } from './kinds';
 import {
-    readBlockInsertView,
+    resolveBlockInsertView,
     writeBlockInsertView,
     type BlockInsertView,
+    type BlockPickerDisplay,
 } from './insert-view-storage';
 import '../components/VizyBlockBrowseDialogElement';
 
@@ -176,9 +177,9 @@ export class InsertionOverlay {
      * Toolbar Add Block — insert Vizy Blocks at the caret (or first root child
      * when unfocused). Shared Blocks-only palette with gutter `+` and slash.
      *
-     * Search always autofocuses (the picker is for typing/filter). Field focus ring
-     * hold + editor restore stay warm-only so a cold open from the Craft title
-     * does not paint the field ring or leave the caret in ProseMirror.
+     * Search autofocuses when the field exposes it. Field focus ring hold + editor
+     * restore stay warm-only so a cold open from the Craft title does not paint the
+     * field ring or leave the caret in ProseMirror.
      */
     openToolbarInsert(
         invoker: HTMLElement,
@@ -805,6 +806,8 @@ export class InsertionOverlay {
             invokerKey: key,
             invoker,
             kinds,
+            filterable: this.#showBlockSearch(),
+            showViewToggle: this.#allowsViewSwitching(),
             autofocusFilter,
             holdFieldFocus: claimEditorFocus,
             onRestoreFocus: claimEditorFocus
@@ -832,10 +835,32 @@ export class InsertionOverlay {
     }
 
     #fieldInsertView(): BlockInsertView {
-        return readBlockInsertView(this.#fieldHandle());
+        return resolveBlockInsertView(
+            this.#fieldHandle(),
+            this.#pickerDisplay(),
+            this.#defaultPickerView(),
+        );
+    }
+
+    #pickerDisplay(): BlockPickerDisplay {
+        const display = this.#services().manifest.field.blockPickerDisplay;
+        return display === 'list' || display === 'grid' ? display : 'both';
+    }
+
+    #defaultPickerView(): BlockInsertView {
+        return this.#services().manifest.field.defaultBlockPickerView === 'grid' ? 'grid' : 'list';
+    }
+
+    #allowsViewSwitching(): boolean {
+        return this.#pickerDisplay() === 'both';
+    }
+
+    #showBlockSearch(): boolean {
+        return this.#services().manifest.field.showBlockSearch !== false;
     }
 
     #onInsertViewChange(view: BlockInsertView): void {
+        if (!this.#allowsViewSwitching()) return;
         writeBlockInsertView(this.#fieldHandle(), view);
         const last = this.#lastOpen;
         if (!last) return;
@@ -859,7 +884,9 @@ export class InsertionOverlay {
             invokerKey: last.invokerKey,
             invoker: last.invoker,
             kinds: last.kinds,
-            autofocusFilter: last.autofocusFilter,
+            filterable: this.#showBlockSearch(),
+            showViewToggle: true,
+            autofocusFilter: this.#showBlockSearch() && last.autofocusFilter,
             holdFieldFocus: last.claimEditorFocus,
             onRestoreFocus: last.claimEditorFocus
                 ? () => {
@@ -885,7 +912,11 @@ export class InsertionOverlay {
         },
     ): void {
         this.#browse.open(services, context, items, {
-            onView: (view) => this.#onInsertViewChange(view),
+            filterable: this.#showBlockSearch(),
+            showViewToggle: this.#allowsViewSwitching(),
+            onView: this.#allowsViewSwitching()
+                ? (view) => this.#onInsertViewChange(view)
+                : undefined,
             onClose: () => {
                 this.#setInvokerExpanded(options.invoker, options.key, false);
             },

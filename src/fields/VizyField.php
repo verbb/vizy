@@ -86,6 +86,9 @@ class VizyField extends Field
     public const MODE_RICH_TEXT = 'richText';
     public const ROOT_CONTENT_RICH = 'rich';
     public const ROOT_CONTENT_BLOCKS = 'blocks';
+    public const BLOCK_PICKER_DISPLAY_BOTH = 'both';
+    public const BLOCK_PICKER_DISPLAY_LIST = 'list';
+    public const BLOCK_PICKER_DISPLAY_GRID = 'grid';
 
 
     // Traits
@@ -131,6 +134,9 @@ class VizyField extends Field
      * ordering, and never invalidates existing authored content of that type.
      */
     public array $blockTypePickerGroups = [];
+    public string $blockPickerDisplay = self::BLOCK_PICKER_DISPLAY_BOTH;
+    public string $defaultBlockPickerView = self::BLOCK_PICKER_DISPLAY_LIST;
+    public bool $showBlockSearch = true;
     public string $editorConfig = 'standard';
     public string $rootContentType = self::ROOT_CONTENT_RICH;
 
@@ -794,6 +800,15 @@ class VizyField extends Field
 
         $rules[] = [['initialRows', 'minBlocks', 'maxBlocks'], 'integer', 'min' => 0];
         $rules[] = [['rootContentType'], 'in', 'range' => [self::ROOT_CONTENT_RICH, self::ROOT_CONTENT_BLOCKS]];
+        $rules[] = [['blockPickerDisplay'], 'in', 'range' => [
+            self::BLOCK_PICKER_DISPLAY_BOTH,
+            self::BLOCK_PICKER_DISPLAY_LIST,
+            self::BLOCK_PICKER_DISPLAY_GRID,
+        ]];
+        $rules[] = [['defaultBlockPickerView'], 'in', 'range' => [
+            self::BLOCK_PICKER_DISPLAY_LIST,
+            self::BLOCK_PICKER_DISPLAY_GRID,
+        ]];
         $rules[] = [['editorConfig'], 'match', 'pattern' => '/^[a-z][a-z0-9_-]*$/'];
         $rules[] = [['editorConfig'], function(): void {
             Vizy::$plugin->getEditorConfigs()->validateFieldReference($this);

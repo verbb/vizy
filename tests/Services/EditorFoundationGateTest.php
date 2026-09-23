@@ -1446,6 +1446,9 @@ it('builds deterministic manifest revisions with request-local correlation IDs',
         ->and($first['uid'])->not->toBe($second['uid'])
         ->and($first['field']['blockTypePickerGroups'])->toBe([])
         ->and($first['field']['fieldHandle'])->toBe('manifestField')
+        ->and($first['field']['blockPickerDisplay'])->toBe('both')
+        ->and($first['field']['defaultBlockPickerView'])->toBe('list')
+        ->and($first['field']['showBlockSearch'])->toBeTrue()
         ->and($first['internalNodes'])->toContain('doc', 'text', 'vizyBlock');
 });
 

@@ -1,9 +1,11 @@
 import { afterEach, describe, expect, it } from 'vitest';
 import {
     readBlockInsertView,
+    resolveBlockInsertView,
     writeBlockInsertView,
 } from '../../src/web/assets/field/src/ts/insertion/insert-view-storage';
 import { VizyInsertionListElement } from '../../src/web/assets/field/src/ts/components/VizyInsertionListElement';
+import { VizyBlockBrowseDialogElement } from '../../src/web/assets/field/src/ts/components/VizyBlockBrowseDialogElement';
 import type { AvailableInsertion, InsertionContext } from '../../src/web/assets/field/src/ts/insertion/types';
 
 const stubContext = { editorId: 'test', surface: 'inline' } as InsertionContext;
@@ -41,6 +43,14 @@ describe('block insert view preference', () => {
         writeBlockInsertView('body', 'grid');
         expect(readBlockInsertView('body')).toBe('grid');
         expect(readBlockInsertView('sidebar')).toBe('list');
+    });
+
+    it('uses the configured default until the author chooses, and forced displays ignore preferences', () => {
+        expect(resolveBlockInsertView('body', 'both', 'grid')).toBe('grid');
+        writeBlockInsertView('body', 'list');
+        expect(resolveBlockInsertView('body', 'both', 'grid')).toBe('list');
+        expect(resolveBlockInsertView('body', 'grid', 'list')).toBe('grid');
+        expect(resolveBlockInsertView('body', 'list', 'grid')).toBe('list');
     });
 });
 
@@ -92,5 +102,34 @@ describe('insertion list preview + view toggle', () => {
             detail: { value: ['grid'] },
         }));
         expect(views).toEqual(['grid']);
+    });
+
+    it('can hide both search and the view toggle without hiding choices', async () => {
+        const list = new VizyInsertionListElement();
+        list.items = [blockEntry('block:a')];
+        list.filterable = false;
+        list.showViewToggle = false;
+        list.setAttribute('data-open', '');
+        document.body.append(list);
+        await list.updateComplete;
+
+        expect(list.shadowRoot!.querySelector('input[type="search"]')).toBeNull();
+        expect(list.shadowRoot!.querySelector('.view-toggle')).toBeNull();
+        expect(list.shadowRoot!.querySelectorAll('button.option')).toHaveLength(1);
+    });
+});
+
+describe('block grid picker policy', () => {
+    it('can hide search and the view toggle while keeping Block cards available', async () => {
+        const dialog = new VizyBlockBrowseDialogElement();
+        dialog.items = [blockEntry('block:a')];
+        dialog.filterable = false;
+        dialog.showViewToggle = false;
+        document.body.append(dialog);
+        await dialog.updateComplete;
+
+        expect(dialog.shadowRoot!.querySelector('pk-input')).toBeNull();
+        expect(dialog.shadowRoot!.querySelector('.view-toggle')).toBeNull();
+        expect(dialog.shadowRoot!.querySelectorAll('button.card').length).toBeGreaterThan(0);
     });
 });

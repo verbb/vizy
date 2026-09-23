@@ -3,6 +3,7 @@
 ## Unreleased
 
 ### Added
+- Added field settings for choosing the available Block picker displays, their default, and whether search is shown. ([#341](https://github.com/verbb/vizy/issues/341))
 - Added durable Vizy content recovery records and commands to restore a field’s saved document, nested Matrix values, ownership, order, enabled states, and relations across sites. See [Content Recovery](https://verbb.io/craft-plugins/vizy/docs/v4/developers/content-recovery).
 - Added `block.owner` to Block Type templates for direct access to the durable Craft element containing the Vizy field. ([#285](https://github.com/verbb/vizy/issues/285))
 

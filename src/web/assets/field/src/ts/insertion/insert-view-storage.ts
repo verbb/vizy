@@ -4,6 +4,7 @@
  */
 
 export type BlockInsertView = 'list' | 'grid';
+export type BlockPickerDisplay = 'both' | BlockInsertView;
 
 const STORAGE_PREFIX = 'Vizy.blockInsertView';
 
@@ -15,14 +16,27 @@ function storageKey(fieldHandle: string): string {
     return `${prefix}.${STORAGE_PREFIX}.${fieldHandle}`;
 }
 
-export function readBlockInsertView(fieldHandle: string | null | undefined): BlockInsertView {
-    if (!fieldHandle || typeof localStorage === 'undefined') return 'list';
+export function readBlockInsertView(
+    fieldHandle: string | null | undefined,
+    defaultView: BlockInsertView = 'list',
+): BlockInsertView {
+    if (!fieldHandle || typeof localStorage === 'undefined') return defaultView;
     try {
         const raw = localStorage.getItem(storageKey(fieldHandle));
-        return raw === 'grid' ? 'grid' : 'list';
+        return raw === 'list' || raw === 'grid' ? raw : defaultView;
     } catch {
-        return 'list';
+        return defaultView;
     }
+}
+
+/** Resolve field policy before consulting the per-user preference. */
+export function resolveBlockInsertView(
+    fieldHandle: string | null | undefined,
+    display: BlockPickerDisplay = 'both',
+    defaultView: BlockInsertView = 'list',
+): BlockInsertView {
+    if (display === 'list' || display === 'grid') return display;
+    return readBlockInsertView(fieldHandle, defaultView);
 }
 
 export function writeBlockInsertView(
