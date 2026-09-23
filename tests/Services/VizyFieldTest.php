@@ -2,10 +2,18 @@
 
 declare(strict_types=1);
 
+use craft\elements\Asset;
 use craft\elements\Entry;
+use craft\models\ImageTransform;
+use Tests\Support\Fixtures\AssetSpikeFixture;
 use Tests\Support\Fixtures\VizyFixtureFactory;
+use verbb\vizy\base\RenderContext;
 use verbb\vizy\document\VizyDocument;
 use verbb\vizy\fields\VizyField;
+use verbb\vizy\helpers\FieldImageOptions;
+use verbb\vizy\helpers\FieldImagePreviews;
+use verbb\vizy\nodes\Image;
+use yii\base\Event;
 
 it('normalizes and serializes the canonical VizyDocument field value', function() {
     $field = VizyFixtureFactory::vizyField();
@@ -268,6 +276,85 @@ it('separates field-local availability from block type membership', function() {
     expect($field->getInsertableBlockTypeUids())->toBe([])
         ->and($field->getAllowedBlockTypeUids())->toBe([$uid])
         ->and($field->allowsBlockTypeUid($uid))->toBeTrue();
+});
+
+it('offers private volumes in image and file picker settings', function() {
+    AssetSpikeFixture::ensureAdminUser();
+    $volume = AssetSpikeFixture::volume();
+    expect($volume->getFs()->hasUrls)->toBeFalse();
+
+    $field = new VizyField([
+        'name' => 'Private asset settings',
+        'handle' => 'privateAssetSettings',
+        'editorConfig' => 'standard',
+    ]);
+
+    $html = $field->getSettingsHtml();
+
+    // The source is always present once in Default Upload Location. It must
+    // also be present in Available Volumes so authors can browse existing
+    // private assets through Craft's permission-aware element selector.
+    expect(substr_count($html, (string)$volume->uid))->toBeGreaterThanOrEqual(2)
+        ->and(substr_count(
+            $html,
+            htmlspecialchars($volume->name, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8'),
+        ))->toBeGreaterThanOrEqual(2)
+        ->and(FieldImageOptions::volumes(new VizyField([
+            'availableVolumes' => [$volume->uid],
+        ])))->toBe(['volume:' . $volume->uid]);
+});
+
+it('uses UID-backed default transforms for private asset previews and output', function() {
+    AssetSpikeFixture::ensureAdminUser();
+    $suffix = craft\helpers\StringHelper::randomString(6);
+    $transform = new ImageTransform([
+        'name' => 'Private preview ' . $suffix,
+        'handle' => 'privatePreview' . $suffix,
+        'width' => 1,
+        'height' => 1,
+    ]);
+    expect(Craft::$app->getImageTransforms()->saveTransform($transform))->toBeTrue();
+    $transform = Craft::$app->getImageTransforms()->getTransformByHandle($transform->handle);
+
+    $field = new VizyField([
+        'name' => 'Private image output',
+        'handle' => 'privateImageOutput',
+        'defaultTransform' => $transform->uid,
+    ]);
+    $asset = AssetSpikeFixture::createTempAsset(
+        'private-preview.png',
+        base64_decode('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=', true),
+    );
+    $document = [
+        'type' => 'doc',
+        'attrs' => ['schemaVersion' => VizyDocument::CURRENT_SCHEMA_VERSION],
+        'content' => [[
+            'type' => 'image',
+            'attrs' => ['assetUid' => $asset->uid],
+        ]],
+    ];
+    $seenTransforms = [];
+    $handler = static function($event) use (&$seenTransforms): void {
+        $seenTransforms[] = $event->transform;
+        $event->url = 'https://transforms.example.test/private-preview.png';
+        $event->handled = true;
+    };
+    Event::on(Asset::class, Asset::EVENT_BEFORE_DEFINE_URL, $handler);
+
+    try {
+        $options = FieldImageOptions::forField($field);
+        $context = new RenderContext(field: $field, siteId: (int)$asset->siteId);
+        $resolved = Image::resolveAttrs(['assetUid' => $asset->uid], $context);
+        $previews = FieldImagePreviews::forDocument($document, (int)$asset->siteId, $field);
+
+        expect($options['defaultTransform'])->toBe($transform->handle)
+            ->and($resolved['src'])->toBe('https://transforms.example.test/private-preview.png')
+            ->and($previews[$asset->uid]['url'])->toBe('https://transforms.example.test/private-preview.png')
+            ->and($previews[$asset->uid]['transform'])->toBe($transform->handle)
+            ->and($seenTransforms)->toBe([$transform->handle, $transform->handle]);
+    } finally {
+        Event::off(Asset::class, Asset::EVENT_BEFORE_DEFINE_URL, $handler);
+    }
 });
 
 it('warns in asset settings when volume and transform pickers have no options', function() {

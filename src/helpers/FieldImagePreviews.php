@@ -1,6 +1,8 @@
 <?php
 namespace verbb\vizy\helpers;
 
+use verbb\vizy\fields\VizyField;
+
 use Craft;
 use craft\elements\Asset;
 use craft\helpers\StringHelper;
@@ -16,7 +18,7 @@ final class FieldImagePreviews
     // Static Methods
     // =========================================================================
 
-    public static function forDocument(array $document, int $siteId): array
+    public static function forDocument(array $document, int $siteId, ?VizyField $field = null): array
     {
         $uids = [];
         self::_collectAssetUids($document, $uids);
@@ -32,6 +34,7 @@ final class FieldImagePreviews
 
         $previews = [];
         $elements = Craft::$app->getElements();
+        $defaultTransform = $field ? FieldImageOptions::defaultTransformHandle($field) : '';
 
         foreach ($assets as $asset) {
             if (!$elements->canView($asset)) {
@@ -39,13 +42,13 @@ final class FieldImagePreviews
             }
 
             $uid = (string)$asset->uid;
-            $url = (string)($asset->getUrl() ?: '');
+            $url = (string)($asset->getUrl($defaultTransform ?: null) ?: '');
 
             $previews[$uid] = [
                 'assetId' => (int)$asset->id,
                 'url' => $url,
                 'label' => (string)($asset->title ?: $asset->filename ?: 'Image'),
-                'transform' => '',
+                'transform' => $defaultTransform,
             ];
         }
 

@@ -32,9 +32,26 @@ final class FieldImageOptions
         return [
             'volumes' => self::volumes($field),
             'transforms' => self::transforms($field),
-            'defaultTransform' => (string)($field->defaultTransform ?? ''),
+            'defaultTransform' => self::defaultTransformHandle($field),
             'defaultSource' => $field->defaultUploadLocationSource,
         ];
+    }
+
+    public static function defaultTransformHandle(VizyField $field): string
+    {
+        $configured = (string)($field->defaultTransform ?? '');
+        if ($configured === '') {
+            return '';
+        }
+
+        $transforms = Craft::$app->getImageTransforms();
+        // Field settings persist the stable UID, while Craft's asset URL and
+        // transform endpoints require the mutable handle. Accept handles as
+        // well for older project config written before UID-backed options.
+        $transform = $transforms->getTransformByUid($configured)
+            ?? $transforms->getTransformByHandle($configured);
+
+        return (string)($transform?->handle ?? '');
     }
 
     public static function volumes(VizyField $field): array

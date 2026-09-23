@@ -4,6 +4,7 @@ namespace verbb\vizy\nodes;
 use verbb\vizy\base\EditorGroup;
 use verbb\vizy\base\Node;
 use verbb\vizy\base\RenderContext;
+use verbb\vizy\helpers\FieldImageOptions;
 use verbb\vizy\helpers\Nodes;
 use verbb\vizy\helpers\SafeHtml;
 use verbb\vizy\helpers\TypeHtml;
@@ -60,9 +61,13 @@ class Image extends Node
             }
         }
 
-        // Transform is not part of the canonical authoring contract (preview-only
-        // in the editor). Honor a persisted handle if present for legacy content.
+        // Per-image transforms are not part of the canonical authoring contract.
+        // Honor a persisted handle for legacy content; otherwise the field's
+        // default transform lets private originals render from a public transform FS.
         $transform = $attrs['transform'] ?? null;
+        if ((!is_string($transform) || $transform === '') && ($field = $ctx->fieldOrNull())) {
+            $transform = FieldImageOptions::defaultTransformHandle($field);
+        }
         ArrayHelper::remove($attrs, 'transform');
 
         $src = $attrs['src'] ?? null;

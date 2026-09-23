@@ -216,12 +216,10 @@ class VizyField extends Field
         $volumeOptions = [];
 
         foreach (Craft::$app->getVolumes()->getAllVolumes() as $volume) {
-            if ($volume->getFs()->hasUrls) {
-                $volumeOptions[] = [
-                    'label' => Html::encode($volume->name),
-                    'value' => $volume->uid,
-                ];
-            }
+            $volumeOptions[] = [
+                'label' => Html::encode($volume->name),
+                'value' => $volume->uid,
+            ];
         }
 
         $transformOptions = [];
@@ -239,15 +237,9 @@ class VizyField extends Field
             ? Craft::t('app', 'No volumes exist yet.')
             : null;
 
-        $volumeOptionsWarning = null;
-        if ($volumeOptions === []) {
-            $volumeOptionsWarning = Craft::$app->getVolumes()->getAllVolumes() === []
-                ? Craft::t('app', 'No volumes exist yet.')
-                : Craft::t(
-                    'vizy',
-                    'No volumes have public URLs. Image and file picking requires at least one volume whose filesystem has public URLs.',
-                );
-        }
+        $volumeOptionsWarning = $volumeOptions === []
+            ? Craft::t('app', 'No volumes exist yet.')
+            : null;
 
         $transformOptionsWarning = $transformOptions === []
             ? Craft::t('app', 'No image transforms exist yet.')
@@ -922,7 +914,7 @@ class VizyField extends Field
             // Image asset picker (volumes / transforms) — same owner scope.
             'imageAuthoring' => FieldImageOptions::forField($this),
             // Session thumbs for Image nodes (canonical never stores src).
-            'imagePreviews' => FieldImagePreviews::forDocument($document, (int)$element->siteId),
+            'imagePreviews' => FieldImagePreviews::forDocument($document, (int)$element->siteId, $this),
         ];
         // Embed bootstrap on the element (same path as Hosted). Slideouts /
         // CpScreen AJAX often miss registerJs + getElementById after namespace
@@ -1015,7 +1007,7 @@ class VizyField extends Field
             'linkOptions' => FieldLinkOptions::forField($this, $owner),
             'elementSiteId' => (int)$owner->siteId,
             'imageAuthoring' => FieldImageOptions::forField($this),
-            'imagePreviews' => FieldImagePreviews::forDocument($document, (int)$owner->siteId),
+            'imagePreviews' => FieldImagePreviews::forDocument($document, (int)$owner->siteId, $this),
         ];
         // Embed bootstrap on the element so FieldLayout mount does not depend on
         // appendBodyHtml + getElementById (easy to miss after fragment distribution).

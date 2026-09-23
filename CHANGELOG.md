@@ -11,6 +11,7 @@
 - Upgrade verification now compares nested content before committing each owner conversion.
 
 ### Fixed
+- Fixed private Asset volumes being omitted from Vizy’s available-volume settings and asset picker, including default-transform previews and output for private originals. ([#256](https://github.com/verbb/vizy/issues/256))
 - Fixed link insertion at an empty caret and schemeless `www.` URLs, added authoring validation for unsafe URL schemes, and added coverage confirming mixed-format links render once in native Vizy output. ([#262](https://github.com/verbb/vizy/issues/262), [#290](https://github.com/verbb/vizy/issues/290))
 - Fixed Craft field and tab conditions inside Vizy Blocks not updating as sibling field values change, including hidden required fields and retained hidden values. ([#64](https://github.com/verbb/vizy/issues/64), [#233](https://github.com/verbb/vizy/issues/233))
 - Fixed GraphQL queries for resolver-backed fields in Vizy Blocks, including Matrix rows containing Assets, and ensured full schema dumps include concrete Vizy node types. ([#214](https://github.com/verbb/vizy/issues/214), [#268](https://github.com/verbb/vizy/issues/268))

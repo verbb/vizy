@@ -113,7 +113,6 @@ return [
   'No items found.' => 'No items found.',
   'No Transform' => 'No Transform',
   'No transform' => 'No transform',
-  'No volumes have public URLs. Image and file picking requires at least one volume whose filesystem has public URLs.' => 'No volumes have public URLs. Image and file picking requires at least one volume whose filesystem has public URLs.',
   'Open link in new tab' => 'Open link in new tab',
   'Ordered List' => 'Ordered List',
   'Paragraph' => 'Paragraph',
