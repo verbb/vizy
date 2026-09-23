@@ -123,8 +123,19 @@ final class FieldLinkOptions
 
         $sources = array_values(array_unique($sources));
         $customSources = self::_customSources(Entry::class);
+        $permittedSources = Collection::make(Craft::$app->getElementSources()->getSources(Entry::class))
+            ->filter(fn(array $source) =>
+                ($source['type'] ?? null) !== ElementSources::TYPE_HEADING &&
+                isset($source['key'])
+            )
+            ->pluck('key')
+            ->flip()
+            ->all();
 
-        return $customSources !== [] ? array_merge($sources, $customSources) : $sources;
+        return Collection::make(array_merge($sources, $customSources))
+            ->filter(fn(string $source) => isset($permittedSources[$source]))
+            ->values()
+            ->all();
     }
 
     private static function _categorySources(?ElementInterface $element): array
