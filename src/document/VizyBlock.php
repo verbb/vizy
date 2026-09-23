@@ -1,8 +1,10 @@
 <?php
 namespace verbb\vizy\document;
 
+use verbb\vizy\elements\Block as BlockElement;
 use verbb\vizy\models\BlockType;
 
+use craft\base\ElementInterface;
 use craft\errors\InvalidFieldException;
 
 use OutOfBoundsException;
@@ -49,6 +51,28 @@ final class VizyBlock implements \ArrayAccess
     public function path(): string
     {
         return $this->path;
+    }
+
+    /**
+     * The durable Craft element whose field contains this Block.
+     *
+     * Hosted Vizy documents are normalized against a request-local Block
+     * projection. Templates need the outer persisted element instead.
+     */
+    public function owner(): ?ElementInterface
+    {
+        $owner = $this->document->owner();
+
+        while ($owner instanceof BlockElement) {
+            $owner = $owner->getOwner();
+        }
+
+        return $owner;
+    }
+
+    public function getOwner(): ?ElementInterface
+    {
+        return $this->owner();
     }
 
     /**
@@ -143,6 +167,7 @@ final class VizyBlock implements \ArrayAccess
             'handle' => $this->getHandle(),
             'enabled' => $this->getEnabled(),
             'uid' => $this->uid(),
+            'owner' => $this->getOwner(),
             default => $this->fieldValue($name),
         };
     }
@@ -189,6 +214,6 @@ final class VizyBlock implements \ArrayAccess
 
     private function _isReservedQueryProperty(string $name): bool
     {
-        return in_array($name, ['type', 'handle', 'enabled', 'uid'], true);
+        return in_array($name, ['type', 'handle', 'enabled', 'uid', 'owner'], true);
     }
 }

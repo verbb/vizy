@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use craft\elements\Entry;
+use craft\elements\User;
 use craft\helpers\Html;
 use craft\helpers\StringHelper;
 use verbb\vizy\document\DocumentParser;
@@ -168,7 +169,12 @@ it('renders Block Type templates when an explicit blockTemplates map is provided
     mkdir($templatesPath . '/_vizy/blocks', 0777, true);
     file_put_contents(
         $templatesPath . '/_vizy/blocks/smoke-card.twig',
-        '<div class="smoke-block-template">{{ block.blockType.handle }}</div>',
+        <<<'TWIG'
+{% set owner = block.owner %}
+{% if owner is instance of('craft\\elements\\Entry') %}
+    <div class="smoke-block-template">{{ block.blockType.handle }}:{{ owner.title }}</div>
+{% endif %}
+TWIG,
     );
 
     $view->setTemplateMode(\craft\web\View::TEMPLATE_MODE_SITE);
@@ -177,6 +183,7 @@ it('renders Block Type templates when an explicit blockTemplates map is provided
     try {
         expect($view->doesTemplateExist($relative, \craft\web\View::TEMPLATE_MODE_SITE))->toBeTrue();
 
+        $owner = new Entry(['title' => 'Template owner']);
         $document = (new DocumentParser())->parse([
             'type' => 'doc',
             'attrs' => ['schemaVersion' => VizyDocument::CURRENT_SCHEMA_VERSION],
@@ -190,14 +197,18 @@ it('renders Block Type templates when an explicit blockTemplates map is provided
                 ],
                 'content' => [],
             ]],
-        ], new Entry(['title' => 'Owner']), new VizyField(['name' => 'Body', 'handle' => 'body']));
+        ], $owner, new VizyField(['name' => 'Body', 'handle' => 'body']));
 
         $html = (string)$document->render([
             'blockTemplates' => [$typeUid => $relative],
         ]);
 
         expect($html)->toContain('smoke-block-template')
-            ->and($html)->toContain($type->handle);
+            ->and($html)->toContain($type->handle)
+            ->and($html)->toContain('Template owner')
+            ->and($document->blocks()[0]->owner())->toBe($owner)
+            ->and($document->blocks()[0]->getOwner())->toBe($owner)
+            ->and($document->blocks()[0]->owner)->toBe($owner);
     } finally {
         $view->setTemplatesPath($previousPath);
         $view->setTemplateMode($previousMode);
@@ -206,4 +217,35 @@ it('renders Block Type templates when an explicit blockTemplates map is provided
         @rmdir($templatesPath . '/_vizy');
         @rmdir($templatesPath);
     }
+});
+
+it('unwraps Hosted Vizy Block projections to the durable template owner', function() {
+    $owner = new Entry(['title' => 'Durable owner']);
+    $outerHost = new \verbb\vizy\elements\Block();
+    $outerHost->setOwner($owner);
+    $innerHost = new \verbb\vizy\elements\Block();
+    $innerHost->setOwner($outerHost);
+    $node = [
+        'type' => 'doc',
+        'attrs' => ['schemaVersion' => VizyDocument::CURRENT_SCHEMA_VERSION],
+        'content' => [[
+            'type' => 'vizyBlock',
+            'attrs' => [
+                'blockUid' => StringHelper::UUID(),
+                'blockTypeUid' => StringHelper::UUID(),
+                'enabled' => true,
+                'fieldSlots' => [],
+            ],
+            'content' => [],
+        ]],
+    ];
+
+    $hosted = (new DocumentParser())->parse($node, $innerHost, new VizyField(['name' => 'Nested body', 'handle' => 'nestedBody']));
+    $user = new User(['username' => 'non-entry-owner']);
+    $userOwned = (new DocumentParser())->parse($node, $user, new VizyField(['name' => 'User body', 'handle' => 'userBody']));
+    $detached = (new DocumentParser())->parse($node);
+
+    expect($hosted->blocks()[0]->owner())->toBe($owner)
+        ->and($userOwned->blocks()[0]->owner())->toBe($user)
+        ->and($detached->blocks()[0]->owner())->toBeNull();
 });

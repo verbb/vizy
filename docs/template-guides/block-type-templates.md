@@ -57,9 +57,28 @@ Useful block properties include:
 | `block.uid` | The persistent ID for this block instance. |
 | `block.handle` | The Block Type handle. |
 | `block.enabled` | Whether this block is enabled. Disabled blocks are not passed to the template during automatic rendering. |
+| `block.owner` | The Craft element whose Vizy field contains the block, or `null` for a detached document. |
 | `block.<fieldHandle>` | The normalised value of a custom field in the Block Type’s field layout. |
 
 Custom field values use the same Twig APIs as fields on entries. For example, use `block.image.one()` for an Assets field and `block.relatedEntries.all()` for an Entries field.
+
+## Access the Element Containing the Vizy Field
+
+Use `block.owner` when a Block Type template needs the element containing the Vizy field. Do not query an Entry again from the request URI:
+
+```twig
+{% set owner = block.owner %}
+
+{% if owner is instance of('craft\\elements\\Entry') %}
+    <a href="{{ owner.url }}">{{ owner.title }}</a>
+{% endif %}
+```
+
+The owner is not always an Entry. Vizy fields can belong to other Craft element types, so check the type before using Entry-specific properties. The returned object retains the current site, draft, or revision context. For a Hosted Vizy field directly inside another Vizy Block, `block.owner` skips the temporary Block projection and returns the durable outer element.
+
+A document created without an element context has no owner, so `block.owner` is `null`. Keep the guard when a module may construct detached Vizy documents. Use `blockVariables` for presentation-only values that are not properties of the stored owner.
+
+If the Block Type also has a custom field with the handle `owner`, access that field explicitly with `block.fieldValue('owner')`.
 
 ## Render a Nested Vizy Field
 

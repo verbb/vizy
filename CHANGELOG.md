@@ -4,6 +4,7 @@
 
 ### Added
 - Added durable Vizy content recovery records and commands to restore a field’s saved document, nested Matrix values, ownership, order, enabled states, and relations across sites. See [Content Recovery](https://verbb.io/craft-plugins/vizy/docs/v4/developers/content-recovery).
+- Added `block.owner` to Block Type templates for direct access to the durable Craft element containing the Vizy field. ([#285](https://github.com/verbb/vizy/issues/285))
 
 ### Changed
 - Reorganised the Feature Tour around the editor, Vizy blocks, field configuration, editor capabilities, Block Types, nested content, and content-planning guidance.
