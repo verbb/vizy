@@ -132,7 +132,7 @@ See [Layouts](docs:feature-tour/editor-capabilities#layouts) for authoring and [
 | --- | --- | --- |
 | `image` | `<img>` (optional link wrap) | **Persist `assetUid` only** — never store `src`. Render resolves Asset URL; emit allowlists `src` / `alt` / dimensions / `class` / … and sanitises `src` (http/https). Link fields (`url`, `target`, …) wrap via the Link mark path |
 | `iframe` | `<iframe>` | Authoring `url` → sanitised `src` (http/https); attr allowlist (`width`, `height`, `title`, `loading`, `allow`, …). Omitted when URI rejected |
-| `mediaEmbed` | Custom (YouTube/Vimeo shell, purified oEmbed, or safe link) | `url` + optional `data.html`. Known providers rebuild trusted iframes from URL; unknown providers purify stored HTML (SafeIframe); else encoded link |
+| `mediaEmbed` | Custom (YouTube/Vimeo player, purified stored embed HTML, or safe link) | `url` + optional `data.html`. YouTube and Vimeo rebuild trusted iframe markup from the source URL. Other providers use stored HTML when content remains after purification, or an encoded link otherwise; only YouTube and Vimeo iframe hosts are permitted |
 
 ### Tables
 

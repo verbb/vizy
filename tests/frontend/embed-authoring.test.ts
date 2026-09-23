@@ -5,6 +5,7 @@ import { nodeViewServices } from './support/node-view-services';
 import { createEditorExtensions } from '../../src/web/assets/field/src/ts/editor-schema';
 import { createInsertionRegistry } from '../../src/web/assets/field/src/ts/insertion/registry';
 import { activateUrlNodeControl } from '../../src/web/assets/field/src/ts/semantic/embed-ui';
+import { resolveMediaEmbed } from '../../src/web/assets/field/src/ts/semantic/media-providers';
 import { installAnimationsShim, installElementInternalsShim } from './support/element-internals';
 import '../../src/web/assets/field/src/ts/semantic/url-node-dialog';
 import '../../src/web/assets/field/src/ts/semantic/embed-bubble';
@@ -81,6 +82,29 @@ function makeEditor(): Editor {
     editors.push(editor);
     return editor;
 }
+
+describe('media provider resolution', () => {
+    it.each([
+        ['https://www.youtube.com/watch?v=abcdefghijk', 'youtube', 'https://www.youtube.com/embed/abcdefghijk'],
+        ['https://youtu.be/abcdefghijk', 'youtube', 'https://www.youtube.com/embed/abcdefghijk'],
+        ['https://www.youtube.com/shorts/abcdefghijk', 'youtube', 'https://www.youtube.com/embed/abcdefghijk'],
+        ['https://vimeo.com/123456789', 'vimeo', 'https://player.vimeo.com/video/123456789'],
+    ])('builds a trusted player for %s', (url, provider, iframeUrl) => {
+        const resolved = resolveMediaEmbed(url);
+
+        expect(resolved?.provider).toBe(provider);
+        expect(resolved?.html).toContain(iframeUrl);
+    });
+
+    it('keeps Twitter and other unknown providers as URL-only embeds', () => {
+        expect(resolveMediaEmbed('x.com/verbb/status/123')).toMatchObject({
+            provider: 'unknown',
+            url: 'https://x.com/verbb/status/123',
+            html: null,
+            resourceId: null,
+        });
+    });
+});
 
 describe('embed / iframe URL dialog', () => {
     it('opens Insert Media Embed dialog from the toolbar control', async () => {

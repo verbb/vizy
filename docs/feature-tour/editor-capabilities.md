@@ -51,9 +51,24 @@ Alignment is an editor action rather than a separate content capability. Place `
 | --- | --- | --- |
 | Image | `image` | Selects or uploads an image using the field’s Asset settings |
 | Iframe | `iframe` | Inserts an iframe from a URL |
-| Media embed | `mediaEmbed` | Inserts supported media from a URL |
+| Media embed | `mediaEmbed` | Inserts a YouTube or Vimeo player from a URL, with a safe link fallback for other providers |
 
 Image controls follow the field’s upload location, allowed volumes, and available transforms. The chosen transform controls the editor preview; your frontend still needs to apply the transform required by its design. Iframe and media embed output is sanitised when rendered.
+
+### Media Embeds
+
+Enable the `mediaEmbed` capability and place its control in the toolbar to let editors paste a media URL. Vizy recognises the following URL formats:
+
+| Provider | Supported URL Formats |
+| --- | --- |
+| YouTube | `youtube.com/watch?v=…`, `youtu.be/…`, `youtube.com/shorts/…`, and `youtube.com/embed/…` |
+| Vimeo | `vimeo.com/…` and `vimeo.com/video/…` |
+
+The scheme is optional when an editor enters the URL. Vizy normalises supported URLs to HTTPS, stores the source URL, and rebuilds the player from that URL for both the control-panel preview and frontend rendering. It does not fetch third-party oEmbed data during authoring.
+
+Twitter/X and other providers are not converted into players. The editor shows an inert card containing the URL, and frontend rendering produces an encoded link. If stored content includes an oEmbed HTML payload, Vizy purifies it and permits iframe sources from YouTube and Vimeo only; scripts, event handlers, and other iframe hosts are removed.
+
+Media Embed output does not use a Twig template. A module or plugin can wrap or replace its frontend HTML with the [`modifyRenderedNode` event](docs:developers/events#customising-media-embed-output). This changes rendered output, including GraphQL `renderedHtml`, but does not add a provider to the control-panel preview. A provider that needs its own authoring experience should be implemented as a [custom node](docs:guides/developers/creating-a-custom-node-from-scratch).
 
 ## Tables
 

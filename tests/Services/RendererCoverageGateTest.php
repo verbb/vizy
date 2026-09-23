@@ -3,11 +3,15 @@
 declare(strict_types=1);
 
 use craft\elements\Entry;
+use craft\helpers\Html;
 use craft\helpers\StringHelper;
 use verbb\vizy\document\DocumentParser;
 use verbb\vizy\document\VizyDocument;
+use verbb\vizy\events\ModifyRenderedNodeEvent;
 use verbb\vizy\fields\VizyField;
+use verbb\vizy\nodes\MediaEmbed;
 use verbb\vizy\Vizy;
+use yii\base\Event;
 
 it('asserts every installed extension has a valid render strategy', function() {
     $extensions = Vizy::$plugin->getExtensions();
@@ -107,6 +111,37 @@ it('renders iframe and unknown mediaEmbed via type classes', function() {
         ->and($html)->toContain('https://example.com/embed')
         ->and($html)->toContain('vizy-media-embed-link')
         ->and($html)->toContain('https://example.com/unknown-provider');
+});
+
+it('allows Media Embed output to be customised through its rendered-node event', function() {
+    Vizy::$plugin->getExtensions()->reset();
+
+    $listener = function(ModifyRenderedNodeEvent $event): void {
+        if ($event->context?->field?->handle !== 'articleBody') {
+            return;
+        }
+
+        $event->renderedNode = Html::tag('div', $event->renderedNode, ['class' => 'article-media']);
+    };
+    Event::on(MediaEmbed::class, MediaEmbed::EVENT_MODIFY_RENDERED_NODE, $listener);
+
+    try {
+        $document = (new DocumentParser())->parse([
+            'type' => 'doc',
+            'attrs' => ['schemaVersion' => VizyDocument::CURRENT_SCHEMA_VERSION],
+            'content' => [[
+                'type' => 'mediaEmbed',
+                'attrs' => ['url' => 'https://vimeo.com/123456789'],
+            ]],
+        ], new Entry(['title' => 'Owner']), new VizyField(['name' => 'Article body', 'handle' => 'articleBody']));
+
+        $html = (string)$document->render();
+
+        expect($html)->toContain('<div class="article-media">')
+            ->and($html)->toContain('https://player.vimeo.com/video/123456789');
+    } finally {
+        Event::off(MediaEmbed::class, MediaEmbed::EVENT_MODIFY_RENDERED_NODE, $listener);
+    }
 });
 
 it('renders Block Type templates when an explicit blockTemplates map is provided', function() {

@@ -165,6 +165,31 @@ Event::on(Image::class, Image::EVENT_MODIFY_RENDERED_NODE, function(ModifyRender
 });
 ```
 
+#### Customising Media Embed Output
+
+Media Embed does not look for a Twig template. To adjust its frontend output, listen for the same event on the `MediaEmbed` node. Put these imports at the top of your module file and register the listener in its `init()` method:
+
+```php
+use craft\helpers\Html;
+use verbb\vizy\events\ModifyRenderedNodeEvent;
+use verbb\vizy\nodes\MediaEmbed;
+use yii\base\Event;
+
+Event::on(MediaEmbed::class, MediaEmbed::EVENT_MODIFY_RENDERED_NODE, function(ModifyRenderedNodeEvent $event) {
+    if ($event->context?->field?->handle !== 'articleBody') {
+        return;
+    }
+
+    $event->renderedNode = Html::tag(
+        'div',
+        $event->renderedNode,
+        ['class' => 'article-media'],
+    );
+});
+```
+
+This wraps each Media Embed rendered from the `articleBody` field in `<div class="article-media">`. The listener affects frontend rendering and GraphQL `renderedHtml`; it does not change which providers receive a player in the control-panel editor. [Editor Capabilities](docs:feature-tour/editor-capabilities#media-embeds) describes the supported providers and fallback behaviour.
+
 ## The `registerLinkOptions` Event
 The event that is triggered when registering the link options for the field.
 
