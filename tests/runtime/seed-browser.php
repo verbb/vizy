@@ -7,7 +7,9 @@ use craft\elements\User;
 use craft\fieldlayoutelements\CustomField;
 use craft\fields\Entries;
 use craft\fields\Json as JsonField;
+use craft\fields\Lightswitch;
 use craft\fields\PlainText;
+use craft\fields\conditions\LightswitchFieldConditionRule;
 use craft\helpers\StringHelper;
 use craft\models\FieldLayout;
 use craft\models\FieldLayoutTab;
@@ -27,7 +29,9 @@ $related = new Entries(['name' => 'Related pages', 'handle' => 'relatedPages']);
 $nested = new VizyField(['name' => 'Nested body', 'handle' => 'nestedBody', 'editorConfig' => 'standard']);
 $json = new JsonField(['name' => 'Structured JSON', 'handle' => 'structuredJson']);
 $jsonText = new PlainText(['name' => 'JSON-looking text', 'handle' => 'jsonLookingText', 'multiline' => true]);
-foreach ([$plain, $related, $nested, $json, $jsonText] as $field) {
+$showDetails = new Lightswitch(['name' => 'Show details', 'handle' => 'showDetails']);
+$details = new PlainText(['name' => 'Conditional details', 'handle' => 'conditionalDetails']);
+foreach ([$plain, $related, $nested, $json, $jsonText, $showDetails, $details] as $field) {
     $save($field, Craft::$app->getFields()->saveField(...));
 }
 $uploads = AssetSpikeFixture::assetsField('browser-uploads');
@@ -35,7 +39,7 @@ $uploads->name = 'Uploaded files';
 $save($uploads, Craft::$app->getFields()->saveField(...));
 $layout = new FieldLayout(['uid' => StringHelper::UUID(), 'type' => Block::class]);
 $placements = [];
-foreach ([$plain, $related, $nested, $uploads, $json, $jsonText] as $field) {
+foreach ([$plain, $related, $nested, $uploads, $json, $jsonText, $showDetails, $details] as $field) {
     $placement = new CustomField($field);
     $placement->uid = StringHelper::UUID();
     $placements[] = $placement;
@@ -44,6 +48,13 @@ $placements[0]->required = true;
 $tab = new FieldLayoutTab(['name' => 'Content', 'layout' => $layout]);
 $tab->setElements($placements);
 $layout->setTabs([$tab]);
+$condition = Block::createCondition();
+$condition->setFieldLayouts([$layout]);
+$conditionRule = new LightswitchFieldConditionRule();
+$conditionRule->setFieldUid($showDetails->uid);
+$conditionRule->value = true;
+$condition->setConditionRules([$conditionRule]);
+$placements[7]->setElementCondition($condition);
 $type = new BlockType(['uid' => StringHelper::UUID(), 'name' => 'Card', 'handle' => 'card']);
 $type->setFieldLayout($layout);
 $save($type, Vizy::$plugin->getBlockTypes()->saveBlockType(...));
@@ -70,6 +81,11 @@ $peer = VizyFixtureFactory::entry('Peer owner');
 $actor = new User(['username' => 'editor', 'email' => 'editor@example.test', 'active' => true, 'pending' => false]);
 $actor->newPassword = 'testing-only-password';
 $save($actor, Craft::$app->getElements()->saveElement(...));
+$conditionBlockUid = StringHelper::UUID();
+$conditionDocument = $doc;
+$conditionDocument['content'][1]['attrs']['blockUid'] = $conditionBlockUid;
+$conditionDocument['content'][1]['attrs']['fieldSlots'][$placements[6]->uid] = false;
+$conditionOwner = VizyFixtureFactory::entry('Condition browser owner', json_encode($conditionDocument));
 $jsonBlockUid = StringHelper::UUID();
 $jsonValue = ['enabled' => true, 'count' => 2, 'nested' => ['colors' => ['red', 'blue']]];
 $jsonTextValue = '{"nested":{"count":2},"list":["red","blue"],"enabled":true}';
@@ -92,6 +108,8 @@ Craft::$app->getUserPermissions()->saveUserPermissions($actor->id, [
 ]);
 $jsonOwner->setAuthorIds([$actor->id]);
 $save($jsonOwner, Craft::$app->getElements()->saveElement(...));
+$conditionOwner->setAuthorIds([$actor->id]);
+$save($conditionOwner, Craft::$app->getElements()->saveElement(...));
 $owner->setAuthorIds([$actor->id]);
 $save($owner, Craft::$app->getElements()->saveElement(...));
 $peer->setAuthorIds([$admin->id]);
@@ -156,6 +174,15 @@ $metadata = [
     'headingPlacement' => $placements[0]->uid, 'relatedPlacement' => $placements[1]->uid,
     'uploadPlacement' => $placements[3]->uid, 'uploadVolumeId' => AssetSpikeFixture::volume()->id,
     'nestedPlacement' => $placements[2]->uid, 'relatedId' => $relatedEntry->id,
+    'conditions' => [
+        'entryId' => $conditionOwner->id,
+        'editPath' => '/index.php?p=admin/entries/' . $section->handle . '/' . $conditionOwner->id,
+        'blockUid' => $conditionBlockUid,
+        'toggleHandle' => $showDetails->handle,
+        'togglePlacement' => $placements[6]->uid,
+        'detailsHandle' => $details->handle,
+        'detailsPlacement' => $placements[7]->uid,
+    ],
     'json' => [
         'entryId' => $jsonOwner->id,
         'editPath' => '/index.php?p=admin/entries/' . $section->handle . '/' . $jsonOwner->id,

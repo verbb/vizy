@@ -68,6 +68,36 @@ final class FieldLayoutController extends Controller
     }
 
     /**
+     * Re-evaluates conditional tabs and elements for one mounted Block.
+     */
+    public function actionRefresh(): Response
+    {
+        $this->requirePostRequest();
+        $this->requireAcceptsJson();
+        try {
+            $verified = $this->_verifiedRequest();
+            if ($verified === null) {
+                return $this->_conflict('staleField');
+            }
+            [$context, $owner, $field] = $verified;
+
+            $body = $this->_rawBodyObject();
+            if ($body === null) {
+                return $this->_conflict('invalidBlock');
+            }
+
+            $result = Vizy::$plugin->getFieldLayoutForms()->refreshRequestItem($context, $owner, $field, $body);
+            return $result['ok']
+                ? $this->asJson($result['data'])
+                : $this->_conflict($result['error'], $result['extra']);
+        } catch (ForbiddenHttpException $exception) {
+            throw $exception;
+        } catch (Throwable $exception) {
+            return $this->_rejected($exception);
+        }
+    }
+
+    /**
      * Renders several Block FieldLayouts under one verified editor context.
      *
      * The editor mounts every mountable Block eagerly, so open bursts coalesce

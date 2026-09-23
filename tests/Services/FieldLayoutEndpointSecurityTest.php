@@ -10,6 +10,7 @@ use craft\fields\Assets;
 use craft\fields\Entries;
 use craft\fields\Lightswitch;
 use craft\fields\PlainText;
+use craft\fields\conditions\LightswitchFieldConditionRule;
 use craft\helpers\Json;
 use craft\helpers\StringHelper;
 use craft\models\FieldLayout;
@@ -141,6 +142,178 @@ it('renders typed adapters for Plain Text and Lightswitch without saving the own
         ->and($response->data['tabLabels'])->not->toBeEmpty()
         ->and($reloaded->dateUpdated?->format('c') ?? 'null')->toBe($before)
         ->and($reloaded->id)->toBe($fixture['owner']->id);
+});
+
+it('refreshes Craft-native sibling field conditions without replacing unchanged controls', function() {
+    $fixture = fieldLayoutSecurityFixture('Conditions');
+    $layout = $fixture['type']->getFieldLayout();
+    $placements = $layout->getCustomFieldElements();
+    $plainPlacement = $placements[0];
+    $lightPlacement = $placements[1];
+
+    $condition = Block::createCondition();
+    $condition->setFieldLayouts([$layout]);
+    $rule = new LightswitchFieldConditionRule();
+    $rule->setFieldUid($fixture['light']->uid);
+    $rule->value = true;
+    $condition->setConditionRules([$rule]);
+    $plainPlacement->setElementCondition($condition);
+    expect(Craft::$app->getFields()->saveLayout($layout))->toBeTrue();
+
+    $block = $fixture['block'];
+    $block['attrs']['fieldSlots'] = [
+        $plainPlacement->uid => 'preserved while hidden',
+        $lightPlacement->uid => false,
+    ];
+    $initial = WebControllerHarness::renderFieldLayout(fieldLayoutRequest($fixture, ['block' => $block]));
+
+    expect($initial->getStatusCode())->toBe(200, json_encode($initial->data ?? null))
+        ->and($initial->data['refreshable'])->toBeTrue()
+        ->and($initial->data['html'])->toContain('data-layout-element-placeholder')
+        ->and($initial->data['html'])->not->toContain('preserved while hidden')
+        ->and($initial->data['visibleElements'][$layout->getTabs()[0]->uid] ?? [])
+        ->not->toContain($plainPlacement->uid);
+
+    $block['attrs']['fieldSlots'][$lightPlacement->uid] = true;
+    $shownRequest = fieldLayoutRequest($fixture, [
+        'block' => $block,
+        'documentRevision' => 2,
+        'visibleElements' => $initial->data['visibleElements'],
+        'staticElements' => $initial->data['staticElements'],
+    ]);
+    $shown = WebControllerHarness::refreshFieldLayout($shownRequest);
+    $shownDelta = $shown->data['missingElements'][0]['elements'];
+    $plainDelta = current(array_filter(
+        $shownDelta,
+        static fn(array $element): bool => $element['uid'] === $plainPlacement->uid,
+    ));
+
+    expect($shown->getStatusCode())->toBe(200, json_encode($shown->data ?? null))
+        ->and($plainDelta['html'])->toBeString()
+        ->and($plainDelta['html'])->toContain('preserved while hidden')
+        ->and($plainDelta['html'])->toContain('data-vizy-adapter-id="craft.plainText"')
+        ->and($shown->data['visibleElements'][$layout->getTabs()[0]->uid])
+        ->toContain($plainPlacement->uid);
+
+    $block['attrs']['fieldSlots'][$lightPlacement->uid] = false;
+    $hiddenRequest = fieldLayoutRequest($fixture, [
+        'block' => $block,
+        'documentRevision' => 3,
+        'visibleElements' => $shown->data['visibleElements'],
+        'staticElements' => $shown->data['staticElements'],
+    ]);
+    $hidden = WebControllerHarness::refreshFieldLayout($hiddenRequest);
+    $hiddenDelta = current(array_filter(
+        $hidden->data['missingElements'][0]['elements'],
+        static fn(array $element): bool => $element['uid'] === $plainPlacement->uid,
+    ));
+
+    expect($hidden->getStatusCode())->toBe(200, json_encode($hidden->data ?? null))
+        ->and($hiddenDelta['html'])->toBeFalse()
+        ->and($block['attrs']['fieldSlots'][$plainPlacement->uid])->toBe('preserved while hidden');
+});
+
+it('adds and removes conditioned Block tabs through the same Craft refresh contract', function() {
+    $fixture = fieldLayoutSecurityFixture('TabConditions');
+    $layout = $fixture['type']->getFieldLayout();
+    $advanced = new PlainText([
+        'name' => 'Advanced',
+        'handle' => 'advanced' . StringHelper::randomString(5),
+    ]);
+    expect(Craft::$app->getFields()->saveField($advanced))->toBeTrue();
+    CustomFieldBehavior::$fieldHandles[$advanced->handle] = true;
+
+    $condition = Block::createCondition();
+    $condition->setFieldLayouts([$layout]);
+    $rule = new LightswitchFieldConditionRule();
+    $rule->setFieldUid($fixture['light']->uid);
+    $rule->value = true;
+    $condition->setConditionRules([$rule]);
+    $advancedTab = new FieldLayoutTab([
+        'layout' => $layout,
+        'name' => 'Advanced',
+        'elementCondition' => $condition,
+        'elements' => [[
+            'type' => CustomField::class,
+            'fieldUid' => $advanced->uid,
+        ]],
+    ]);
+    $layout->setTabs([...$layout->getTabs(), $advancedTab]);
+    expect(Craft::$app->getFields()->saveLayout($layout))->toBeTrue();
+
+    $placements = $layout->getCustomFieldElements();
+    $lightPlacement = current(array_filter(
+        $placements,
+        static fn(CustomField $element): bool => $element->getField()->uid === $fixture['light']->uid,
+    ));
+    $advancedPlacement = current(array_filter(
+        $placements,
+        static fn(CustomField $element): bool => $element->getField()->uid === $advanced->uid,
+    ));
+    $block = $fixture['block'];
+    $block['attrs']['fieldSlots'] = [
+        $lightPlacement->uid => false,
+        $advancedPlacement->uid => 'tab value',
+    ];
+    $initial = WebControllerHarness::renderFieldLayout(fieldLayoutRequest($fixture, ['block' => $block]));
+
+    expect($initial->getStatusCode())->toBe(200, json_encode($initial->data ?? null))
+        ->and($initial->data['tabLabels'])->toBe(['Fields']);
+
+    $block['attrs']['fieldSlots'][$lightPlacement->uid] = true;
+    $shown = WebControllerHarness::refreshFieldLayout(fieldLayoutRequest($fixture, [
+        'block' => $block,
+        'documentRevision' => 2,
+        'visibleElements' => $initial->data['visibleElements'],
+        'staticElements' => $initial->data['staticElements'],
+    ]));
+    $advancedDelta = current(array_filter(
+        $shown->data['missingElements'],
+        static fn(array $tab): bool => $tab['uid'] === $advancedTab->uid,
+    ));
+
+    expect($shown->getStatusCode())->toBe(200, json_encode($shown->data ?? null))
+        ->and($shown->data['tabLabels'])->toBe(['Fields', 'Advanced'])
+        ->and($advancedDelta['id'])->toStartWith('vizyHost-')
+        ->and($advancedDelta['elements'][0]['html'])->toContain('tab value');
+});
+
+it('does not validate a required Block field while its Craft condition is hidden', function() {
+    $fixture = fieldLayoutSecurityFixture('ConditionalRequired');
+    $layout = $fixture['type']->getFieldLayout();
+    [$plainPlacement, $lightPlacement] = $layout->getCustomFieldElements();
+
+    $condition = Block::createCondition();
+    $condition->setFieldLayouts([$layout]);
+    $rule = new LightswitchFieldConditionRule();
+    $rule->setFieldUid($fixture['light']->uid);
+    $rule->value = true;
+    $condition->setConditionRules([$rule]);
+    $plainPlacement->required = true;
+    $plainPlacement->setElementCondition($condition);
+    expect(Craft::$app->getFields()->saveLayout($layout))->toBeTrue();
+
+    $document = [
+        'type' => 'doc',
+        'attrs' => ['schemaVersion' => 2],
+        'content' => [[
+            ...$fixture['block'],
+            'attrs' => [
+                ...$fixture['block']['attrs'],
+                'fieldSlots' => [$lightPlacement->uid => false],
+            ],
+        ]],
+    ];
+    $fixture['owner']->setScenario(Entry::SCENARIO_LIVE);
+    $fixture['owner']->setFieldValue($fixture['field']->handle, $document);
+    $fixture['field']->validateBlocks($fixture['owner']);
+    expect($fixture['owner']->getErrors())->toBe([]);
+
+    $document['content'][0]['attrs']['fieldSlots'][$lightPlacement->uid] = true;
+    $fixture['owner']->clearErrors();
+    $fixture['owner']->setFieldValue($fixture['field']->handle, $document);
+    $fixture['field']->validateBlocks($fixture['owner']);
+    expect($fixture['owner']->getErrors())->not->toBeEmpty();
 });
 
 it('server-renders every mountable FieldLayout for initial bootstrap', function() {

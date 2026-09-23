@@ -22,6 +22,11 @@ async function openOwner(page: Page) {
     await expect(page.locator('vizy-editor').first().locator('.ProseMirror').first()).toBeVisible();
 }
 
+async function openConditionOwner(page: Page) {
+    await page.goto(fixture.conditions.editPath);
+    await expect(page.locator(`vizy-block[data-block-uid="${fixture.conditions.blockUid}"]`)).toBeVisible();
+}
+
 async function openJsonOwner(page: Page) {
     await page.goto(fixture.json.editPath);
     await expect(page.locator(`vizy-block[data-block-uid="${fixture.json.blockUid}"]`)).toBeVisible();
@@ -58,6 +63,14 @@ async function save(page: Page, expectedText = 'Root after') {
     await expect.poll(() => persisted().document.content[0].content[0].text).toBe(expectedText);
 }
 
+async function saveCurrentOwner(page: Page) {
+    await Promise.all([
+        page.waitForEvent('framenavigated', { predicate: (frame) => frame === page.mainFrame() }),
+        page.keyboard.press('ControlOrMeta+S'),
+    ]);
+    await page.waitForLoadState('domcontentloaded');
+}
+
 test('opening Matrix and Hosted Vizy does not create an unsolicited autosave draft', async ({ page }) => {
     await login(page, 'editor');
     const before = persisted();
@@ -92,6 +105,34 @@ test('real Craft fields flush root, hosted text and a required block field throu
     await openOwner(page);
     await expect(heading).toHaveValue('Heading after');
     await expect(hosted).toContainText('Nested after');
+});
+
+test('Craft-native Block conditions reveal, hide, preserve and reopen sibling field values', async ({ page }) => {
+    await login(page, 'editor');
+    await openConditionOwner(page);
+    const block = page.locator(`vizy-block[data-block-uid="${fixture.conditions.blockUid}"]`);
+    const toggle = block.locator(`[data-vizy-field-handle="${fixture.conditions.toggleHandle}"] .lightswitch`);
+    const details = block.locator(`input[name$="[${fixture.conditions.detailsHandle}]"]`);
+
+    await expect(toggle).toBeVisible();
+    await expect(details).toHaveCount(0);
+    await toggle.click();
+    await expect(details).toBeVisible();
+    await details.fill('Condition value survives');
+    await toggle.click();
+    await expect(details).toHaveCount(0);
+    // Let Craft finish its normal draft reconciliation before publishing. A
+    // Ctrl+S while checkForm() is still rotating the draft version can submit
+    // the previous content version and correctly trigger Craft's stale guard.
+    await checkAutosave(page);
+    await saveCurrentOwner(page);
+
+    await openConditionOwner(page);
+    await expect(details).toHaveCount(0);
+    await toggle.click();
+    await expect(details).toHaveValue('Condition value survives');
+    await toggle.click();
+    await expect(details).toHaveCount(0);
 });
 
 test('JSON fields and JSON-looking Plain Text load, save, reopen and autosave independently', async ({ page }) => {

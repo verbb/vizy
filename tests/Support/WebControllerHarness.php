@@ -174,6 +174,20 @@ final class WebControllerHarness
     }
 
     /** @param array<string,mixed> $body */
+    public static function refreshFieldLayout(array $body, bool $ensureAdmin = true): Response
+    {
+        return self::withWebRequest($body, 'vizy/field-layout/refresh', static function(): Response {
+            $controller = new FieldLayoutController('field-layout', Vizy::$plugin);
+            $controller->enableCsrfValidation = false;
+            $controller->request = Craft::$app->getRequest();
+            $controller->response = Craft::$app->getResponse();
+            /** @var Response $response */
+            $response = $controller->runAction('refresh');
+            return $response;
+        }, $ensureAdmin);
+    }
+
+    /** @param array<string,mixed> $body */
     public static function retryFinalization(array $body): Response
     {
         return self::withWebRequest($body, 'vizy/finalization/retry', static function() use ($body): Response {

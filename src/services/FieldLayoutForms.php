@@ -24,6 +24,7 @@ use craft\fields\Users;
 use craft\helpers\Html;
 use craft\helpers\Json;
 use craft\models\FieldLayout;
+use craft\models\FieldLayoutForm;
 use craft\web\View;
 
 /**
@@ -71,6 +72,48 @@ final class FieldLayoutForms extends Component
     }
 
     /**
+     * Re-evaluates a mounted Block's Craft FieldLayout conditions.
+     */
+    public function refreshRequestItem(
+        array $context,
+        ElementInterface $owner,
+        VizyField $field,
+        object $item,
+    ): array {
+        $blockObject = $item->block ?? null;
+        if (!is_object($blockObject)) {
+            return $this->_fail('invalidBlock');
+        }
+        $blockHash = $this->blockHash($blockObject);
+        if (!hash_equals($blockHash, (string)($item->blockHash ?? ''))) {
+            return $this->_fail('staleBlockHash');
+        }
+        $destination = Json::decode(Json::encode($item->destination ?? null));
+        if (!is_array($destination)) {
+            return $this->_fail('invalidDestination');
+        }
+        $visibleElements = $this->_elementUidMap($item->visibleElements ?? null);
+        $staticElements = $this->_elementUidMap($item->staticElements ?? null);
+        if ($visibleElements === null || $staticElements === null) {
+            return $this->_fail('invalidLayoutElements');
+        }
+
+        return $this->_render(
+            $context,
+            $owner,
+            $field,
+            $blockObject,
+            $destination,
+            (int)($item->documentRevision ?? 0),
+            (string)($item->requestId ?? ''),
+            true,
+            $visibleElements,
+            $staticElements,
+            true,
+        );
+    }
+
+    /**
      * Renders a server-trusted canonical Block into the initial editor payload.
      *
      * Assets remain registered on the parent CP view, so they are emitted by the
@@ -113,6 +156,9 @@ final class FieldLayoutForms extends Component
         int $documentRevision,
         string $requestId,
         bool $captureAssets,
+        ?array $visibleElements = null,
+        ?array $staticElements = null,
+        bool $refresh = false,
     ): array {
         $blockJson = Json::decode(Json::encode($blockObject));
         // Saved field values can legitimately be large. Loading their form must
@@ -283,10 +329,26 @@ final class FieldLayoutForms extends Component
         $entryFieldUid = (string)($context['entryFieldUid'] ?? $context['fieldUid'] ?? '');
         HostedVizy::setEntryFieldUid($entryFieldUid !== '' ? $entryFieldUid : null);
         HostedVizy::setEntryPlacementUid($context['ownerPlacementUid'] ?? null);
+        $form = null;
         try {
             try {
                 $html = $view->namespaceInputs(
-                    fn() => $layout->createForm($block, false)->render(),
+                    function() use (
+                        $layout,
+                        $block,
+                        $visibleElements,
+                        $staticElements,
+                        $refresh,
+                        &$form,
+                    ): string {
+                        $form = $layout->createForm($block, false, [
+                            'registerDeltas' => false,
+                            'visibleElements' => $visibleElements,
+                            'staticElements' => $staticElements,
+                        ]);
+
+                        return $refresh ? '' : $form->render();
+                    },
                     $namespace,
                 );
             } catch (\Throwable $exception) {
@@ -309,24 +371,59 @@ final class FieldLayoutForms extends Component
                 : '';
             $view->setNamespace($previousNamespace);
         }
+        if (!$form instanceof FieldLayoutForm) {
+            return $this->_fail('fieldLayoutRenderFailed', [
+                'blockUid' => $attrs['blockUid'],
+            ]);
+        }
         foreach ($placements as $placement) {
-            $needle = 'id="' . $placement['wrapperId'] . '"';
-            $attributes = sprintf(
-                'id="%s" data-vizy-field-layout-element-uid="%s" data-vizy-field-handle="%s" data-vizy-adapter-id="%s"',
-                Html::encode($placement['wrapperId']),
-                Html::encode($placement['fieldLayoutElementUid']),
-                Html::encode($placement['fieldHandle']),
-                Html::encode($placement['adapterId']),
-            );
-            $html = str_replace($needle, $attributes, $html);
+            $html = $this->_decoratePlacementHtml($html, $placement);
         }
 
         $tabLabels = [];
-        foreach ($layout->getTabs() as $tab) {
-            $tabLabels[] = (string)$tab->name;
+        foreach ($form->tabs as $tab) {
+            $tabLabels[] = $tab->getName();
         }
 
-        return ['ok' => true, 'data' => [
+        $missingElements = [];
+        if ($refresh) {
+            foreach ($form->tabs as $tab) {
+                if (!$tab->getUid()) {
+                    continue;
+                }
+                $elements = [];
+                foreach ($tab->elements as [$layoutElement, $conditional, $elementHtml, $static]) {
+                    if (!$conditional) {
+                        continue;
+                    }
+                    if (is_string($elementHtml)) {
+                        // createForm() produced field-namespaced HTML while the
+                        // outer callback held the Block namespace for scripts.
+                        $elementHtml = $view->namespaceInputs($elementHtml, $namespace);
+                        foreach ($placements as $placement) {
+                            if ($placement['fieldLayoutElementUid'] === $layoutElement->uid) {
+                                $elementHtml = $this->_decoratePlacementHtml($elementHtml, $placement);
+                                break;
+                            }
+                        }
+                    }
+                    $elements[] = [
+                        'uid' => $layoutElement->uid,
+                        'html' => $elementHtml,
+                        'static' => $static,
+                    ];
+                }
+                $missingElements[] = [
+                    'uid' => $tab->getUid(),
+                    'id' => $view->namespaceInputId($tab->getId(), $namespace),
+                    'elements' => $elements,
+                ];
+            }
+        }
+
+        $refreshable = $this->_layoutIsRefreshable($layout);
+
+        $data = [
             'requestId' => $requestId,
             'documentRevision' => $documentRevision,
             'blockHash' => $blockHash,
@@ -340,7 +437,15 @@ final class FieldLayoutForms extends Component
             'bodyHtml' => $captureAssets ? $view->getBodyHtml() : $initialBodyHtml,
             'fields' => $placements,
             'tabLabels' => $tabLabels,
-        ]];
+            'visibleElements' => $form->getVisibleElements(),
+            'staticElements' => $form->getStaticElements(),
+            'refreshable' => $refreshable,
+        ];
+        if ($refresh) {
+            $data['missingElements'] = $missingElements;
+        }
+
+        return ['ok' => true, 'data' => $data];
     }
 
     private function _matrixInputLayout(FieldLayout $layout): FieldLayout
@@ -402,6 +507,62 @@ final class FieldLayoutForms extends Component
         $js = $view->clearJsBuffer(true, true) ?: '';
 
         return $scriptHtml . $js;
+    }
+
+    private function _decoratePlacementHtml(string $html, array $placement): string
+    {
+        $needle = 'id="' . $placement['wrapperId'] . '"';
+        $attributes = sprintf(
+            'id="%s" data-vizy-field-layout-element-uid="%s" data-vizy-field-handle="%s" data-vizy-adapter-id="%s"',
+            Html::encode($placement['wrapperId']),
+            Html::encode($placement['fieldLayoutElementUid']),
+            Html::encode($placement['fieldHandle']),
+            Html::encode($placement['adapterId']),
+        );
+
+        return str_replace($needle, $attributes, $html);
+    }
+
+    private function _layoutIsRefreshable(FieldLayout $layout): bool
+    {
+        foreach ($layout->getTabs() as $tab) {
+            if ($tab->hasConditions()) {
+                return true;
+            }
+            foreach ($tab->getElements() as $element) {
+                if ($element->hasConditions() || $element->alwaysRefresh()) {
+                    return true;
+                }
+            }
+        }
+
+        return false;
+    }
+
+    /**
+     * Normalizes an untrusted tab UID → element UID list map.
+     */
+    private function _elementUidMap(mixed $value): ?array
+    {
+        $value = Json::decode(Json::encode($value));
+        if (!is_array($value)) {
+            return null;
+        }
+        $map = [];
+        foreach ($value as $tabUid => $elementUids) {
+            if (!is_string($tabUid) || !is_array($elementUids)) {
+                return null;
+            }
+            $map[$tabUid] = [];
+            foreach ($elementUids as $elementUid) {
+                if (!is_string($elementUid)) {
+                    return null;
+                }
+                $map[$tabUid][] = $elementUid;
+            }
+        }
+
+        return $map;
     }
 
     private function _fail(string $error, array $extra = []): array

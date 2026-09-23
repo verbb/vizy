@@ -1,12 +1,14 @@
 <?php
 namespace verbb\vizy\elements;
 
+use verbb\vizy\elements\conditions\BlockCondition;
 use verbb\vizy\fields\VizyField;
 use verbb\vizy\models\BlockType;
 
 use Craft;
 use craft\base\Element;
 use craft\base\ElementInterface;
+use craft\elements\conditions\ElementConditionInterface;
 use craft\elements\User;
 use craft\models\FieldLayout;
 
@@ -18,6 +20,11 @@ class Block extends Element
     public static function isLocalized(): bool
     {
         return true;
+    }
+
+    public static function createCondition(): ElementConditionInterface
+    {
+        return Craft::createObject(BlockCondition::class, [static::class]);
     }
 
 

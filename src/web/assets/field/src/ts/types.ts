@@ -325,6 +325,21 @@ export interface FieldMetadata {
     matrixAnchorUid?: string;
 }
 
+export type FieldLayoutElementMap = Record<string, string[]>;
+
+export interface FieldLayoutElementDelta {
+    uid: string;
+    /** `true` keeps the mounted element, `false` replaces it with a placeholder. */
+    html: string | boolean;
+    static: boolean;
+}
+
+export interface FieldLayoutTabDelta {
+    uid: string;
+    id: string;
+    elements: FieldLayoutElementDelta[];
+}
+
 export interface FieldLayoutResponse {
     requestId: string;
     documentRevision: number;
@@ -338,9 +353,19 @@ export interface FieldLayoutResponse {
     headHtml: string;
     bodyHtml: string;
     fields: FieldMetadata[];
-    /** Craft layout tab names in designer order; shown only when length ≥ 2. */
+    /** Visible Craft layout tab names in designer order; shown only when length ≥ 2. */
     tabLabels: string[];
+    visibleElements?: FieldLayoutElementMap;
+    staticElements?: FieldLayoutElementMap;
+    refreshable?: boolean;
     ok?: true;
+}
+
+export interface FieldLayoutRefreshResponse extends FieldLayoutResponse {
+    visibleElements: FieldLayoutElementMap;
+    staticElements: FieldLayoutElementMap;
+    refreshable: boolean;
+    missingElements: FieldLayoutTabDelta[];
 }
 
 /** Bootstrap / batch entry when PHP could not render a Block FieldLayout. */

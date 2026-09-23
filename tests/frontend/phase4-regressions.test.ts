@@ -675,4 +675,115 @@ describe('lazy FieldLayout request ownership', () => {
         expect(hosts.get('c')?.root.querySelector('#host-c')).not.toBeNull();
         expect(hosts.get('b')?.status).toBe('failed');
     });
+
+    it('patches Craft condition deltas while retaining unchanged field DOM', async () => {
+        const { FieldLayoutLoader } = await import('../../src/web/assets/field/src/ts/FieldLayoutLoader');
+        const hosts = new FieldHostRegistry();
+        const record = hosts.acquire('conditional', 'type', 'layout', 'hash');
+        document.body.append(record.root);
+        const block = {
+            type: 'vizyBlock',
+            attrs: {
+                blockUid: 'conditional',
+                blockTypeUid: 'type',
+                enabled: true,
+                fieldSlots: { toggle: true },
+            },
+        };
+        const node = {
+            type: { name: 'vizyBlock' },
+            attrs: block.attrs,
+            toJSON: () => block,
+        };
+        const requests: Array<{ action: string; data: any }> = [];
+        (window as any).Craft = {
+            sendActionRequest: async (_method: string, action: string, config: { data: any }) => {
+                requests.push({ action, data: config.data });
+                return {
+                    data: {
+                        ...config.data,
+                        blockUid: 'conditional',
+                        blockTypeUid: 'type',
+                        fieldLayoutUid: 'layout',
+                        fieldLayoutHash: 'hash',
+                        hostNamespace: 'vizyHost[conditional]',
+                        html: '',
+                        headHtml: '',
+                        bodyHtml: '',
+                        fields: [],
+                        tabLabels: ['Content'],
+                        visibleElements: { 'tab-one': ['conditional-field'] },
+                        staticElements: {},
+                        refreshable: true,
+                        missingElements: [{
+                            uid: 'tab-one',
+                            id: 'vizyHost-conditional-content',
+                            elements: [{
+                                uid: 'conditional-field',
+                                html: '<div data-layout-element="conditional-field"><input id="new-field"></div>',
+                                static: false,
+                            }],
+                        }],
+                    },
+                };
+            },
+            initUiElements() {},
+        };
+        let mounted = 0;
+        const loader = new FieldLayoutLoader(
+            hosts,
+            {
+                ...manifest(['paragraph']),
+                blockTypes: {
+                    type: {
+                        uid: 'type',
+                        name: 'Type',
+                        handle: 'type',
+                        fieldLayoutUid: 'layout',
+                        fieldLayoutHash: 'hash',
+                    },
+                },
+            },
+            'token',
+            () => ({ node: node as any, revision: 2, destination: { kind: 'root' } }),
+            () => mounted++,
+        );
+        loader.adoptInitial({
+            requestId: '',
+            documentRevision: 0,
+            blockHash: 'trusted',
+            blockUid: 'conditional',
+            blockTypeUid: 'type',
+            fieldLayoutUid: 'layout',
+            fieldLayoutHash: 'hash',
+            hostNamespace: 'vizyHost[conditional]',
+            html: [
+                '<div class="flex-fields" data-layout-tab="tab-one">',
+                '<div data-layout-element="stable-field"><input id="stable-field"></div>',
+                '<div class="hidden" data-layout-element="conditional-field" data-layout-element-placeholder></div>',
+                '</div>',
+                '<div class="flex-fields hidden" data-layout-tab="tab-two"><input id="removed-tab-field"></div>',
+            ].join(''),
+            headHtml: '',
+            bodyHtml: '',
+            fields: [],
+            tabLabels: ['Content', 'Advanced'],
+            visibleElements: {},
+            staticElements: {},
+            refreshable: true,
+        });
+        const stableField = record.root.querySelector('#stable-field');
+
+        loader.scheduleRefresh('conditional');
+        await vi.waitFor(() => expect(requests).toHaveLength(1), { timeout: 1000 });
+        await vi.waitFor(() => expect(record.root.querySelector('#new-field')).not.toBeNull());
+
+        expect(requests[0].action).toBe('vizy/field-layout/refresh');
+        expect(record.root.querySelector('#stable-field')).toBe(stableField);
+        expect(record.root.querySelector('#removed-tab-field')).toBeNull();
+        expect(record.response?.visibleElements).toEqual({ 'tab-one': ['conditional-field'] });
+        expect(mounted).toBe(2);
+        loader.destroy();
+        record.root.remove();
+    });
 });

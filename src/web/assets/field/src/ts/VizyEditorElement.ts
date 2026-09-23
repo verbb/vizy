@@ -1083,12 +1083,20 @@ export class VizyEditorElement extends HTMLElement {
             record.capturedValues.set(metadata.fieldLayoutElementUid, adapter.read(wrapper));
             record.disposals.push(adapter.bind(wrapper, () => {
                 if (!this.#writesEnabled) return;
+                // Craft widgets commonly emit both input and change for one
+                // gesture. Do not create a second editor transaction after the
+                // first callback has already captured the same value.
+                if (stable(record.capturedValues.get(metadata.fieldLayoutElementUid))
+                    === stable(adapter.read(wrapper))) {
+                    return;
+                }
                 this.#contentTouched = true;
                 this.#revision += 1;
                 // The document must already contain live edits when copy,
                 // delete, drag or dirty-state checks run before the next save.
                 this.#flushMountedFields(record.blockUid);
                 this.#publishDocumentToInput();
+                this.#loader?.scheduleRefresh(record.blockUid);
             }));
         }
     }

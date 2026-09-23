@@ -15,6 +15,52 @@ const bindInputs = (root: HTMLElement, changed: () => void): (() => void) => {
     };
 };
 
+/**
+ * Craft's Lightswitch dispatches its value change through jQuery. Native
+ * addEventListener does not observe jQuery-only synthetic events, so bind on
+ * the same event bus when it is present and retain the native fallback.
+ */
+const bindCraftInputs = (root: HTMLElement, changed: () => void): (() => void) => {
+    const jq = (window as Window & {
+        jQuery?: (element: HTMLElement) => {
+            on(events: string, handler: () => void): void;
+            off(events: string, handler: () => void): void;
+        };
+    }).jQuery;
+    if (!jq) return bindInputs(root, changed);
+
+    const handler = () => changed();
+    const wrapped = jq(root);
+    wrapped.on('input change', handler);
+    return () => wrapped.off('input change', handler);
+};
+
+/**
+ * Craft's Lightswitch mutates its hidden input from the button's click
+ * handler, but does not emit a bubbling native input/change event. Listen to
+ * that button as well and defer one notification until Craft has committed
+ * the new value. The small coalescer also prevents duplicate refreshes when a
+ * Craft version or third-party field emits both click and change.
+ */
+const bindLightswitch = (root: HTMLElement, changed: () => void): (() => void) => {
+    let queued = false;
+    const notify = () => {
+        if (queued) return;
+        queued = true;
+        queueMicrotask(() => {
+            queued = false;
+            changed();
+        });
+    };
+    const disposeInputs = bindCraftInputs(root, notify);
+    const button = root.querySelector<HTMLElement>('.lightswitch');
+    button?.addEventListener('click', notify);
+    return () => {
+        disposeInputs();
+        button?.removeEventListener('click', notify);
+    };
+};
+
 const firstControl = (root: HTMLElement): HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement => {
     const control = root.querySelector<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>('input:not([type=hidden]), textarea, select');
     if (!control) throw new Error('adapterControlMissing');
@@ -32,7 +78,7 @@ const lightswitch: FieldTransportAdapter = {
         if (!input) throw new Error('adapterControlMissing');
         return input.value === '1';
     },
-    bind: bindInputs,
+    bind: bindLightswitch,
 };
 
 /**

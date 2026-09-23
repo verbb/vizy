@@ -4,7 +4,12 @@ import {
     selectLayoutTab,
     stampLayoutTabIndexes,
 } from './layout-tabs';
-import type { EditorManifest, FieldLayoutFailure, FieldLayoutResponse } from './types';
+import type {
+    EditorManifest,
+    FieldLayoutFailure,
+    FieldLayoutRefreshResponse,
+    FieldLayoutResponse,
+} from './types';
 import type { VizyBlockElement } from './components/VizyBlockElement';
 import { applyCraftFieldHtml } from './craft-field-html';
 import { wireDismissibleTips } from './dismissible-tips';
@@ -16,6 +21,7 @@ const encode = new TextEncoder();
 
 /** Must not exceed FieldLayoutController::BATCH_LIMIT. */
 const BATCH_LIMIT = 25;
+const CONDITION_REFRESH_DELAY = 180;
 
 interface QueuedRender {
     blockUid: string;
@@ -85,6 +91,8 @@ export class FieldLayoutLoader {
     #hashing = new Set<Promise<string>>();
     /** FieldLayouts fetched before the Block node exists (insert prefetch). */
     #pendingByUid = new Map<string, FieldLayoutResponse>();
+    #refreshTimers = new Map<string, number>();
+    #refreshControllers = new Map<string, AbortController>();
     #destroyed = false;
 
     /** Aborts anything in flight; the editor calls this when it tears down. */
@@ -94,6 +102,10 @@ export class FieldLayoutLoader {
         this.#flushTimer = null;
         this.#opening.clear();
         this.#pendingByUid.clear();
+        for (const timer of this.#refreshTimers.values()) window.clearTimeout(timer);
+        this.#refreshTimers.clear();
+        for (const controller of this.#refreshControllers.values()) controller.abort();
+        this.#refreshControllers.clear();
         for (const controller of this.#inFlight) controller.abort();
         this.#inFlight.clear();
         for (const queued of this.#queue.splice(0)) queued.reject(new Error('loaderDestroyed'));
@@ -254,6 +266,21 @@ export class FieldLayoutLoader {
         }
 
         return this.open(blockUid);
+    }
+
+    /** Debounces Craft condition evaluation after a mounted field changes. */
+    scheduleRefresh(blockUid: string): void {
+        if (this.#destroyed) return;
+        const record = this.hosts.get(blockUid);
+        if (record?.status !== 'mounted' || !record.response?.refreshable) return;
+
+        const existing = this.#refreshTimers.get(blockUid);
+        if (existing !== undefined) window.clearTimeout(existing);
+        this.#refreshControllers.get(blockUid)?.abort();
+        this.#refreshTimers.set(blockUid, window.setTimeout(() => {
+            this.#refreshTimers.delete(blockUid);
+            void this.#refresh(blockUid);
+        }, CONDITION_REFRESH_DELAY));
     }
 
     async #open(blockUid: string): Promise<FieldHostRecord> {
@@ -418,6 +445,95 @@ export class FieldLayoutLoader {
         return response.json() as Promise<BatchResponse>;
     }
 
+    async #requestRefresh(data: unknown, signal: AbortSignal): Promise<FieldLayoutRefreshResponse> {
+        if (window.Craft?.sendActionRequest) {
+            const result = await window.Craft.sendActionRequest<FieldLayoutRefreshResponse>(
+                'POST',
+                'vizy/field-layout/refresh',
+                {
+                    data,
+                    headers: { 'Content-Type': 'application/json' },
+                    signal,
+                },
+            );
+            if (signal.aborted) throw new DOMException('Aborted', 'AbortError');
+            return result.data;
+        }
+        const response = await fetch('/actions/vizy/field-layout/refresh', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(data),
+            signal,
+        });
+        if (!response.ok) throw new Error(`fieldLayoutRefresh:${response.status}`);
+        return response.json() as Promise<FieldLayoutRefreshResponse>;
+    }
+
+    async #refresh(blockUid: string): Promise<void> {
+        const record = this.hosts.get(blockUid);
+        const current = this.findBlock(blockUid);
+        const mounted = record?.response;
+        if (
+            !record
+            || !current
+            || record.status !== 'mounted'
+            || !mounted?.refreshable
+            || this.#destroyed
+        ) {
+            return;
+        }
+
+        const block = current.node.toJSON();
+        const blockHash = await hashFieldLayoutBlock(block);
+        if (this.#destroyed || this.hosts.get(blockUid) !== record) return;
+
+        this.#refreshControllers.get(blockUid)?.abort();
+        const controller = new AbortController();
+        this.#refreshControllers.set(blockUid, controller);
+        const requestId = crypto.randomUUID();
+        try {
+            const response = await this.#requestRefresh({
+                editorContextToken: this.contextToken,
+                requestId,
+                documentRevision: current.revision,
+                blockHash,
+                block,
+                destination: current.destination,
+                visibleElements: mounted.visibleElements ?? {},
+                staticElements: mounted.staticElements ?? {},
+            }, controller.signal);
+            const latest = this.findBlock(blockUid);
+            const latestType = this.manifest.blockTypes[String(latest?.node.attrs.blockTypeUid)];
+            if (
+                controller.signal.aborted
+                || this.#destroyed
+                || this.hosts.get(blockUid) !== record
+                || record.status !== 'mounted'
+                || record.response !== mounted
+                || !latest
+                || response.requestId !== requestId
+                || response.blockUid !== blockUid
+                || response.blockTypeUid !== String(latest.node.attrs.blockTypeUid)
+                || response.documentRevision !== current.revision
+                || response.blockHash !== blockHash
+                || response.fieldLayoutUid !== latestType?.fieldLayoutUid
+                || response.fieldLayoutHash !== latestType?.fieldLayoutHash
+            ) {
+                return;
+            }
+            this.#applyRefresh(record, response);
+        } catch (error: unknown) {
+            if (!controller.signal.aborted) {
+                // A condition refresh must never blank an otherwise usable Block.
+                console.error(`[Vizy] FieldLayout condition refresh failed for block ${blockUid}`, error);
+            }
+        } finally {
+            if (this.#refreshControllers.get(blockUid) === controller) {
+                this.#refreshControllers.delete(blockUid);
+            }
+        }
+    }
+
     /**
      * Adopts a trusted form shipped in the initial editor bootstrap. The live
      * document still has to agree on Block and layout identity; unlike an AJAX
@@ -562,6 +678,84 @@ export class FieldLayoutLoader {
         }
     }
 
+    /** Applies Craft's conditional FieldLayout delta without replacing stable widgets. */
+    #applyRefresh(record: FieldHostRecord, response: FieldLayoutRefreshResponse): void {
+        try {
+            const activePane = record.root.querySelector<HTMLElement>(
+                ':scope > .flex-fields:not(.hidden)',
+            );
+            const activeTabUid = activePane?.dataset.layoutTab ?? null;
+            const liveTabUids = new Set(response.missingElements.map((tab) => tab.uid));
+
+            for (const pane of record.root.querySelectorAll<HTMLElement>(':scope > .flex-fields')) {
+                const uid = pane.dataset.layoutTab;
+                if (uid && !liveTabUids.has(uid)) pane.remove();
+            }
+
+            for (const tab of response.missingElements) {
+                let pane = record.root.querySelector<HTMLElement>(
+                    `:scope > .flex-fields[data-layout-tab="${CSS.escape(tab.uid)}"]`,
+                );
+                if (!pane) {
+                    pane = document.createElement('div');
+                    pane.id = tab.id;
+                    pane.className = 'flex-fields hidden';
+                    pane.dataset.id = tab.id;
+                    pane.dataset.layoutTab = tab.uid;
+                    record.root.append(pane);
+                }
+
+                for (const element of tab.elements) {
+                    const selector = `[data-layout-element="${CSS.escape(element.uid)}"]`;
+                    const mountedElement = pane.querySelector<HTMLElement>(selector);
+                    if (element.html === true) continue;
+
+                    let replacement: HTMLElement;
+                    if (typeof element.html === 'string' && element.html.trim()) {
+                        const template = document.createElement('template');
+                        template.innerHTML = element.html.trim();
+                        const rendered = template.content.firstElementChild;
+                        if (!(rendered instanceof HTMLElement)) {
+                            throw new Error(`invalidFieldLayoutElement:${element.uid}`);
+                        }
+                        replacement = rendered;
+                    } else {
+                        replacement = document.createElement('div');
+                        replacement.className = 'hidden';
+                        replacement.dataset.layoutElement = element.uid;
+                        replacement.dataset.layoutElementPlaceholder = '';
+                    }
+
+                    if (mountedElement) mountedElement.replaceWith(replacement);
+                    else pane.append(replacement);
+                }
+
+                // Appending an existing pane also restores server tab order.
+                record.root.append(pane);
+            }
+
+            if (!record.root.isConnected) throw new Error('fieldHostDisconnected');
+            const headKey = `${response.fieldLayoutHash}:${response.headHtml}`;
+            if (response.headHtml && !mountedHeadResources.has(headKey)) {
+                applyCraftFieldHtml(response.headHtml, document.head);
+                mountedHeadResources.add(headKey);
+            }
+            applyCraftFieldHtml(response.bodyHtml, document.body);
+            window.Craft?.initUiElements?.(record.root);
+
+            record.response = { ...response, html: record.response?.html ?? '' };
+            record.errorMessage = null;
+            record.status = 'mounted';
+            stampLayoutTabIndexes(record.root);
+            this.#syncBlockTabs(record, record.response, activeTabUid);
+            this.onMounted(record);
+            record.disposals.push(wireDismissibleTips(record.root));
+        } catch (error: unknown) {
+            // Keep the previous mounted form usable if a delta is malformed.
+            console.error(`[Vizy] FieldLayout condition delta failed for block ${record.blockUid}`, error);
+        }
+    }
+
     #failMount(record: FieldHostRecord, error: unknown): void {
         record.status = 'failed';
         record.response = null;
@@ -575,16 +769,26 @@ export class FieldLayoutLoader {
      * Wire Craft layout tab labels onto the Block header and show tab 0.
      * Single-tab layouts leave the UI empty (Hyper-style).
      */
-    #syncBlockTabs(record: FieldHostRecord, response: FieldLayoutResponse): void {
+    #syncBlockTabs(
+        record: FieldHostRecord,
+        response: FieldLayoutResponse,
+        preferredTabUid: string | null = null,
+    ): void {
         // The same persisted Block can appear in multiple open editors.
         const block = record.root.closest<VizyBlockElement>('vizy-block');
         const labels = response.tabLabels ?? [];
         if (block) {
-            block.layoutTabLabels = labels;
+            if (JSON.stringify(block.layoutTabLabels) !== JSON.stringify(labels)) {
+                block.layoutTabLabels = labels;
+            }
             block.fieldLayoutError = null;
             block.fieldLayoutState = 'mounted';
         }
-        selectLayoutTab(record, 0);
+        const panes = [...record.root.querySelectorAll<HTMLElement>(':scope > .flex-fields')];
+        const preferredIndex = preferredTabUid
+            ? panes.findIndex((pane) => pane.dataset.layoutTab === preferredTabUid)
+            : -1;
+        selectLayoutTab(record, preferredIndex >= 0 ? preferredIndex : 0);
     }
 
     #syncBlockError(record: FieldHostRecord): void {
