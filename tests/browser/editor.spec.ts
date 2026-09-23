@@ -485,6 +485,49 @@ for (const pasteAsPlainText of [false, true]) {
     });
 }
 
+test('normalizes external HTML through the destination capability schema', async ({ page }) => {
+    await mount(page, { type: 'doc', attrs: { schemaVersion: 2 }, content: [] });
+    const result = await page.evaluate(() => {
+        const editor = (document.querySelector('vizy-editor') as any).editor;
+        const paste = (html: string, text: string) => {
+            const data = new DataTransfer();
+            data.setData('text/html', html);
+            data.setData('text/plain', text);
+            const event = new ClipboardEvent('paste', { bubbles: true, cancelable: true });
+            Object.defineProperty(event, 'clipboardData', { value: data });
+            editor.view.dom.dispatchEvent(event);
+        };
+
+        paste(`
+            <h4>Introduction</h4>
+            <p class="MsoListParagraph" style="mso-list:l0 level1 lfo1"><span style="mso-list:Ignore">· </span><strong>First</strong></p>
+            <p class="MsoListParagraph" style="mso-list:l0 level1 lfo1"><span style="mso-list:Ignore">· </span>Second</p>
+            <table><tr><th>Name</th><th>Value</th></tr><tr><td>Alpha</td><td>One</td></tr></table>
+            <img src="https://example.test/external.jpg" alt="External">
+        `, 'Introduction\nFirst\nSecond\nName Value\nAlpha One');
+
+        const blocks: Array<{ type: string; text: string; marks: string[] }> = [];
+        editor.state.doc.forEach((node: any) => {
+            const marks: string[] = [];
+            node.descendants((child: any) => child.marks.forEach((mark: any) => marks.push(mark.type.name)));
+            blocks.push({ type: node.type.name, text: node.textContent, marks });
+        });
+
+        editor.commands.clearContent();
+        paste('<img src="https://example.test/only.jpg" alt="External">', 'External image');
+        return { blocks, fallback: editor.getText() };
+    });
+
+    expect(result.blocks).toEqual([
+        { type: 'paragraph', text: 'Introduction', marks: [] },
+        { type: 'paragraph', text: 'First', marks: ['bold'] },
+        { type: 'paragraph', text: 'Second', marks: [] },
+        { type: 'paragraph', text: 'Name — Value', marks: [] },
+        { type: 'paragraph', text: 'Alpha — One', marks: [] },
+    ]);
+    expect(result.fallback).toBe('External image');
+});
+
 test('owns one EditorView and direct light-DOM NodeViews', async ({ page }) => {
     await mount(page, {
         type: 'doc',

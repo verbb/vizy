@@ -11,6 +11,7 @@ import { createSlashExtension } from './insertion/slash-extension';
 import { createToolbarExtension, createBubbleExtension } from './toolbar/extensions';
 import { createLayoutCommandsExtension } from './layout/extension';
 import { createRootTypingSurfaceExtension } from './typing-surface';
+import { createPasteNormalizer } from './paste-normalizer';
 import { VizySelectionBoundaries } from './selection-boundaries';
 import { preserveFieldValuesOnHistory } from './reconcile-document';
 import { UndoRedo, Gapcursor } from '@tiptap/extensions';
@@ -96,6 +97,7 @@ export function createEditorExtensions(
         // end of a sibling “Content Rich” area) and the empty region feels dead.
         Gapcursor,
         createRootTypingSurfaceExtension(manifest),
+        createPasteNormalizer(manifest),
         VizySelectionBoundaries,
         TextAlign.configure({ types: alignableTypes }),
         UnsupportedNode,

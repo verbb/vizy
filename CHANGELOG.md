@@ -7,6 +7,7 @@
 
 ### Changed
 - Reorganised the Feature Tour around the editor, Vizy blocks, field configuration, editor capabilities, Block Types, nested content, and content-planning guidance.
+- Pasting from Word and other rich-text sources now normalizes lists and unsupported structures according to the field’s Editor Config capabilities, preserving readable text when source HTML cannot be represented. ([#134](https://github.com/verbb/vizy/issues/134))
 - Opening block forms and creating Matrix rows now keep changes in the editor until the owner is saved.
 - Upgrade verification now compares nested content before committing each owner conversion.
 
