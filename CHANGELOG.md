@@ -11,6 +11,7 @@
 - Upgrade verification now compares nested content before committing each owner conversion.
 
 ### Fixed
+- Fixed JSON fields inside Vizy Blocks failing to load or persist, and JSON-looking Plain Text values being decoded as arrays. ([#352](https://github.com/verbb/vizy/issues/352))
 - Fixed Entry fields inside Vizy Blocks resolving relations against the wrong site in multi-site installs. ([#319](https://github.com/verbb/vizy/issues/319))
 - Fixed custom-field conditions on Matrix entry queries inside Vizy Blocks. ([#309](https://github.com/verbb/vizy/issues/309))
 - Fixed Craft field merges leaving Vizy Block Type layouts pointed at the deleted outgoing field, which could remove embedded values on a later entry save. ([#346](https://github.com/verbb/vizy/issues/346))

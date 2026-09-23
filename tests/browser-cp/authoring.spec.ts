@@ -1,4 +1,4 @@
-import { expect, test, type Page } from '@playwright/test';
+import { expect, test, type Locator, type Page } from '@playwright/test';
 import { execFileSync } from 'node:child_process';
 import fs from 'node:fs';
 
@@ -20,6 +20,28 @@ async function login(page: Page, username = 'admin') {
 async function openOwner(page: Page) {
     await page.goto(fixture.editPath);
     await expect(page.locator('vizy-editor').first().locator('.ProseMirror').first()).toBeVisible();
+}
+
+async function openJsonOwner(page: Page) {
+    await page.goto(fixture.json.editPath);
+    await expect(page.locator(`vizy-block[data-block-uid="${fixture.json.blockUid}"]`)).toBeVisible();
+}
+
+async function setJsonValue(textarea: Locator, value: unknown) {
+    await textarea.evaluate((control, nextValue) => {
+        const input = control as HTMLTextAreaElement & {
+            CodeMirror?: { setValue?: (value: string) => void; save?: () => void };
+        };
+        const codeMirror = input.CodeMirror ?? (input.nextElementSibling as HTMLElement & {
+            CodeMirror?: { setValue?: (value: string) => void; save?: () => void };
+        } | null)?.CodeMirror;
+        const encoded = JSON.stringify(nextValue, null, 2);
+        codeMirror?.setValue?.(encoded);
+        codeMirror?.save?.();
+        if (!codeMirror) input.value = encoded;
+        input.dispatchEvent(new Event('input', { bubbles: true }));
+        input.dispatchEvent(new Event('change', { bubbles: true }));
+    }, value);
 }
 
 function persisted() {
@@ -70,6 +92,51 @@ test('real Craft fields flush root, hosted text and a required block field throu
     await openOwner(page);
     await expect(heading).toHaveValue('Heading after');
     await expect(hosted).toContainText('Nested after');
+});
+
+test('JSON fields and JSON-looking Plain Text load, save, reopen and autosave independently', async ({ page }) => {
+    await login(page, 'editor');
+    const pageErrors: string[] = [];
+    page.on('pageerror', (error) => pageErrors.push(error.message));
+    await openJsonOwner(page);
+    expect(pageErrors.filter((message) => /defineSimpleMode|CodeMirror/i.test(message))).toEqual([]);
+
+    const block = page.locator(`vizy-block[data-block-uid="${fixture.json.blockUid}"]`);
+    const json = block.locator(`textarea[name$="[${fixture.json.fieldHandle}]"]`);
+    const jsonText = block.locator(`textarea[name$="[${fixture.json.textHandle}]"]`);
+    expect(JSON.parse(await json.inputValue())).toEqual(fixture.json.value);
+    await expect(jsonText).toHaveValue(fixture.json.textValue);
+
+    const savedJson = { enabled: false, count: 3, nested: { colors: ['green'], literal: '{"still":"data"}' } };
+    const savedText = '[{"kept":"as text"},{"count":3}]';
+    await setJsonValue(json, savedJson);
+    await jsonText.fill(savedText);
+    await Promise.all([
+        page.waitForEvent('framenavigated', { predicate: (frame) => frame === page.mainFrame() }),
+        page.keyboard.press('ControlOrMeta+S'),
+    ]);
+    await page.waitForLoadState('domcontentloaded');
+    const canonicalSlots = () => persisted().jsonOwner.document.content
+        .find((node: any) => node.attrs?.blockUid === fixture.json.blockUid).attrs.fieldSlots;
+    await expect.poll(() => canonicalSlots()[fixture.json.placement]).toEqual(savedJson);
+    expect(canonicalSlots()[fixture.json.textPlacement]).toBe(savedText);
+
+    await openJsonOwner(page);
+    expect(JSON.parse(await json.inputValue())).toEqual(savedJson);
+    await expect(jsonText).toHaveValue(savedText);
+    const canonical = persisted().jsonOwner.document;
+    const draftJson = { draft: true, items: [{ id: 1 }, { id: 2 }] };
+    const draftText = '{"draft":true,"still":"plain text"}';
+    await setJsonValue(json, draftJson);
+    await jsonText.fill(draftText);
+    const draftId = await checkAutosave(page);
+    expect(draftId).toBeGreaterThan(0);
+    const draftSlots = () => persisted().jsonOwner.drafts
+        .find((draft: any) => draft.draftId === draftId)?.document.content
+        .find((node: any) => node.attrs?.blockUid === fixture.json.blockUid)?.attrs.fieldSlots;
+    await expect.poll(() => draftSlots()?.[fixture.json.placement]).toEqual(draftJson);
+    expect(draftSlots()[fixture.json.textPlacement]).toBe(draftText);
+    expect(persisted().jsonOwner.document).toEqual(canonical);
 });
 
 test('real HTTP middleware refuses a CP action without CSRF', async ({ page }) => {

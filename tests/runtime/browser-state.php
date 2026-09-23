@@ -3,7 +3,10 @@ require __DIR__ . '/verify.php';
 $metadata = json_decode(file_get_contents(dirname(__DIR__, 2) . '/.cache/verbb-tests/browser.json'), true, flags: JSON_THROW_ON_ERROR);
 $entry = craft\elements\Entry::find()->id($metadata['entryId'])->status(null)->one();
 if (!$entry) throw new RuntimeException('Browser fixture owner not found');
+$jsonEntry = craft\elements\Entry::find()->id($metadata['json']['entryId'])->status(null)->one();
+if (!$jsonEntry) throw new RuntimeException('JSON browser fixture owner not found');
 $document = $entry->getFieldValue($metadata['fieldHandle']);
+$jsonDocument = $jsonEntry->getFieldValue($metadata['fieldHandle']);
 $matrix = $metadata['matrix'];
 $block = $document->findBlock($matrix['blockUid']);
 $rows = $document->blockElement($block)->getFieldValue($matrix['fieldHandle'])->all();
@@ -13,6 +16,14 @@ file_put_contents(dirname(__DIR__, 2) . '/.cache/verbb-tests/browser-state.json'
         'id' => $draft->id, 'draftId' => $draft->draftId,
         'document' => $draft->getFieldValue($metadata['fieldHandle'])->toArray(),
     ], craft\elements\Entry::find()->drafts()->provisionalDrafts(null)->draftOf($entry->id)->status(null)->all()),
+    'jsonOwner' => [
+        'document' => $jsonDocument->toArray(),
+        'drafts' => array_map(fn($draft) => [
+            'id' => $draft->id,
+            'draftId' => $draft->draftId,
+            'document' => $draft->getFieldValue($metadata['fieldHandle'])->toArray(),
+        ], craft\elements\Entry::find()->drafts()->provisionalDrafts(null)->draftOf($jsonEntry->id)->status(null)->all()),
+    ],
     'uploads' => array_map(static function($asset) {
         $folder = Craft::$app->getAssets()->getFolderById($asset->folderId);
         return ['id' => $asset->id, 'filename' => $asset->filename, 'volumeId' => $asset->volumeId,
