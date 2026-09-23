@@ -21,6 +21,7 @@ import {
     type ToolbarEntry,
 } from './toolbar-entries';
 import { MENU_CHEVRON_SVG } from '../../../shared/menu-chevron';
+import { loadIconSvg } from '../../../iconpicker/src/ts/VizyImageBrowserElement';
 
 type CatalogItem = {
     id: string;
@@ -112,6 +113,8 @@ type EditorConfigState = {
         enabled: boolean;
         items: string[];
     };
+    /** Catalogue value by control ID. One override follows the control across every surface. */
+    icons: Record<string, string>;
     /** Outset gutter `+` chip — independent of toolbar Add Block. Default on. */
     gutterInsert: boolean;
     /** Blank-line `/` opens Add Block palette. Default on. */
@@ -154,6 +157,9 @@ type InitialData = {
     dropdownCatalog: CatalogItem[];
     bubbleCatalog: CatalogItem[];
     capabilityCatalog: CapabilityCatalog;
+    /** Sanitized server-resolved SVGs for the configured icon values. */
+    iconSvgs?: Record<string, string | null>;
+    iconCatalogUrl?: string;
 };
 
 /** Every level a heading can be, which is what the Headings select offers. */
@@ -193,6 +199,7 @@ class VizyEditorConfigSettingsElement extends HTMLElement {
         toolbar: [],
         dropdowns: {},
         bubble: { enabled: true, items: [] },
+        icons: {},
         gutterInsert: true,
         slashInsert: true,
     };
@@ -204,6 +211,9 @@ class VizyEditorConfigSettingsElement extends HTMLElement {
     #dropdownCatalog: CatalogItem[] = [];
     #bubbleCatalog: CatalogItem[] = [];
     #capabilityCatalog: CapabilityCatalog = { nodes: [], marks: [], extensions: [], headingAvailable: false };
+    #iconSvgs: Record<string, string> = {};
+    #iconCatalogUrl = '';
+    #selectedIconControl = '';
     #mode: 'visual' | 'advanced' = 'visual';
 
     /**
@@ -354,6 +364,7 @@ class VizyEditorConfigSettingsElement extends HTMLElement {
                     enabled: parsed.config.bubble?.enabled ?? true,
                     items: [...(parsed.config.bubble?.items ?? [])],
                 },
+                icons: { ...(parsed.config.icons ?? {}) },
             };
             this.#reconcileHeadings();
             this.#toolbarCatalog = parsed.toolbarCatalog;
@@ -365,6 +376,14 @@ class VizyEditorConfigSettingsElement extends HTMLElement {
                 extensions: parsed.capabilityCatalog.extensions ?? [],
                 headingAvailable: parsed.capabilityCatalog.headingAvailable ?? false,
             };
+            this.#iconSvgs = Object.fromEntries(
+                Object.entries(parsed.iconSvgs ?? {})
+                    .filter((entry): entry is [string, string] => typeof entry[1] === 'string' && entry[1] !== ''),
+            );
+            this.#iconCatalogUrl = parsed.iconCatalogUrl ?? '';
+            this.#selectedIconControl = Object.keys(this.#state.icons)[0]
+                ?? this.#iconControlItems()[0]?.id
+                ?? '';
         }
         this.#advancedJson = this.#serializeAdvanced();
         // The hidden inputs are kept current as the author works — `render()` ends by
@@ -412,6 +431,7 @@ class VizyEditorConfigSettingsElement extends HTMLElement {
             toolbar: this.#state.toolbar,
             dropdowns: this.#state.dropdowns,
             bubble: this.#state.bubble,
+            icons: this.#state.icons,
             gutterInsert: this.#state.gutterInsert,
             slashInsert: this.#state.slashInsert,
         }, null, 2);
@@ -420,6 +440,10 @@ class VizyEditorConfigSettingsElement extends HTMLElement {
     #applyAdvanced(): boolean {
         try {
             const parsed = JSON.parse(this.#advancedJson) as Partial<EditorConfigState>;
+            const icons = parsed.icons ?? {};
+            if (typeof icons !== 'object' || icons === null || Array.isArray(icons)) {
+                throw new Error('Invalid icons map');
+            }
             this.#state = {
                 capabilities: {
                     nodes: [...(parsed.capabilities?.nodes ?? [])],
@@ -435,6 +459,7 @@ class VizyEditorConfigSettingsElement extends HTMLElement {
                     enabled: parsed.bubble?.enabled ?? true,
                     items: [...(parsed.bubble?.items ?? [])],
                 },
+                icons: { ...icons },
                 gutterInsert: parsed.gutterInsert ?? true,
                 slashInsert: parsed.slashInsert ?? true,
             };
@@ -998,6 +1023,7 @@ class VizyEditorConfigSettingsElement extends HTMLElement {
         appendHidden('toolbarJson', JSON.stringify(this.#state.toolbar));
         appendHidden('dropdownsJson', JSON.stringify(this.#state.dropdowns));
         appendHidden('bubbleJson', JSON.stringify(this.#state.bubble));
+        appendHidden('iconsJson', JSON.stringify(this.#state.icons));
         appendHidden('gutterInsert', this.#state.gutterInsert ? '1' : '0');
         appendHidden('slashInsert', this.#state.slashInsert ? '1' : '0');
         appendHidden('advancedConfig', this.#serializeAdvanced());
@@ -1010,8 +1036,13 @@ class VizyEditorConfigSettingsElement extends HTMLElement {
      * of. `abbr` is how the heading levels are drawn — "H3" in the square, with the full
      * name left to the tooltip.
      */
+    #controlIcon(item: CatalogItem): string | null {
+        return this.#iconSvgs[item.id] ?? item.icon ?? null;
+    }
+
     #glyphHtml(item: CatalogItem): string {
-        if (item.icon) return item.icon;
+        const icon = this.#controlIcon(item);
+        if (icon) return icon;
         if (item.abbr) return `<span class="vizy-control-abbr">${escapeHtml(item.abbr)}</span>`;
 
         return `<span class="vizy-control-text">${escapeHtml(item.label)}</span>`;
@@ -1046,12 +1077,13 @@ class VizyEditorConfigSettingsElement extends HTMLElement {
         // roster menu, but the same appearance (+ glyph + chevron) says it opens something.
         const isDropdown = item.kind === 'group' || item.kind === 'dropdown';
         const hasMenuAppearance = isDropdown || item.id === 'addBlock';
+        const icon = this.#controlIcon(item);
         const classes = [
             'vizy-control',
             item.id === 'separator' ? 'is-separator' : '',
             // A stand-in glyph keeps the square, as an icon does; only a button falling all
             // the way back to its full name has to widen for it.
-            item.icon || item.abbr || item.id === 'separator' ? '' : 'is-text',
+            icon || item.abbr || item.id === 'separator' ? '' : 'is-text',
             // A chevron, so a dropdown / Add Block reads as an opener in the preview as
             // well as in the editor. Same class the field's own UI uses.
             hasMenuAppearance ? 'has-menu' : '',
@@ -1269,7 +1301,70 @@ class VizyEditorConfigSettingsElement extends HTMLElement {
                 data-toolbar-item="${escapeHtml(item.id)}"
                 data-toolbar-list="toolbar"
                 data-toolbar-variant="member"
-            >${item.icon ? `<span class="vizy-editor-config-menu-icon" aria-hidden="true">${item.icon}</span>` : ''}<span class="preview-label"${item.preview ? ` data-preview="${escapeHtml(item.preview)}"` : ''}>${escapeHtml(item.label)}</span></button>
+            >${this.#controlIcon(item) ? `<span class="vizy-editor-config-menu-icon" aria-hidden="true">${this.#controlIcon(item)}</span>` : ''}<span class="preview-label"${item.preview ? ` data-preview="${escapeHtml(item.preview)}"` : ''}>${escapeHtml(item.label)}</span></button>
+        `;
+    }
+
+    /** Every real control that can receive one shared toolbar/Bubble/dropdown icon override. */
+    #iconControlItems(): CatalogItem[] {
+        const items = new Map<string, CatalogItem>();
+        for (const item of [...this.#toolbarCatalog, ...this.#dropdownCatalog, ...this.#bubbleCatalog]) {
+            if (item.kind === 'presentation' || items.has(item.id)) continue;
+            items.set(item.id, item);
+        }
+
+        return [...items.values()].sort((a, b) => a.label.localeCompare(b.label));
+    }
+
+    #iconSettingsHtml(): string {
+        const controls = this.#iconControlItems();
+        if (!controls.some((item) => item.id === this.#selectedIconControl)) {
+            this.#selectedIconControl = Object.keys(this.#state.icons)
+                .find((id) => controls.some((item) => item.id === id))
+                ?? controls[0]?.id
+                ?? '';
+        }
+        const iconValue = this.#state.icons[this.#selectedIconControl] ?? '';
+        const iconSvg = this.#iconSvgs[this.#selectedIconControl] ?? '';
+
+        return `
+            <section class="vizy-editor-config-section">
+                <h3>${t('vizy', 'Toolbar icons')}</h3>
+                <p class="instructions">${t('vizy', 'Choose a control and replace its icon everywhere this config uses it. Clear the icon to restore Vizy’s default.')}</p>
+                <div class="vizy-editor-config-icon-controls">
+                    <label class="vizy-editor-config-icon-control">
+                        <span class="vizy-editor-config-icon-label">${t('vizy', 'Control')}</span>
+                        <span class="select">
+                            <select data-icon-control>
+                                ${controls.map((item) => `
+                                    <option value="${escapeHtml(item.id)}" ${item.id === this.#selectedIconControl ? 'selected' : ''}>
+                                        ${escapeHtml(`${item.label} — ${item.id}`)}
+                                    </option>
+                                `).join('')}
+                            </select>
+                        </span>
+                    </label>
+                    <pk-field
+                        label="${escapeHtml(t('vizy', 'Icon'))}"
+                        instructions="${escapeHtml(t('vizy', 'Uses Vizy’s icon catalogue and SVG files from the configured icons path.'))}"
+                    >
+                        <vizy-image-browser
+                            name=""
+                            value="${escapeHtml(iconValue)}"
+                            mode="icon"
+                            label-mode="tooltip"
+                            placeholder="${escapeHtml(t('vizy', 'Use default icon'))}"
+                            search-placeholder="${escapeHtml(t('vizy', 'Search icons'))}"
+                            empty-message="${escapeHtml(t('vizy', 'No icons match your query.'))}"
+                            aria-label="${escapeHtml(t('vizy', 'Toolbar icon'))}"
+                            data-icon-picker
+                            data-catalog-url="${escapeHtml(this.#iconCatalogUrl)}"
+                            data-selected-label="${escapeHtml(iconValue)}"
+                            data-selected-preview="${escapeHtml(iconSvg)}"
+                        ></vizy-image-browser>
+                    </pk-field>
+                </div>
+            </section>
         `;
     }
 
@@ -1722,6 +1817,8 @@ class VizyEditorConfigSettingsElement extends HTMLElement {
                             </div>
                         </section>
 
+                        ${this.#iconSettingsHtml()}
+
                         <section class="vizy-editor-config-section">
                             <h3>${t('vizy', 'Block insertion')}</h3>
                             <pk-field
@@ -1839,6 +1936,44 @@ class VizyEditorConfigSettingsElement extends HTMLElement {
         const schema = host.querySelector<HTMLDetailsElement>('[data-schema-details]');
         if (schema) {
             schema.addEventListener('toggle', () => { this.#schemaOpen = schema.open; });
+        }
+
+        const iconControl = host.querySelector<HTMLSelectElement>('[data-icon-control]');
+        if (iconControl) {
+            iconControl.addEventListener('change', () => {
+                this.#selectedIconControl = iconControl.value;
+                this.render();
+            });
+        }
+
+        const iconPicker = host.querySelector<HTMLElement>('[data-icon-picker]');
+        if (iconPicker) {
+            iconPicker.addEventListener('pk-change', (event) => {
+                const controlId = this.#selectedIconControl;
+                const value = (event as CustomEvent<{ value: string }>).detail.value;
+                if (value === '') {
+                    delete this.#state.icons[controlId];
+                    delete this.#iconSvgs[controlId];
+                    this.render();
+                    return;
+                }
+
+                this.#state.icons[controlId] = value;
+                this.#syncInputs();
+                if (this.#iconCatalogUrl === '') {
+                    this.render();
+                    return;
+                }
+
+                // The picker and this preview share one cached catalog request. Capture both
+                // values so a slow response cannot repaint a different control selected later.
+                void loadIconSvg(this.#iconCatalogUrl, value).then((svg) => {
+                    if (this.#state.icons[controlId] !== value) return;
+                    if (svg) this.#iconSvgs[controlId] = svg;
+                    else delete this.#iconSvgs[controlId];
+                    this.render();
+                });
+            });
         }
 
         host.querySelectorAll<PkCheckboxSelect>('[data-capability-group]').forEach((select) => {

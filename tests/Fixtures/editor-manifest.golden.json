@@ -1,13 +1,13 @@
 {
     "uid": "<request-local-uuid>",
-    "revision": "1:80a71592924e42ecfe47a14a523adc145df7571705226ae4a8dbe7d137430821",
-    "hash": "80a71592924e42ecfe47a14a523adc145df7571705226ae4a8dbe7d137430821",
+    "revision": "1:0016f58bbb2ac95abccc1c4a49430678f4f5cc591f0f247b5ea7c46bd5a025f7",
+    "hash": "0016f58bbb2ac95abccc1c4a49430678f4f5cc591f0f247b5ea7c46bd5a025f7",
     "manifestVersion": 1,
     "registryRevision": "2b27076d016672d373b6a95308d8472199a5aca2c5f1401e13d38bcec9c8d35e",
     "editorConfig": {
         "id": "test-contract",
-        "revision": "1:6da0b016e1ad8080e5554bea35f1241db7d136b281d5402699fb46958f0c17fe",
-        "hash": "6da0b016e1ad8080e5554bea35f1241db7d136b281d5402699fb46958f0c17fe"
+        "revision": "1:7a552aad8cce1da3ed6f1186cd5e337c6fd07257014757a0b4807307b597e8f7",
+        "hash": "7a552aad8cce1da3ed6f1186cd5e337c6fd07257014757a0b4807307b597e8f7"
     },
     "schemaRevision": "8f3cd9bab4a722a182d2731c4813d5d51ca5dbbdd34abff04c291a5b468c6586",
     "enabledNodes": [

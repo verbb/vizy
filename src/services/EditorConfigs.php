@@ -4,6 +4,7 @@ namespace verbb\vizy\services;
 use verbb\vizy\deprecations\VizyToolbarTokenDeprecations;
 use verbb\vizy\fields\VizyField;
 use verbb\vizy\helpers\EditorConfigPresentation;
+use verbb\vizy\helpers\ToolbarIcons;
 
 use Craft;
 use craft\base\Component;
@@ -252,6 +253,7 @@ final class EditorConfigs extends Component
             ],
             'toolbar' => array_values($config['toolbar'] ?? []),
             'bubble' => $config['bubble'] ?? EditorConfigPresentation::defaultBubble(),
+            'icons' => is_array($config['icons'] ?? null) ? $config['icons'] : [],
             // Insertion chrome — independent of toolbar `addBlock` placement.
             'gutterInsert' => (bool)($config['gutterInsert'] ?? true),
             'slashInsert' => (bool)($config['slashInsert'] ?? true),
@@ -424,7 +426,7 @@ final class EditorConfigs extends Component
         if (!preg_match('/^[a-z][a-z0-9_-]*$/', $id)) {
             throw new RuntimeException("Invalid Vizy Editor Config ID: {$id}.");
         }
-        $unknownKeys = array_diff(array_keys($config), ['label', 'capabilities', 'headings', 'toolbar', 'dropdowns', 'bubble', 'gutterInsert', 'slashInsert', 'dateModified']);
+        $unknownKeys = array_diff(array_keys($config), ['label', 'capabilities', 'headings', 'toolbar', 'dropdowns', 'bubble', 'icons', 'gutterInsert', 'slashInsert', 'dateModified']);
         if ($unknownKeys !== []) {
             throw new RuntimeException("Unknown Vizy Editor Config keys for {$id}: " . implode(', ', $unknownKeys) . '.');
         }
@@ -502,6 +504,7 @@ final class EditorConfigs extends Component
         $toolbar = $this->_normalizeToolbar($id, $config['toolbar'] ?? null);
         $dropdowns = $this->_normalizeDropdowns($id, $config['dropdowns'] ?? null, $toolbar);
         $bubble = $this->_normalizeBubble($id, $config['bubble'] ?? null);
+        $icons = $this->_normalizeIcons($id, $config['icons'] ?? null);
 
         // Two different lists, and conflating them was a round-trip bug: `capabilities` is
         // the author's selection — exactly what the edit screen's checkboxes stand for and
@@ -527,6 +530,7 @@ final class EditorConfigs extends Component
             'toolbar' => $toolbar,
             'dropdowns' => $dropdowns,
             'bubble' => $bubble,
+            'icons' => $icons,
             // Default on — missing keys (older PC / file configs) stay enabled.
             'gutterInsert' => (bool)($config['gutterInsert'] ?? true),
             'slashInsert' => (bool)($config['slashInsert'] ?? true),
@@ -538,6 +542,68 @@ final class EditorConfigs extends Component
         $payload['hash'] = hash('sha256', $this->_stableJson($hashPayload));
         $payload['revision'] = '1:' . $payload['hash'];
         return $payload;
+    }
+
+    /**
+     * Per-control icon catalogue values.
+     *
+     * Keys are canonical control IDs, including registered dropdown IDs. Values are names from
+     * Vizy's bundled/custom icon catalogue; inline SVG is deliberately not an authorable config
+     * value. Resolving here means invalid references fail before Project Config is written and
+     * every manifest receives server-sanitized markup rather than a filesystem path or raw SVG.
+     */
+    private function _normalizeIcons(string $id, mixed $icons): array
+    {
+        if ($icons === null || $icons === []) {
+            return [];
+        }
+        if (!is_array($icons) || array_is_list($icons)) {
+            throw new RuntimeException("Vizy Editor Config {$id} icons must be an object keyed by control ID.");
+        }
+
+        $known = [];
+        foreach ([
+            EditorConfigPresentation::toolbarCatalog(),
+            EditorConfigPresentation::dropdownCatalog(),
+            EditorConfigPresentation::bubbleCatalog(),
+        ] as $catalog) {
+            foreach ($catalog as $item) {
+                $controlId = (string)($item['id'] ?? '');
+                if ($controlId !== '' && !EditorConfigPresentation::isPresentationItem($controlId)) {
+                    $known[$controlId] = true;
+                }
+            }
+        }
+
+        $normalized = [];
+        foreach ($icons as $controlId => $icon) {
+            $controlId = trim((string)$controlId);
+            if ($controlId === '') {
+                throw new RuntimeException("Vizy Editor Config {$id} icon control IDs must be non-empty strings.");
+            }
+            $controlId = VizyToolbarTokenDeprecations::canonicalize($controlId, "Editor Config {$id} icon");
+            if (str_starts_with($controlId, EditorConfigPresentation::DROPDOWN_PREFIX)) {
+                $name = substr($controlId, strlen(EditorConfigPresentation::DROPDOWN_PREFIX));
+                $controlId = EditorConfigPresentation::DROPDOWN_PREFIX . EditorConfigPresentation::dropdownAlias($name);
+            }
+            if (!isset($known[$controlId])) {
+                throw new RuntimeException("Unknown Vizy Editor Config icon control ID in {$id}: {$controlId}.");
+            }
+            if (!is_string($icon) || trim($icon) === '') {
+                throw new RuntimeException("Vizy Editor Config {$id} icon for {$controlId} must name an available icon.");
+            }
+            $icon = trim($icon);
+            if (ToolbarIcons::glyph($icon) === null) {
+                throw new RuntimeException("Unknown Vizy icon in Editor Config {$id}: {$icon}.");
+            }
+            if (isset($normalized[$controlId])) {
+                throw new RuntimeException("Duplicate Vizy Editor Config {$id} icon control ID: {$controlId}.");
+            }
+            $normalized[$controlId] = $icon;
+        }
+
+        ksort($normalized);
+        return $normalized;
     }
 
     private function _normalizeIds(mixed $values, string $label): array

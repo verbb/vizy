@@ -21,7 +21,7 @@ All other settings keep their defaults. Add any further settings you want to cha
 
 **Type:** `string` · **Default:** `'@webroot/icons/'`
 
-Provide a file system path for a collection of SVG icons. These are available when creating your Block Types for a Vizy field. This also accepts environment variables or aliases.
+Provide a file system path for a collection of SVG icons. These are available for Block Types and Editor Config control-icon overrides. This also accepts environment variables or aliases.
 :::
 
 ::: reference
@@ -76,6 +76,10 @@ Create `config/vizy/minimal.json`:
     "bubble": {
         "enabled": true,
         "items": ["bold", "italic", "link"]
+    },
+    "icons": {
+        "bold": "star-solid",
+        "dropdown:formatting": "custom-formatting"
     }
 }
 ```
@@ -92,6 +96,7 @@ Create `config/vizy/minimal.json`:
 | `toolbar` | Flat list of control IDs (`bold`, `dropdown:formatting`, `separator`, …). |
 | `dropdowns` | Optional map of dropdown name → member IDs, trimming/reordering a registered roster. |
 | `bubble` | `{ "enabled": true, "items": ["bold", "italic", "link"] }`. |
+| `icons` | Optional map of control ID → icon name. The same override follows a control across the toolbar, dropdowns, and Bubble Menu. |
 | `gutterInsert` | `true` (default) — `+` control beside the content. Independent of toolbar `addBlock`. |
 | `slashInsert` | `true` (default) — blank-line `/` opens the Add Block list. |
 
@@ -100,6 +105,8 @@ Toolbar and dropdown IDs use the Editor Config vocabulary (`heading2`,
 is what the Editor Configs screen offers under Available items. Your own
 controls are registered in PHP (see [Extensibility](docs:developers/extending-vizy)),
 not declared as free-form objects inside the JSON.
+
+Icon values come from Vizy’s icon catalogue, including SVG files under the configured [`iconsPath`](#iconspath). Use the visual Editor Config screen to search that catalogue and preview the result. Clearing an override restores the control’s built-in or extension-provided icon. Inline SVG markup and arbitrary filesystem paths are not accepted in an Editor Config.
 
 
 Save the config and open an entry using that field to check that its toolbar and content choices match your settings.

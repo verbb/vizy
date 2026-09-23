@@ -8,6 +8,7 @@ use Craft;
 use craft\base\Component;
 use craft\helpers\ArrayHelper;
 use craft\helpers\FileHelper;
+use craft\helpers\Html;
 use craft\helpers\Json;
 use craft\helpers\StringHelper;
 
@@ -52,7 +53,9 @@ class Icons extends Component
             $icons = [];
 
             foreach ($rootFiles as $rootFile) {
-                $icons[] = $this->_getIconModel($rootFile);
+                if ($icon = $this->_getIconModel($rootFile)) {
+                    $icons[] = $icon;
+                }
             }
 
             if ($icons) {
@@ -79,7 +82,9 @@ class Icons extends Component
             $icons = [];
 
             foreach ($folderFiles as $folderFile) {
-                $icons[] = $this->_getIconModel($folderFile);
+                if ($icon = $this->_getIconModel($folderFile)) {
+                    $icons[] = $icon;
+                }
             }
 
             if ($icons) {
@@ -238,14 +243,26 @@ class Icons extends Component
         return $files;
     }
 
-    private function _getIconModel(string $filepath): array
+    private function _getIconModel(string $filepath): ?array
     {
         $filename = pathinfo($filepath, PATHINFO_FILENAME);
+        $contents = @file_get_contents($filepath);
+        if ($contents === false) {
+            return null;
+        }
+        $svg = Html::sanitizeSvg($contents);
+        // Craft's sanitizer serializes an XML declaration. The icon catalogue transports
+        // embeddable fragments and the client deliberately accepts only values beginning with
+        // `<svg`, so remove the document wrapper while retaining the sanitized element.
+        $svg = preg_replace('/^\s*<\?xml[^>]*\?>\s*/i', '', $svg) ?? '';
+        if (trim($svg) === '') {
+            return null;
+        }
 
         return [
             'label' => $this->_getTitleString($filename),
             'value' => $filename,
-            'svg' => file_get_contents($filepath),
+            'svg' => $svg,
         ];
     }
 

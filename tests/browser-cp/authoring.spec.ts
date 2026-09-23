@@ -50,6 +50,22 @@ test('field settings expose one Block picker display policy and one shared searc
     await expect(defaultDisplay).toBeVisible();
 });
 
+test('Editor Configs expose one shared icon override per control', async ({ page }) => {
+    await login(page);
+    await page.goto('/index.php?p=admin/vizy/settings/editor-configs/standard');
+
+    await expect(page.getByRole('heading', { name: 'Toolbar icons' })).toBeVisible();
+    const control = page.locator('select[data-icon-control]');
+    await expect(control).toBeVisible();
+    await expect(control.locator('option[value="bold"]')).toHaveCount(1);
+    await expect(control.locator('option[value="separator"]')).toHaveCount(0);
+    await control.selectOption('bold');
+
+    await expect(page.locator('[data-icon-picker] pk-image-browser')).toBeVisible();
+    await expect(page.locator('input[name="iconsJson"]')).toHaveValue('{}');
+    await expect(page.locator('[data-builder-list="toolbar-active"] [data-toolbar-item="bold"] svg')).toBeVisible();
+});
+
 async function setJsonValue(textarea: Locator, value: unknown) {
     await textarea.evaluate((control, nextValue) => {
         const input = control as HTMLTextAreaElement & {

@@ -456,6 +456,11 @@ it('renders toolbar and bubble controls as icons, and a dropdown as its registra
         'headings' => ['levels' => [2, 3]],
         'toolbar' => ['dropdown:formatting', 'separator', 'bold', 'horizontalRule'],
         'bubble' => ['enabled' => true, 'items' => ['bold', 'link']],
+        'icons' => [
+            'bold' => 'italic',
+            'dropdown:formatting' => 'link',
+            'paragraph' => 'h1',
+        ],
     ]);
 
     $field = new VizyField([
@@ -472,23 +477,67 @@ it('renders toolbar and bubble controls as icons, and a dropdown as its registra
 
     // Every control except the separator carries a glyph, so the client never
     // has to fall back to a text label.
-    expect($controls['bold']['icon'])->toStartWith('<svg')
+    expect($controls['bold']['icon'])->toBe(ToolbarIcons::glyph('italic'))
         ->and($controls['horizontalRule']['icon'])->toStartWith('<svg')
-        ->and($controls[$formatting]['icon'])->toStartWith('<svg')
+        ->and($controls[$formatting]['icon'])->toBe(ToolbarIcons::glyph('link'))
         ->and($controls[$formatting]['label'])->toBe('Formatting')
         ->and($controls['separator']['icon'])->toBeNull()
-        ->and($manifest['bubble']['controls'][0]['icon'])->toStartWith('<svg');
+        ->and($manifest['bubble']['controls'][0]['icon'])->toBe(ToolbarIcons::glyph('italic'));
 
     // Paragraph, then the levels this config allows, then the enabled block transforms — all
     // resolved from the registration at build time. `codeBlock` is not an allowed capability so
     // it is dropped rather than refused: a dropdown renders less than it names.
     expect(array_column($controls[$formatting]['items'], 'id'))
         ->toBe(['paragraph', 'heading2', 'heading3', 'blockquote']);
+    $formattingItems = collect($controls[$formatting]['items'])->keyBy('id')->all();
+    expect($formattingItems['paragraph']['icon'])->toBe(ToolbarIcons::glyph('h1'));
 
     // The trigger keeps the registered glyph; current value is shown inside the open menu.
     expect($controls[$formatting])->not->toHaveKey('reflectsValue');
 
     $service->removeConfig($id);
+});
+
+it('validates Editor Config icon override keys and catalogue values', function() {
+    $service = Vizy::$plugin->getEditorConfigs();
+    $config = [
+        'label' => 'Icon validation',
+        'capabilities' => ['nodes' => [], 'marks' => ['bold']],
+        'toolbar' => ['bold'],
+    ];
+
+    expect(fn() => $service->saveConfig('iconlist' . strtolower(StringHelper::randomString(5)), [
+        ...$config,
+        'icons' => ['bold'],
+    ]))->toThrow(RuntimeException::class, 'icons must be an object')
+        ->and(fn() => $service->saveConfig('iconcontrol' . strtolower(StringHelper::randomString(5)), [
+            ...$config,
+            'icons' => ['notAControl' => 'bold'],
+        ]))->toThrow(RuntimeException::class, 'Unknown Vizy Editor Config icon control ID')
+        ->and(fn() => $service->saveConfig('iconvalue' . strtolower(StringHelper::randomString(5)), [
+            ...$config,
+            'icons' => ['bold' => 'not-an-installed-icon'],
+        ]))->toThrow(RuntimeException::class, 'Unknown Vizy icon');
+});
+
+it('sanitizes project SVG icons before they enter a picker or editor manifest', function() {
+    $directory = Craft::$app->getPath()->getTempPath() . DIRECTORY_SEPARATOR . 'vizy-icon-' . StringHelper::randomString(8);
+    FileHelper::createDirectory($directory);
+    file_put_contents($directory . DIRECTORY_SEPARATOR . 'unsafe.svg', '<svg xmlns="http://www.w3.org/2000/svg" onload="alert(1)"><script>alert(2)</script><path d="M0 0h1v1z"/></svg>');
+    $settings = Vizy::$plugin->getSettings();
+    $previous = $settings->iconsPath;
+
+    try {
+        $settings->iconsPath = $directory;
+        $groups = (new \verbb\vizy\services\Icons())->getCustomIcons();
+        $svg = $groups[0]['icons'][0]['svg'] ?? '';
+        expect($svg)->toStartWith('<svg')
+            ->and($svg)->not->toContain('onload')
+            ->and($svg)->not->toContain('<script');
+    } finally {
+        $settings->iconsPath = $previous;
+        FileHelper::removeDirectory($directory);
+    }
 });
 
 it('resolves a dropdown’s contents from its registration, minus this config’s trim', function() {

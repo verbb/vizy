@@ -835,6 +835,34 @@ pk-checkbox-select {
     margin-bottom: 12px;
 }
 
+.vizy-editor-config-icon-controls {
+    display: grid;
+    grid-template-columns: minmax(14rem, 1fr) minmax(14rem, 1fr);
+    gap: 16px;
+    align-items: start;
+}
+
+.vizy-editor-config-icon-control {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.vizy-editor-config-icon-label {
+    font-weight: 600;
+}
+
+.vizy-editor-config-icon-control .select,
+.vizy-editor-config-icon-control select {
+    width: 100%;
+}
+
+@media (max-width: 700px) {
+    .vizy-editor-config-icon-controls {
+        grid-template-columns: 1fr;
+    }
+}
+
 /* Sub-headings inside a section, e.g. splitting blocks from inline formatting. */
 .vizy-editor-config-subhead {
     font-size: 11px;
@@ -848,4 +876,3 @@ pk-checkbox-select {
 pk-checkbox-select + .vizy-editor-config-subhead {
     margin-top: 20px;
 }
-

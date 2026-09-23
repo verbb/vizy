@@ -322,13 +322,13 @@ final class EditorManifests extends Component
             // Presentation rather than a command, so it resolves to nothing actionable. Checked
             // first because `controlFor` would find no capability behind it.
             if (EditorConfigPresentation::isPresentationItem($item)) {
-                $controls[] = [
+                $controls[] = $this->_applyIconOverrides([
                     'id' => $item,
                     'kind' => 'presentation',
                     'label' => EditorConfigPresentation::toolbarItemLabel($item),
                     'icon' => ToolbarIcons::svgFor($item),
                     'presentation' => $item,
-                ];
+                ], $config['icons'] ?? []);
                 continue;
             }
             // Buttons and dropdowns are both plain IDs, with a dropdown's members resolved from
@@ -342,7 +342,7 @@ final class EditorManifests extends Component
                 $enabledExtensions,
             );
             if ($control !== null) {
-                $controls[] = $control;
+                $controls[] = $this->_applyIconOverrides($control, $config['icons'] ?? []);
             }
         }
 
@@ -371,12 +371,42 @@ final class EditorManifests extends Component
             if ($control === null) {
                 continue;
             }
+            $control = $this->_applyIconOverrides($control, $config['icons'] ?? []);
             // Namespaced so the two surfaces cannot collide on a control ID.
             $control['id'] = "bubble:{$item}";
             $controls[] = $control;
         }
 
         return ['enabled' => $enabled, 'controls' => $controls];
+    }
+
+    /**
+     * Apply one Editor Config's catalogue-backed icon map to a resolved control tree.
+     *
+     * Dropdown members are ordinary controls nested under `items`, so walking them here keeps a
+     * control's appearance identical as a toolbar button, Bubble Menu button, or menu row. The
+     * config has already resolved every value through `ToolbarIcons::glyph()` during normalize;
+     * the null guard is defensive for runtime event mutations between normalization and build.
+     */
+    private function _applyIconOverrides(array $control, array $icons): array
+    {
+        $controlId = (string)($control['id'] ?? '');
+        $iconName = $icons[$controlId] ?? null;
+        if (is_string($iconName)) {
+            $svg = ToolbarIcons::glyph($iconName);
+            if ($svg !== null) {
+                $control['icon'] = $svg;
+            }
+        }
+
+        if (is_array($control['items'] ?? null)) {
+            $control['items'] = array_map(
+                fn(array $item): array => $this->_applyIconOverrides($item, $icons),
+                $control['items'],
+            );
+        }
+
+        return $control;
     }
 
     /**

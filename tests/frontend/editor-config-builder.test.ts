@@ -46,6 +46,7 @@ const FORMATTING_DROPDOWN = {
 
 afterEach(() => {
     document.body.replaceChildren();
+    vi.unstubAllGlobals();
 });
 
 function initialData(overrides: Record<string, unknown> = {}): Initial {
@@ -128,6 +129,63 @@ const dropdownState = (element: HTMLElement): Record<string, string[]> => {
     const input = element.querySelector<HTMLInputElement>('input[name="dropdownsJson"]');
     return JSON.parse(input?.value ?? '{}');
 };
+
+const iconState = (element: HTMLElement): Record<string, string> => {
+    const input = element.querySelector<HTMLInputElement>('input[name="iconsJson"]');
+    return JSON.parse(input?.value ?? '{}');
+};
+
+describe('icon overrides', () => {
+    const CUSTOM_SVG = '<svg id="custom-bold" viewBox="0 0 16 16"><path d="M0 0h1v1z"/></svg>';
+
+    it('previews one control override across toolbar and Bubble Menu and clears back to defaults', () => {
+        const element = mount({
+            config: {
+                capabilities: { nodes: [], marks: ['bold', 'italic'] },
+                headings: { levels: [2, 3] },
+                toolbar: ['bold', 'italic'],
+                dropdowns: {},
+                bubble: { enabled: true, items: ['bold'] },
+                icons: { bold: 'custom-bold' },
+            },
+            iconSvgs: { bold: CUSTOM_SVG },
+        });
+
+        expect(iconState(element)).toEqual({ bold: 'custom-bold' });
+        expect(items(element, 'toolbar-active')[0]?.querySelector('#custom-bold')).not.toBeNull();
+        expect(items(element, 'bubble-active')[0]?.querySelector('#custom-bold')).not.toBeNull();
+        expect(element.querySelector('option[value="bold"]')?.hasAttribute('selected')).toBe(true);
+        expect(element.querySelector('option[value="separator"]')).toBeNull();
+
+        element.querySelector('[data-icon-picker]')?.dispatchEvent(new CustomEvent('pk-change', {
+            detail: { value: '' },
+            bubbles: true,
+        }));
+
+        expect(iconState(element)).toEqual({});
+        expect(items(element, 'toolbar-active')[0]?.querySelector('#custom-bold')).toBeNull();
+        expect(items(element, 'bubble-active')[0]?.querySelector('#custom-bold')).toBeNull();
+    });
+
+    it('uses the same override for a dropdown member preview', () => {
+        const element = mount({
+            config: {
+                capabilities: { nodes: ['heading'], marks: ['bold'] },
+                headings: { levels: [2] },
+                toolbar: ['dropdown:formatting'],
+                dropdowns: { formatting: ['heading2'] },
+                bubble: { enabled: false, items: [] },
+                icons: { heading2: 'custom-heading' },
+            },
+            iconSvgs: { heading2: '<svg id="custom-heading"></svg>' },
+        });
+
+        items(element, 'toolbar-active')[0]?.click();
+        const heading = items(element, 'toolbar-members')
+            .find((item) => item.dataset.toolbarItem === 'heading2');
+        expect(heading?.querySelector('#custom-heading')).not.toBeNull();
+    });
+});
 
 describe('the palette', () => {
     const add = (element: HTMLElement, list: string, id: string): void => {

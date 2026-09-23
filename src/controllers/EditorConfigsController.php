@@ -173,9 +173,15 @@ class EditorConfigsController extends Controller
                     // Vizy release adds.
                     'dropdowns' => $config['dropdowns'] ?? [],
                     'bubble' => $config['bubble'],
+                    'icons' => $config['icons'] ?? [],
                     'gutterInsert' => (bool)($config['gutterInsert'] ?? true),
                     'slashInsert' => (bool)($config['slashInsert'] ?? true),
                 ],
+                'iconSvgs' => array_map(
+                    static fn(string $icon): ?string => \verbb\vizy\helpers\ToolbarIcons::glyph($icon),
+                    $config['icons'] ?? [],
+                ),
+                'iconCatalogUrl' => UrlHelper::actionUrl('vizy/icons/index'),
                 // Two catalogs, one palette. They are assembled and looked up separately —
                 // only a dropdown has `members` — and offered together, merged into one row
                 // by the `paletteRank` both carry.
@@ -309,6 +315,7 @@ class EditorConfigsController extends Controller
                     'enabled' => (bool)($decoded['bubble']['enabled'] ?? true),
                     'items' => array_values(array_map('strval', $decoded['bubble']['items'] ?? [])),
                 ] : EditorConfigPresentation::defaultBubble(),
+                'icons' => $decoded['icons'] ?? [],
                 'gutterInsert' => (bool)($decoded['gutterInsert'] ?? true),
                 'slashInsert' => (bool)($decoded['slashInsert'] ?? true),
             ];
@@ -317,6 +324,7 @@ class EditorConfigsController extends Controller
         $toolbar = Json::decodeIfJson((string)$this->request->getBodyParam('toolbarJson', '[]'));
         $dropdowns = Json::decodeIfJson((string)$this->request->getBodyParam('dropdownsJson', '{}'));
         $bubble = Json::decodeIfJson((string)$this->request->getBodyParam('bubbleJson', '{}'));
+        $icons = Json::decodeIfJson((string)$this->request->getBodyParam('iconsJson', '{}'));
 
         return [
             'capabilities' => [
@@ -333,6 +341,7 @@ class EditorConfigsController extends Controller
                 'enabled' => (bool)($bubble['enabled'] ?? true),
                 'items' => array_values(array_map('strval', $bubble['items'] ?? [])),
             ] : EditorConfigPresentation::defaultBubble(),
+            'icons' => $icons,
             // Hidden inputs post "1" / "0" from the Editor Config builder.
             'gutterInsert' => (string)$this->request->getBodyParam('gutterInsert', '1') !== '0',
             'slashInsert' => (string)$this->request->getBodyParam('slashInsert', '1') !== '0',

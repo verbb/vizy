@@ -20,6 +20,12 @@ Vizy provides Formatting, Alignment, and Table dropdowns. Placing a dropdown con
 
 The Bubble Menu appears when an editor selects text. It is a flat row of supported formatting controls rather than a second full toolbar. Keep it focused on actions that are useful for a selection, such as bold, italic, and links.
 
+## Override Control Icons
+
+Use **Toolbar icons** to choose a control and replace its glyph with an icon from Vizy’s catalogue. An override belongs to the control ID, so Bold uses the same chosen icon in the toolbar, Bubble Menu, and any dropdown that contains it. Dropdown triggers can have their own overrides as well.
+
+The catalogue includes project SVG files from `iconsPath`. Clearing the selected icon restores Vizy’s default or the icon registered by an extension. Icon overrides affect the authoring interface only; they do not change saved content or rendered HTML.
+
 [Editor Capabilities](docs:feature-tour/editor-capabilities) lists the built-in capabilities, control IDs, dropdowns, and supported editing surfaces.
 
 ## Configure Block Insertion
