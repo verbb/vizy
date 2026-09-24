@@ -49,6 +49,7 @@ const editorManifest = {
         rootContentType: 'rich',
         blockTypePickerGroups: [],
         allowedBlockTypeUids: ['type'],
+        insertableBlockTypeUids: ['type'],
         minBlocks: null,
         maxBlocks: null,
     },

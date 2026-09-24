@@ -13,7 +13,7 @@ const initial = {
         { id: 'italic', label: 'Italic', kind: 'mark', group: 'formatting', icon: null },
         { id: 'separator', label: 'Separator', kind: 'presentation', group: 'layout', icon: null },
     ],
-    dropdownCatalog: [], capabilityCatalog: { nodes: [], marks: [], headingAvailable: false },
+    dropdownCatalog: [], bubbleCatalog: [], capabilityCatalog: { nodes: [], marks: [], extensions: [], headingAvailable: false },
 };
 async function mount(page: Page) {
     await page.route(`${origin}/**`, async (route) => {
