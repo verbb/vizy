@@ -166,7 +166,7 @@
     ]
   },
   "field/src/ts/editor-runtime.ts": {
-    "file": "assets/editor-runtime-CA5TGsSm.js",
+    "file": "assets/editor-runtime-CgY-UOjo.js",
     "name": "editor-runtime",
     "src": "field/src/ts/editor-runtime.ts",
     "isDynamicEntry": true,
@@ -189,7 +189,7 @@
     ]
   },
   "field/src/ts/vizy.ts": {
-    "file": "assets/vizy-Djb81Av4.js",
+    "file": "assets/vizy-BYSdzo36.js",
     "name": "vizy",
     "src": "field/src/ts/vizy.ts",
     "isEntry": true,
@@ -211,7 +211,7 @@
     ]
   },
   "fieldsettings/src/ts/field-settings.ts": {
-    "file": "assets/field-settings-DoYpSvJT.js",
+    "file": "assets/field-settings-C3LUDejb.js",
     "name": "field-settings",
     "src": "fieldsettings/src/ts/field-settings.ts",
     "isEntry": true,
@@ -226,7 +226,7 @@
       "_lightswitch-BCgJjxpl.js"
     ],
     "css": [
-      "assets/field-settings-BhFuuFh-.css",
+      "assets/field-settings-CUgq8x-q.css",
       "assets/tokens-ekR-Z1gs.css"
     ]
   },

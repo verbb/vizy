@@ -24,6 +24,31 @@
         data-initial="{{ configuratorInitial|json_encode|e('html_attr') }}"
         data-picker-groups-name="{{ pickerGroupsInputName|e('html_attr') }}"
     ></vizy-field-settings>
+
+    <div class="vizy-block-availability-panels">
+        {% for panel in availabilityConditionPanels|default([]) %}
+            <section
+                class="vizy-block-availability-panel hidden"
+                data-vizy-block-availability-panel="{{ panel.uid }}"
+                aria-hidden="true"
+            >
+                <header class="vizy-block-availability-header">
+                    <div>
+                        <h3>{{ '{name} availability'|t('vizy', {name: panel.name}) }}</h3>
+                        <p class="light">{{ 'These conditions control new insertions only. Existing blocks remain editable.'|t('vizy') }}</p>
+                    </div>
+                    <button
+                        type="button"
+                        class="btn small"
+                        data-vizy-close-block-availability
+                    >{{ 'Done'|t('app') }}</button>
+                </header>
+
+                {{ panel.userConditionHtml|raw }}
+                {{ panel.elementConditionHtml|raw }}
+            </section>
+        {% endfor %}
+    </div>
 {% endset %}
 
 <div class="vizy-mode-blocks vizy-mode-combined {{ editorMode == 'richText' ? 'hidden' }}">
@@ -32,7 +57,7 @@
     {{ forms.field({
         label: 'Block Configuration' | t('vizy'),
         instructions: 'Choose which block types authors can insert in this field, group them, and set their order. Block types themselves are global — editing one affects every Vizy field that uses it. [Manage all block types]({url}).' | t('vizy', { url: url('vizy/settings/block-types') }),
-        errors: field.getErrors('blockTypePickerGroups'),
+        errors: field.getErrors('blockTypePickerGroups')|merge(field.getErrors('blockTypeAvailabilityConditions')),
     }, blockConfigurationInput) }}
 
     {{ forms.selectField({

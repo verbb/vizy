@@ -11,6 +11,9 @@ declare(strict_types=1);
 
 use Craft;
 use craft\elements\Entry;
+use craft\elements\conditions\TitleConditionRule;
+use craft\elements\conditions\entries\SectionConditionRule;
+use craft\elements\conditions\entries\TypeConditionRule;
 use craft\fieldlayoutelements\CustomField;
 use craft\fields\Lightswitch;
 use craft\fields\PlainText;
@@ -19,6 +22,25 @@ use craft\models\FieldLayout;
 use craft\models\FieldLayoutTab;
 use Tests\Support\Fixtures\VizyFixtureFactory;
 use verbb\vizy\elements\Block as VizyBlockElement;
+
+it('offers Entry rules on Block layouts and evaluates them against the owner', function() {
+    $condition = VizyBlockElement::createCondition();
+    $selectable = array_map('get_class', $condition->getSelectableConditionRules());
+
+    expect($selectable)->toContain(SectionConditionRule::class)
+        ->and($selectable)->toContain(TypeConditionRule::class);
+
+    $rule = new TitleConditionRule();
+    $rule->value = 'Matching owner';
+    $condition->setConditionRules([$rule]);
+
+    $block = new VizyBlockElement();
+    $block->setOwner(new Entry(['title' => 'Matching owner']));
+    expect($condition->matchElement($block))->toBeTrue();
+
+    $block->setOwner(new Entry(['title' => 'Other owner']));
+    expect($condition->matchElement($block))->toBeFalse();
+});
 
 it('evaluates sibling FieldLayout element conditions on an ephemeral Block', function() {
     $suffix = (string)mt_rand(100000, 999999);

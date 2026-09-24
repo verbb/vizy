@@ -5,12 +5,14 @@ declare(strict_types=1);
 use craft\base\PreviewableFieldInterface;
 use craft\elements\Asset;
 use craft\elements\Entry;
+use craft\elements\conditions\TitleConditionRule;
 use craft\fieldlayoutelements\CustomField;
 use craft\models\FieldLayout;
 use craft\models\FieldLayoutTab;
 use craft\models\ImageTransform;
 use Tests\Support\Fixtures\AssetSpikeFixture;
 use Tests\Support\Fixtures\VizyFixtureFactory;
+use Tests\Support\WebControllerHarness;
 use verbb\vizy\base\RenderContext;
 use verbb\vizy\document\VizyDocument;
 use verbb\vizy\fields\VizyField;
@@ -377,6 +379,114 @@ it('separates field-local availability from block type membership', function() {
     expect($field->getInsertableBlockTypeUids())->toBe([])
         ->and($field->getAllowedBlockTypeUids())->toBe([$uid])
         ->and($field->allowsBlockTypeUid($uid))->toBeTrue();
+});
+
+it('resolves Block Type insertion conditions against the Entry owner', function() {
+    $uid = '33333333-3333-4333-8333-333333333333';
+    $condition = Entry::createCondition();
+    $rule = new TitleConditionRule();
+    $rule->value = 'Matching owner';
+    $condition->setConditionRules([$rule]);
+
+    $field = new VizyField([
+        'name' => 'Conditional blocks',
+        'handle' => 'conditionalBlocks',
+        'blockTypePickerGroups' => [[
+            'name' => 'Content',
+            'blockTypeUids' => [$uid],
+        ]],
+        'blockTypeAvailabilityConditions' => [
+            $uid => ['elementCondition' => $condition->getConfig()],
+        ],
+    ]);
+
+    $matching = new Entry(['title' => 'Matching owner']);
+    $other = new Entry(['title' => 'Other owner']);
+
+    expect($field->getAllowedBlockTypeUids())->toBe([$uid])
+        ->and($field->getInsertableBlockTypeUids($matching))->toBe([$uid])
+        ->and($field->getInsertableBlockTypeUids($other))->toBe([]);
+});
+
+it('renders native user and Entry condition builders for referenced Block Types', function() {
+    $uid = '44444444-4444-4444-8444-444444444444';
+    $field = new VizyField([
+        'name' => 'Conditional settings',
+        'handle' => 'conditionalSettings',
+        'blockTypePickerGroups' => [[
+            'name' => 'Content',
+            'blockTypeUids' => [$uid],
+        ]],
+    ]);
+
+    $html = WebControllerHarness::withWebRequest([], 'fields/edit',
+        static fn(): string => (string)$field->getSettingsHtml(),
+    );
+
+    expect($html)
+        ->toContain("data-vizy-block-availability-panel=\"{$uid}\"")
+        ->toContain('Current User Condition')
+        ->toContain('Entry Condition');
+});
+
+it('grandfathers existing conditional Blocks but rejects new identities', function() {
+    $typeUid = craft\helpers\StringHelper::UUID();
+
+    $condition = Entry::createCondition();
+    $rule = new TitleConditionRule();
+    $rule->value = 'Allowed owner';
+    $condition->setConditionRules([$rule]);
+
+    $field = new VizyField([
+        'name' => 'Conditional content',
+        'handle' => 'conditionalContent',
+        'editorConfig' => 'standard',
+        'blockTypePickerGroups' => [[
+            'name' => 'Content',
+            'blockTypeUids' => [$typeUid],
+        ]],
+        'blockTypeAvailabilityConditions' => [
+            $typeUid => ['elementCondition' => $condition->getConfig()],
+        ],
+    ]);
+    $owner = new class([
+        'title' => 'Blocked owner',
+        'siteId' => Craft::$app->getSites()->getPrimarySite()->id,
+    ]) extends Entry {
+        public mixed $testFieldValue = null;
+
+        public function getFieldValue(string $fieldHandle): mixed
+        {
+            return $this->testFieldValue;
+        }
+    };
+    $blockUid = craft\helpers\StringHelper::UUID();
+    $document = static fn(string $uid): array => [
+        'type' => 'doc',
+        'attrs' => ['schemaVersion' => VizyDocument::CURRENT_SCHEMA_VERSION],
+        'content' => [[
+            'type' => 'vizyBlock',
+            'attrs' => [
+                'blockUid' => $uid,
+                'blockTypeUid' => $typeUid,
+                'enabled' => true,
+                'fieldSlots' => [],
+            ],
+        ]],
+    ];
+
+    $baseline = $field->normalizeValue($document($blockUid), $owner);
+    $owner->testFieldValue = $baseline;
+    $field->validateBlocks($owner, $baseline);
+    expect($owner->getErrors($field->handle))->toBe([]);
+
+    $owner->testFieldValue = $field->normalizeValue(
+        $document(craft\helpers\StringHelper::UUID()),
+        $owner,
+    );
+    $field->validateBlocks($owner, $baseline);
+    expect(implode(' ', $owner->getErrors($field->handle)))
+        ->toContain('is not available for this entry or user');
 });
 
 it('offers private volumes in image and file picker settings', function() {

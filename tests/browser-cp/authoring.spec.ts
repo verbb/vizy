@@ -53,6 +53,24 @@ test('field settings expose one Block picker display policy and one shared searc
     await expect(defaultDisplay).toBeHidden();
     await display.selectOption('both');
     await expect(defaultDisplay).toBeVisible();
+
+    const blockRow = page.locator('vizy-field-settings [data-block-row]').first();
+    const blockTypeUid = await blockRow.getAttribute('data-block-row');
+    expect(blockTypeUid).toBeTruthy();
+    await blockRow.locator('pk-dropdown-menu').evaluate((menu) => {
+        menu.dispatchEvent(new CustomEvent('pk-select', {
+            detail: { value: 'availability' },
+            bubbles: true,
+            composed: true,
+        }));
+    });
+
+    const availability = page.locator(`[data-vizy-block-availability-panel="${blockTypeUid}"]`);
+    await expect(availability).toBeVisible();
+    await expect(availability.getByText('Current User Condition', { exact: true })).toBeVisible();
+    await expect(availability.getByText('Entry Condition', { exact: true })).toBeVisible();
+    await availability.getByRole('button', { name: 'Done', exact: true }).click();
+    await expect(availability).toBeHidden();
 });
 
 test('Editor Configs expose one shared icon override per control', async ({ page }) => {

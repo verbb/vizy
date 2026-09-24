@@ -124,6 +124,10 @@ export async function duplicateBlock(
 
     const found = findBlockNode(editor, blockUid);
     if (!found) return false;
+    const blockTypeUid = String(found.node.attrs.blockTypeUid ?? '');
+    if (options && !options.manifest.field.insertableBlockTypeUids.includes(blockTypeUid)) {
+        return false;
+    }
     const json = found.node.toJSON() as CanonicalNode;
     const copy = recursiveRegenerateAuthoredUids(json, undefined, options?.manifest.blockTypes);
     const rootUid = String((copy.attrs as { blockUid?: string } | undefined)?.blockUid ?? '');

@@ -2,6 +2,18 @@ import { describe, expect, it } from 'vitest';
 import '../../src/web/assets/field/src/ts/components/VizyBlockElement';
 
 describe('vizy-block disabled UI', () => {
+    it('hides duplicate when the current owner cannot insert this Block Type', async () => {
+        const block = document.createElement('vizy-block');
+        block.typeName = 'Conditional card';
+        block.canDuplicate = false;
+        document.body.append(block);
+        await block.updateComplete;
+
+        expect(block.shadowRoot?.querySelector('pk-dropdown-item[value="duplicate"]')).toBeNull();
+        expect(block.shadowRoot?.querySelector('pk-dropdown-item[value="delete"]')).not.toBeNull();
+        block.remove();
+    });
+
     it('shows a pk-status dot, stays collapsed, and drops the disabled badge', async () => {
         const block = document.createElement('vizy-block');
         block.typeName = 'Card';

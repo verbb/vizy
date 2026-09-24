@@ -138,16 +138,35 @@ describe('vizy field settings configurator', () => {
         expect(tags).toEqual(['pk-lightswitch', 'button', 'span', 'pk-dropdown-menu']);
     });
 
-    it('offers edit, reorder and delete for each block type', () => {
+    it('offers edit, availability conditions, reorder and delete for each block type', () => {
         const menu = element.querySelector(`[data-block-row="${TYPE_A}"] pk-dropdown-menu`);
         const items = [...(menu?.querySelectorAll('pk-dropdown-item') ?? [])];
 
         expect(items.map((item) => item.getAttribute('value')))
-            .toEqual(['edit', 'move-up', 'move-down', 'delete']);
+            .toEqual(['edit', 'availability', 'move-up', 'move-down', 'delete']);
         // First row in its group cannot move up; delete is marked destructive.
-        expect(items[1].hasAttribute('disabled')).toBe(true);
-        expect(items[2].hasAttribute('disabled')).toBe(false);
-        expect(items[3].hasAttribute('destructive')).toBe(true);
+        expect(items[2].hasAttribute('disabled')).toBe(true);
+        expect(items[3].hasAttribute('disabled')).toBe(false);
+        expect(items[4].hasAttribute('destructive')).toBe(true);
+    });
+
+    it('reveals the matching native Craft availability panel from the row menu', () => {
+        const panel = document.createElement('section');
+        panel.className = 'hidden';
+        panel.dataset.vizyBlockAvailabilityPanel = TYPE_A;
+        panel.setAttribute('aria-hidden', 'true');
+        const close = document.createElement('button');
+        close.dataset.vizyCloseBlockAvailability = '';
+        panel.append(close);
+        document.body.append(panel);
+
+        selectBlockMenu(element, TYPE_A, 'availability');
+        expect(panel.classList.contains('hidden')).toBe(false);
+        expect(panel.getAttribute('aria-hidden')).toBe('false');
+
+        close.click();
+        expect(panel.classList.contains('hidden')).toBe(true);
+        expect(panel.getAttribute('aria-hidden')).toBe('true');
     });
 
     it('nudges a block type down through its row menu', async () => {
@@ -364,8 +383,15 @@ describe('vizy field settings configurator', () => {
             'delete:xmark',
         ]);
 
-        // Identical but for the primary action's own label.
-        expect(shape(row)).toEqual(shape(group).map((entry) => entry.replace('rename:', 'edit:')));
+        expect(shape(row)).toEqual([
+            'edit:pen-to-square',
+            'availability:sliders',
+            '---',
+            'move-up:arrow-up',
+            'move-down:arrow-down',
+            '---',
+            'delete:xmark',
+        ]);
     });
 
     it('renames a group through the menu, from a plain label', async () => {

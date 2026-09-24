@@ -104,6 +104,7 @@ export function createEditorExtensions(
         UnsupportedInlineNode,
         OpaqueClipboard.configure({
             schemaIdentity: manifest.blockTypes,
+            insertableBlockTypeUids: manifest.field.insertableBlockTypeUids,
             beforeCopy: () => services().flushMountedFields?.(),
         }),
         CopyIdentity.configure({ schemaIdentity: manifest.blockTypes }),

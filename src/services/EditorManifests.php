@@ -12,6 +12,7 @@ use verbb\vizy\services\BlockSummaryProjection;
 
 use Craft;
 use craft\base\Component;
+use craft\base\ElementInterface;
 
 use RuntimeException;
 
@@ -35,7 +36,7 @@ final class EditorManifests extends Component
     // Public Methods
     // =========================================================================
 
-    public function build(VizyField $field): array
+    public function build(VizyField $field, ?ElementInterface $owner = null): array
     {
         $configId = $field->editorConfig !== '' ? $field->editorConfig : EditorConfigs::DEFAULT_ID;
         $editorConfigs = Vizy::$plugin->getEditorConfigs();
@@ -137,7 +138,7 @@ final class EditorManifests extends Component
                 'disabledBlockTypeUids' => array_values(array_map('strval', $group['disabledBlockTypeUids'] ?? [])),
             ], $field->blockTypePickerGroups)),
             'allowedBlockTypeUids' => $field->getAllowedBlockTypeUids(),
-            'insertableBlockTypeUids' => $field->getInsertableBlockTypeUids(),
+            'insertableBlockTypeUids' => $field->getInsertableBlockTypeUids($owner),
             'blockPickerDisplay' => $field->blockPickerDisplay,
             'defaultBlockPickerView' => $field->defaultBlockPickerView,
             'showBlockSearch' => $field->showBlockSearch,

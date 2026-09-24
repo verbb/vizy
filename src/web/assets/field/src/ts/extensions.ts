@@ -100,6 +100,7 @@ class BlockNodeView implements NodeView {
 
         this.dom = document.createElement('vizy-block');
         this.dom.blockUid = this.#uid;
+        this.dom.canDuplicate = services.manifest.field.insertableBlockTypeUids.includes(blockTypeUid);
         this.dom.setAttribute('data-block-uid', this.#uid);
         if (type?.color) {
             // Set the CSS var before first paint so accent tints immediately.

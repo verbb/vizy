@@ -22,6 +22,7 @@ import {
     gripMove,
     penToSquare,
     plus,
+    sliders,
     xmark,
 } from '@verbb/plugin-kit-icons';
 
@@ -38,6 +39,7 @@ registerIcons({
     'grip-move': gripMove,
     'pen-to-square': penToSquare,
     'plus': plus,
+    'sliders': sliders,
     'xmark': xmark,
 });
 
@@ -115,10 +117,12 @@ class VizyFieldSettingsElement extends LitElement {
         super.disconnectedCallback();
         this.#sortable?.destroy();
         this.#sortable = null;
+        this.parentElement?.removeEventListener('click', this.#onAvailabilityPanelClick);
     }
 
     firstUpdated(): void {
         this.#initSortable();
+        this.parentElement?.addEventListener('click', this.#onAvailabilityPanelClick);
     }
 
     /**
@@ -374,6 +378,31 @@ class VizyFieldSettingsElement extends LitElement {
         return this.#state.groups.some((group) => group.disabledBlockTypeUids.includes(uid));
     }
 
+    #openAvailabilityConditions(uid: string): void {
+        const host = this.parentElement;
+        const panels = host?.querySelectorAll<HTMLElement>('[data-vizy-block-availability-panel]');
+        const panel = [...(panels ?? [])].find((item) => item.dataset.vizyBlockAvailabilityPanel === uid);
+        if (!panel) {
+            window.alert(t('Save the field before adding availability conditions to this new block type.'));
+            return;
+        }
+
+        panels?.forEach((item) => {
+            const active = item === panel;
+            item.classList.toggle('hidden', !active);
+            item.setAttribute('aria-hidden', active ? 'false' : 'true');
+        });
+        panel.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }
+
+    #onAvailabilityPanelClick = (event: Event): void => {
+        const button = (event.target as Element | null)?.closest('[data-vizy-close-block-availability]');
+        if (!button) return;
+        const panel = button.closest<HTMLElement>('[data-vizy-block-availability-panel]');
+        panel?.classList.add('hidden');
+        panel?.setAttribute('aria-hidden', 'true');
+    };
+
     // Drag and drop
     // =========================================================================
 
@@ -497,6 +526,10 @@ class VizyFieldSettingsElement extends LitElement {
                         <pk-icon slot="start" icon="pen-to-square"></pk-icon>
                         ${t('Edit')}
                     </pk-dropdown-item>
+                    <pk-dropdown-item value="availability">
+                        <pk-icon slot="start" icon="sliders"></pk-icon>
+                        ${t('Availability conditions')}
+                    </pk-dropdown-item>
                     <pk-dropdown-separator></pk-dropdown-separator>
                     <pk-dropdown-item value="move-up" ?disabled=${index === 0}>
                         <pk-icon slot="start" icon="arrow-up"></pk-icon>
@@ -518,6 +551,7 @@ class VizyFieldSettingsElement extends LitElement {
 
     #onBlockMenuSelect(uid: string, value?: string): void {
         if (value === 'edit') this.#openBlockTypeSlideout(uid, null);
+        if (value === 'availability') this.#openAvailabilityConditions(uid);
         if (value === 'move-up') this.nudgeBlock(uid, -1);
         if (value === 'move-down') this.nudgeBlock(uid, 1);
         if (value === 'delete') this.removeBlock(uid);

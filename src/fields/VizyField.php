@@ -26,8 +26,12 @@ use craft\base\ElementInterface;
 use craft\base\Field;
 use craft\base\PreviewableFieldInterface;
 use craft\elements\Asset;
+use craft\elements\Entry;
+use craft\elements\User;
+use craft\elements\conditions\ElementConditionInterface;
 use craft\fields\Matrix;
 use craft\fields\conditions\EmptyFieldConditionRule;
+use craft\helpers\Cp;
 use craft\helpers\Html;
 use craft\helpers\Json;
 use craft\helpers\StringHelper;
@@ -36,6 +40,7 @@ use craft\validators\ArrayValidator;
 use yii\base\InvalidConfigException;
 
 use GraphQL\Type\Definition\Type;
+use Throwable;
 
 class VizyField extends Field implements PreviewableFieldInterface
 {
@@ -137,6 +142,13 @@ class VizyField extends Field implements PreviewableFieldInterface
      * ordering, and never invalidates existing authored content of that type.
      */
     public array $blockTypePickerGroups = [];
+    /**
+     * Field-local insertion conditions keyed by global Block Type UID.
+     *
+     * Existing Blocks remain allowed when these conditions stop matching; the
+     * conditions govern only creation of a new instance in this field.
+     */
+    public array $blockTypeAvailabilityConditions = [];
     public string $blockPickerDisplay = self::BLOCK_PICKER_DISPLAY_BOTH;
     public string $defaultBlockPickerView = self::BLOCK_PICKER_DISPLAY_LIST;
     public bool $showBlockSearch = true;
@@ -324,6 +336,50 @@ class VizyField extends Field implements PreviewableFieldInterface
             }
         }
 
+        // Craft's native condition builders remain outside the Lit-managed
+        // configurator DOM so their HTMX state and registered scripts survive
+        // row reorders. Every known type (and unchanged missing reference) gets
+        // a panel, allowing picker selections to be configured before save and
+        // preserving conditions while a referenced global type is unavailable.
+        $availabilityConditionPanels = [];
+        if (Craft::$app->getRequest() instanceof \craft\web\Request) {
+            $conditionPanelSummaries = [];
+            foreach ([...$availableBlockTypes, ...array_values($blockTypeSummaries)] as $summary) {
+                $conditionPanelSummaries[$summary['uid']] = $summary;
+            }
+            foreach ($conditionPanelSummaries as $summary) {
+                $uid = $summary['uid'];
+                $config = $this->blockTypeAvailabilityConditions[$uid] ?? [];
+
+                $userCondition = $this->_availabilityCondition($config['userCondition'] ?? null)
+                    ?? User::createCondition();
+                $userCondition->mainTag = 'div';
+                $userCondition->id = "vizy-block-user-condition-{$uid}";
+                $userCondition->name = "blockTypeAvailabilityConditions[{$uid}][userCondition]";
+                $userCondition->forProjectConfig = true;
+
+                $elementCondition = $this->_availabilityCondition($config['elementCondition'] ?? null)
+                    ?? Entry::createCondition();
+                $elementCondition->mainTag = 'div';
+                $elementCondition->id = "vizy-block-entry-condition-{$uid}";
+                $elementCondition->name = "blockTypeAvailabilityConditions[{$uid}][elementCondition]";
+                $elementCondition->forProjectConfig = true;
+
+                $availabilityConditionPanels[] = [
+                    'uid' => $uid,
+                    'name' => $summary['name'],
+                    'userConditionHtml' => Cp::fieldHtml($userCondition->getBuilderHtml(), [
+                        'label' => Craft::t('app', 'Current User Condition'),
+                        'instructions' => Craft::t('vizy', 'Only allow this block type to be inserted by users who match the following rules.'),
+                    ]),
+                    'elementConditionHtml' => Cp::fieldHtml($elementCondition->getBuilderHtml(), [
+                        'label' => Craft::t('vizy', 'Entry Condition'),
+                        'instructions' => Craft::t('vizy', 'Only allow this block type to be inserted when editing entries that match the following rules.'),
+                    ]),
+                ];
+            }
+        }
+
         return $view->renderTemplate('vizy/field/settings', [
             'field' => $this,
             'editorMode' => $this->getEditorMode(),
@@ -334,6 +390,7 @@ class VizyField extends Field implements PreviewableFieldInterface
                 'blockTypes' => $blockTypeSummaries,
                 'availableBlockTypes' => $availableBlockTypes,
             ],
+            'availabilityConditionPanels' => $availabilityConditionPanels,
             'volumeOptions' => $volumeOptions,
             'sourceOptions' => $sourceOptions,
             'transformOptions' => $transformOptions,
@@ -451,6 +508,28 @@ class VizyField extends Field implements PreviewableFieldInterface
             }
         }
         $this->blockTypePickerGroups = $groups;
+
+        $allowed = array_fill_keys($this->getAllowedBlockTypeUids(), true);
+        $conditions = [];
+        foreach ($this->blockTypeAvailabilityConditions as $uid => $config) {
+            if (!is_string($uid) || !isset($allowed[$uid]) || !is_array($config)) {
+                continue;
+            }
+
+            $normalized = [];
+            foreach (['userCondition', 'elementCondition'] as $key) {
+                if ($condition = $this->_availabilityCondition($config[$key] ?? null)) {
+                    if ($condition->getConditionRules()) {
+                        $normalized[$key] = $condition->getConfig();
+                    }
+                }
+            }
+            if ($normalized !== []) {
+                $conditions[$uid] = $normalized;
+            }
+        }
+        $this->blockTypeAvailabilityConditions = $conditions;
+
         return true;
     }
 
@@ -596,7 +675,7 @@ class VizyField extends Field implements PreviewableFieldInterface
      * The subset authors may actually insert. Insertion surfaces use this;
      * permission and validation use `getAllowedBlockTypeUids()`.
      */
-    public function getInsertableBlockTypeUids(): array
+    public function getInsertableBlockTypeUids(?ElementInterface $owner = null): array
     {
         if ($this->richTextOnly) {
             return [];
@@ -604,10 +683,51 @@ class VizyField extends Field implements PreviewableFieldInterface
 
         $disabled = $this->getDisabledBlockTypeUids();
 
-        return array_values(array_filter(
+        $uids = array_values(array_filter(
             $this->getAllowedBlockTypeUids(),
             static fn(string $uid) => !in_array($uid, $disabled, true),
         ));
+
+        if ($owner === null) {
+            return $uids;
+        }
+
+        return array_values(array_filter(
+            $uids,
+            fn(string $uid) => $this->blockTypeIsAvailableFor($uid, $owner),
+        ));
+    }
+
+    /**
+     * Whether a new Block of this type may be created for the current owner and
+     * control-panel user. Existing Blocks are intentionally handled separately.
+     */
+    public function blockTypeIsAvailableFor(string $uid, ElementInterface $owner): bool
+    {
+        $config = $this->blockTypeAvailabilityConditions[$uid] ?? null;
+        if (!is_array($config)) {
+            return true;
+        }
+
+        if (isset($config['elementCondition'])) {
+            if (!$owner instanceof Entry) {
+                return false;
+            }
+            $condition = $this->_availabilityCondition($config['elementCondition']);
+            if (!$condition || !$condition->matchElement($owner)) {
+                return false;
+            }
+        }
+
+        if (isset($config['userCondition'])) {
+            $user = Craft::$app->getUser()->getIdentity();
+            $condition = $this->_availabilityCondition($config['userCondition']);
+            if (!$user instanceof User || !$condition || !$condition->matchElement($user)) {
+                return false;
+            }
+        }
+
+        return true;
     }
 
     public function getDisabledBlockTypeUids(): array
@@ -728,6 +848,30 @@ class VizyField extends Field implements PreviewableFieldInterface
                 $element->addError(
                     $this->handle,
                     "Block Type {$block->blockTypeUid()} is not allowed in this Vizy field.",
+                );
+            }
+        }
+
+        // Availability conditions are insertion policy, not destructive content
+        // policy. A saved Block keeps working after its owner/user stops matching;
+        // a duplicate, pasted Block, or type change has a new identity/type pair
+        // and must satisfy the current policy.
+        $availabilityOwner = $element instanceof Block ? $element->getOwner() : $element;
+        $baselineTypes = [];
+        foreach ($baseline?->content()->blocks(true, null) ?? [] as $block) {
+            $baselineTypes[$block->uid()] = $block->blockTypeUid();
+        }
+        foreach ($allBlocks as $block) {
+            $uid = $block->uid();
+            $typeUid = $block->blockTypeUid();
+            if (
+                $this->allowsBlockTypeUid($typeUid)
+                && !$this->blockTypeIsAvailableFor($typeUid, $availabilityOwner)
+                && ($baselineTypes[$uid] ?? null) !== $typeUid
+            ) {
+                $element->addError(
+                    $this->handle,
+                    "Block Type {$typeUid} is not available for this entry or user.",
                 );
             }
         }
@@ -857,6 +1001,33 @@ class VizyField extends Field implements PreviewableFieldInterface
                 }
             }
         }];
+        $rules[] = [['blockTypeAvailabilityConditions'], function(): void {
+            $allowed = array_fill_keys($this->getAllowedBlockTypeUids(), true);
+            foreach ($this->blockTypeAvailabilityConditions as $uid => $config) {
+                if (!is_array($config)) {
+                    $this->addError('blockTypeAvailabilityConditions', "Availability conditions for Block Type {$uid} are invalid.");
+                    continue;
+                }
+                $hasRules = false;
+                foreach (['userCondition', 'elementCondition'] as $key) {
+                    if (!isset($config[$key])) {
+                        continue;
+                    }
+                    $condition = $this->_availabilityCondition($config[$key]);
+                    if (!$condition) {
+                        $this->addError('blockTypeAvailabilityConditions', "Availability condition {$key} for Block Type {$uid} is invalid.");
+                    } elseif ($condition->getConditionRules()) {
+                        $hasRules = true;
+                    }
+                }
+                if (
+                    $hasRules
+                    && (!is_string($uid) || !preg_match('/^[0-9a-f-]{36}$/i', $uid) || !isset($allowed[$uid]))
+                ) {
+                    $this->addError('blockTypeAvailabilityConditions', 'Availability conditions must reference a Block Type used by this field.');
+                }
+            }
+        }];
 
         return $rules;
     }
@@ -916,6 +1087,28 @@ class VizyField extends Field implements PreviewableFieldInterface
     // Private Methods
     // =========================================================================
 
+    /**
+     * Normalizes both portable Project Config and raw condition-builder POST
+     * payloads. Invalid/missing condition types fail closed at runtime and are
+     * surfaced by field validation rather than breaking the editor bootstrap.
+     */
+    private function _availabilityCondition(mixed $config): ?ElementConditionInterface
+    {
+        if ($config === null || $config === '') {
+            return null;
+        }
+
+        try {
+            $condition = $config instanceof ElementConditionInterface
+                ? $config
+                : Craft::$app->getConditions()->createCondition($config);
+
+            return $condition instanceof ElementConditionInterface ? $condition : null;
+        } catch (Throwable) {
+            return null;
+        }
+    }
+
     private function _previewText(mixed $value, ?ElementInterface $element): ?string
     {
         if (!$value instanceof CanonicalVizyDocument) {
@@ -936,7 +1129,7 @@ class VizyField extends Field implements PreviewableFieldInterface
         $view->registerAssetBundle(VizyAsset::class);
         $editorId = 'vizy-editor-' . StringHelper::randomString(12);
         $inputId = $editorId . '-document';
-        $manifest = Vizy::$plugin->getEditorManifests()->build($this);
+        $manifest = Vizy::$plugin->getEditorManifests()->build($this, $element);
         $context = Vizy::$plugin->getEditorContexts()->issue($element, $this);
         $document = $value->toArray();
         $storageToken = Vizy::$plugin->getContentVersions()->issue($element, $this);
@@ -1019,7 +1212,7 @@ class VizyField extends Field implements PreviewableFieldInterface
         $view->registerAssetBundle(VizyAsset::class);
         $editorId = 'vizy-editor-hosted-' . StringHelper::randomString(12);
         $inputId = $editorId . '-document';
-        $manifest = Vizy::$plugin->getEditorManifests()->build($this);
+        $manifest = Vizy::$plugin->getEditorManifests()->build($this, $owner);
         $context = Vizy::$plugin->getEditorContexts()->issueHosted($owner, $entryField, $this, [
             'depth' => $depth,
             'blockUid' => $block->getBlockUid(),

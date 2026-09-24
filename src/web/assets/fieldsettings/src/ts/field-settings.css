@@ -299,3 +299,34 @@
 .vizy-add-group {
     margin-top: 2px;
 }
+
+/* Native Craft condition builders live outside Lit's frequently re-rendered
+   row tree. One panel is revealed at a time from the Block Type action menu. */
+.vizy-block-availability-panels {
+    max-width: 600px;
+}
+
+.vizy-block-availability-panel {
+    margin-top: 14px;
+    padding: 14px;
+    border: 1px solid var(--gray-200, hsl(212, 30%, 85%));
+    border-radius: var(--large-border-radius, 5px);
+    background: var(--white, #fff);
+}
+
+.vizy-block-availability-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 14px;
+    margin-bottom: 18px;
+}
+
+.vizy-block-availability-header h3,
+.vizy-block-availability-header p {
+    margin: 0;
+}
+
+.vizy-block-availability-header p {
+    margin-top: 3px;
+}

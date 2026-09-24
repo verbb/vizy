@@ -333,11 +333,29 @@ function transportNode(name: string, inline: boolean) {
 export const UnsupportedNode = transportNode('unsupportedNode', false);
 export const UnsupportedInlineNode = transportNode('unsupportedInlineNode', true);
 
-export const OpaqueClipboard = Extension.create<{ schemaIdentity: IdentitySchema; beforeCopy?: () => void }>({
+function assertInsertableBlockTypes(slice: OpaqueSliceJson, insertable: ReadonlySet<string>): void {
+    const walk = (node: CanonicalNode, path: string): void => {
+        if (node.type === 'vizyBlock') {
+            const uid = String((node.attrs as Record<string, unknown> | undefined)?.blockTypeUid ?? '');
+            if (!insertable.has(uid)) {
+                throw new TransportIntegrityError('blockTypeNotInsertable', path);
+            }
+        }
+        node.content?.forEach((child, index) => walk(child, `${path}.content[${index}]`));
+    };
+    slice.content.forEach((node, index) => walk(node, `$clipboard.content[${index}]`));
+}
+
+export const OpaqueClipboard = Extension.create<{
+    schemaIdentity: IdentitySchema;
+    insertableBlockTypeUids: string[];
+    beforeCopy?: () => void;
+}>({
     name: 'opaqueClipboard',
-    addOptions: () => ({ schemaIdentity: {} }),
+    addOptions: () => ({ schemaIdentity: {}, insertableBlockTypeUids: [] }),
     addProseMirrorPlugins() {
         const schemaIdentity = this.options.schemaIdentity;
+        const insertableBlockTypes = new Set(this.options.insertableBlockTypeUids);
         const beforeCopy = this.options.beforeCopy;
         const copySelection = (view: EditorView, event: ClipboardEvent, cut: boolean): boolean => {
             const clipboard = event.clipboardData;
@@ -350,7 +368,10 @@ export const OpaqueClipboard = Extension.create<{ schemaIdentity: IdentitySchema
                 beforeCopy?.();
                 encoded = JSON.stringify(view.state.selection.content().toJSON());
                 // A cut must remain pasteable before its source is removed.
-                if (cut) validateOpaqueSlice(JSON.parse(encoded));
+                if (cut) {
+                    const slice = validateOpaqueSlice(JSON.parse(encoded));
+                    assertInsertableBlockTypes(slice, insertableBlockTypes);
+                }
             } catch (error) {
                 // An unreadable live field must not silently copy its
                 // older stored value through the native fallback.
@@ -382,7 +403,9 @@ export const OpaqueClipboard = Extension.create<{ schemaIdentity: IdentitySchema
                         if (!encoded) return false;
                         event.preventDefault();
                         try {
-                            const json = regenerateAuthoredUids(validateOpaqueSlice(JSON.parse(encoded)), undefined, schemaIdentity);
+                            const validated = validateOpaqueSlice(JSON.parse(encoded));
+                            assertInsertableBlockTypes(validated, insertableBlockTypes);
+                            const json = regenerateAuthoredUids(validated, undefined, schemaIdentity);
                             const slice = Slice.fromJSON(view.state.schema, json);
                             view.dispatch(view.state.tr.replaceSelection(slice).scrollIntoView());
                         } catch (error) {

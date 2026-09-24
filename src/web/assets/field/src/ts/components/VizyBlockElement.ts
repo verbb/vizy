@@ -47,6 +47,8 @@ export class VizyBlockElement extends LitElement {
     @property({ type: String }) accessor addAboveLabel = 'Add Block above';
     /** False when the schema forbids any Block insert above this position. */
     @property({ type: Boolean }) accessor canAddAbove = true;
+    /** Existing Blocks stay editable, but cannot be cloned when insertion policy rejects their type. */
+    @property({ type: Boolean }) accessor canDuplicate = true;
     /** Block Type carries Craft fields — header paints; fields fill in quietly. */
     @property({ type: Boolean, reflect: true, attribute: 'expects-field-layout' })
     accessor expectsFieldLayout = false;
@@ -619,10 +621,12 @@ export class VizyBlockElement extends LitElement {
                                     ${this.collapsed ? 'Expand' : 'Collapse'}
                                 </pk-dropdown-item>
                             ` : nothing}
-                            <pk-dropdown-item value="duplicate">
-                                <pk-icon slot="start" icon="clone" label=""></pk-icon>
-                                Duplicate
-                            </pk-dropdown-item>
+                            ${this.canDuplicate ? html`
+                                <pk-dropdown-item value="duplicate">
+                                    <pk-icon slot="start" icon="clone" label=""></pk-icon>
+                                    Duplicate
+                                </pk-dropdown-item>
+                            ` : nothing}
                             <pk-dropdown-separator></pk-dropdown-separator>
                             <pk-dropdown-item value="moveUp">
                                 <pk-icon slot="start" icon="arrow-up" label=""></pk-icon>

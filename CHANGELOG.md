@@ -3,6 +3,7 @@
 ## Unreleased
 
 ### Added
+- Added Craft-native Entry and current-user conditions for field-local Block Type availability, plus Entry-aware field and tab conditions inside Vizy Blocks. ([#178](https://github.com/verbb/vizy/issues/178))
 - Added native Craft element-card previews for Vizy field content. ([#332](https://github.com/verbb/vizy/issues/332))
 - Added automatic collapsed Block summaries from Hosted Vizy field content. ([#140](https://github.com/verbb/vizy/issues/140))
 - Added Editor Config icon overrides for toolbar, dropdown, and Bubble Menu controls. ([#342](https://github.com/verbb/vizy/issues/342))
