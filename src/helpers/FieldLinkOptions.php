@@ -11,6 +11,7 @@ use craft\elements\Category;
 use craft\elements\Entry;
 use craft\models\CategoryGroup;
 use craft\models\Section;
+use craft\models\Section_SiteSettings;
 use craft\models\Volume;
 use craft\services\ElementSources;
 
@@ -40,9 +41,12 @@ final class FieldLinkOptions
     {
         $linkOptions = [];
 
-        $entrySources = self::_entrySources($element);
-        $assetSources = self::_assetSources($field);
-        $categorySources = self::_categorySources($element);
+        $entrySectionIds = [];
+        $entrySources = self::_entrySources($element, $entrySectionIds);
+        $assetVolumeIds = [];
+        $categoryGroupIds = [];
+        $assetSources = self::_assetSources($field, $assetVolumeIds);
+        $categorySources = self::_categorySources($element, $categoryGroupIds);
 
         if ($entrySources !== []) {
             $linkOptions[] = [
@@ -50,7 +54,14 @@ final class FieldLinkOptions
                 'elementType' => Entry::class,
                 'refHandle' => Entry::refHandle(),
                 'sources' => $entrySources,
-                'criteria' => ['uri' => ':notempty:'],
+                // Craft's aggregate `singles` and custom sources can include
+                // entries from sections the current user cannot view. Keep the
+                // modal query inside the same section permission boundary as
+                // the native sources exposed below.
+                'criteria' => [
+                    'uri' => ':notempty:',
+                    'sectionId' => $entrySectionIds,
+                ],
             ];
         }
 
@@ -60,6 +71,7 @@ final class FieldLinkOptions
                 'elementType' => Asset::class,
                 'refHandle' => Asset::refHandle(),
                 'sources' => $assetSources,
+                'criteria' => ['volumeId' => $assetVolumeIds],
             ];
         }
 
@@ -69,6 +81,7 @@ final class FieldLinkOptions
                 'elementType' => Category::class,
                 'refHandle' => Category::refHandle(),
                 'sources' => $categorySources,
+                'criteria' => ['groupId' => $categoryGroupIds],
             ];
         }
 
@@ -89,21 +102,32 @@ final class FieldLinkOptions
         return array_values($linkOptions);
     }
 
-    private static function _entrySources(?ElementInterface $element, bool $showSingles = false): array
+    private static function _entrySources(?ElementInterface $element, array &$sectionIds): array
     {
         $sources = [];
+        $sectionIds = [];
+        $showSingles = false;
+        $canViewEveryLinkableSection = $element !== null;
         $sections = Craft::$app->getEntries()->getAllSections();
         $sites = Craft::$app->getSites()->getAllSites();
+        $user = Craft::$app->getUser();
 
         foreach ($sections as $section) {
+            $sectionSiteSettings = $section->getSiteSettings();
+            $hasUrls = Collection::make($sectionSiteSettings)
+                ->contains(fn(Section_SiteSettings $settings) => $settings->hasUrls);
+            if (!$hasUrls) {
+                continue;
+            }
+            if (!$element || !$user->checkPermission("viewEntries:$section->uid")) {
+                $canViewEveryLinkableSection = false;
+                continue;
+            }
+            $sectionIds[] = $section->id;
             if ($section->type === Section::TYPE_SINGLE) {
                 $showSingles = true;
                 continue;
             }
-            if (!$element) {
-                continue;
-            }
-            $sectionSiteSettings = $section->getSiteSettings();
             foreach ($sites as $site) {
                 if (isset($sectionSiteSettings[$site->id]) && $sectionSiteSettings[$site->id]->hasUrls) {
                     $sources[] = 'section:' . $section->uid;
@@ -112,40 +136,36 @@ final class FieldLinkOptions
         }
 
         $sources = array_values(array_unique($sources));
+        $sectionIds = array_values(array_unique($sectionIds));
 
         if ($showSingles) {
             array_unshift($sources, 'singles');
         }
-
-        if ($sources !== []) {
+        if ($canViewEveryLinkableSection && $sectionIds !== []) {
             array_unshift($sources, '*');
         }
 
-        $sources = array_values(array_unique($sources));
-        $customSources = self::_customSources(Entry::class);
-        $permittedSources = Collection::make(Craft::$app->getElementSources()->getSources(Entry::class))
-            ->filter(fn(array $source) =>
-                ($source['type'] ?? null) !== ElementSources::TYPE_HEADING &&
-                isset($source['key'])
-            )
-            ->pluck('key')
-            ->flip()
-            ->all();
-
-        return Collection::make(array_merge($sources, $customSources))
-            ->filter(fn(string $source) => isset($permittedSources[$source]))
-            ->values()
-            ->all();
+        // Custom sources are filtered by Craft's user/group policy. Native
+        // section sources are filtered explicitly above because Craft 5.9 and
+        // later differ in which context applies that permission. The aggregate
+        // source is safe only when every linkable section is permitted.
+        return array_values(array_unique(array_merge($sources, self::_customSources(Entry::class))));
     }
 
-    private static function _categorySources(?ElementInterface $element): array
+    private static function _categorySources(?ElementInterface $element, array &$groupIds): array
     {
+        $groupIds = [];
         if (!$element) {
             return [];
         }
 
-        $sources = Collection::make(Craft::$app->getCategories()->getAllGroups())
-            ->filter(fn(CategoryGroup $group) => $group->getSiteSettings()[$element->siteId]?->hasUrls ?? false)
+        $groups = Collection::make(Craft::$app->getCategories()->getAllGroups())
+            ->filter(fn(CategoryGroup $group) =>
+                Craft::$app->getUser()->checkPermission("viewCategories:$group->uid") &&
+                ($group->getSiteSettings()[$element->siteId]?->hasUrls ?? false)
+            );
+        $groupIds = $groups->map(fn(CategoryGroup $group) => (int)$group->id)->values()->all();
+        $sources = $groups
             ->map(fn(CategoryGroup $group) => "group:$group->uid")
             ->values()
             ->all();
@@ -155,8 +175,9 @@ final class FieldLinkOptions
         return $customSources !== [] ? array_merge($sources, $customSources) : $sources;
     }
 
-    private static function _assetSources(VizyField $field): array
+    private static function _assetSources(VizyField $field, array &$volumeIds): array
     {
+        $volumeIds = [];
         if (!$field->availableVolumes) {
             return [];
         }
@@ -176,6 +197,7 @@ final class FieldLinkOptions
             );
         }
 
+        $volumeIds = $volumes->map(fn(Volume $volume) => (int)$volume->id)->values()->all();
         $sources = $volumes
             ->map(fn(Volume $volume) => "volume:$volume->uid")
             ->values()
@@ -189,7 +211,9 @@ final class FieldLinkOptions
     private static function _customSources(string $elementType): array
     {
         $customSources = [];
-        $elementSources = Craft::$app->getElementSources()->getSources($elementType, 'modal');
+        // Craft deliberately applies custom-source user-group restrictions in
+        // index context only; modal context returns the raw configuration.
+        $elementSources = Craft::$app->getElementSources()->getSources($elementType);
 
         foreach ($elementSources as $elementSource) {
             if (($elementSource['type'] ?? null) === ElementSources::TYPE_CUSTOM && isset($elementSource['key'])) {
