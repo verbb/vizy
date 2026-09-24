@@ -5,6 +5,7 @@ use verbb\vizy\Vizy;
 use verbb\vizy\elements\Block;
 use verbb\vizy\fields\VizyField;
 use verbb\vizy\helpers\FieldSlotValues;
+use verbb\vizy\helpers\AnchorDocuments;
 use verbb\vizy\helpers\Matrix as MatrixHelper;
 
 use Craft;
@@ -226,6 +227,7 @@ final class FieldLayoutForms extends Component
                 $field,
                 $attrs['blockUid'],
                 $anchorUid,
+                AnchorDocuments::keyFromEditorContext($context),
             );
             if (!$anchor && $anchorUid) {
                 return $this->_fail('unresolvedMatrixContent');

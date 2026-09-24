@@ -224,11 +224,8 @@ final class MultisiteDocuments extends Component
         VizyBlock $targetBlock,
         VizyField $hostedField,
     ): array {
-        $sourceOwner = $sourceBlock->document()->owner();
-        $targetOwner = $targetBlock->document()->owner();
-        if (!$sourceOwner || !$targetOwner) {
-            return $sourceEnvelope;
-        }
+        $sourceOwner = $sourceBlock->document()->blockElement($sourceBlock);
+        $targetOwner = $targetBlock->document()->blockElement($targetBlock);
 
         $sourceDoc = Vizy::$plugin->getDocuments()->normalizeValue(
             $sourceEnvelope,

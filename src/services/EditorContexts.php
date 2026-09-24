@@ -19,8 +19,9 @@ final class EditorContexts extends Component
     // =========================================================================
 
     private const PURPOSE = 'vizy-editor-context';
-    // Earlier tokens could identify the first of several same-field placements.
-    private const VERSION = 4;
+    // Earlier tokens could identify the first of several same-field placements,
+    // and v4 Hosted paths did not bind each nested document to its Block UID.
+    private const VERSION = 5;
 
 
     // Public Methods

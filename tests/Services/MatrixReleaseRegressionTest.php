@@ -7,6 +7,7 @@ use craft\db\Table;
 use craft\elements\Entry;
 use craft\enums\PropagationMethod;
 use craft\helpers\StringHelper;
+use craft\helpers\Json;
 use Tests\Support\Fixtures\MatrixSupportFixture;
 use Tests\Support\Fixtures\VizyFixtureFactory;
 use Tests\Support\Fixtures\AssetSpikeFixture;
@@ -33,6 +34,30 @@ it('normalizes repeated Matrix row identities once and retains their first posit
     expect(array_column($f->rows($uid), 'id'))->toBe([$second->id, $first->id]);
 });
 
+it('scopes Matrix duplicate sources to the requested field, owner and type', function() {
+    $f = new MatrixSupportFixture();
+    $firstUid = StringHelper::UUID();
+    $secondUid = StringHelper::UUID();
+    $owner = $f->save([
+        $f->block($firstUid, $f->payload(['First source'])),
+        $f->block($secondUid, $f->payload(['Second source'])),
+    ]);
+    $firstRow = $f->rows($firstUid)[0];
+    $secondAnchor = Vizy::$plugin->getAnchors()->getAnchor($owner, $f->field, $secondUid);
+
+    $source = Entry::find()
+        ->id($firstRow->id)
+        ->siteId($owner->siteId)
+        ->fieldId($f->matrix->id)
+        ->ownerId($secondAnchor->id)
+        ->typeId($f->rowType->id)
+        ->drafts(null)
+        ->status(null)
+        ->one();
+
+    expect($source)->toBeNull();
+});
+
 it('migrates legacy Matrix identities idempotently without creating duplicate entries', function() {
     $f = new MatrixSupportFixture();
     $uid = StringHelper::UUID();
@@ -46,6 +71,40 @@ it('migrates legacy Matrix identities idempotently without creating duplicate en
     expect($rows)->toHaveCount(1)
         ->and($rows[0]->id)->toBe($original->id)
         ->and($rows[0]->getFieldValue($f->text->handle))->toBe('Legacy row updated');
+});
+
+it('keeps a referenced legacy anchor when stored Block JSON has lost its anchor UID', function() {
+    $f = new MatrixSupportFixture();
+    $uid = StringHelper::UUID();
+    $owner = $f->save([$f->block($uid, $f->payload(['Legacy content']))]);
+    $anchor = Vizy::$plugin->getAnchors()->getAnchor($owner, $f->field, $uid);
+    $row = $f->rows($uid)[0];
+    expect($anchor)->not->toBeNull();
+    Craft::$app->getDb()->createCommand()->update('{{%vizy_matrix_anchors}}', [
+        'documentKey' => '',
+    ], ['id' => $anchor->id])->execute();
+
+    $condition = ['elementId' => $owner->id, 'siteId' => $owner->siteId];
+    $content = (new Query())->select('content')->from(Table::ELEMENTS_SITES)->where($condition)->scalar();
+    $content = is_string($content) ? Json::decode($content) : $content;
+    $placement = array_values(array_filter(
+        $owner->getFieldLayout()->getCustomFieldElements(),
+        static fn($element) => $element->getField()->uid === $f->field->uid,
+    ))[0];
+    $placementUid = $placement->uid;
+    $storedDocument = $content[$placementUid];
+    $storedDocument = is_string($storedDocument) ? Json::decode($storedDocument) : $storedDocument;
+    unset($storedDocument['content'][0]['attrs']['matrixAnchorUid']);
+    $content[$placementUid] = Json::encode($storedDocument);
+    Craft::$app->getDb()->createCommand()->update(Table::ELEMENTS_SITES, [
+        'content' => $content,
+    ], $condition)->execute();
+
+    $owner = $f->reload($owner);
+    Vizy::$plugin->getAnchors()->gcOrphans($owner);
+
+    expect(MatrixAnchor::find()->id($anchor->id)->status(null)->exists())->toBeTrue()
+        ->and(Entry::find()->id($row->id)->status(null)->exists())->toBeTrue();
 });
 
 it('scopes legacy temporary Matrix identities to their anchor and preserves valid UIDs', function() {

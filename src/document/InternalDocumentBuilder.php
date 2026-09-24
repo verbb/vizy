@@ -3,6 +3,7 @@ namespace verbb\vizy\document;
 
 use verbb\vizy\Vizy;
 use verbb\vizy\fields\VizyField;
+use verbb\vizy\helpers\AnchorDocuments;
 use verbb\vizy\helpers\Matrix as MatrixHelper;
 
 use craft\fields\Matrix;
@@ -262,9 +263,11 @@ final class InternalDocumentBuilder
         string &$rootUid,
         ?array &$sharedMap = null,
         ?VizyField $contextField = null,
+        ?string $contextDocumentKey = null,
     ): array
     {
         $contextField ??= $this->source->field();
+        $contextDocumentKey ??= $this->source->anchorDocumentKey();
         $type = $node['type'] ?? null;
 
         // TipTap structure UIDs (layout/column) — not opaque field payloads.
@@ -285,7 +288,7 @@ final class InternalDocumentBuilder
             $oldUid = (string)($node['attrs']['blockUid'] ?? '');
             // Materialize Matrix blobs before clearing ownership so the copy can
             // persist independent nested Entries on a new MatrixAnchor.
-            $this->_materializeMatrixForIndependentCopy($node, $oldUid, $contextField);
+            $this->_materializeMatrixForIndependentCopy($node, $oldUid, $contextField, $contextDocumentKey);
 
             $newUid = $sharedMap === null
                 ? $this->uidFactory->uid("{$key}.block.{$oldUid}")
@@ -318,6 +321,12 @@ final class InternalDocumentBuilder
                                 $nestedRoot,
                                 $sharedMap,
                                 $nestedField,
+                                $contextDocumentKey === null ? null : AnchorDocuments::nestedKey(
+                                    $contextDocumentKey,
+                                    $oldUid,
+                                    $placementUid,
+                                    $nestedField->uid,
+                                ),
                             );
                         }
                     }
@@ -341,7 +350,14 @@ final class InternalDocumentBuilder
 
         foreach (($node['content'] ?? []) as $index => $child) {
             if (is_array($child)) {
-                $node['content'][$index] = $this->_regenerateBlockUids($child, "{$key}.content.{$index}", $rootUid, $sharedMap, $contextField);
+                $node['content'][$index] = $this->_regenerateBlockUids(
+                    $child,
+                    "{$key}.content.{$index}",
+                    $rootUid,
+                    $sharedMap,
+                    $contextField,
+                    $contextDocumentKey,
+                );
             }
         }
         return $node;
@@ -352,7 +368,12 @@ final class InternalDocumentBuilder
      * matrixAnchorUid. Without this, copies of already-serialized Blocks keep
      * empty Matrix slots and lose nested Entries after the next owner save.
      */
-    private function _materializeMatrixForIndependentCopy(array &$node, string $oldBlockUid, ?VizyField $vizyField): void
+    private function _materializeMatrixForIndependentCopy(
+        array &$node,
+        string $oldBlockUid,
+        ?VizyField $vizyField,
+        ?string $documentKey,
+    ): void
     {
         $typeUid = (string)($node['attrs']['blockTypeUid'] ?? '');
         if ($typeUid === '') {
@@ -380,6 +401,7 @@ final class InternalDocumentBuilder
                 $vizyField,
                 $oldBlockUid,
                 $oldAnchorUid,
+                $documentKey,
             );
         }
 

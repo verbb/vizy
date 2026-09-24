@@ -27,4 +27,13 @@ final class RecoveryController extends Controller
         $this->stdout("Restored Vizy recovery record {$id}.\n");
         return ExitCode::OK;
     }
+
+    /** Removes old automatic save snapshots while retaining operation checkpoints. */
+    public function actionPrune(int $keep = 10, ?int $ownerId = null): int
+    {
+        $deleted = Vizy::$plugin->getContentRecovery()->pruneAutomatic($keep, $ownerId);
+        $scope = $ownerId === null ? 'all owners' : "owner {$ownerId}";
+        $this->stdout("Removed {$deleted} automatic Vizy recovery records for {$scope}.\n");
+        return ExitCode::OK;
+    }
 }

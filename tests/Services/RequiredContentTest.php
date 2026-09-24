@@ -36,14 +36,27 @@ it('rejects blank paragraphs in required root and Hosted fields without losing s
         $saved = Entry::find()->id($entry->id)->status(null)->one();
         expect($saved->getFieldValue($field->handle)->toArray())->toBe($before);
 
+        $blockLayout = new \craft\models\FieldLayout(['type' => Block::class]);
+        $blockPlacement = new CustomField($field, ['uid' => $placement->uid, 'required' => true]);
+        $blockTab = new FieldLayoutTab(['name' => 'Content', 'layout' => $blockLayout]);
+        $blockTab->setElements([$blockPlacement]);
+        $blockLayout->setTabs([$blockTab]);
+        expect(Craft::$app->getFields()->saveLayout($blockLayout))->toBeTrue();
+
         $block = new Block(['siteId' => $entry->siteId]);
         $block->setOwner($entry);
-        $block->setFieldLayout($layout);
+        // Real projected Vizy Blocks always carry their parent field context.
+        // Craft 5.9 does not validate layout fields on an incomplete projection.
+        $block->setField($field);
+        $block->setFieldLayout($blockLayout);
         $block->setScenario(Entry::SCENARIO_LIVE);
         $block->setFieldValue($field->handle, $entry->getFieldValue($field->handle)->toArray());
         expect($block->validate())->toBeFalse()
             ->and($block->getErrors($field->handle))->not->toBeEmpty();
 
+        // A real resubmission begins with a fresh element validation state;
+        // Craft 5.9 retains the earlier failed-save errors on this test object.
+        $entry->clearErrors();
         $entry->setFieldValue($field->handle, VizyFixtureFactory::paragraphDocument('Recovered content'));
         expect(Craft::$app->getElements()->saveElement($entry))->toBeTrue();
         expect(Entry::find()->id($entry->id)->status(null)->one()->getFieldValue($field->handle)->render()->__toString())

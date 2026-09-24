@@ -79,6 +79,7 @@ class MatrixAnchor extends Element
     public ?int $vizyFieldId = null;
     public ?string $blockInstanceId = null;
     public ?int $parentOwnerId = null;
+    public string $documentKey = '';
 
     private ?FieldLayout $_fieldLayout = null;
     private ?ElementInterface $_parentOwner = null;
@@ -169,6 +170,7 @@ class MatrixAnchor extends Element
             $record->vizyFieldId = $this->vizyFieldId;
             $record->blockInstanceId = $this->blockInstanceId;
             $record->parentOwnerId = $this->parentOwnerId;
+            $record->documentKey = $this->documentKey;
             $record->save(false);
         }
 
@@ -197,6 +199,7 @@ class MatrixAnchor extends Element
         return array_merge(parent::defineRules(), [
             [['vizyFieldId', 'parentOwnerId'], 'integer'],
             [['blockInstanceId'], 'string', 'max' => 36],
+            [['documentKey'], 'string', 'max' => 64],
         ]);
     }
 

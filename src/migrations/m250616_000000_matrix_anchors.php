@@ -18,6 +18,7 @@ class m250616_000000_matrix_anchors extends Migration
                 'vizyFieldId' => $this->integer()->notNull(),
                 'blockInstanceId' => $this->string(36)->notNull(),
                 'parentOwnerId' => $this->integer()->notNull(),
+                'documentKey' => $this->string(64)->notNull()->defaultValue(''),
                 'PRIMARY KEY([[id]])',
             ]);
 
@@ -44,7 +45,7 @@ class m250616_000000_matrix_anchors extends Migration
             $this->createIndex(
                 null,
                 Table::MATRIX_ANCHORS,
-                ['parentOwnerId', 'vizyFieldId', 'blockInstanceId'],
+                ['parentOwnerId', 'vizyFieldId', 'documentKey', 'blockInstanceId'],
                 true,
             );
         }

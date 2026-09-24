@@ -94,7 +94,7 @@ final class MatrixPersistence extends Component
                         }
                         $nested = Vizy::$plugin->getDocuments()->normalizeValue(
                             $raw,
-                            $document->owner(),
+                            $document->blockElement($block),
                             $field,
                         );
                         $nestedCanonical = $nested->toArray();
@@ -129,13 +129,15 @@ final class MatrixPersistence extends Component
         if (!$owner || !$vizyField || !$owner->id) {
             throw new RuntimeException('Matrix persistence requires a saved Vizy owner.');
         }
-        $priorAnchor = Vizy::$plugin->getAnchors()->getAnchor($owner, $vizyField, $block->uid());
+        $documentKey = $document->anchorDocumentKey();
+        $priorAnchor = Vizy::$plugin->getAnchors()->getAnchor($owner, $vizyField, $block->uid(), null, $documentKey);
         $referencedAnchor = $block->matrixAnchorUid()
             ? Vizy::$plugin->getAnchors()->getStoredReferencedAnchor(
                 $owner,
                 $vizyField,
                 $block->uid(),
                 $block->matrixAnchorUid(),
+                $documentKey,
             )
             : null;
 
@@ -146,6 +148,7 @@ final class MatrixPersistence extends Component
             $block->uid(),
             $layout,
             $block->matrixAnchorUid(),
+            $documentKey,
         );
         if (!$anchor) {
             throw new RuntimeException('Unable to persist the Vizy Matrix anchor.');
@@ -165,7 +168,7 @@ final class MatrixPersistence extends Component
             // the existing canonical anchor, even when no Matrix POST is present.
             $sourceOwner = $owner->duplicateOf;
             if ($priorAnchor && $sourceOwner && $sourceOwner->id !== $owner->id) {
-                $source = Vizy::$plugin->getAnchors()->getAnchor($sourceOwner, $vizyField, $block->uid());
+                $source = Vizy::$plugin->getAnchors()->getAnchor($sourceOwner, $vizyField, $block->uid(), null, $documentKey);
                 if ($source) {
                     $source->setFieldLayout($layout);
                     Vizy::$plugin->getAnchors()->copyMatrixField($field, $source, $anchor);

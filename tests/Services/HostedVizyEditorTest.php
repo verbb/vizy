@@ -7,6 +7,7 @@ use craft\helpers\StringHelper;
 use craft\models\FieldLayout;
 use craft\models\FieldLayoutTab;
 use craft\fieldlayoutelements\CustomField;
+use Tests\Support\Fixtures\AssetSpikeFixture;
 use verbb\vizy\document\DocumentSerializer;
 use verbb\vizy\document\VizyDocument;
 use verbb\vizy\elements\Block;
@@ -16,6 +17,10 @@ use verbb\vizy\services\FieldLifecycle;
 use verbb\vizy\Vizy;
 use craft\elements\Entry;
 use craft\fields\PlainText;
+
+beforeEach(function() {
+    AssetSpikeFixture::ensureAdminUser();
+});
 
 it('classifies Vizy as hostedVizy for Block fieldSlots serialization', function() {
     expect(Vizy::$plugin->getFieldLifecycle()->classify(new VizyField())['capability'])
@@ -263,6 +268,62 @@ it('issues depth-2 hosted contexts that still auth against the Entry Vizy field'
         }
     }
     expect($placed)->toBeTrue();
+});
+
+it('keys trusted Hosted baselines through every ephemeral Block ancestor', function() {
+    $rootField = \Tests\Support\Fixtures\VizyFixtureFactory::vizyField();
+    $owner = \Tests\Support\Fixtures\VizyFixtureFactory::entry('Nested baseline owner');
+    $suffix = StringHelper::randomString(6);
+    $middleField = new VizyField([
+        'uid' => StringHelper::UUID(),
+        'name' => 'Middle baseline',
+        'handle' => 'middleBaseline' . $suffix,
+    ]);
+    $deepField = new VizyField([
+        'uid' => StringHelper::UUID(),
+        'name' => 'Deep baseline',
+        'handle' => 'deepBaseline' . $suffix,
+    ]);
+    expect(Craft::$app->getFields()->saveField($middleField))->toBeTrue()
+        ->and(Craft::$app->getFields()->saveField($deepField))->toBeTrue();
+
+    $deepLayout = new FieldLayout(['uid' => StringHelper::UUID(), 'type' => Block::class]);
+    $deepTab = new FieldLayoutTab(['uid' => StringHelper::UUID(), 'name' => 'Content', 'layout' => $deepLayout]);
+    $deepPlacement = new CustomField($deepField);
+    $deepPlacement->uid = StringHelper::UUID();
+    $deepTab->setElements([$deepPlacement]);
+    $deepLayout->setTabs([$deepTab]);
+
+    $middleLayout = new FieldLayout(['uid' => StringHelper::UUID(), 'type' => Block::class]);
+    $middleTab = new FieldLayoutTab(['uid' => StringHelper::UUID(), 'name' => 'Content', 'layout' => $middleLayout]);
+    $middlePlacement = new CustomField($middleField);
+    $middlePlacement->uid = StringHelper::UUID();
+    $middleTab->setElements([$middlePlacement]);
+    $middleLayout->setTabs([$middleTab]);
+
+    $outer = new Block();
+    $outer->setOwner($owner);
+    $outer->setField($rootField);
+    $outer->setFieldLayout($middleLayout);
+    $outer->setBlockUid(StringHelper::UUID());
+    $inner = new Block();
+    $inner->setOwner($outer);
+    $inner->setField($middleField);
+    $inner->setFieldLayout($deepLayout);
+    $inner->setBlockUid(StringHelper::UUID());
+
+    $document = $deepField->normalizeValue(
+        \Tests\Support\Fixtures\VizyFixtureFactory::paragraphDocument('Preserved nested content'),
+        $inner,
+    );
+    $baselines = Vizy::$plugin->getContentBaselines();
+    $baselines->clear();
+    $baselines->trust($inner, $deepField, $document);
+
+    expect($baselines->document($inner, $deepField)?->toArray())->toBe($document->toArray());
+
+    $outer->setBlockUid(StringHelper::UUID());
+    expect($baselines->document($inner, $deepField))->toBeNull();
 });
 
 it('ships one inline hosted bootstrap without duplicating it into instance JS', function() {

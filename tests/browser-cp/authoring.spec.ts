@@ -509,6 +509,38 @@ test('Matrix creation permits the configured field and type for an authorized ed
     expect(persisted().document).toEqual(before.document);
 });
 
+test('native Matrix Duplicate inside Vizy returns copied fields without a provisional row', async ({ page }) => {
+    await login(page, 'editor');
+    const csrf = await page.evaluate(() => ({ name: (window as any).Craft.csrfTokenName, value: (window as any).Craft.csrfTokenValue }));
+    const before = persisted();
+    const source = before.matrixRows[0];
+    expect(source).toBeTruthy();
+    const response = await page.request.post('/index.php?p=admin&action=matrix/create-entry', {
+        headers: { Accept: 'application/json' },
+        form: {
+            [csrf.name]: csrf.value,
+            ownerId: String(fixture.matrix.anchorId),
+            ownerElementType: 'verbb\\vizy\\elements\\Block',
+            siteId: String(fixture.siteId),
+            fieldId: String(fixture.matrix.fieldId),
+            entryTypeId: String(fixture.matrix.entryTypeId),
+            namespace: `vizyHost[test][${fixture.matrix.blockUid}][fields]`,
+            duplicate: String(source.id),
+        },
+    });
+    expect(response.status(), (await response.text()).slice(0, 500)).toBe(200);
+    const { blockHtml } = await response.json();
+    expect(blockHtml).toContain(source.label);
+    const created = await page.evaluate((html) => {
+        const block = new DOMParser().parseFromString(html, 'text/html').querySelector('.matrixblock');
+        return { elementId: block?.getAttribute('data-id'), draftId: block?.getAttribute('data-draft-id') };
+    }, blockHtml);
+    expect(created.elementId).toBeNull();
+    expect(created.draftId).toBeNull();
+    expect(persisted().nestedElementCount).toBe(before.nestedElementCount);
+    expect(persisted().document).toEqual(before.document);
+});
+
 
 test('a real Assets widget upload survives capture, finalization and reopen with intact file bytes', async ({ page }) => {
     await login(page);

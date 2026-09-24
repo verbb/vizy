@@ -3,8 +3,10 @@ namespace verbb\vizy\services;
 
 use verbb\vizy\Vizy;
 use verbb\vizy\db\Table as VizyTable;
+use verbb\vizy\document\DocumentWalk;
 use verbb\vizy\document\VizyDocument;
 use verbb\vizy\fields\VizyField;
+use verbb\vizy\helpers\AnchorDocuments;
 use verbb\vizy\helpers\FieldPlacements;
 use verbb\vizy\helpers\Matrix as MatrixHelper;
 
@@ -25,6 +27,8 @@ use Throwable;
  */
 final class ContentRecovery extends Component
 {
+    public const AUTOMATIC_RETENTION = 10;
+
     // Properties
     // =========================================================================
 
@@ -44,21 +48,37 @@ final class ContentRecovery extends Component
             return null;
         }
         $hash = $this->hash($snapshot);
-        $existing = (new Query())->select('id')->from(VizyTable::CONTENT_RECOVERY)
-            ->where(['ownerId' => $owner->id, 'fieldUid' => $field->uid, 'snapshotHash' => $hash])->scalar();
-        if ($existing !== false) {
-            return (int)$existing;
+        $existing = (new Query())->select(['id', 'reason'])->from(VizyTable::CONTENT_RECOVERY)
+            ->where(['ownerId' => $owner->id, 'fieldUid' => $field->uid, 'snapshotHash' => $hash])->one();
+        if ($existing) {
+            // An explicit operation checkpoint must not remain classified as
+            // automatic merely because the same state was captured earlier.
+            // Automatic retention is allowed to delete only owner-save rows.
+            if ($reason !== 'owner-save' && $existing['reason'] === 'owner-save') {
+                Craft::$app->getDb()->createCommand()->update(VizyTable::CONTENT_RECOVERY, [
+                    'reason' => $reason,
+                ], ['id' => $existing['id']])->execute();
+            }
+            if ($reason === 'owner-save') {
+                $this->pruneAutomatic(self::AUTOMATIC_RETENTION, (int)$owner->id);
+            }
+            return (int)$existing['id'];
         }
         Craft::$app->getDb()->createCommand()->upsert(VizyTable::CONTENT_RECOVERY, [
             'ownerId' => $owner->id,
             'fieldUid' => $field->uid,
+            'placementUid' => $snapshot['placementUid'],
             'snapshotHash' => $hash,
             'snapshotJson' => Json::encode($snapshot),
             'reason' => $reason,
             'dateCreated' => gmdate('Y-m-d H:i:s'),
         ], false)->execute();
-        return (int)(new Query())->select('id')->from(VizyTable::CONTENT_RECOVERY)
+        $id = (int)(new Query())->select('id')->from(VizyTable::CONTENT_RECOVERY)
             ->where(['ownerId' => $owner->id, 'fieldUid' => $field->uid, 'snapshotHash' => $hash])->scalar();
+        if ($reason === 'owner-save') {
+            $this->pruneAutomatic(self::AUTOMATIC_RETENTION, (int)$owner->id);
+        }
+        return $id;
     }
 
     public function captureUpgrade(array $fieldUids): void
@@ -85,22 +105,62 @@ final class ContentRecovery extends Component
     public function snapshot(ElementInterface $owner, VizyField $field, bool $lock = false): array
     {
         $placement = FieldPlacements::uid($owner, $field);
+        $rootDocumentKey = AnchorDocuments::key($owner, $field);
         $sites = [];
         $references = [];
-        $blockUids = [];
+        $fallbackBlocks = [];
         foreach ($this->_rows(Table::ELEMENTS_SITES, ['elementId' => $owner->id], $lock) as $row) {
             $content = $this->_decode($row['content']);
             if ($placement === null || !array_key_exists($placement, $content)) {
                 continue;
             }
-            $sites[] = ['siteId' => (int)$row['siteId'], 'value' => $content[$placement]];
-            $this->_references($content[$placement], $references, $blockUids);
+            $value = $content[$placement];
+            $sites[] = ['siteId' => (int)$row['siteId'], 'value' => $value];
+            $this->_references($value, $references);
+            if ($field->id) {
+                $fieldId = (int)$field->id;
+                $documentKey = $rootDocumentKey ?? '';
+                $fallbackBlocks[$fieldId][$documentKey] ??= [];
+                $this->_rootBlockUids($value, $fallbackBlocks[$fieldId][$documentKey]);
+            }
+            try {
+                $document = Vizy::$plugin->getDocuments()->normalizeValue($value, $owner, $field);
+                foreach (DocumentWalk::blocks($document) as $block) {
+                    $fieldId = $block->document()->field()?->id;
+                    if ($fieldId) {
+                        $documentKey = $block->document()->anchorDocumentKey() ?? '';
+                        $fallbackBlocks[(int)$fieldId][$documentKey][$block->uid()] = true;
+                    }
+                }
+            } catch (Throwable) {
+                // The exact source remains in `sites` and explicit anchor UIDs
+                // remain usable. Root Block UIDs above are the safe legacy
+                // fallback when the document cannot be fully normalized.
+            }
         }
-        $anchors = $references === [] && $blockUids === [] ? [] : (new Query())->from(['a' => VizyTable::MATRIX_ANCHORS])
+        $anchorConditions = ['or'];
+        if ($references !== []) {
+            $anchorConditions[] = ['e.uid' => array_keys($references)];
+        }
+        foreach ($fallbackBlocks as $fieldId => $documents) {
+            foreach ($documents as $documentKey => $blockUids) {
+                if ($blockUids === []) {
+                    continue;
+                }
+                // Block UIDs are local to one placed Vizy document. Include the
+                // unclaimed legacy key only as an upgrade fallback; a claimed
+                // anchor must match this exact root/Hosted placement path.
+                $anchorConditions[] = ['and',
+                    ['a.parentOwnerId' => $owner->id],
+                    ['a.vizyFieldId' => $fieldId],
+                    ['a.documentKey' => array_values(array_unique([$documentKey, '']))],
+                    ['a.blockInstanceId' => array_keys($blockUids)],
+                ];
+            }
+        }
+        $anchors = count($anchorConditions) === 1 ? [] : (new Query())->from(['a' => VizyTable::MATRIX_ANCHORS])
             ->innerJoin(['e' => Table::ELEMENTS], '[[a.id]] = [[e.id]]')
-            ->select('a.id')->where(['or', ['e.uid' => array_keys($references)], [
-                'a.parentOwnerId' => $owner->id, 'a.blockInstanceId' => array_keys($blockUids),
-            ]])->column();
+            ->select('a.id')->where($anchorConditions)->column();
         $ids = array_map('intval', $anchors);
         // Follow the real ownership graph, including Matrix inside Matrix and
         // Vizy inside nested entries. UID references alone are not the content.
@@ -158,7 +218,11 @@ final class ContentRecovery extends Component
                                 : $element->getFieldValue($field->handle);
                             $node['attrs']['fieldSlots'][$placement->uid] = $this->_comparableRows($field->serializeValue($value, $element));
                         } elseif ($field instanceof VizyField && isset($node['attrs']['fieldSlots'][$placement->uid])) {
-                            $nested = Vizy::$plugin->getDocuments()->normalizeValue($node['attrs']['fieldSlots'][$placement->uid], $scope->owner(), $field);
+                            $nested = Vizy::$plugin->getDocuments()->normalizeValue(
+                                $node['attrs']['fieldSlots'][$placement->uid],
+                                $scope->blockElement($block),
+                                $field,
+                            );
                             $nestedArray = $nested->toArray();
                             $nestedArray['content'] = $walk($nestedArray['content'], $nested);
                             $node['attrs']['fieldSlots'][$placement->uid] = $nestedArray;
@@ -178,8 +242,49 @@ final class ContentRecovery extends Component
 
     public function records(?int $ownerId = null): array
     {
-        return (new Query())->select(['id', 'ownerId', 'fieldUid', 'snapshotHash', 'reason', 'dateCreated'])
+        return (new Query())->select(['id', 'ownerId', 'fieldUid', 'placementUid', 'snapshotHash', 'reason', 'dateCreated'])
             ->from(VizyTable::CONTENT_RECOVERY)->filterWhere(['ownerId' => $ownerId])->orderBy(['id' => SORT_DESC])->all();
+    }
+
+    /**
+     * Keep a bounded edit history per owner and field. Operation checkpoints
+     * use distinct reasons and are deliberately never removed here.
+     */
+    public function pruneAutomatic(int $keep = self::AUTOMATIC_RETENTION, ?int $ownerId = null): int
+    {
+        if ($keep < 0) {
+            throw new \InvalidArgumentException('Recovery retention cannot be negative.');
+        }
+
+        $counts = [];
+        $deleted = 0;
+        $beforeId = null;
+        do {
+            $query = (new Query())->select(['id', 'ownerId', 'fieldUid', 'placementUid'])
+                ->from(VizyTable::CONTENT_RECOVERY)
+                ->where(['reason' => 'owner-save'])
+                ->andFilterWhere(['ownerId' => $ownerId]);
+            if ($beforeId !== null) {
+                $query->andWhere(['<', 'id', $beforeId]);
+            }
+            $rows = $query->orderBy(['id' => SORT_DESC])->limit(500)->all();
+            $deleteIds = [];
+            foreach ($rows as $row) {
+                $beforeId = (int)$row['id'];
+                $key = $row['ownerId'] . ':' . $row['fieldUid'] . ':' . ($row['placementUid'] ?? '');
+                $counts[$key] = ($counts[$key] ?? 0) + 1;
+                if ($counts[$key] > $keep) {
+                    $deleteIds[] = (int)$row['id'];
+                }
+            }
+            if ($deleteIds !== []) {
+                $deleted += Craft::$app->getDb()->createCommand()
+                    ->delete(VizyTable::CONTENT_RECOVERY, ['id' => $deleteIds])
+                    ->execute();
+            }
+        } while (count($rows) === 500);
+
+        return $deleted;
     }
 
     /** Restore only this field and its captured nested graph, in one transaction. */
@@ -208,15 +313,37 @@ final class ContentRecovery extends Component
             $tables = $snapshot['tables'];
             $ids = array_column($tables[Table::ELEMENTS], 'id');
             $this->_assertRestorable($snapshot, $ids);
-            foreach ([Table::DRAFTS, Table::REVISIONS, Table::ELEMENTS, Table::ENTRIES, VizyTable::MATRIX_ANCHORS, Table::ELEMENTS_SITES] as $table) {
-                foreach ($tables[$table] as $row) {
-                    $values = $row;
-                    foreach (Craft::$app->getDb()->getTableSchema($table)->columns as $column) {
-                        if ($column->type === 'json' && is_string($values[$column->name] ?? null)) {
-                            $values[$column->name] = Json::decode($values[$column->name]);
-                        }
+            // Elements and their draft/revision metadata reference each other.
+            // Recreate every element identity first with those links detached,
+            // then restore the metadata and reconnect the captured graph.
+            $elementLinks = [];
+            foreach ($tables[Table::ELEMENTS] as $row) {
+                $elementLinks[$row['id']] = array_intersect_key($row, array_flip([
+                    'canonicalId',
+                    'draftId',
+                    'revisionId',
+                    // MySQL may refresh this column on the reconnect update;
+                    // restoration must retain the captured timestamp exactly.
+                    'dateUpdated',
+                ]));
+                foreach (['canonicalId', 'draftId', 'revisionId'] as $column) {
+                    if (array_key_exists($column, $row)) {
+                        $row[$column] = null;
                     }
-                    Craft::$app->getDb()->createCommand()->upsert($table, $values, true, [], false)->execute();
+                }
+                $this->_restoreRow(Table::ELEMENTS, $row);
+            }
+            foreach ([Table::DRAFTS, Table::REVISIONS] as $table) {
+                foreach ($tables[$table] as $row) {
+                    $this->_restoreRow($table, $row);
+                }
+            }
+            foreach ($elementLinks as $elementId => $links) {
+                Craft::$app->getDb()->createCommand()->update(Table::ELEMENTS, $links, ['id' => $elementId])->execute();
+            }
+            foreach ([Table::ENTRIES, VizyTable::MATRIX_ANCHORS, Table::ELEMENTS_SITES] as $table) {
+                foreach ($tables[$table] as $row) {
+                    $this->_restoreRow($table, $row);
                 }
             }
             // Replace only edges belonging to the captured graph. Newer rows
@@ -232,7 +359,10 @@ final class ContentRecovery extends Component
             foreach ($tables as $table => $rows) {
                 foreach ($rows as $row) {
                     $key = isset($row['id']) ? ['id' => $row['id']] : ['elementId' => $row['elementId'], 'ownerId' => $row['ownerId']];
-                    if ((new Query())->from($table)->where($key)->one() != $row) {
+                    // Recovery records are durable across additive schema
+                    // migrations. Verify every captured value without making a
+                    // historical snapshot invent columns that did not exist.
+                    if ((new Query())->select(array_keys($row))->from($table)->where($key)->one() != $row) {
                         throw new RuntimeException("Recovery verification failed for {$table}.");
                     }
                 }
@@ -275,6 +405,30 @@ final class ContentRecovery extends Component
             ksort($value);
         }
         return array_map($this->_stable(...), $value);
+    }
+
+    private function _restoreRow(string $table, array $values): void
+    {
+        foreach (Craft::$app->getDb()->getTableSchema($table)->columns as $column) {
+            if ($column->type === 'json' && is_string($values[$column->name] ?? null)) {
+                $values[$column->name] = Json::decode($values[$column->name]);
+            }
+        }
+        $rowId = $values['id'] ?? null;
+        if ($rowId === null) {
+            throw new RuntimeException("Recovery row for {$table} has no primary identity.");
+        }
+
+        // Yii infers PostgreSQL UPSERT targets by combining every unique key.
+        // On elements_sites that produces the invalid (id, elementId, siteId)
+        // conflict target, so restore by captured primary identity explicitly.
+        if ((new Query())->from($table)->where(['id' => $rowId])->exists()) {
+            $updates = $values;
+            unset($updates['id']);
+            Craft::$app->getDb()->createCommand()->update($table, $updates, ['id' => $rowId])->execute();
+        } else {
+            Craft::$app->getDb()->createCommand()->insert($table, $values)->execute();
+        }
     }
 
     private function _comparableRows(mixed $value): mixed
@@ -353,7 +507,7 @@ final class ContentRecovery extends Component
         return $decoded;
     }
 
-    private function _references(mixed $value, array &$references, array &$blockUids): void
+    private function _references(mixed $value, array &$references): void
     {
         if (is_string($value) && (str_starts_with(ltrim($value), '[') || str_starts_with(ltrim($value), '{'))) {
             try {
@@ -371,14 +525,35 @@ final class ContentRecovery extends Component
             if ($key === 'matrixAnchorUid' && is_string($child) && $child !== '') {
                 $references[$child] = true;
             }
-            if (($value['type'] ?? null) === 'vizyBlock') {
-                $uid = $value['attrs']['blockUid'] ?? $value['attrs']['id'] ?? null;
-                if (is_string($uid)) {
-                    $blockUids[$uid] = true;
-                }
-            }
             if (is_array($child)) {
-                $this->_references($child, $references, $blockUids);
+                $this->_references($child, $references);
+            }
+        }
+    }
+
+    /** Root TipTap Blocks only; Hosted fieldSlots require schema-aware traversal. */
+    private function _rootBlockUids(mixed $value, array &$blockUids): void
+    {
+        if (is_string($value) && (str_starts_with(ltrim($value), '[') || str_starts_with(ltrim($value), '{'))) {
+            try {
+                $value = Json::decode($value);
+            } catch (\yii\base\InvalidArgumentException) {
+                return;
+            }
+        }
+        if (!is_array($value)) {
+            return;
+        }
+        if (($value['type'] ?? null) === 'vizyBlock') {
+            $uid = $value['attrs']['blockUid'] ?? $value['attrs']['id'] ?? null;
+            if (is_string($uid) && $uid !== '') {
+                $blockUids[$uid] = true;
+            }
+            return;
+        }
+        foreach ($value['content'] ?? $value as $child) {
+            if (is_array($child)) {
+                $this->_rootBlockUids($child, $blockUids);
             }
         }
     }

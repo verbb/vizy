@@ -15,6 +15,7 @@ use Tests\Support\Fixtures\VizyFixtureFactory;
 use Tests\Support\WebControllerHarness;
 use verbb\vizy\base\RenderContext;
 use verbb\vizy\document\VizyDocument;
+use verbb\vizy\elements\Block;
 use verbb\vizy\fields\VizyField;
 use verbb\vizy\helpers\FieldImageOptions;
 use verbb\vizy\helpers\FieldImagePreviews;
@@ -406,6 +407,36 @@ it('resolves Block Type insertion conditions against the Entry owner', function(
     expect($field->getAllowedBlockTypeUids())->toBe([$uid])
         ->and($field->getInsertableBlockTypeUids($matching))->toBe([$uid])
         ->and($field->getInsertableBlockTypeUids($other))->toBe([]);
+});
+
+it('resolves nested Hosted insertion conditions against the durable Entry owner', function() {
+    $uid = '35353535-3535-4535-8535-353535353535';
+    $condition = Entry::createCondition();
+    $rule = new TitleConditionRule();
+    $rule->value = 'Matching owner';
+    $condition->setConditionRules([$rule]);
+
+    $field = new VizyField([
+        'name' => 'Nested conditional blocks',
+        'handle' => 'nestedConditionalBlocks',
+        'blockTypePickerGroups' => [[
+            'name' => 'Content',
+            'blockTypeUids' => [$uid],
+        ]],
+        'blockTypeAvailabilityConditions' => [
+            $uid => ['elementCondition' => $condition->getConfig()],
+        ],
+    ]);
+
+    $entry = new Entry(['title' => 'Matching owner']);
+    $outer = new Block();
+    $outer->setOwner($entry);
+    $inner = new Block();
+    $inner->setOwner($outer);
+
+    expect($field->blockTypeIsAvailableFor($uid, $inner))->toBeTrue();
+    $entry->title = 'Other owner';
+    expect($field->blockTypeIsAvailableFor($uid, $inner))->toBeFalse();
 });
 
 it('renders native user and Entry condition builders for referenced Block Types', function() {

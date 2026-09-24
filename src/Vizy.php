@@ -55,7 +55,7 @@ class Vizy extends Plugin
     // =========================================================================
 
     public bool $hasCpSettings = true;
-    public string $schemaVersion = '1.0.4';
+    public string $schemaVersion = '1.0.6';
 
 
     // Public Methods
@@ -227,6 +227,11 @@ class Vizy extends Plugin
 
                 // Only override things if this is coming from a Vizy field
                 if ($ownerElementType === BlockElement::class) {
+                    // `Response::send()` does not terminate Yii's action pipeline.
+                    // Cancel the core Matrix action before dispatching our
+                    // ephemeral-owner implementation, otherwise Craft attempts
+                    // to resolve the Vizy Block as a persisted element afterward.
+                    $event->isValid = false;
                     Craft::$app->runAction('vizy/field/create-matrix-entry')->send();
                 }
             }

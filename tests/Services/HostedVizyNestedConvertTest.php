@@ -3,11 +3,11 @@
 declare(strict_types=1);
 
 use craft\elements\Entry;
+use craft\elements\conditions\TitleConditionRule;
 use craft\fieldlayoutelements\CustomField;
 use craft\helpers\StringHelper;
 use craft\models\FieldLayout;
 use craft\models\FieldLayoutTab;
-use ReflectionMethod;
 use Tests\Support\Fixtures\VizyFixtureFactory;
 use Tests\Support\WebControllerHarness;
 use verbb\vizy\document\DocumentSerializer;
@@ -104,6 +104,89 @@ function nestedHostedFixture(string $suffix): array
 
     return compact('nestedField', 'nestedPlacement', 'blockType', 'rootField', 'owner');
 }
+
+it('grandfathers persisted availability inside Hosted Vizy but rejects a new nested identity', function() {
+    $suffix = StringHelper::randomString(6);
+    $fixture = nestedHostedFixture($suffix);
+    $innerType = new BlockType([
+        'uid' => StringHelper::UUID(),
+        'name' => 'Conditional nested card',
+        'handle' => 'conditionalNestedCard' . $suffix,
+    ]);
+    $innerLayout = new FieldLayout(['uid' => StringHelper::UUID(), 'type' => Block::class]);
+    $innerType->setFieldLayout($innerLayout);
+    expect(Vizy::$plugin->getBlockTypes()->saveBlockType($innerType))->toBeTrue();
+
+    $fixture['nestedField']->blockTypePickerGroups = [[
+        'name' => 'Nested',
+        'blockTypeUids' => [$innerType->uid],
+    ]];
+    expect(Craft::$app->getFields()->saveField($fixture['nestedField']))->toBeTrue();
+    (new ReflectionMethod(Vizy::$plugin->getBlockTypes(), '_resetCache'))
+        ->invoke(Vizy::$plugin->getBlockTypes());
+
+    $outerUid = StringHelper::UUID();
+    $innerUid = StringHelper::UUID();
+    $document = [
+        'type' => 'doc',
+        'attrs' => ['schemaVersion' => VizyDocument::CURRENT_SCHEMA_VERSION],
+        'content' => [[
+            'type' => 'vizyBlock',
+            'attrs' => [
+                'blockUid' => $outerUid,
+                'blockTypeUid' => $fixture['blockType']->uid,
+                'enabled' => true,
+                'fieldSlots' => [
+                    $fixture['nestedPlacement']->uid => [
+                        'type' => 'doc',
+                        'attrs' => ['schemaVersion' => VizyDocument::CURRENT_SCHEMA_VERSION],
+                        'content' => [[
+                            'type' => 'vizyBlock',
+                            'attrs' => [
+                                'blockUid' => $innerUid,
+                                'blockTypeUid' => $innerType->uid,
+                                'enabled' => true,
+                                'fieldSlots' => [],
+                            ],
+                        ]],
+                    ],
+                ],
+            ],
+        ]],
+    ];
+
+    $owner = $fixture['owner'];
+    $owner->setFieldValue($fixture['rootField']->handle, $document);
+    expect(Craft::$app->getElements()->saveElement($owner))->toBeTrue(json_encode($owner->getErrors()));
+
+    // Tightening an insertion condition after content exists must not turn that
+    // content into a new insertion during the next unrelated owner save.
+    $condition = Entry::createCondition();
+    $rule = new TitleConditionRule();
+    $rule->value = 'A title this owner does not have';
+    $condition->setConditionRules([$rule]);
+    $nestedField = Craft::$app->getFields()->getFieldById($fixture['nestedField']->id);
+    expect($nestedField)->toBeInstanceOf(VizyField::class);
+    $nestedField->blockTypeAvailabilityConditions = [
+        $innerType->uid => ['elementCondition' => $condition->getConfig()],
+    ];
+    expect(Craft::$app->getFields()->saveField($nestedField))->toBeTrue();
+    (new ReflectionMethod(Vizy::$plugin->getBlockTypes(), '_resetCache'))
+        ->invoke(Vizy::$plugin->getBlockTypes());
+
+    Vizy::$plugin->getContentBaselines()->clear();
+    $owner = Craft::$app->getElements()->getElementById($owner->id, Entry::class, $owner->siteId);
+    $owner->title = 'Blocked Hosted ' . $suffix;
+    expect(Craft::$app->getElements()->saveElement($owner))->toBeTrue(json_encode($owner->getErrors()));
+
+    Vizy::$plugin->getContentBaselines()->clear();
+    $owner = Craft::$app->getElements()->getElementById($owner->id, Entry::class, $owner->siteId);
+    $changed = $owner->getFieldValue($fixture['rootField']->handle)->toArray();
+    $changed['content'][0]['attrs']['fieldSlots'][$fixture['nestedPlacement']->uid]['content'][0]['attrs']['blockUid'] = StringHelper::UUID();
+    $owner->setFieldValue($fixture['rootField']->handle, $changed);
+    expect(Craft::$app->getElements()->saveElement($owner))->toBeFalse()
+        ->and(json_encode($owner->getErrors()))->toContain('is not available for this entry or user');
+});
 
 it('serializes V3 nested bare lists into Hosted canonical document objects', function(mixed $nestedPayload) {
     $suffix = StringHelper::randomString(6);

@@ -16,6 +16,7 @@ use verbb\vizy\document\VizyDocument;
 use verbb\vizy\elements\Block;
 use verbb\vizy\models\BlockType;
 use verbb\vizy\Vizy;
+use verbb\vizy\db\Table as VizyTable;
 
 function repeatedVizyPlacements(): array
 {
@@ -56,6 +57,167 @@ afterEach(function() {
     Vizy::$plugin->getContentBaselines()->clear();
     Vizy::$plugin->getAssetUploads()->resetRequestStateForTesting();
     Vizy::$plugin->getEditorAcknowledgements()->resetRequestStateForTesting();
+});
+
+it('keeps Matrix content independent when repeated Vizy placements reuse a block UID', function() {
+    $fixture = new \Tests\Support\Fixtures\MatrixSupportFixture();
+    $layout = $fixture->owner->getFieldLayout();
+    $tab = $layout->getTabs()[0];
+    $tab->setElements([...$tab->getElements(), new CustomField($fixture->field, [
+        'uid' => StringHelper::UUID(),
+        'handle' => 'secondMatrixVizy' . StringHelper::randomString(8),
+    ])]);
+    expect(Craft::$app->getFields()->saveLayout($layout))->toBeTrue();
+
+    $owner = $fixture->reload();
+    $fields = [];
+    foreach ($owner->getFieldLayout()->getCustomFieldElements() as $placement) {
+        if ($placement->getField()->uid === $fixture->field->uid) {
+            $fields[] = $placement->getField();
+        }
+    }
+    expect($fields)->toHaveCount(2);
+
+    $blockUid = StringHelper::UUID();
+    foreach (['First placement', 'Second placement'] as $index => $label) {
+        $owner->setFieldValue($fields[$index]->handle, [
+            'type' => 'doc',
+            'attrs' => ['schemaVersion' => 2],
+            'content' => [$fixture->block($blockUid, $fixture->payload([$label]))],
+        ]);
+    }
+    expect(Craft::$app->getElements()->saveElement($owner, true, false))->toBeTrue();
+
+    $owner = $fixture->reload($owner);
+    $fields = array_values(array_filter(
+        array_map(static fn($placement) => $placement->getField(), $owner->getFieldLayout()->getCustomFieldElements()),
+        static fn($field) => $field->uid === $fixture->field->uid,
+    ));
+    $anchors = [];
+    $labels = [];
+    foreach ($fields as $field) {
+        $document = $owner->getFieldValue($field->handle);
+        $block = $document->findBlock($blockUid);
+        $anchor = Vizy::$plugin->getAnchors()->getAnchor($owner, $field, $blockUid, $block->matrixAnchorUid());
+        $anchors[] = $anchor;
+        $labels[] = $document->blockElement($block)->getFieldValue($fixture->matrix->handle)->one()?->getFieldValue($fixture->text->handle);
+    }
+
+    expect(array_map(static fn($anchor) => $anchor?->id, $anchors))->each->not->toBeNull()
+        ->and(array_unique(array_map(static fn($anchor) => $anchor->id, $anchors)))->toHaveCount(2)
+        ->and(array_unique(array_map(static fn($anchor) => $anchor->documentKey, $anchors)))->toHaveCount(2)
+        ->and($labels)->toBe(['First placement', 'Second placement'])
+        ->and((int)(new \craft\db\Query())->from(VizyTable::MATRIX_ANCHORS)->where([
+            'parentOwnerId' => $owner->id,
+            'vizyFieldId' => $fixture->field->id,
+            'blockInstanceId' => $blockUid,
+        ])->count())->toBe(2);
+
+    $recovery = Vizy::$plugin->getContentRecovery();
+    $snapshots = array_map(fn($field) => $recovery->snapshot($owner, $field), $fields);
+    expect(array_map(
+        static fn(array $snapshot): array => array_column($snapshot['tables'][VizyTable::MATRIX_ANCHORS], 'id'),
+        $snapshots,
+    ))->toBe([[$anchors[0]->id], [$anchors[1]->id]]);
+
+    $firstRecoveryId = $recovery->capture($owner, $fields[0], 'repeated-placement-isolation');
+    foreach (['Changed first', 'Changed second'] as $index => $label) {
+        $owner->setFieldValue($fields[$index]->handle, [
+            'type' => 'doc',
+            'attrs' => ['schemaVersion' => 2],
+            'content' => [$fixture->block($blockUid, $fixture->payload([$label]))],
+        ]);
+    }
+    expect(Craft::$app->getElements()->saveElement($owner, true, false))->toBeTrue();
+    $recovery->restore($firstRecoveryId);
+
+    $owner = $fixture->reload($owner);
+    $fields = array_values(array_filter(
+        array_map(static fn($placement) => $placement->getField(), $owner->getFieldLayout()->getCustomFieldElements()),
+        static fn($field) => $field->uid === $fixture->field->uid,
+    ));
+    $restoredLabels = [];
+    foreach ($fields as $field) {
+        $document = $owner->getFieldValue($field->handle);
+        $block = $document->findBlock($blockUid);
+        $restoredLabels[] = $document->blockElement($block)->getFieldValue($fixture->matrix->handle)->one()?->getFieldValue($fixture->text->handle);
+    }
+    expect($restoredLabels)->toBe(['First placement', 'Changed second']);
+});
+
+it('forks a shared beta 1 Matrix anchor before editing one repeated placement', function() {
+    $fixture = new \Tests\Support\Fixtures\MatrixSupportFixture();
+    $layout = $fixture->owner->getFieldLayout();
+    $tab = $layout->getTabs()[0];
+    $tab->setElements([...$tab->getElements(), new CustomField($fixture->field, [
+        'uid' => StringHelper::UUID(),
+        'handle' => 'legacySecondMatrixVizy' . StringHelper::randomString(8),
+    ])]);
+    expect(Craft::$app->getFields()->saveLayout($layout))->toBeTrue();
+
+    $owner = $fixture->reload();
+    $fields = array_values(array_filter(
+        array_map(static fn($placement) => $placement->getField(), $owner->getFieldLayout()->getCustomFieldElements()),
+        static fn($field) => $field->uid === $fixture->field->uid,
+    ));
+    $blockUid = StringHelper::UUID();
+    foreach ($fields as $field) {
+        $owner->setFieldValue($field->handle, [
+            'type' => 'doc', 'attrs' => ['schemaVersion' => 2],
+            'content' => [$fixture->block($blockUid, $fixture->payload(['Legacy shared']))],
+        ]);
+    }
+    expect(Craft::$app->getElements()->saveElement($owner, true, false))->toBeTrue();
+
+    $owner = $fixture->reload($owner);
+    $fields = array_values(array_filter(
+        array_map(static fn($placement) => $placement->getField(), $owner->getFieldLayout()->getCustomFieldElements()),
+        static fn($field) => $field->uid === $fixture->field->uid,
+    ));
+    $documents = array_map(fn($field) => $owner->getFieldValue($field->handle), $fields);
+    $anchors = array_map(fn($index) => Vizy::$plugin->getAnchors()->getAnchor(
+        $owner,
+        $fields[$index],
+        $blockUid,
+        $documents[$index]->findBlock($blockUid)->matrixAnchorUid(),
+    ), array_keys($fields));
+    $legacyAnchor = $anchors[0];
+    expect($legacyAnchor)->not->toBeNull()
+        ->and($anchors[1])->not->toBeNull()
+        ->and(Craft::$app->getElements()->deleteElement($anchors[1], true))->toBeTrue();
+    Craft::$app->getDb()->createCommand()->update(VizyTable::MATRIX_ANCHORS, [
+        'documentKey' => '',
+    ], ['id' => $legacyAnchor->id])->execute();
+
+    $condition = ['elementId' => $owner->id, 'siteId' => $owner->siteId];
+    $content = (new \craft\db\Query())->select('content')->from('{{%elements_sites}}')->where($condition)->scalar();
+    $content = is_string($content) ? Json::decode($content) : $content;
+    $content[$fields[1]->layoutElement->uid] = $content[$fields[0]->layoutElement->uid];
+    Craft::$app->getDb()->createCommand()->update('{{%elements_sites}}', ['content' => $content], $condition)->execute();
+
+    $owner = $fixture->reload($owner);
+    $fields = array_values(array_filter(
+        array_map(static fn($placement) => $placement->getField(), $owner->getFieldLayout()->getCustomFieldElements()),
+        static fn($field) => $field->uid === $fixture->field->uid,
+    ));
+    $owner->setFieldValue($fields[0]->handle, [
+        'type' => 'doc', 'attrs' => ['schemaVersion' => 2],
+        'content' => [$fixture->block($blockUid, $fixture->payload(['Changed first']))],
+    ]);
+    expect(Craft::$app->getElements()->saveElement($owner, true, false))->toBeTrue();
+
+    $owner = $fixture->reload($owner);
+    $fields = array_values(array_filter(
+        array_map(static fn($placement) => $placement->getField(), $owner->getFieldLayout()->getCustomFieldElements()),
+        static fn($field) => $field->uid === $fixture->field->uid,
+    ));
+    $labels = [];
+    foreach ($fields as $field) {
+        $document = $owner->getFieldValue($field->handle);
+        $block = $document->findBlock($blockUid);
+        $labels[] = $document->blockElement($block)->getFieldValue($fixture->matrix->handle)->one()?->getFieldValue($fixture->text->handle);
+    }
+    expect($labels)->toBe(['Changed first', 'Legacy shared']);
 });
 
 it('migrates repeated legacy placements with independent resumable checkpoints', function() {

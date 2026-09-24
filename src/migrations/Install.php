@@ -14,6 +14,9 @@ class Install extends Migration
     public function safeUp(): bool
     {
         (new m260920_000000_content_recovery())->safeUp();
+        // Recovery survives uninstall. Normalize a retained Beta 1 table before
+        // Craft marks standalone migrations as applied during reinstall.
+        (new m260924_000000_content_recovery_capacity())->safeUp();
         $this->_createSchemaPromotionsTable();
         $this->_createOwnerMigrationsTable();
         $this->_createAssetUploadBatchesTable();
@@ -176,6 +179,7 @@ class Install extends Migration
             'vizyFieldId' => $this->integer()->notNull(),
             'blockInstanceId' => $this->string(36)->notNull(),
             'parentOwnerId' => $this->integer()->notNull(),
+            'documentKey' => $this->string(64)->notNull()->defaultValue(''),
             'PRIMARY KEY([[id]])',
         ]);
 
@@ -202,7 +206,7 @@ class Install extends Migration
         $this->createIndex(
             null,
             Table::MATRIX_ANCHORS,
-            ['parentOwnerId', 'vizyFieldId', 'blockInstanceId'],
+            ['parentOwnerId', 'vizyFieldId', 'documentKey', 'blockInstanceId'],
             true,
         );
     }

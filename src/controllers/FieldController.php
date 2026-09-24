@@ -3,6 +3,7 @@ namespace verbb\vizy\controllers;
 
 use verbb\vizy\Vizy;
 use verbb\vizy\fields\VizyField;
+use verbb\vizy\helpers\AnchorDocuments;
 use verbb\vizy\helpers\Fields;
 use verbb\vizy\models\BlockType;
 
@@ -19,6 +20,8 @@ use craft\web\Controller;
 use yii\web\BadRequestHttpException;
 use yii\web\ForbiddenHttpException;
 use yii\web\Response;
+
+use UnitEnum;
 
 class FieldController extends Controller
 {
@@ -168,7 +171,10 @@ class FieldController extends Controller
         if (!in_array((int)$entryType->id, array_map(static fn($type): int => (int)$type->id, $field->getEntryTypes()), true)) {
             throw new BadRequestHttpException('Entry type is not available for this Matrix field.');
         }
-        $anchor = Vizy::$plugin->getAnchors()->getAnchor($parentOwner, $vizyField, $blockInstanceId, $matrixAnchorUid);
+        $documentKey = isset($context) && is_array($context)
+            ? AnchorDocuments::keyFromEditorContext($context)
+            : null;
+        $anchor = Vizy::$plugin->getAnchors()->getAnchor($parentOwner, $vizyField, $blockInstanceId, $matrixAnchorUid, $documentKey);
         if (!$anchor && $matrixAnchorUid) {
             throw new BadRequestHttpException('Stored Matrix content could not be resolved. Restore it before adding rows.');
         }
@@ -177,14 +183,14 @@ class FieldController extends Controller
                 'parentOwnerId' => $parentOwner->id,
                 'vizyFieldId' => $vizyField->id,
                 'blockInstanceId' => $blockInstanceId,
+                'documentKey' => $documentKey ?? '',
                 'siteId' => $siteId,
             ]);
             $anchor->setParentOwner($parentOwner);
         }
         $anchor->setFieldLayout($blockType->getFieldLayout());
 
-        $entry = Craft::createObject([
-            'class' => Entry::class,
+        $attributes = [
             'siteId' => $siteId,
             'uid' => StringHelper::UUID(),
             'typeId' => $entryType->id,
@@ -192,7 +198,71 @@ class FieldController extends Controller
             'primaryOwner' => $anchor,
             'owner' => $anchor,
             'slug' => ElementHelper::tempSlug(),
-        ]);
+        ];
+
+        // Match Craft's native Matrix Duplicate contract without persisting a
+        // provisional draft during this render-only request. The submitted row
+        // is saved atomically with the outer Vizy owner later.
+        $sourceId = $this->request->getBodyParam('duplicate');
+        if ($sourceId) {
+            if (!$anchor->id) {
+                throw new BadRequestHttpException('Matrix rows can only be duplicated from persisted content.');
+            }
+
+            $source = Entry::find()
+                ->id($sourceId)
+                ->siteId($siteId)
+                ->fieldId($fieldId)
+                ->ownerId($anchor->id)
+                ->typeId($entryType->id)
+                ->drafts(null)
+                ->status(null)
+                ->one();
+            if (!$source) {
+                throw new BadRequestHttpException("Invalid source element ID: $sourceId");
+            }
+
+            // Check the source while it still has its persisted owner. Replacing
+            // the owner first would make Matrix authorize against the target and
+            // could disclose a guessed row from another owner or field.
+            if (!$elementsService->canView($source, $user)) {
+                throw new ForbiddenHttpException('User not authorized to view this element.');
+            }
+
+            $source->setOwner($anchor);
+            if (!$elementsService->canDuplicateAsDraft($source, $user)) {
+                throw new ForbiddenHttpException('User not authorized to duplicate this element.');
+            }
+
+            $entry = clone $source;
+            $entry->id = null;
+            $entry->uid = $attributes['uid'];
+            $entry->draftId = null;
+            $entry->siteSettingsId = null;
+            $entry->root = null;
+            $entry->lft = null;
+            $entry->rgt = null;
+            $entry->level = null;
+            $entry->dateCreated = null;
+            $entry->dateUpdated = null;
+            $entry->dateLastMerged = null;
+            $entry->duplicateOf = $source;
+            $entry->setCanonicalId(null);
+            Craft::configure($entry, $attributes);
+
+            // Avoid a shared query/model instance allowing edits in the new row
+            // to mutate the source's normalized field value before submission.
+            foreach ($entry->getFieldValues() as $handle => $value) {
+                if (is_object($value) && !$value instanceof UnitEnum) {
+                    $entry->setFieldValue($handle, clone $value);
+                }
+            }
+        } else {
+            $entry = Craft::createObject([
+                'class' => Entry::class,
+                ...$attributes,
+            ]);
+        }
 
         $entry->setScenario(Element::SCENARIO_ESSENTIALS);
 

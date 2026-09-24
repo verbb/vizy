@@ -2,7 +2,9 @@
 namespace verbb\vizy\services;
 
 use verbb\vizy\document\VizyDocument;
+use verbb\vizy\elements\Block;
 use verbb\vizy\fields\VizyField;
+use verbb\vizy\helpers\AnchorDocuments;
 use verbb\vizy\helpers\FieldPlacements;
 
 use craft\base\Component;
@@ -102,6 +104,46 @@ final class ContentBaselines extends Component
     {
         if (!$field->uid) {
             return null;
+        }
+
+        // Hosted Vizy lives in a parent Block's fieldSlots, so its projected
+        // Block is deliberately not a persisted element. Give preloaded Hosted
+        // baselines a stable key rooted in the durable owner and the full
+        // parent-field/block/nested-placement identity instead of attempting an
+        // elements_sites lookup with a null or borrowed Matrix anchor ID.
+        if ($owner instanceof Block) {
+            $documentKey = AnchorDocuments::key($owner, $field);
+            if ($documentKey === null) {
+                return null;
+            }
+            $durableOwner = $owner;
+            while ($durableOwner instanceof Block) {
+                try {
+                    $nextOwner = $durableOwner->getOwner();
+                } catch (\LogicException) {
+                    // Some validation-only Block projections intentionally omit
+                    // field or owner context. They cannot address a baseline.
+                    return null;
+                }
+                $durableOwner = $nextOwner;
+            }
+            $ownerId = $durableOwner->id;
+            $siteId = $durableOwner->siteId;
+            if ((!$ownerId || !$siteId) && $durableOwner->duplicateOf instanceof ElementInterface) {
+                $ownerId = $durableOwner->duplicateOf->id;
+                $siteId = $durableOwner->duplicateOf->siteId;
+            }
+            if (!$ownerId || !$siteId) {
+                return null;
+            }
+
+            return implode(':', [
+                'hosted',
+                $durableOwner::class,
+                $ownerId,
+                $siteId,
+                $documentKey,
+            ]);
         }
 
         $ownerId = $owner->id;

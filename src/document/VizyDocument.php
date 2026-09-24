@@ -5,6 +5,7 @@ use verbb\vizy\Vizy;
 use verbb\vizy\deprecations\VizyDocumentNodeCollectionDeprecations;
 use verbb\vizy\elements\Block as BlockElement;
 use verbb\vizy\fields\VizyField;
+use verbb\vizy\helpers\AnchorDocuments;
 use verbb\vizy\helpers\FieldSlotValues;
 use verbb\vizy\helpers\Matrix as MatrixHelper;
 use verbb\vizy\models\BlockType;
@@ -89,6 +90,13 @@ final class VizyDocument
     public function siteId(): ?int
     {
         return $this->owner?->siteId;
+    }
+
+    public function anchorDocumentKey(): ?string
+    {
+        return $this->owner && $this->field
+            ? AnchorDocuments::key($this->owner, $this->field)
+            : null;
     }
 
     public function content(): VizyContent
@@ -235,6 +243,7 @@ final class VizyDocument
                 $this->field,
                 $block->uid(),
                 $block->matrixAnchorUid(),
+                $this->anchorDocumentKey(),
             );
             if (!$anchor && $block->matrixAnchorUid()) {
                 // Vizy 3 could persist a duplicate owner with the source
@@ -245,6 +254,7 @@ final class VizyDocument
                     $this->field,
                     $block->uid(),
                     $block->matrixAnchorUid(),
+                    $this->anchorDocumentKey(),
                 );
                 if ($storedAnchor?->dateDeleted === null) {
                     $anchor = $storedAnchor;

@@ -15,6 +15,7 @@ class MatrixAnchorQuery extends ElementQuery
     public mixed $vizyFieldId = null;
     public mixed $blockInstanceId = null;
     public mixed $parentOwnerId = null;
+    public mixed $documentKey = null;
 
 
     // Public Methods
@@ -36,15 +37,18 @@ class MatrixAnchorQuery extends ElementQuery
             $vizyFieldId = isset($row['vizyFieldId']) ? (int)$row['vizyFieldId'] : null;
             $blockInstanceId = $row['blockInstanceId'] ?? null;
             $parentOwnerId = isset($row['parentOwnerId']) ? (int)$row['parentOwnerId'] : null;
+            $documentKey = $row['documentKey'] ?? '';
 
             if (is_array($element)) {
                 $elements[$key]['vizyFieldId'] = $vizyFieldId;
                 $elements[$key]['blockInstanceId'] = $blockInstanceId;
                 $elements[$key]['parentOwnerId'] = $parentOwnerId;
+                $elements[$key]['documentKey'] = $documentKey;
             } else {
                 $element->vizyFieldId = $vizyFieldId;
                 $element->blockInstanceId = $blockInstanceId;
                 $element->parentOwnerId = $parentOwnerId;
+                $element->documentKey = $documentKey;
             }
         }
 
@@ -67,6 +71,7 @@ class MatrixAnchorQuery extends ElementQuery
             'vizy_matrix_anchors.vizyFieldId',
             'vizy_matrix_anchors.blockInstanceId',
             'vizy_matrix_anchors.parentOwnerId',
+            'vizy_matrix_anchors.documentKey',
         ]);
 
         if (isset($this->vizyFieldId)) {
@@ -79,6 +84,10 @@ class MatrixAnchorQuery extends ElementQuery
 
         if (isset($this->parentOwnerId)) {
             $this->subQuery->andWhere(Db::parseParam('vizy_matrix_anchors.parentOwnerId', $this->parentOwnerId));
+        }
+
+        if (isset($this->documentKey)) {
+            $this->subQuery->andWhere(Db::parseParam('vizy_matrix_anchors.documentKey', $this->documentKey));
         }
 
         return true;

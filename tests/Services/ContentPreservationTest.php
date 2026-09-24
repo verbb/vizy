@@ -4,7 +4,9 @@ declare(strict_types=1);
 
 use craft\db\Query;
 use craft\db\Table;
+use craft\helpers\Json;
 use craft\helpers\StringHelper;
+use craft\fieldlayoutelements\CustomField;
 use Tests\Support\Fixtures\MatrixSupportFixture;
 use Tests\Support\WebControllerHarness;
 use verbb\vizy\db\Table as VizyTable;
@@ -81,6 +83,257 @@ it('restores actual nested content and original references from a durable journa
     expect(array_map(fn($row) => $row->getFieldValue($f->text->handle), $rows))->toBe(['First', 'Second']);
     expect($rows[1]->enabled)->toBeFalse();
     expect($rows[0]->getFieldValue($f->nestedMatrix->handle)->one()->getFieldValue($f->text->handle))->toBe('Nested original');
+});
+
+it('restores a pre-document-key Matrix recovery record after the schema upgrade', function() {
+    $f = new MatrixSupportFixture();
+    $uid = StringHelper::UUID();
+    $owner = $f->save([$f->block($uid, $f->payload(['Legacy recovery']))]);
+    $recovery = Vizy::$plugin->getContentRecovery();
+    $id = $recovery->capture($owner, $f->field, 'pre-document-key');
+    $record = (new Query())->from(VizyTable::CONTENT_RECOVERY)->where(['id' => $id])->one();
+    $snapshot = Json::decode($record['snapshotJson']);
+    foreach ($snapshot['tables'][VizyTable::MATRIX_ANCHORS] as &$anchor) {
+        unset($anchor['documentKey']);
+    }
+    unset($anchor);
+    Craft::$app->getDb()->createCommand()->update(VizyTable::CONTENT_RECOVERY, [
+        'snapshotHash' => $recovery->hash($snapshot),
+        'snapshotJson' => Json::encode($snapshot),
+    ], ['id' => $id])->execute();
+
+    $f->save([$f->block($uid, $f->payload(['Replacement']))]);
+    $recovery->restore($id);
+
+    expect(array_map(
+        fn($row) => $row->getFieldValue($f->text->handle),
+        $f->rows($uid, $f->reload()),
+    ))->toBe(['Legacy recovery']);
+});
+
+it('keeps automatic recovery history bounded without pruning operation checkpoints', function() {
+    $ownerId = random_int(1000000, 2000000000);
+    $fieldUid = StringHelper::UUID();
+    $db = Craft::$app->getDb();
+    try {
+        foreach (range(1, 12) as $index) {
+            $db->createCommand()->insert(VizyTable::CONTENT_RECOVERY, [
+                'ownerId' => $ownerId,
+                'fieldUid' => $fieldUid,
+                'snapshotHash' => hash('sha256', "automatic-{$index}"),
+                'snapshotJson' => '{}',
+                'reason' => 'owner-save',
+                'dateCreated' => gmdate('Y-m-d H:i:s'),
+            ])->execute();
+        }
+        foreach (['before-schema-upgrade', 'owner-deletion'] as $reason) {
+            $db->createCommand()->insert(VizyTable::CONTENT_RECOVERY, [
+                'ownerId' => $ownerId,
+                'fieldUid' => $fieldUid,
+                'snapshotHash' => hash('sha256', $reason),
+                'snapshotJson' => '{}',
+                'reason' => $reason,
+                'dateCreated' => gmdate('Y-m-d H:i:s'),
+            ])->execute();
+        }
+
+        expect(Vizy::$plugin->getContentRecovery()->pruneAutomatic(10, $ownerId))->toBe(2)
+            ->and((int)(new Query())->from(VizyTable::CONTENT_RECOVERY)->where([
+                'ownerId' => $ownerId,
+                'reason' => 'owner-save',
+            ])->count())->toBe(10)
+            ->and((int)(new Query())->from(VizyTable::CONTENT_RECOVERY)->where([
+                'ownerId' => $ownerId,
+            ])->andWhere(['not', ['reason' => 'owner-save']])->count())->toBe(2);
+    } finally {
+        $db->createCommand()->delete(VizyTable::CONTENT_RECOVERY, ['ownerId' => $ownerId])->execute();
+    }
+});
+
+it('keeps ordinary new Matrix anchors inside automatic recovery retention', function() {
+    $f = new MatrixSupportFixture();
+    $owner = $f->owner;
+    foreach (range(1, 12) as $index) {
+        $owner = $f->save([
+            $f->block(StringHelper::UUID(), $f->payload(["Automatic {$index}"])),
+        ], $owner);
+    }
+
+    $reasons = (new Query())->select('reason')->from(VizyTable::CONTENT_RECOVERY)->where([
+        'ownerId' => $owner->id,
+        'fieldUid' => $f->field->uid,
+    ])->column();
+    expect($reasons)->not->toContain('before-anchor-repair')
+        ->and(array_values(array_filter($reasons, static fn(string $reason): bool => $reason === 'owner-save')))->toHaveCount(10);
+});
+
+it('lists and retains automatic recovery independently for repeated field placements', function() {
+    $ownerId = random_int(1000000, 2000000000);
+    $fieldUid = StringHelper::UUID();
+    $placements = [StringHelper::UUID(), StringHelper::UUID()];
+    $db = Craft::$app->getDb();
+    try {
+        foreach ($placements as $placementUid) {
+            foreach (range(1, 2) as $index) {
+                $snapshot = ['placementUid' => $placementUid, 'index' => $index];
+                $db->createCommand()->insert(VizyTable::CONTENT_RECOVERY, [
+                    'ownerId' => $ownerId,
+                    'fieldUid' => $fieldUid,
+                    'placementUid' => $placementUid,
+                    'snapshotHash' => hash('sha256', json_encode($snapshot, JSON_THROW_ON_ERROR)),
+                    'snapshotJson' => json_encode($snapshot, JSON_THROW_ON_ERROR),
+                    'reason' => 'owner-save',
+                    'dateCreated' => gmdate('Y-m-d H:i:s'),
+                ])->execute();
+            }
+        }
+
+        $records = Vizy::$plugin->getContentRecovery()->records($ownerId);
+        expect(array_values(array_unique(array_column($records, 'placementUid'))))->toHaveCount(2)
+            ->and(Vizy::$plugin->getContentRecovery()->pruneAutomatic(1, $ownerId))->toBe(2);
+        foreach ($placements as $placementUid) {
+            expect((int)(new Query())->from(VizyTable::CONTENT_RECOVERY)->where([
+                'ownerId' => $ownerId,
+                'fieldUid' => $fieldUid,
+                'placementUid' => $placementUid,
+                'reason' => 'owner-save',
+            ])->count())->toBe(1);
+        }
+    } finally {
+        $db->createCommand()->delete(VizyTable::CONTENT_RECOVERY, ['ownerId' => $ownerId])->execute();
+    }
+});
+
+it('promotes a matching automatic snapshot to a protected operation checkpoint', function() {
+    $f = new MatrixSupportFixture();
+    $uid = StringHelper::UUID();
+    $owner = $f->save([$f->block($uid, $f->payload(['Checkpoint content']))]);
+    $recovery = Vizy::$plugin->getContentRecovery();
+    $snapshot = $recovery->snapshot($owner, $f->field);
+    $hash = $recovery->hash($snapshot);
+    Craft::$app->getDb()->createCommand()->upsert(VizyTable::CONTENT_RECOVERY, [
+        'ownerId' => $owner->id,
+        'fieldUid' => $f->field->uid,
+        'snapshotHash' => $hash,
+        'snapshotJson' => json_encode($snapshot, JSON_THROW_ON_ERROR),
+        'reason' => 'owner-save',
+        'dateCreated' => gmdate('Y-m-d H:i:s'),
+    ], ['reason' => 'owner-save'])->execute();
+
+    $id = $recovery->capture($owner, $f->field, 'before-schema-upgrade');
+    $record = (new Query())->from(VizyTable::CONTENT_RECOVERY)->where(['id' => $id])->one();
+    expect($record['reason'])->toBe('before-schema-upgrade');
+});
+
+it('does not capture another Vizy field anchor when block UIDs collide on one owner', function() {
+    $f = new MatrixSupportFixture();
+    $secondField = new \verbb\vizy\fields\VizyField([
+        'name' => 'Second Matrix article',
+        'handle' => 'secondMatrixArticle' . StringHelper::randomString(8),
+        'editorConfig' => 'standard',
+        'rootContentType' => \verbb\vizy\fields\VizyField::ROOT_CONTENT_BLOCKS,
+        'blockTypePickerGroups' => [[
+            'name' => 'Content',
+            'blockTypeUids' => [$f->blockType->uid],
+        ]],
+    ]);
+    expect(Craft::$app->getFields()->saveField($secondField))->toBeTrue();
+    $entryType = $f->owner->getType();
+    $layout = $entryType->getFieldLayout();
+    $tabs = $layout->getTabs();
+    $tabs[0]->setElements([...$tabs[0]->getElements(), new CustomField($secondField)]);
+    $layout->setTabs($tabs);
+    $entryType->setFieldLayout($layout);
+    expect(Craft::$app->getEntries()->saveEntryType($entryType))->toBeTrue();
+    Craft::$app->getFields()->refreshFields();
+
+    $owner = $f->reload();
+    $blockUid = StringHelper::UUID();
+    $owner->setFieldValue($f->field->handle, [
+        'type' => 'doc', 'attrs' => ['schemaVersion' => 2],
+        'content' => [$f->block($blockUid, $f->payload(['First field']))],
+    ]);
+    $owner->setFieldValue($secondField->handle, [
+        'type' => 'doc', 'attrs' => ['schemaVersion' => 2],
+        'content' => [$f->block($blockUid, $f->payload(['Second field']))],
+    ]);
+    expect(Craft::$app->getElements()->saveElement($owner))->toBeTrue();
+    $owner = $f->reload($owner);
+
+    $matchingAnchors = (new Query())->from(VizyTable::MATRIX_ANCHORS)->where([
+        'parentOwnerId' => $owner->id,
+        'blockInstanceId' => $blockUid,
+    ])->all();
+    expect($matchingAnchors)->toHaveCount(2);
+    $snapshot = Vizy::$plugin->getContentRecovery()->snapshot($owner, $f->field);
+    expect($snapshot['tables'][VizyTable::MATRIX_ANCHORS])->toHaveCount(1)
+        ->and((int)$snapshot['tables'][VizyTable::MATRIX_ANCHORS][0]['vizyFieldId'])->toBe($f->field->id);
+});
+
+it('captures a legacy Hosted Vizy Matrix graph without an embedded anchor UID', function() {
+    $f = new MatrixSupportFixture();
+    $nestedUid = StringHelper::UUID();
+    $host = $f->hostedBlock(StringHelper::UUID(), [
+        $f->block($nestedUid, $f->payload(['Hosted legacy recovery'])),
+    ]);
+    $owner = $f->save([$host]);
+    $anchor = Vizy::$plugin->getAnchors()->getAnchor($owner, $f->hostedField, $nestedUid);
+    expect($anchor)->not->toBeNull();
+    $rowIds = array_map('intval', array_column((new Query())->from(Table::ELEMENTS_OWNERS)
+        ->where(['ownerId' => $anchor->id])->all(), 'elementId'));
+
+    $placement = \verbb\vizy\helpers\FieldPlacements::uid($owner, $f->field);
+    $stored = (new Query())->select('content')->from(Table::ELEMENTS_SITES)
+        ->where(['elementId' => $owner->id, 'siteId' => $owner->siteId])->scalar();
+    $content = is_string($stored) ? json_decode($stored, true, 512, JSON_THROW_ON_ERROR) : $stored;
+    $document = is_string($content[$placement])
+        ? json_decode($content[$placement], true, 512, JSON_THROW_ON_ERROR)
+        : $content[$placement];
+    $hostedPlacement = $f->hostType->getFieldLayout()->getCustomFieldElements()[0]->uid;
+    unset($document['content'][0]['attrs']['fieldSlots'][$hostedPlacement]['content'][0]['attrs']['matrixAnchorUid']);
+    $content[$placement] = json_encode($document, JSON_THROW_ON_ERROR);
+    Craft::$app->getDb()->createCommand()->update(Table::ELEMENTS_SITES, [
+        'content' => $content,
+    ], ['elementId' => $owner->id, 'siteId' => $owner->siteId])->execute();
+
+    $snapshot = Vizy::$plugin->getContentRecovery()->snapshot($f->reload($owner), $f->field);
+    expect(array_map('intval', array_column($snapshot['tables'][VizyTable::MATRIX_ANCHORS], 'id')))
+        ->toContain((int)$anchor->id);
+    foreach ($rowIds as $rowId) {
+        expect(array_map('intval', array_column($snapshot['tables'][Table::ENTRIES], 'id')))->toContain($rowId);
+    }
+});
+
+it('recreates hard-deleted nested draft and revision graphs from a durable journal', function() {
+    $f = new MatrixSupportFixture();
+    $uid = StringHelper::UUID();
+    $owner = $f->save([$f->block($uid, $f->payload(['Recover derivatives']))]);
+    $nested = $f->rows($uid)[0];
+    Craft::$app->getDrafts()->createDraft($nested);
+    Craft::$app->getRevisions()->createRevision($nested, force: true);
+
+    $recovery = Vizy::$plugin->getContentRecovery();
+    $original = $recovery->snapshot($owner, $f->field);
+    expect($original['tables'][Table::DRAFTS])->not->toBeEmpty()
+        ->and($original['tables'][Table::REVISIONS])->not->toBeEmpty();
+    $id = $recovery->capture($owner, $f->field, 'hard-deleted-derivatives');
+    $elementIds = array_map('intval', array_column($original['tables'][Table::ELEMENTS], 'id'));
+    Craft::$app->getDb()->createCommand()->delete(Table::ELEMENTS, ['id' => $elementIds])->execute();
+
+    foreach ([Table::DRAFTS, Table::REVISIONS] as $table) {
+        foreach ($original['tables'][$table] as $row) {
+            expect((new Query())->from($table)->where(['id' => $row['id']])->exists())->toBeFalse();
+        }
+    }
+
+    $recovery->restore($id);
+    $restored = $recovery->snapshot($f->reload(), $f->field);
+    foreach ($original['tables'] as $table => $rows) {
+        foreach ($rows as $row) {
+            expect($restored['tables'][$table])->toContain($row);
+        }
+    }
+    expect($f->rows($uid)[0]->getFieldValue($f->text->handle))->toBe('Recover derivatives');
 });
 
 it('preserves a canonical anchor still referenced by a historical shared draft', function() {

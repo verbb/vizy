@@ -18,8 +18,9 @@ final class m260920_000000_content_recovery extends Migration
                 'id' => $this->primaryKey(),
                 'ownerId' => $this->integer()->notNull(),
                 'fieldUid' => $this->uid()->notNull(),
+                'placementUid' => $this->uid()->null()->defaultValue(null),
                 'snapshotHash' => $this->char(64)->notNull(),
-                'snapshotJson' => $this->mediumText()->notNull(),
+                'snapshotJson' => $this->longText()->notNull(),
                 'reason' => $this->string()->notNull(),
                 'dateCreated' => $this->dateTime()->notNull(),
             ]);

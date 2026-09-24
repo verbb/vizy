@@ -8,8 +8,13 @@ use craft\helpers\StringHelper;
 use verbb\vizy\fields\VizyField;
 use verbb\vizy\Vizy;
 use verbb\vizy\web\assets\field\VizyAsset;
+use Tests\Support\Fixtures\AssetSpikeFixture;
 use Tests\Support\Fixtures\VizyFixtureFactory;
 use verbb\vizy\controllers\FieldLayoutController;
+
+beforeEach(function() {
+    Craft::$app->getUser()->setIdentity(AssetSpikeFixture::ensureAdminUser());
+});
 
 it('signs editor context and rejects tampering', function() {
     $owner = new Entry([
@@ -25,6 +30,7 @@ it('signs editor context and rejects tampering', function() {
 
     expect(Vizy::$plugin->getEditorContexts()->verify($context['token']))
         ->toMatchArray([
+            'version' => 5,
             'purpose' => 'vizy-editor-context',
             'ownerClass' => Entry::class,
             'ownerUid' => $owner->uid,

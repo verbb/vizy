@@ -704,6 +704,14 @@ class VizyField extends Field implements PreviewableFieldInterface
      */
     public function blockTypeIsAvailableFor(string $uid, ElementInterface $owner): bool
     {
+        while ($owner instanceof Block) {
+            try {
+                $owner = $owner->getOwner();
+            } catch (\LogicException) {
+                return false;
+            }
+        }
+
         $config = $this->blockTypeAvailabilityConditions[$uid] ?? null;
         if (!is_array($config)) {
             return true;
@@ -856,17 +864,18 @@ class VizyField extends Field implements PreviewableFieldInterface
         // policy. A saved Block keeps working after its owner/user stops matching;
         // a duplicate, pasted Block, or type change has a new identity/type pair
         // and must satisfy the current policy.
-        $availabilityOwner = $element instanceof Block ? $element->getOwner() : $element;
         $baselineTypes = [];
+        $baselineBlocks = [];
         foreach ($baseline?->content()->blocks(true, null) ?? [] as $block) {
             $baselineTypes[$block->uid()] = $block->blockTypeUid();
+            $baselineBlocks[$block->uid()] = $block;
         }
         foreach ($allBlocks as $block) {
             $uid = $block->uid();
             $typeUid = $block->blockTypeUid();
             if (
                 $this->allowsBlockTypeUid($typeUid)
-                && !$this->blockTypeIsAvailableFor($typeUid, $availabilityOwner)
+                && !$this->blockTypeIsAvailableFor($typeUid, $element)
                 && ($baselineTypes[$uid] ?? null) !== $typeUid
             ) {
                 $element->addError(
@@ -900,7 +909,7 @@ class VizyField extends Field implements PreviewableFieldInterface
             \verbb\vizy\document\VizyBlock $block,
             bool $ancestorEnabled = true,
             array $ancestorTypeUids = [],
-        ) use ($element, $scenario): void {
+        ) use ($element, $scenario, $baselineTypes, $baselineBlocks): void {
             $enabled = $ancestorEnabled && $block->isEnabled();
             $type = $block->blockType();
             $layout = $type?->getFieldLayout();
@@ -918,6 +927,36 @@ class VizyField extends Field implements PreviewableFieldInterface
             if ($enabled && $layout) {
                 $blockElement = clone $block->document()->blockElement($block);
                 $blockElement->setScenario($scenario);
+                $baselineBlock = ($baselineTypes[$block->uid()] ?? null) === $typeUid
+                    ? ($baselineBlocks[$block->uid()] ?? null)
+                    : null;
+
+                // Hosted fields validate recursively through this ephemeral
+                // Block element. Seed each nested field with the corresponding
+                // persisted fieldSlots document so preserve-existing capability
+                // and availability checks retain their real baseline at every
+                // Hosted depth.
+                if ($baselineBlock) {
+                    foreach ($layout->getCustomFieldElements() as $placement) {
+                        $nestedField = $placement->getField();
+                        if (!$nestedField instanceof self || !$baselineBlock->hasRawFieldValue($placement->uid)) {
+                            continue;
+                        }
+
+                        try {
+                            $nestedBaseline = $nestedField->normalizeValue(
+                                $baselineBlock->rawFieldValue($placement->uid),
+                                $blockElement,
+                            );
+                            if ($nestedBaseline instanceof CanonicalVizyDocument) {
+                                Vizy::$plugin->getContentBaselines()->trust($blockElement, $nestedField, $nestedBaseline);
+                            }
+                        } catch (Throwable) {
+                            // A malformed persisted nested value is not a trusted
+                            // grandfather baseline; ordinary validation reports it.
+                        }
+                    }
+                }
                 // The document's read projection deliberately hydrates saved
                 // Matrix content. Validate the submitted rows on a separate
                 // projection without mutating that cached read value.
@@ -1219,6 +1258,7 @@ class VizyField extends Field implements PreviewableFieldInterface
             'placementUid' => $placementUid,
             'parentFieldUid' => $parentField->uid,
             'path' => [...HostedVizy::renderingPath(), [
+                'blockUid' => $block->getBlockUid(),
                 'blockTypeUid' => $block->getType()->uid,
                 'layoutUid' => $block->getFieldLayout()->uid,
                 'placementUid' => $placementUid,
