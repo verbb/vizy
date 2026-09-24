@@ -14,6 +14,7 @@ use verbb\vizy\services\Cache;
 use verbb\vizy\services\Content;
 use verbb\vizy\services\ContentBaselines;
 use verbb\vizy\services\ContentRecovery;
+use verbb\vizy\services\ContentText;
 use verbb\vizy\services\ContentVersions;
 use verbb\vizy\services\Documents;
 use verbb\vizy\services\EditorAcknowledgements;
@@ -58,6 +59,7 @@ trait PluginTrait
                 'content' => Content::class,
                 'contentBaselines' => ContentBaselines::class,
                 'contentRecovery' => ContentRecovery::class,
+                'contentText' => ContentText::class,
                 'contentVersions' => ContentVersions::class,
                 'documents' => Documents::class,
                 'editorConfigs' => EditorConfigs::class,
@@ -159,6 +161,11 @@ trait PluginTrait
     public function getContentRecovery(): ContentRecovery
     {
         return $this->get('contentRecovery');
+    }
+
+    public function getContentText(): ContentText
+    {
+        return $this->get('contentText');
     }
 
     public function getContentVersions(): ContentVersions

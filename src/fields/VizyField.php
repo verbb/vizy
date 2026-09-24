@@ -24,6 +24,7 @@ use Craft;
 use craft\base\Element;
 use craft\base\ElementInterface;
 use craft\base\Field;
+use craft\base\PreviewableFieldInterface;
 use craft\elements\Asset;
 use craft\fields\Matrix;
 use craft\fields\conditions\EmptyFieldConditionRule;
@@ -36,7 +37,7 @@ use yii\base\InvalidConfigException;
 
 use GraphQL\Type\Definition\Type;
 
-class VizyField extends Field
+class VizyField extends Field implements PreviewableFieldInterface
 {
     // Static Methods
     // =========================================================================
@@ -89,6 +90,8 @@ class VizyField extends Field
     public const BLOCK_PICKER_DISPLAY_BOTH = 'both';
     public const BLOCK_PICKER_DISPLAY_LIST = 'list';
     public const BLOCK_PICKER_DISPLAY_GRID = 'grid';
+
+    private const CARD_PREVIEW_LIMIT = 256;
 
 
     // Traits
@@ -399,6 +402,24 @@ class VizyField extends Field
         return Html::tag('div', (string)$value->render() ?: '&nbsp;', [
             'class' => 'text vizy-static',
         ]);
+    }
+
+    public function getPreviewHtml(mixed $value, ElementInterface $element): string
+    {
+        return Html::encode($this->_previewText($value, $element) ?? '');
+    }
+
+    public function previewPlaceholderHtml(mixed $value, ?ElementInterface $element): string
+    {
+        if ($value === null && $element === null) {
+            return Html::encode(Craft::t('vizy', 'A short preview of your Vizy content will appear here.'));
+        }
+
+        if ($value === null) {
+            $value = $element->getFieldValue($this->handle);
+        }
+
+        return Html::encode($this->_previewText($value, $element) ?? '');
     }
 
     public function beforeSave(bool $isNew): bool
@@ -894,6 +915,17 @@ class VizyField extends Field
 
     // Private Methods
     // =========================================================================
+
+    private function _previewText(mixed $value, ?ElementInterface $element): ?string
+    {
+        if (!$value instanceof CanonicalVizyDocument) {
+            $value = $element
+                ? $this->normalizeValue($value, $element)
+                : Vizy::$plugin->getDocuments()->normalizeDetached($value);
+        }
+
+        return Vizy::$plugin->getContentText()->project($value, self::CARD_PREVIEW_LIMIT);
+    }
 
     /**
      * Entry (or other non-Block) Vizy field — owns ElementEditor dirty/save.

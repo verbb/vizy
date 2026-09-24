@@ -47,3 +47,18 @@ for (const mode of ['cards', 'cards-grid', 'index']) {
         expect(failures).toEqual([]);
     });
 }
+
+test('a root Matrix card renders the configured Vizy field snippet', async ({ page }) => {
+    await page.goto('/index.php?p=admin/login');
+    await page.getByRole('textbox', { name: 'Username or Email' }).fill('editor');
+    await page.getByRole('textbox', { name: 'Password', exact: true }).fill('testing-only-password');
+    await Promise.all([
+        page.waitForURL((url) => url.searchParams.get('p') !== 'admin/login'),
+        page.getByRole('button', { name: 'Sign in', exact: true }).click(),
+    ]);
+    await page.goto(fixture.cardPreview.editPath);
+
+    const card = page.locator('.nested-element-cards .card').filter({ hasText: fixture.cardPreview.text });
+    await expect(card).toBeVisible();
+    await expect(card.locator('.card-attribute-preview')).toHaveText(fixture.cardPreview.text);
+});

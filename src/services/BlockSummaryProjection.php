@@ -1,6 +1,7 @@
 <?php
 namespace verbb\vizy\services;
 
+use verbb\vizy\Vizy;
 use verbb\vizy\fields\VizyField;
 use verbb\vizy\models\BlockSummaryInference;
 use verbb\vizy\models\BlockSummaryMedia;
@@ -19,6 +20,12 @@ use craft\models\FieldLayout;
  */
 final class BlockSummaryProjection
 {
+    // Constants
+    // =========================================================================
+
+    private const DOCUMENT_TEXT_LIMIT = 200;
+
+
     // Properties
     // =========================================================================
 
@@ -200,35 +207,8 @@ final class BlockSummaryProjection
             return null;
         }
         if (($raw['type'] ?? null) === 'doc' || isset($raw['content'])) {
-            return $this->_plainTextFromRichDocument($raw);
+            return Vizy::$plugin->getContentText()->project($raw, self::DOCUMENT_TEXT_LIMIT);
         }
         return null;
-    }
-
-    private function _plainTextFromRichDocument(array $node, int $depth = 0): ?string
-    {
-        if ($depth > 8) {
-            return null;
-        }
-        if (($node['type'] ?? null) === 'text' && isset($node['text'])) {
-            return (string)$node['text'];
-        }
-        $parts = [];
-        foreach ($node['content'] ?? [] as $child) {
-            if (!is_array($child)) {
-                continue;
-            }
-            if (($child['type'] ?? null) === 'vizyBlock') {
-                continue;
-            }
-            $text = $this->_plainTextFromRichDocument($child, $depth + 1);
-            if ($text !== null && $text !== '') {
-                $parts[] = $text;
-            }
-        }
-        if (!$parts) {
-            return null;
-        }
-        return implode(' ', $parts);
     }
 }

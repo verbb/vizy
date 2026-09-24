@@ -2,8 +2,12 @@
 
 declare(strict_types=1);
 
+use craft\base\PreviewableFieldInterface;
 use craft\elements\Asset;
 use craft\elements\Entry;
+use craft\fieldlayoutelements\CustomField;
+use craft\models\FieldLayout;
+use craft\models\FieldLayoutTab;
 use craft\models\ImageTransform;
 use Tests\Support\Fixtures\AssetSpikeFixture;
 use Tests\Support\Fixtures\VizyFixtureFactory;
@@ -13,6 +17,7 @@ use verbb\vizy\fields\VizyField;
 use verbb\vizy\helpers\FieldImageOptions;
 use verbb\vizy\helpers\FieldImagePreviews;
 use verbb\vizy\nodes\Image;
+use verbb\vizy\Vizy;
 use yii\base\Event;
 
 it('normalizes and serializes the canonical VizyDocument field value', function() {
@@ -55,6 +60,82 @@ it('renders static canonical prose and extracts canonical search text', function
 
     expect($field->getStaticHtml($document, $entry))->toContain('<p>Canonical projection</p>')
         ->and($keywords)->toContain('Canonical projection');
+});
+
+it('provides cached bounded native card previews without rendering Blocks or images', function() {
+    $field = VizyFixtureFactory::vizyField();
+    $document = [
+        'type' => 'doc',
+        'attrs' => ['schemaVersion' => VizyDocument::CURRENT_SCHEMA_VERSION],
+        'content' => [
+            ['type' => 'paragraph', 'content' => [
+                ['type' => 'text', 'text' => 'Preview <script>alert(1)</script> ' . str_repeat('x', 300)],
+            ]],
+            ['type' => 'image', 'attrs' => [
+                'assetUid' => craft\helpers\StringHelper::UUID(),
+                'alt' => 'Image text must not appear',
+            ]],
+            ['type' => 'vizyBlock', 'attrs' => [
+                'blockUid' => craft\helpers\StringHelper::UUID(),
+                'blockTypeUid' => craft\helpers\StringHelper::UUID(),
+                'enabled' => true,
+                'fieldSlots' => [],
+            ], 'content' => [
+                ['type' => 'paragraph', 'content' => [
+                    ['type' => 'text', 'text' => 'Nested Block text must not appear'],
+                ]],
+            ]],
+        ],
+    ];
+    $entry = VizyFixtureFactory::entry('Native card preview');
+    $value = $field->normalizeValue($document, $entry);
+    $entry->setFieldValue($field->handle, $value);
+    Vizy::$plugin->getContentText()->reset();
+
+    $html = $field->getPreviewHtml($value, $entry);
+    $text = html_entity_decode($html, ENT_QUOTES | ENT_HTML5);
+
+    expect($field)->toBeInstanceOf(PreviewableFieldInterface::class)
+        ->and($html)->toContain('&lt;script&gt;')
+        ->and($html)->not->toContain('<script>')
+        ->and($text)->toStartWith('Preview <script>alert(1)</script>')
+        ->and($text)->not->toContain('Image text')
+        ->and($text)->not->toContain('Nested Block text')
+        ->and(mb_strlen($text))->toBe(256)
+        ->and($text)->toEndWith('…')
+        ->and(Vizy::$plugin->getContentText()->projectionCount())->toBe(1);
+
+    expect($field->getPreviewHtml($value, $entry))->toBe($html)
+        ->and(Vizy::$plugin->getContentText()->projectionCount())->toBe(1);
+
+    $layout = new FieldLayout(['type' => Entry::class]);
+    $placement = new CustomField($field);
+    $placement->uid = craft\helpers\StringHelper::UUID();
+    $tab = new FieldLayoutTab(['name' => 'Content', 'layout' => $layout]);
+    $tab->setElements([$placement]);
+    $layout->setTabs([$tab]);
+    $key = 'layoutElement:' . $placement->uid;
+    $layout->setCardView([$key]);
+
+    expect($layout->getCardBodyHtmlForElement($key, $entry))->toBe($html)
+        ->and($layout->getCardBodyHtmlForElement($key, null))->toContain('A short preview of your Vizy content');
+
+    $blockOnly = $field->normalizeValue([
+        'type' => 'doc',
+        'attrs' => ['schemaVersion' => VizyDocument::CURRENT_SCHEMA_VERSION],
+        'content' => [[
+            'type' => 'vizyBlock',
+            'attrs' => [
+                'blockUid' => craft\helpers\StringHelper::UUID(),
+                'blockTypeUid' => craft\helpers\StringHelper::UUID(),
+                'enabled' => true,
+                'fieldSlots' => [],
+            ],
+            'content' => [['type' => 'text', 'text' => 'Hidden']],
+        ]],
+    ], $entry);
+
+    expect($field->getPreviewHtml($blockOnly, $entry))->toBe('');
 });
 
 it('indexes Image alt and Link mark values in search keywords', function() {

@@ -9,11 +9,13 @@ use craft\fieldlayoutelements\Tip;
 use craft\fields\Entries;
 use craft\fields\Json as JsonField;
 use craft\fields\Lightswitch;
+use craft\fields\Matrix;
 use craft\fields\PlainText;
 use craft\fields\conditions\LightswitchFieldConditionRule;
 use craft\helpers\StringHelper;
 use craft\models\FieldLayout;
 use craft\models\FieldLayoutTab;
+use craft\models\EntryType;
 use Tests\Support\Fixtures\AssetSpikeFixture;
 use Tests\Support\Fixtures\VizyFixtureFactory;
 use verbb\vizy\elements\Block;
@@ -86,12 +88,32 @@ $save($rootField, Craft::$app->getFields()->saveField(...));
 $section = VizyFixtureFactory::section();
 $section->enableVersioning = true;
 $save($section, Craft::$app->getEntries()->saveSection(...));
+$cardPreviewText = 'Matrix Vizy card preview';
+$cardPreviewRowLayout = new FieldLayout(['type' => Entry::class]);
+$cardPreviewPlacement = new CustomField($nested);
+$cardPreviewPlacement->uid = StringHelper::UUID();
+$cardPreviewRowTab = new FieldLayoutTab(['name' => 'Content', 'layout' => $cardPreviewRowLayout]);
+$cardPreviewRowTab->setElements([$cardPreviewPlacement]);
+$cardPreviewRowLayout->setTabs([$cardPreviewRowTab]);
+$cardPreviewRowLayout->setCardView(['layoutElement:' . $cardPreviewPlacement->uid]);
+$cardPreviewRowType = new EntryType(['name' => 'Vizy preview row', 'handle' => 'vizyPreviewRow']);
+$cardPreviewRowType->setFieldLayout($cardPreviewRowLayout);
+$save($cardPreviewRowType, Craft::$app->getEntries()->saveEntryType(...));
+$cardPreviewMatrix = new Matrix([
+    'name' => 'Vizy preview cards',
+    'handle' => 'vizyPreviewCards',
+    'viewMode' => Matrix::VIEW_MODE_CARDS,
+]);
+$cardPreviewMatrix->setEntryTypes([$cardPreviewRowType]);
+$save($cardPreviewMatrix, Craft::$app->getFields()->saveField(...));
 $entryType = $section->getEntryTypes()[0];
 $entryLayout = $entryType->getFieldLayout();
 $entryTabs = $entryLayout->getTabs();
 $rootJsonPlacement = new CustomField($rootJson);
 $rootJsonPlacement->uid = StringHelper::UUID();
-$entryTabs[0]->setElements([...$entryTabs[0]->getElements(), $rootJsonPlacement]);
+$cardPreviewMatrixPlacement = new CustomField($cardPreviewMatrix);
+$cardPreviewMatrixPlacement->uid = StringHelper::UUID();
+$entryTabs[0]->setElements([...$entryTabs[0]->getElements(), $rootJsonPlacement, $cardPreviewMatrixPlacement]);
 $entryLayout->setTabs($entryTabs);
 $entryType->setFieldLayout($entryLayout);
 $save($entryType, Craft::$app->getEntries()->saveEntryType(...));
@@ -119,6 +141,16 @@ $nestedPreviewDocument = ['type' => 'doc', 'attrs' => ['schemaVersion' => 2], 'c
     ],
 ]]];
 $nestedPreviewOwner = VizyFixtureFactory::entry('Nested preview browser owner', json_encode($nestedPreviewDocument));
+$cardPreviewOwner = VizyFixtureFactory::entry('Matrix card preview owner');
+$cardPreviewRow = new Entry([
+    'siteId' => $cardPreviewOwner->siteId,
+    'typeId' => $cardPreviewRowType->id,
+    'fieldId' => $cardPreviewMatrix->id,
+    'title' => 'Vizy preview row',
+]);
+$cardPreviewRow->setOwner($cardPreviewOwner);
+$cardPreviewRow->setFieldValue($nested->handle, json_decode(VizyFixtureFactory::paragraphDocument($cardPreviewText), true));
+$save($cardPreviewRow, Craft::$app->getElements()->saveElement(...));
 $peer = VizyFixtureFactory::entry('Peer owner');
 $actor = new User(['username' => 'editor', 'email' => 'editor@example.test', 'active' => true, 'pending' => false]);
 $actor->newPassword = 'testing-only-password';
@@ -158,6 +190,8 @@ $owner->setAuthorIds([$actor->id]);
 $save($owner, Craft::$app->getElements()->saveElement(...));
 $nestedPreviewOwner->setAuthorIds([$actor->id]);
 $save($nestedPreviewOwner, Craft::$app->getElements()->saveElement(...));
+$cardPreviewOwner->setAuthorIds([$actor->id]);
+$save($cardPreviewOwner, Craft::$app->getElements()->saveElement(...));
 $peer->setAuthorIds([$admin->id]);
 $save($peer, Craft::$app->getElements()->saveElement(...));
 require __DIR__ . '/seed-browser-matrix.php';
@@ -220,6 +254,10 @@ $metadata = [
     'nestedPreview' => [
         'editPath' => '/index.php?p=admin/entries/' . $section->handle . '/' . $nestedPreviewOwner->id,
         'blockUid' => $nestedPreviewBlockUid,
+    ],
+    'cardPreview' => [
+        'editPath' => '/index.php?p=admin/entries/' . $section->handle . '/' . $cardPreviewOwner->id,
+        'text' => $cardPreviewText,
     ],
     'dismissibleTip' => ['uid' => $dismissibleTip->uid, 'text' => $dismissibleTip->tip],
     'headingPlacement' => $placements[0]->uid, 'relatedPlacement' => $placements[1]->uid,
