@@ -37,6 +37,7 @@
 - Fixed unresolved anchors and incomplete Matrix submissions being treated as replacement or empty content.
 - Fixed historical shared anchors being modified or cleaned up while another owner or draft still references them.
 - Fixed repeated placements of the same Vizy field sharing Matrix content when their documents contained the same Block UID, including Hosted Vizy placement paths and legacy anchor upgrades.
+- Fixed the Matrix anchor placement migration failing on MySQL when its legacy unique index was required by the parent-owner foreign key.
 - Fixed stale editor submissions overwriting newer saved Vizy content.
 - Fixed Block Type availability inside deeply Hosted Vizy fields being evaluated against the immediate Block instead of the containing Entry.
 - Fixed native Matrix row duplication inside Vizy creating an empty row, accepting an unrelated source row, and then continuing into Craft’s incompatible persisted-owner action.
