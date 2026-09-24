@@ -22,13 +22,13 @@
 
 ### Fixed
 - Fixed Vizy 3 upgrades failing when historical Block Type layout identities are array-wrapped, and added actionable diagnostics for ambiguous layout identity data. ([#353](https://github.com/verbb/vizy/issues/353))
-- Fixed custom Entry sources being omitted from link pickers and sections hidden from the current user being shown. ([#226](https://github.com/verbb/vizy/issues/226))
+- Fixed custom Entry sources being omitted from link pickers and restricted custom, Single, or Category sources being shown, including on Craft 5.9. ([#226](https://github.com/verbb/vizy/issues/226))
 - Fixed private Asset volumes being omitted from Vizy’s available-volume settings and asset picker, including default-transform previews and output for private originals. ([#256](https://github.com/verbb/vizy/issues/256))
 - Fixed link insertion at an empty caret and schemeless `www.` URLs, added authoring validation for unsafe URL schemes, and added coverage confirming mixed-format links render once in native Vizy output. ([#262](https://github.com/verbb/vizy/issues/262), [#290](https://github.com/verbb/vizy/issues/290))
 - Fixed plain email addresses entered or pasted as links being stored as ordinary URLs instead of semantic `mailto:` links. ([#238](https://github.com/verbb/vizy/issues/238))
 - Fixed Craft field and tab conditions inside Vizy Blocks not updating as sibling field values change, including hidden required fields and retained hidden values. ([#64](https://github.com/verbb/vizy/issues/64), [#233](https://github.com/verbb/vizy/issues/233))
 - Fixed GraphQL queries for resolver-backed fields in Vizy Blocks, including Matrix rows containing Assets, and ensured full schema dumps include concrete Vizy node types. ([#214](https://github.com/verbb/vizy/issues/214), [#268](https://github.com/verbb/vizy/issues/268))
-- Fixed legacy or unsupported TipTap nodes blanking the editor or appearing to lose content. Vizy now repairs Vizy 1 `list_item` nodes and visibly preserves other unsupported content without exposing its payload. ([#231](https://github.com/verbb/vizy/issues/231))
+- Fixed legacy, numerous, or large unsupported TipTap nodes blanking the editor or appearing to lose content. Vizy now repairs Vizy 1 `list_item` nodes and visibly preserves other unsupported content without exposing its payload. ([#231](https://github.com/verbb/vizy/issues/231))
 - Fixed JSON fields inside Vizy Blocks failing to load or persist, and JSON-looking Plain Text values being decoded as arrays. ([#352](https://github.com/verbb/vizy/issues/352))
 - Fixed Entry fields inside Vizy Blocks resolving relations against the wrong site in multi-site installs. ([#319](https://github.com/verbb/vizy/issues/319))
 - Fixed custom-field conditions on Matrix entry queries inside Vizy Blocks. ([#309](https://github.com/verbb/vizy/issues/309))
@@ -36,7 +36,19 @@
 - Fixed empty link options, volume selections, and transform selections reverting to defaults after saving field settings.
 - Fixed unresolved anchors and incomplete Matrix submissions being treated as replacement or empty content.
 - Fixed historical shared anchors being modified or cleaned up while another owner or draft still references them.
+- Fixed repeated placements of the same Vizy field sharing Matrix content when their documents contained the same Block UID, including Hosted Vizy placement paths and legacy anchor upgrades.
 - Fixed stale editor submissions overwriting newer saved Vizy content.
+- Fixed Block Type availability inside deeply Hosted Vizy fields being evaluated against the immediate Block instead of the containing Entry.
+- Fixed native Matrix row duplication inside Vizy creating an empty row, accepting an unrelated source row, and then continuing into Craft’s incompatible persisted-owner action.
+- Fixed image dialogs accepting unsafe link schemes that the frontend renderer later discarded.
+- Fixed slow Block FieldLayout prefetches inserting at a stale document position after intervening edits.
+- Fixed the Block picker grid retaining closed dialogs, reopening after an asynchronous close, or losing open-state semantics during view switches, and added arrow-key navigation between its options.
+- Fixed recovery restores failing for Matrix content on PostgreSQL or when recreating hard-deleted nested draft and revision records.
+- Fixed automatic recovery records growing without bounds, large recovery snapshots exceeding MySQL storage limits, repeated field placements sharing one retention pool, and same-owner Block UID collisions pulling another Vizy field into a snapshot.
+- Fixed Block limit controls offering or accepting add, duplicate, delete, and move operations after the document reached its configured minimum or maximum.
+- Fixed root Block limits incorrectly disabling duplicate and delete actions for Blocks nested in Layout columns.
+- Fixed rejected private Vizy clipboard operations failing silently, and removed a pointer-only Block drag grip from the keyboard tab order.
+- Fixed the control-panel browser test runner reporting success when its Craft provisioning process failed during cleanup.
 
 ## 4.0.0-beta.1 - 2026-09-22
 
