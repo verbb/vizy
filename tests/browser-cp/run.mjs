@@ -29,7 +29,8 @@ try {
 } finally {
     fs.mkdirSync(runtime, { recursive: true });
     fs.writeFileSync(done, 'finished');
-    await provisionDone;
+    const provisionResult = await provisionDone;
+    if (result === 0 && provisionResult !== 0) result = provisionResult;
     fs.rmSync(done, { force: true });
 }
 process.exit(result);
