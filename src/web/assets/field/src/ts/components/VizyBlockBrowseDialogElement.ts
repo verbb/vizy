@@ -171,6 +171,8 @@ export class VizyBlockBrowseDialogElement extends LitElement {
     #onSelect: ((id: string) => void) | null = null;
     #onView: ((view: BlockInsertView) => void) | null = null;
     #onClose: (() => void) | null = null;
+    #openGeneration = 0;
+    #pendingOpen = false;
 
     open(options: {
         items: readonly AvailableInsertion[];
@@ -191,22 +193,28 @@ export class VizyBlockBrowseDialogElement extends LitElement {
         this.#onSelect = options.onSelect;
         this.#onView = options.onView ?? null;
         this.#onClose = options.onClose ?? null;
-        void this.#mountOpen();
+        this.#pendingOpen = true;
+        const generation = ++this.#openGeneration;
+        void this.#mountOpen(generation);
     }
 
-    async #mountOpen(): Promise<void> {
+    async #mountOpen(generation: number): Promise<void> {
         await ensurePkDialog();
+        if (generation !== this.#openGeneration) return;
         // pk-dialog focuses light-DOM [autofocus], then a shadow input/textarea/select/button.
         this.setAttribute('autofocus', '');
         this.#ensureDialog();
         // Paint the configured toolbar before showModal’s rAF focus pass.
         await this.updateComplete;
+        if (generation !== this.#openGeneration) return;
         if (this.#dialog) {
             this.#dialog.open = true;
         }
+        this.#pendingOpen = false;
         // Belt-and-suspenders if the dialog focus pass ran before the input existed.
         await this.updateComplete;
         await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
+        if (generation !== this.#openGeneration) return;
         if (!this.focusFilter()) {
             this.focusFirstBlock();
         }
@@ -234,15 +242,29 @@ export class VizyBlockBrowseDialogElement extends LitElement {
         return this.shadowRoot?.activeElement === button;
     }
 
-    close(): void {
-        // `pk-open-change` clears handlers once the dialog reports closed.
+    close(options: { notify?: boolean } = {}): void {
+        const notify = options.notify !== false;
+        ++this.#openGeneration;
+        this.#pendingOpen = false;
+        if (!notify) this.#onClose = null;
+        // `pk-open-change` clears handlers and removes the body-level dialog
+        // once its close animation completes.
         if (this.#dialog) {
-            this.#dialog.open = false;
+            if (this.#dialog.open) {
+                this.#dialog.open = false;
+            } else {
+                this.#finishClose(this.#dialog, notify);
+            }
+        } else {
+            const onClose = notify ? this.#onClose : null;
+            this.#clearHandlers();
+            this.remove();
+            onClose?.();
         }
     }
 
     get isOpen(): boolean {
-        return Boolean(this.#dialog?.open);
+        return this.#pendingOpen || Boolean(this.#dialog?.open);
     }
 
     disconnectedCallback(): void {
@@ -261,14 +283,25 @@ export class VizyBlockBrowseDialogElement extends LitElement {
         dialog.append(this);
         dialog.addEventListener('pk-open-change', ((event: CustomEvent<{ open?: boolean }>) => {
             if (event.detail?.open === false) {
-                this.#onClose?.();
-                this.#onClose = null;
-                this.#onSelect = null;
-                this.#onView = null;
+                this.#finishClose(dialog, true);
             }
         }) as EventListener);
         document.body.append(dialog);
         this.#dialog = dialog;
+    }
+
+    #finishClose(dialog: PkDialogEl, notify: boolean): void {
+        const onClose = notify ? this.#onClose : null;
+        this.#clearHandlers();
+        if (this.#dialog === dialog) this.#dialog = null;
+        dialog.remove();
+        onClose?.();
+    }
+
+    #clearHandlers(): void {
+        this.#onClose = null;
+        this.#onSelect = null;
+        this.#onView = null;
     }
 
     render() {
@@ -334,14 +367,18 @@ export class VizyBlockBrowseDialogElement extends LitElement {
         if (!filtered.length) {
             return html`<div class="empty">${this.query ? 'No matching Blocks.' : 'No Blocks available.'}</div>`;
         }
+        const tabbableId = filtered.some((entry) => entry.item.id === this.activeId)
+            ? this.activeId
+            : filtered[0].item.id;
         return html`
             <div
                 class="grid"
                 role="listbox"
                 aria-label="Blocks"
+                @keydown=${this.#onGridKeyDown}
                 @mouseleave=${() => { this.activeId = null; }}
             >
-                ${filtered.map((entry) => this.#card(entry))}
+                ${filtered.map((entry) => this.#card(entry, entry.item.id === tabbableId))}
             </div>
         `;
     }
@@ -375,7 +412,7 @@ export class VizyBlockBrowseDialogElement extends LitElement {
         });
     }
 
-    #card(entry: AvailableInsertion) {
+    #card(entry: AvailableInsertion, tabbable: boolean) {
         const id = entry.item.id;
         const url = entry.item.previewImageUrl?.trim();
         return html`
@@ -385,6 +422,7 @@ export class VizyBlockBrowseDialogElement extends LitElement {
                 role="option"
                 data-active=${this.activeId === id ? 'true' : 'false'}
                 aria-selected=${String(this.activeId === id)}
+                tabindex=${tabbable ? 0 : -1}
                 @mouseenter=${() => { this.activeId = id; }}
                 @focus=${() => { this.activeId = id; }}
                 @blur=${() => {
@@ -417,11 +455,37 @@ export class VizyBlockBrowseDialogElement extends LitElement {
     #onFilter = (event: Event): void => {
         const target = event.currentTarget as HTMLElement & { value?: string };
         this.query = target.value ?? '';
+        this.activeId = null;
     };
 
     #onTabChange = (event: CustomEvent<{ value?: string }>): void => {
         const next = event.detail?.value?.trim();
-        if (next) this.activeTab = next;
+        if (next) {
+            this.activeTab = next;
+            this.activeId = null;
+        }
+    };
+
+    #onGridKeyDown = (event: KeyboardEvent): void => {
+        if (!['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', 'Home', 'End'].includes(event.key)) {
+            return;
+        }
+        const grid = event.currentTarget as HTMLElement;
+        const options = [...grid.querySelectorAll<HTMLButtonElement>('button.card')];
+        if (!options.length) return;
+
+        const current = event.composedPath().find((node) => node instanceof HTMLButtonElement) as HTMLButtonElement | undefined;
+        let index = Math.max(0, current ? options.indexOf(current) : 0);
+        if (event.key === 'Home') index = 0;
+        if (event.key === 'End') index = options.length - 1;
+        if (event.key === 'ArrowLeft') index = Math.max(0, index - 1);
+        if (event.key === 'ArrowRight') index = Math.min(options.length - 1, index + 1);
+        if (event.key === 'ArrowUp') index = Math.max(0, index - 4);
+        if (event.key === 'ArrowDown') index = Math.min(options.length - 1, index + 4);
+
+        event.preventDefault();
+        event.stopPropagation();
+        options[index]?.focus({ preventScroll: true });
     };
 
     /** Exclusive list/grid — ignore empty (toggle-group allows clearing single). */

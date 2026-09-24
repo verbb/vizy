@@ -542,6 +542,70 @@ for (const pasteAsPlainText of [false, true]) {
     });
 }
 
+test('Paste as Plain Text still restores private Vizy Block slices', async ({ page }) => {
+    await mount(page, {
+        type: 'doc', attrs: { schemaVersion: 2 }, content: [leafBlock('private-plain-text')],
+    }, {
+        manifest: { ...editorManifest, field: { ...editorManifest.field, pasteAsPlainText: true } },
+    });
+    const result = await page.evaluate(() => {
+        const element = document.querySelector('vizy-editor') as any;
+        const editor = element.editor;
+        editor.commands.setNodeSelection(0);
+        const data = new DataTransfer();
+        const cut = new Event('cut', { bubbles: true, cancelable: true });
+        Object.defineProperty(cut, 'clipboardData', { value: data });
+        editor.view.dom.dispatchEvent(cut);
+        const afterCut = editor.getJSON();
+        const paste = new Event('paste', { bubbles: true, cancelable: true });
+        Object.defineProperty(paste, 'clipboardData', { value: data });
+        editor.view.dom.dispatchEvent(paste);
+        return {
+            afterCut,
+            afterPaste: editor.getJSON(),
+            plain: data.getData('text/plain'),
+            privateSlice: data.getData('application/x-vizy-opaque-slice+json'),
+        };
+    });
+    expect(result.afterCut.content ?? []).not.toContainEqual(expect.objectContaining({ type: 'vizyBlock' }));
+    expect(result.privateSlice).not.toBe('');
+    expect(result.plain).toBe('Vizy content');
+    expect(result.afterPaste.content).toContainEqual(expect.objectContaining({
+        type: 'vizyBlock',
+        attrs: expect.objectContaining({ blockTypeUid: 'type' }),
+    }));
+    expect(result.afterPaste.content?.some((node: any) => node.textContent === 'Vizy content')).toBe(false);
+});
+
+test('ordinary text beginning with unsupported uses the native clipboard path', async ({ page }) => {
+    await mount(page, {
+        type: 'doc', attrs: { schemaVersion: 2 },
+        content: [{ type: 'paragraph', content: [{ type: 'text', text: 'unsupported formats' }] }],
+    });
+    const result = await page.evaluate(() => {
+        const editor = (document.querySelector('vizy-editor') as any).editor;
+        editor.commands.setTextSelection({ from: 1, to: 20 });
+        const outcomes = ['copy', 'cut'].map((action) => {
+            const data = new DataTransfer();
+            const event = new Event(action, { bubbles: true, cancelable: true });
+            Object.defineProperty(event, 'clipboardData', { value: data });
+            editor.view.dom.dispatchEvent(event);
+            return {
+                action,
+                prevented: event.defaultPrevented,
+                privateSlice: data.getData('application/x-vizy-opaque-slice+json'),
+                plain: data.getData('text/plain'),
+            };
+        });
+        return { outcomes, text: editor.getText() };
+    });
+    expect(result.outcomes).toEqual([
+        { action: 'copy', prevented: true, privateSlice: '', plain: 'unsupported formats' },
+        { action: 'cut', prevented: true, privateSlice: '', plain: 'unsupported formats' },
+    ]);
+    expect(result.text).toBe('');
+});
+
 test('normalizes external HTML through the destination capability schema', async ({ page }) => {
     await mount(page, { type: 'doc', attrs: { schemaVersion: 2 }, content: [] });
     const result = await page.evaluate(() => {
@@ -597,9 +661,12 @@ test('owns one EditorView and direct light-DOM NodeViews', async ({ page }) => {
     await expect(page.locator('.ProseMirror')).toHaveCount(1);
     await expect(page.locator('vizy-block[data-block-uid="block"]')).toHaveCount(1);
     await expect(page.locator('vizy-slot')).toHaveCount(0);
-    await page.locator('.ProseMirror p').click();
-    await page.keyboard.press('End');
-    await page.keyboard.type(' world');
+    await expect(page.locator('.ProseMirror p')).toContainText('Hello');
+    await page.evaluate(() => {
+        const element = document.querySelector('vizy-editor') as any;
+        element.editor.commands.setTextSelection(6);
+        element.editor.commands.insertContent(' world');
+    });
     await expect(page.locator('.ProseMirror')).toContainText('Hello world');
 });
 
@@ -745,6 +812,50 @@ test('unchanged widgets preserve accepted canonical values while edits, reversio
     expect(result.textReverted.fieldSlots.text).toBe('Original');
 });
 
+test('cancels submission and omits stale JSON when a live Block field cannot be captured', async ({ page }) => {
+    await mount(page, {
+        type: 'doc', attrs: { schemaVersion: 2 }, content: [leafBlock('capture-failure', { text: 'Stored' })],
+    }, {
+        initialFieldLayouts: [{
+            requestId: '', documentRevision: 0, blockHash: 'trusted',
+            blockUid: 'capture-failure', blockTypeUid: 'type', fieldLayoutUid: 'layout', fieldLayoutHash: 'hash',
+            hostNamespace: 'vizyHost[capture-failure]', headHtml: '', bodyHtml: '', tabLabels: [],
+            html: '<div id="capture-text"><input name="vizyHost[capture-failure][text]" value="Stored"></div>',
+            fields: [{
+                fieldLayoutElementUid: 'text', fieldUid: 'text-field', fieldHandle: 'text',
+                fieldType: 'PlainText', adapterId: 'craft.plainText', wrapperId: 'capture-text',
+            }],
+        }],
+    });
+    await expect(page.locator('vizy-block')).toHaveAttribute('field-layout', 'mounted');
+    const result = await page.evaluate(() => {
+        const form = document.querySelector('form')!;
+        document.querySelector('#capture-text input')!.remove();
+        let downstreamSubmit = false;
+        form.addEventListener('submit', () => { downstreamSubmit = true; }, true);
+        const submit = new SubmitEvent('submit', { bubbles: true, cancelable: true });
+        form.dispatchEvent(submit);
+        const formData = new FormData(form);
+        const notice = document.querySelector('[data-vizy-capture-status]');
+        return {
+            prevented: submit.defaultPrevented,
+            downstreamSubmit,
+            hasStaleDocument: formData.has('fields[body]'),
+            notice: notice?.textContent ?? '',
+            hidden: (notice as HTMLElement | null)?.hidden ?? true,
+            role: notice?.getAttribute('role'),
+        };
+    });
+    expect(result).toMatchObject({
+        prevented: true,
+        downstreamSubmit: false,
+        hasStaleDocument: false,
+        hidden: false,
+        role: 'alert',
+    });
+    expect(result.notice).toContain('was not saved');
+});
+
 test('large documents batch-mount every FieldLayout when bootstrap is empty', async ({ page }) => {
     const content = Array.from({ length: 500 }, (_, index) => leafBlock(`block-${index}`));
     await mount(
@@ -778,6 +889,60 @@ test('preserves unsupported content while other editor content remains editable'
         'Vizy has preserved it and will keep it unchanged when you save.',
     );
     expect(await page.evaluate(() => (window as any).bad)).toBeUndefined();
+
+    const copy = await page.evaluate(() => {
+        const element = document.querySelector('vizy-editor') as any;
+        const editor = element.editor;
+        let position = -1;
+        editor.state.doc.descendants((node: any, pos: number) => {
+            if (node.type.name === 'unsupportedNode') position = pos;
+        });
+        editor.commands.setNodeSelection(position);
+        const data = new DataTransfer();
+        let rejection: unknown = null;
+        editor.view.dom.addEventListener('vizy-clipboard-rejected', (event: Event) => {
+            rejection = (event as CustomEvent).detail;
+        }, { once: true });
+        const event = new Event('copy', { bubbles: true, cancelable: true });
+        Object.defineProperty(event, 'clipboardData', { value: data });
+        editor.view.dom.dispatchEvent(event);
+        return {
+            prevented: event.defaultPrevented,
+            privateSlice: data.getData('application/x-vizy-opaque-slice+json'),
+            rejection,
+            notice: element.querySelector('[data-vizy-clipboard-status]')?.textContent ?? '',
+        };
+    });
+    expect(copy).toMatchObject({
+        prevented: true,
+        privateSlice: '',
+        rejection: { code: 'opaqueClipboardUnsupported', operation: 'copy' },
+    });
+    expect(copy.notice).toContain('cannot be copied or cut');
+
+    const cut = await page.locator('vizy-editor').evaluate((element: any) => {
+        const editor = element.editor;
+        const data = new DataTransfer();
+        let rejection: unknown = null;
+        editor.view.dom.addEventListener('vizy-clipboard-rejected', (event: Event) => {
+            rejection = (event as CustomEvent).detail;
+        }, { once: true });
+        const event = new Event('cut', { bubbles: true, cancelable: true });
+        Object.defineProperty(event, 'clipboardData', { value: data });
+        editor.view.dom.dispatchEvent(event);
+        return {
+            prevented: event.defaultPrevented,
+            privateSlice: data.getData('application/x-vizy-opaque-slice+json'),
+            rejection,
+            notice: element.querySelector('[data-vizy-clipboard-status]')?.textContent ?? '',
+        };
+    });
+    expect(cut).toMatchObject({
+        prevented: true,
+        privateSlice: '',
+        rejection: { code: 'opaqueClipboardUnsupported', operation: 'cut' },
+    });
+    expect(cut.notice).toContain('cannot be copied or cut');
 
     const flushed = await page.locator('vizy-editor').evaluate((element: any) => JSON.parse(element.flush('submit')));
     expect(flushed).toEqual(original);
@@ -1130,10 +1295,20 @@ for (const reason of ['oversized', 'readonly'] as const) {
             const event = new Event('cut', { bubbles: true, cancelable: true });
             Object.defineProperty(event, 'clipboardData', { value: clipboard });
             editor.view.dom.dispatchEvent(event);
-            return { rejected, retained: editor.getJSON().content[0].attrs.blockUid };
+            const notice = element.querySelector('[data-vizy-clipboard-status]');
+            return {
+                rejected,
+                retained: editor.getJSON().content[0].attrs.blockUid,
+                notice: notice?.textContent ?? '',
+                noticeRole: notice?.getAttribute('role'),
+            };
         }, reason);
         expect(outcome.retained).toBe('cut-guard');
         expect(outcome.rejected).toBe(reason === 'oversized' ? 'documentBytesExceeded' : null);
+        if (reason === 'oversized') {
+            expect(outcome.notice).toContain('too large');
+            expect(outcome.noticeRole).toBe('alert');
+        }
     });
 }
 
@@ -1168,10 +1343,110 @@ test('selection, keyboard Escape, and opaque malformed rejection stay harness-sa
             text: editor.getText(),
             emptySelection: editor.state.selection.empty,
             rejection,
+            notice: document.querySelector('[data-vizy-clipboard-status]')?.textContent ?? '',
         };
     });
     expect(outcome.text).toContain('Select me');
     expect(outcome.rejection).toMatchObject({ code: expect.any(String) });
+    expect(outcome.notice).toContain('could not paste');
+});
+
+test('Block limits remove dead actions and explain a policy-rejected private paste', async ({ page }) => {
+    const limitedManifest = {
+        ...editorManifest,
+        enabledNodes: [...editorManifest.enabledNodes, 'layout', 'column'],
+        internalNodes: [...editorManifest.internalNodes, 'layout', 'column'],
+        modules: [...editorManifest.modules, 'vizy/core/node/layout', 'vizy/core/node/column'],
+        field: { ...editorManifest.field, minBlocks: 1, maxBlocks: 1 },
+        toolbar: {
+            controls: [{
+                id: 'addBlock',
+                kind: 'action',
+                label: 'Add Block',
+                icon: null,
+                action: { command: 'openAddBlock' },
+            }],
+        },
+    };
+    await mount(page, {
+        type: 'doc',
+        attrs: { schemaVersion: 2 },
+        content: [
+            { type: 'paragraph', content: [{ type: 'text', text: 'Paste here' }] },
+            leafBlock('only'),
+            {
+                type: 'layout',
+                attrs: { layoutUid: 'limited-layout', stack: 'small' },
+                content: [{
+                    type: 'column',
+                    attrs: { columnUid: 'limited-column', span: 12 },
+                    content: [leafBlock('nested-available')],
+                }],
+            },
+        ],
+    }, { manifest: limitedManifest });
+
+    const block = page.locator('vizy-block[data-block-uid="only"]');
+    await block.locator('[part="menu-trigger"]').click();
+    await expect(block.locator('pk-dropdown-item[value="duplicate"]')).toHaveCount(0);
+    await expect(block.locator('pk-dropdown-item[value="delete"]')).toHaveCount(0);
+    await expect(page.locator('vizy-toolbar').locator('[data-vizy-toolbar-add-block]')).toHaveCount(0);
+
+    await page.evaluate(() => {
+        const editor = (document.querySelector('vizy-editor') as any).editor;
+        let nestedPos: number | null = null;
+        editor.state.doc.descendants((node: any, pos: number) => {
+            if (node.attrs?.blockUid === 'nested-available') nestedPos = pos;
+        });
+        editor.commands.setNodeSelection(nestedPos);
+        editor.view.focus();
+    });
+    const addBlock = page.locator('vizy-toolbar').locator('[data-vizy-toolbar-add-block]');
+    await expect(addBlock).toHaveCount(1);
+    await addBlock.focus();
+    await page.waitForTimeout(20);
+    await expect(addBlock).toHaveCount(1);
+    await addBlock.press('Enter');
+    await expect.poll(() => page.evaluate(() => {
+        const editor = (document.querySelector('vizy-editor') as any).editor;
+        let rootBlocks = 0;
+        let nestedBlocks = 0;
+        editor.state.doc.descendants((node: any, _pos: number, parent: any) => {
+            if (node.type.name !== 'vizyBlock') return;
+            if (parent === editor.state.doc) rootBlocks += 1;
+            if (parent?.type.name === 'column') nestedBlocks += 1;
+        });
+        return { rootBlocks, nestedBlocks };
+    })).toEqual({ rootBlocks: 1, nestedBlocks: 2 });
+
+    const outcome = await page.evaluate(() => {
+        const element = document.querySelector('vizy-editor') as any;
+        const editor = element.editor;
+        editor.commands.setTextSelection(1);
+        const data = new DataTransfer();
+        data.setData('application/x-vizy-opaque-slice+json', JSON.stringify({
+            content: [{
+                type: 'vizyBlock',
+                attrs: {
+                    blockUid: 'clipboard',
+                    blockTypeUid: 'type',
+                    enabled: true,
+                    fieldSlots: {},
+                },
+            }],
+            openStart: 0,
+            openEnd: 0,
+        }));
+        const paste = new Event('paste', { bubbles: true, cancelable: true });
+        Object.defineProperty(paste, 'clipboardData', { value: data });
+        editor.view.dom.dispatchEvent(paste);
+        return {
+            blockCount: editor.getJSON().content.filter((node: any) => node.type === 'vizyBlock').length,
+            notice: element.querySelector('[data-vizy-clipboard-status]')?.textContent ?? '',
+        };
+    });
+    expect(outcome.blockCount).toBe(1);
+    expect(outcome.notice).toContain('Block limits');
 });
 
 test('Block menu Move down changes sibling order and Move up restores it', async ({ page }) => {

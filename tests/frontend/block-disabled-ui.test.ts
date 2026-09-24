@@ -14,6 +14,31 @@ describe('vizy-block disabled UI', () => {
         block.remove();
     });
 
+    it('hides structural actions that cannot change the current document', async () => {
+        const block = document.createElement('vizy-block');
+        block.canDuplicate = false;
+        block.canDelete = false;
+        block.canMoveUp = false;
+        block.canMoveDown = false;
+        document.body.append(block);
+        await block.updateComplete;
+
+        for (const action of ['duplicate', 'delete', 'moveUp', 'moveDown']) {
+            expect(block.shadowRoot?.querySelector(`pk-dropdown-item[value="${action}"]`)).toBeNull();
+        }
+        block.remove();
+    });
+
+    it('keeps the pointer-only drag grip out of keyboard and accessibility navigation', async () => {
+        const block = document.createElement('vizy-block');
+        document.body.append(block);
+        await block.updateComplete;
+        const grip = block.shadowRoot?.querySelector<HTMLButtonElement>('[data-vizy-drag-handle]');
+        expect(grip?.tabIndex).toBe(-1);
+        expect(grip?.getAttribute('aria-hidden')).toBe('true');
+        block.remove();
+    });
+
     it('shows a pk-status dot, stays collapsed, and drops the disabled badge', async () => {
         const block = document.createElement('vizy-block');
         block.typeName = 'Card';

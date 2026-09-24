@@ -46,6 +46,15 @@ export async function executeBlockInsertion(
         } catch {
             // Still insert: open() will retry after NodeView construction.
         }
+
+        // The author can continue editing while FieldLayout HTML is in flight.
+        // A numeric ProseMirror position is no longer a trustworthy destination
+        // once any intervening transaction has changed the document, so cancel
+        // and let the author choose the current gap again.
+        if (String(runtime.documentRevision()) !== context.documentRevision) {
+            runtime.discardPrefetchedBlock?.(blockUid);
+            return { status: 'cancelled' };
+        }
     }
 
     const before = editor.state.doc;
@@ -63,6 +72,7 @@ export async function executeBlockInsertion(
     // claim insert only when the doc actually changed (replace of empty p may
     // not increase content.size).
     if (!inserted || editor.state.doc.eq(before)) {
+        runtime.discardPrefetchedBlock?.(blockUid);
         return { status: 'cancelled' };
     }
     runtime.animateBlockInsert?.(blockUid);

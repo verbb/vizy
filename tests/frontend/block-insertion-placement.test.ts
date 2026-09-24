@@ -118,7 +118,7 @@ function createHarness(initialBlockUids: string[] = []) {
         manifest.insertionItems,
     );
 
-    return { editor, insertion, manifest };
+    return { editor, insertion, manifest, revision: () => revision };
 }
 
 function rootBlockUids(editor: Editor): string[] {
@@ -163,6 +163,31 @@ describe('block insertion placement', () => {
         const blocks = (harness.editor.getJSON().content ?? []).filter((n) => n.type === 'vizyBlock');
         expect(blocks).toHaveLength(1);
         expect(blocks[0]?.content ?? []).toEqual([]);
+    });
+
+    it('cancels a prefetched Block when editing makes its destination stale', async () => {
+        const harness = createHarness();
+        Object.assign(harness.manifest.blockTypes['type-a'], { fieldLayoutUid: 'layout-a' });
+        let finishPrefetch!: () => void;
+        const prefetch = new Promise<void>((resolve) => { finishPrefetch = resolve; });
+        const discarded: string[] = [];
+        const insertion = createInsertionRegistry({
+            editor: harness.editor,
+            manifest: harness.manifest,
+            documentRevision: harness.revision,
+            createUid: () => '00000000-0000-4000-8000-000000000099',
+            prefetchBlockFieldLayout: () => prefetch,
+            discardPrefetchedBlock: (blockUid) => discarded.push(blockUid),
+        }, 'editor-test', harness.manifest.insertionItems);
+        const context = insertion.buildContext('inline', harness.editor.state.doc.content.size)!;
+
+        const pending = insertion.execute({ id: 'block:type-a', context });
+        harness.editor.commands.insertContent({ type: 'paragraph', content: [{ type: 'text', text: 'changed' }] });
+        finishPrefetch();
+
+        expect((await pending).status).toBe('cancelled');
+        expect(rootBlockUids(harness.editor)).toEqual([]);
+        expect(discarded).toEqual(['00000000-0000-4000-8000-000000000099']);
     });
 
     it('adds a block above the subject rather than appending', async () => {

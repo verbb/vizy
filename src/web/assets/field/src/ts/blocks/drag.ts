@@ -90,7 +90,7 @@ export function wireBlockDragHandle(host: HTMLElement, options: BlockDragWireOpt
         // TipTap's public typing omits `node`; runtime still accepts it.
         view.dragging = { slice, move: true, node: nodeSelection } as typeof view.dragging;
         // Survive WebKit dragend-before-drop clearing view.dragging.
-        armDraggedVizyBlock({
+        armDraggedVizyBlock(view, {
             uid: String(nodeSelection.node.attrs.blockUid),
             blockTypeUid: String(nodeSelection.node.attrs.blockTypeUid),
             from: nodeSelection.from,

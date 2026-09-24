@@ -70,6 +70,61 @@ describe('opaque canonical transport', () => {
         expect(restoreCanonicalFromEditor(adapted)).toEqual(input);
     });
 
+    it('round-trips many unknown siblings without exponential placement search', () => {
+        const input: CanonicalNode = {
+            type: 'doc',
+            content: Array.from({ length: 64 }, (_, index) => ({
+                type: `futureBlock${index}`,
+                attrs: { index },
+            })),
+        };
+        const adapted = adaptCanonicalForEditor(input, schema(), {
+            nodes: ['doc', 'paragraph', 'text'],
+            marks: [],
+        });
+
+        expect(adapted.content).toHaveLength(64);
+        expect(adapted.content?.every((node) => node.type === 'unsupportedNode')).toBe(true);
+        expect(restoreCanonicalFromEditor(adapted)).toEqual(input);
+    });
+
+    it('round-trips persisted documents with more than the clipboard placeholder budget', () => {
+        const input: CanonicalNode = {
+            type: 'doc',
+            content: Array.from({ length: DEFAULT_LIMITS.maxPlaceholders + 1 }, (_, index) => ({
+                type: 'paragraph',
+                content: [{
+                    type: 'text',
+                    text: `Paragraph ${index}`,
+                    marks: [{ type: 'futureMark' }],
+                }],
+            })),
+        };
+        const adapted = adaptCanonicalForEditor(input, schema(), {
+            nodes: ['doc', 'paragraph', 'text'],
+            marks: [],
+        });
+
+        expect(adapted.content).toHaveLength(DEFAULT_LIMITS.maxPlaceholders + 1);
+        expect(restoreCanonicalFromEditor(adapted)).toEqual(input);
+    });
+
+    it('round-trips a large persisted unknown subtree without clipboard byte limits', () => {
+        const input: CanonicalNode = {
+            type: 'doc',
+            content: [{
+                type: 'futureBlock',
+                attrs: { payload: 'x'.repeat(DEFAULT_LIMITS.maxRawBytes + 1) },
+            }],
+        };
+        const adapted = adaptCanonicalForEditor(input, schema(), {
+            nodes: ['doc', 'paragraph', 'text'],
+            marks: [],
+        });
+
+        expect(restoreCanonicalFromEditor(adapted)).toEqual(input);
+    });
+
     it('quarantines the #231 list_item subtree when server repair is bypassed', () => {
         const input: CanonicalNode = {
             type: 'doc',

@@ -5,22 +5,29 @@ import { NodeSelection } from '@tiptap/pm/state';
 import { createBlockDragGhost, selectBlockForDrag, wireBlockDragHandle } from '../../src/web/assets/field/src/ts/blocks/drag';
 import { armBlockDragHost, isBlockDragHostArmed } from '../../src/web/assets/field/src/ts/blocks/drag-arm';
 import {
+    armDraggedVizyBlock,
+    clearArmedDraggedVizyBlock,
     commitSiblingBlockMove,
     getDraggedVizyBlock,
     isDropInsideDraggedBlock,
     isValidBlockMoveDrop,
     listSiblingBlockRanges,
 } from '../../src/web/assets/field/src/ts/blocks/drop-rules';
-import { findBlockPosition, moveBlockByOffset } from '../../src/web/assets/field/src/ts/blocks/actions';
+import { deleteBlock, duplicateBlock, findBlockPosition, moveBlockByOffset } from '../../src/web/assets/field/src/ts/blocks/actions';
 import { regenerateAuthoredUids } from '../../src/web/assets/field/src/ts/identity';
 import { createEditorExtensions } from '../../src/web/assets/field/src/ts/editor-schema';
 import { BlockUiStateRegistry, FieldHostRegistry } from '../../src/web/assets/field/src/ts/registries';
 import { createInsertionRegistry } from '../../src/web/assets/field/src/ts/insertion/registry';
 import { nodeViewServices } from './support/node-view-services';
 import type { EditorManifest } from '../../src/web/assets/field/src/ts/types';
+import type { VizyBlockElement } from '../../src/web/assets/field/src/ts/components/VizyBlockElement';
+import { syncBlockStructuralActions } from '../../src/web/assets/field/src/ts/extensions';
 
 const editors: Editor[] = [];
-afterEach(() => editors.splice(0).forEach((editor) => editor.destroy()));
+afterEach(() => {
+    clearArmedDraggedVizyBlock();
+    editors.splice(0).forEach((editor) => editor.destroy());
+});
 
 function testManifest(): EditorManifest {
     return {
@@ -63,8 +70,9 @@ function testManifest(): EditorManifest {
     };
 }
 
-function createHarness() {
+function createHarness(field: Partial<EditorManifest['field']> = {}) {
     const manifest = testManifest();
+    manifest.field = { ...manifest.field, ...field };
     const ui = new BlockUiStateRegistry();
     const hosts = new FieldHostRegistry();
     let revision = 1;
@@ -96,6 +104,7 @@ function createHarness() {
         },
         onTransaction: ({ transaction }) => {
             if (transaction.docChanged) revision += 1;
+            if (transaction.docChanged) syncBlockStructuralActions(editor, manifest);
         },
     });
     insertion = createInsertionRegistry(
@@ -109,7 +118,7 @@ function createHarness() {
         manifest.insertionItems ?? [],
     );
     editors.push(editor);
-    return { editor };
+    return { editor, manifest };
 }
 
 describe('block drag helpers', () => {
@@ -169,6 +178,58 @@ describe('block drag helpers', () => {
         expect(moveBlockByOffset(editor, 'a', 1)).toBe(false);
         expect(moveBlockByOffset(editor, 'a', -1)).toBe(true);
         expect(editor.getJSON().content).toEqual(original);
+    });
+
+    it('keeps structural actions live at min/max and sibling boundaries', async () => {
+        const { editor, manifest } = createHarness({ minBlocks: 1, maxBlocks: 2 });
+        await Promise.resolve();
+        const first = editor.view.nodeDOM(findBlockPosition(editor, 'a')!) as VizyBlockElement;
+        const second = editor.view.nodeDOM(findBlockPosition(editor, 'b')!) as VizyBlockElement;
+        expect(first.canDuplicate).toBe(false);
+        expect(first.canDelete).toBe(true);
+        expect(first.canMoveUp).toBe(false);
+        expect(first.canMoveDown).toBe(true);
+        expect(second.canMoveUp).toBe(true);
+        expect(second.canMoveDown).toBe(false);
+        expect(await duplicateBlock(editor, 'a', {
+            manifest,
+            documentRevision: () => 0,
+            prefetchNewBlocks: async () => undefined,
+        })).toBe(false);
+
+        expect(deleteBlock(editor, 'b', manifest.field.minBlocks)).toBe(true);
+        await Promise.resolve();
+        const remaining = editor.view.nodeDOM(findBlockPosition(editor, 'a')!) as VizyBlockElement;
+        expect(remaining.canDuplicate).toBe(true);
+        expect(remaining.canDelete).toBe(false);
+        expect(remaining.canMoveUp).toBe(false);
+        expect(remaining.canMoveDown).toBe(false);
+        expect(deleteBlock(editor, 'a', manifest.field.minBlocks)).toBe(false);
+    });
+
+    it('discards prefetched duplicate layouts when the source disappears', async () => {
+        const { editor, manifest } = createHarness();
+        manifest.blockTypes.card!.fieldLayoutUid = 'layout-card';
+        let release!: () => void;
+        const gate = new Promise<void>((resolve) => { release = resolve; });
+        let prefetched: string[] = [];
+        const discarded: string[] = [];
+        const pending = duplicateBlock(editor, 'a', {
+            manifest,
+            documentRevision: () => 0,
+            prefetchNewBlocks: async (items) => {
+                prefetched = items.map((item) => item.blockUid);
+                await gate;
+            },
+            discardPrefetchedBlocks: (blockUids) => discarded.push(...blockUids),
+        });
+        await Promise.resolve();
+        expect(prefetched).toHaveLength(1);
+        expect(deleteBlock(editor, 'a')).toBe(true);
+        release();
+
+        expect(await pending).toBe(false);
+        expect(discarded).toEqual(prefetched);
     });
 
     it('moves down past the full size of a following prose node', () => {
@@ -271,7 +332,7 @@ describe('block drag helpers', () => {
         expect(host.draggable).toBe(true);
     });
 
-            it('preserves blockUid when committing a sibling move', () => {
+    it('preserves blockUid when committing a sibling move', () => {
         // Stock PM drop runs transformPasted (UID regen) then inserts the slice —
         // that disposed FieldLayout hosts. commitSiblingBlockMove keeps the node.
         const { editor } = createHarness();
@@ -296,6 +357,23 @@ describe('block drag helpers', () => {
             regenerateAuthoredUids(editor.state.doc.toJSON()),
         );
         editor.view.dragging = null;
+    });
+
+    it('does not resolve an armed same-UID drag in another editor', () => {
+        const source = createHarness().editor;
+        const destination = createHarness().editor;
+        const from = findBlockPosition(source, 'a')!;
+        const node = source.state.doc.nodeAt(from)!;
+        armDraggedVizyBlock(source.view, {
+            uid: 'a',
+            blockTypeUid: 'card',
+            from,
+            to: from + node.nodeSize,
+            node,
+        });
+
+        expect(getDraggedVizyBlock(destination.view)).toBeNull();
+        expect(getDraggedVizyBlock(source.view)?.uid).toBe('a');
     });
 
     it('lists only same-container siblings for snap targets', () => {

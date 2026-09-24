@@ -29,6 +29,18 @@ export function findBlockNode(editor: Editor, blockUid: string): { node: ProseMi
     return { node, pos };
 }
 
+function isRootBlock(editor: Editor, pos: number): boolean {
+    return editor.state.doc.resolve(pos).parent === editor.state.doc;
+}
+
+function rootBlockCount(editor: Editor): number {
+    let count = 0;
+    editor.state.doc.forEach((node) => {
+        if (node.type.name === 'vizyBlock') count += 1;
+    });
+    return count;
+}
+
 /** Destination for a live Block — FieldLayout is always root (Hosted nesting elsewhere). */
 export function findBlockDestination(
     editor: Editor,
@@ -104,6 +116,7 @@ export interface DuplicateBlockOptions {
         destination: FieldLayoutDestination;
         documentRevision: number;
     }>) => Promise<void>;
+    discardPrefetchedBlocks?: (blockUids: readonly string[]) => void;
     animateInsert?: (blockUid: string) => void;
     /** Capture mounted Craft field values into TipTap before snapshotting. */
     flushMountedFields?: () => void;
@@ -128,16 +141,22 @@ export async function duplicateBlock(
     if (options && !options.manifest.field.insertableBlockTypeUids.includes(blockTypeUid)) {
         return false;
     }
+    if (options && isRootBlock(editor, found.pos)) {
+        const maxBlocks = options.manifest.field.maxBlocks;
+        if (maxBlocks !== null && rootBlockCount(editor) >= maxBlocks) return false;
+    }
     const json = found.node.toJSON() as CanonicalNode;
     const copy = recursiveRegenerateAuthoredUids(json, undefined, options?.manifest.blockTypes);
     const rootUid = String((copy.attrs as { blockUid?: string } | undefined)?.blockUid ?? '');
     if (!rootUid) return false;
 
+    let prefetchedUids: string[] = [];
     if (options) {
         const destination = findBlockDestination(editor, blockUid) ?? { kind: 'root' };
         const revision = options.documentRevision();
         const prefetchItems = collectMountableBlockPrefetch(copy, destination, options.manifest)
             .map((item) => ({ ...item, documentRevision: revision }));
+        prefetchedUids = prefetchItems.map((item) => item.blockUid);
         if (prefetchItems.length) {
             try {
                 await options.prefetchNewBlocks(prefetchItems);
@@ -149,22 +168,41 @@ export async function duplicateBlock(
 
     // Re-resolve by UID after await — edits/moves/deletes can invalidate `found.pos`.
     const latest = findBlockNode(editor, blockUid);
-    if (!latest) return false;
+    if (!latest) {
+        options?.discardPrefetchedBlocks?.(prefetchedUids);
+        return false;
+    }
+    if (options && isRootBlock(editor, latest.pos)) {
+        const maxBlocks = options.manifest.field.maxBlocks;
+        if (maxBlocks !== null && rootBlockCount(editor) >= maxBlocks) {
+            options.discardPrefetchedBlocks?.(prefetchedUids);
+            return false;
+        }
+    }
 
     const duplicated = editor.schema.nodeFromJSON(copy);
     const insertPos = latest.pos + latest.node.nodeSize;
+    const before = editor.state.doc;
     editor.view.dispatch(editor.state.tr.insert(insertPos, duplicated).scrollIntoView());
+    if (editor.state.doc.eq(before)) {
+        options?.discardPrefetchedBlocks?.(prefetchedUids);
+        return false;
+    }
     (options?.animateInsert ?? playBlockInsertAnimation)(rootUid);
     return true;
 }
 
-export function deleteBlock(editor: Editor, blockUid: string): boolean {
+export function deleteBlock(editor: Editor, blockUid: string, minBlocks: number | null = null): boolean {
     const found = findBlockNode(editor, blockUid);
     if (!found) return false;
+    if (minBlocks !== null && isRootBlock(editor, found.pos)) {
+        if (rootBlockCount(editor) <= minBlocks) return false;
+    }
+    const before = editor.state.doc;
     editor.view.dispatch(
         editor.state.tr.delete(found.pos, found.pos + found.node.nodeSize).scrollIntoView(),
     );
-    return true;
+    return !editor.state.doc.eq(before);
 }
 
 export function toggleBlockEnabled(editor: Editor, blockUid: string): boolean {
@@ -197,8 +235,9 @@ export function moveBlockByOffset(editor: Editor, blockUid: string, direction: -
     let tr = editor.state.tr.delete(found.pos, found.pos + found.node.nodeSize);
     const mapped = tr.mapping.map(targetPos);
     tr = tr.replaceRange(mapped, mapped, slice);
+    const before = editor.state.doc;
     editor.view.dispatch(tr.scrollIntoView());
-    return true;
+    return !editor.state.doc.eq(before);
 }
 
 export function copyBlockSubtree(editor: Editor, blockUid: string): CanonicalNode | null {

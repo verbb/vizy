@@ -104,7 +104,7 @@ export class InsertionOverlay {
 
     sync(): void {
         if (this.#services().insertionSideEffectsSuspended?.()) return;
-        invalidateInlineAnchorCache();
+        invalidateInlineAnchorCache(this.#services().editor);
         if (this.#popover.isOpen) {
             this.#popover.refresh(this.#services());
         }
@@ -183,16 +183,17 @@ export class InsertionOverlay {
      */
     openToolbarInsert(
         invoker: HTMLElement,
-        options: { hadEditorFocus?: boolean } = {},
+        options: { hadEditorFocus?: boolean; useCurrentSelection?: boolean } = {},
     ): void {
         const services = this.#services();
         const { editor } = services;
         let position: number;
-        if (editor.view.hasFocus()) {
+        if (editor.view.hasFocus() || options.useCurrentSelection) {
             position = editor.state.selection.from;
         } else {
-            // Prefer start of doc content when the field is not focused.
-            position = editor.state.doc.content.size === 0 ? 0 : 1;
+            // A cold toolbar action is a root insertion, independent of the
+            // shape of the first document child.
+            position = 0;
         }
         const context = services.insertion.buildContext('inline', position);
         if (!context) return;
@@ -879,7 +880,9 @@ export class InsertionOverlay {
             return;
         }
         // Back to list from dialog.
-        this.#browse.close();
+        // The list takes ownership of the same invoker. Suppress the grid's
+        // delayed close callback so it cannot clear the list's open state.
+        this.#browse.close({ notify: false });
         this.#popover.open(services, last.context, last.rect, {
             invokerKey: last.invokerKey,
             invoker: last.invoker,

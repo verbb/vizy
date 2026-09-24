@@ -49,6 +49,10 @@ export class VizyBlockElement extends LitElement {
     @property({ type: Boolean }) accessor canAddAbove = true;
     /** Existing Blocks stay editable, but cannot be cloned when insertion policy rejects their type. */
     @property({ type: Boolean }) accessor canDuplicate = true;
+    /** Root min/max and sibling boundaries drive the remaining structural actions. */
+    @property({ type: Boolean }) accessor canDelete = true;
+    @property({ type: Boolean }) accessor canMoveUp = true;
+    @property({ type: Boolean }) accessor canMoveDown = true;
     /** Block Type carries Craft fields — header paints; fields fill in quietly. */
     @property({ type: Boolean, reflect: true, attribute: 'expects-field-layout' })
     accessor expectsFieldLayout = false;
@@ -627,15 +631,21 @@ export class VizyBlockElement extends LitElement {
                                     Duplicate
                                 </pk-dropdown-item>
                             ` : nothing}
-                            <pk-dropdown-separator></pk-dropdown-separator>
-                            <pk-dropdown-item value="moveUp">
-                                <pk-icon slot="start" icon="arrow-up" label=""></pk-icon>
-                                Move up
-                            </pk-dropdown-item>
-                            <pk-dropdown-item value="moveDown">
-                                <pk-icon slot="start" icon="arrow-down" label=""></pk-icon>
-                                Move down
-                            </pk-dropdown-item>
+                            ${this.canMoveUp || this.canMoveDown ? html`
+                                <pk-dropdown-separator></pk-dropdown-separator>
+                                ${this.canMoveUp ? html`
+                                    <pk-dropdown-item value="moveUp">
+                                        <pk-icon slot="start" icon="arrow-up" label=""></pk-icon>
+                                        Move up
+                                    </pk-dropdown-item>
+                                ` : nothing}
+                                ${this.canMoveDown ? html`
+                                    <pk-dropdown-item value="moveDown">
+                                        <pk-icon slot="start" icon="arrow-down" label=""></pk-icon>
+                                        Move down
+                                    </pk-dropdown-item>
+                                ` : nothing}
+                            ` : nothing}
                             <pk-dropdown-separator></pk-dropdown-separator>
                             <pk-dropdown-item value="toggleEnabled">
                                 <pk-icon slot="start" icon=${this.enabled ? 'ban' : 'check'} label=""></pk-icon>
@@ -648,17 +658,20 @@ export class VizyBlockElement extends LitElement {
                                     ${this.addAboveLabel}
                                 </pk-dropdown-item>
                             ` : nothing}
-                            <pk-dropdown-separator></pk-dropdown-separator>
-                            <pk-dropdown-item value="delete" destructive>
-                                <pk-icon slot="start" icon="xmark" label=""></pk-icon>
-                                Delete
-                            </pk-dropdown-item>
+                            ${this.canDelete ? html`
+                                <pk-dropdown-separator></pk-dropdown-separator>
+                                <pk-dropdown-item value="delete" destructive>
+                                    <pk-icon slot="start" icon="xmark" label=""></pk-icon>
+                                    Delete
+                                </pk-dropdown-item>
+                            ` : nothing}
                         </pk-dropdown-menu>
                         <button
                             type="button"
                             part="drag-handle"
                             data-vizy-drag-handle
-                            aria-label="Move block"
+                            aria-hidden="true"
+                            tabindex="-1"
                             @click=${(event: Event) => event.stopPropagation()}
                         >
                             <pk-icon class="action-icon" icon="grip-move"></pk-icon>

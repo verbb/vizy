@@ -30,7 +30,7 @@ export class BlockBrowseHost {
             onSelect?: (id: string) => Promise<boolean> | boolean;
         },
     ): void {
-        this.close();
+        this.close({ notify: false });
         const panel = document.createElement('vizy-block-browse-dialog') as VizyBlockBrowseDialogElement;
         this.#panel = panel;
         panel.open({
@@ -58,8 +58,8 @@ export class BlockBrowseHost {
         });
     }
 
-    close(): void {
-        this.#panel?.close();
+    close(options: { notify?: boolean } = {}): void {
+        this.#panel?.close(options);
         this.#panel = null;
     }
 }

@@ -184,6 +184,13 @@ export class FieldLayoutLoader {
         }
     }
 
+    /** Drop prefetched responses for Blocks that were cancelled before insert. */
+    discardPrefetchedBlocks(blockUids: readonly string[]): void {
+        for (const blockUid of blockUids) {
+            this.#pendingByUid.delete(blockUid);
+        }
+    }
+
     open(blockUid: string): Promise<FieldHostRecord> {
         const record = this.hosts.get(blockUid);
         if (!record || record.status === 'disposed') {

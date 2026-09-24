@@ -65,6 +65,19 @@ vizy-editor:not(:has(.vizy-editor-shell)) {
     line-height: 1.4;
 }
 
+.vizy-clipboard-status:not([hidden]),
+.vizy-capture-status:not([hidden]) {
+    display: block;
+    padding: var(--pk-space-3, 0.75rem);
+    margin-bottom: var(--pk-space-2, 0.5rem);
+    border: 1px solid var(--error-color, var(--pk-color-red-500, #ef4444));
+    border-radius: var(--vizy-radius);
+    background: var(--pk-color-red-50, #fef2f2);
+    color: var(--vizy-text);
+    font-size: 13px;
+    line-height: 1.4;
+}
+
 /* Boot failure — replaces a blank frame when the editor module or initialize() throws. */
 .vizy-field-boot-failure {
     box-sizing: border-box;

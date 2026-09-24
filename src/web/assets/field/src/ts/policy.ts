@@ -42,8 +42,12 @@ function violationKeys(doc: ProseMirrorNode, manifest: EditorManifest): Violatio
             addViolation(violations, `root:type:${String(block.attrs.blockUid)}:${String(block.attrs.blockTypeUid)}`);
         }
     });
-    if (manifest.field.minBlocks !== null && rootBlocks.length < manifest.field.minBlocks) addViolation(violations, 'root:min');
-    if (manifest.field.maxBlocks !== null && rootBlocks.length > manifest.field.maxBlocks) addViolation(violations, 'root:max');
+    if (manifest.field.minBlocks !== null && rootBlocks.length < manifest.field.minBlocks) {
+        violations.set('root:min', manifest.field.minBlocks - rootBlocks.length);
+    }
+    if (manifest.field.maxBlocks !== null && rootBlocks.length > manifest.field.maxBlocks) {
+        violations.set('root:max', rootBlocks.length - manifest.field.maxBlocks);
+    }
 
     // Same-type depth in this TipTap doc (root / layout columns). Hosted nesting
     // depth is enforced separately via HostedVizyContext — vizyBlock is a leaf.

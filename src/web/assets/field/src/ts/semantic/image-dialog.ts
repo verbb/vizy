@@ -1,5 +1,5 @@
 import { LitElement, css, html } from 'lit';
-import { customElement, property, query } from 'lit/decorators.js';
+import { customElement, property, query, state } from 'lit/decorators.js';
 import type { Editor } from '@tiptap/core';
 import '@verbb/plugin-kit-web/components/button/pk-button.js';
 import '@verbb/plugin-kit-web/components/checkbox/pk-checkbox.js';
@@ -15,6 +15,7 @@ import {
     type ImageDialogSeed,
 } from './image-apply';
 import type { ImageSize } from './attrs';
+import { urlDialogValidationError } from './link-apply';
 
 type PkDialogEl = HTMLElement & {
     open: boolean;
@@ -25,7 +26,7 @@ type PkDialogEl = HTMLElement & {
     updateComplete?: Promise<unknown>;
 };
 
-type PkInputEl = HTMLElement & { value: string };
+type PkInputEl = HTMLElement & { value: string; invalid: boolean; focus: () => void };
 type PkCheckboxEl = HTMLElement & { checked: boolean };
 type PkSelectEl = HTMLElement & { value: string };
 
@@ -39,6 +40,7 @@ let sharedDialog: VizyImageDialogElement | null = null;
 export class VizyImageDialogElement extends LitElement {
     @property() accessor dialogTitle = 'Insert Image';
     @property() accessor submitLabel = 'Insert';
+    @state() accessor urlError: string | null = null;
 
     #editor: Editor | null = null;
     #seed: ImageDialogSeed | null = null;
@@ -150,8 +152,18 @@ export class VizyImageDialogElement extends LitElement {
                         <pk-field label="Title" .for=${`vizy-img-title-${this.#id}`}>
                             <pk-input id=${`vizy-img-title-${this.#id}`} class="image-dialog__title" type="text"></pk-input>
                         </pk-field>
-                        <pk-field label="URL" .for=${`vizy-img-url-${this.#id}`}>
-                            <pk-input id=${`vizy-img-url-${this.#id}`} class="image-dialog__url" type="url" placeholder="https://"></pk-input>
+                        <pk-field
+                            label="URL"
+                            .for=${`vizy-img-url-${this.#id}`}
+                            .errors=${this.urlError ? [this.urlError] : []}
+                        >
+                            <pk-input
+                                id=${`vizy-img-url-${this.#id}`}
+                                class="image-dialog__url"
+                                type="text"
+                                placeholder="https://"
+                                @input=${this.#onUrlInput}
+                            ></pk-input>
                         </pk-field>
                         <pk-checkbox>Open link in new tab</pk-checkbox>
                         <pk-field label="Size" .for=${`vizy-img-size-${this.#id}`}>
@@ -198,6 +210,8 @@ export class VizyImageDialogElement extends LitElement {
         if (this.altInput) this.altInput.value = seed.alt;
         if (this.titleInput) this.titleInput.value = seed.title;
         if (this.urlInput) this.urlInput.value = seed.linkUrl;
+        this.urlError = null;
+        if (this.urlInput) this.urlInput.invalid = false;
         if (this.newTabCheckbox) this.newTabCheckbox.checked = seed.openInNewTab;
         if (this.sizeSelect) this.sizeSelect.value = seed.size;
         if (this.transformSelect) this.transformSelect.value = seed.transform;
@@ -219,16 +233,30 @@ export class VizyImageDialogElement extends LitElement {
         });
     };
 
+    #onUrlInput = (): void => {
+        const url = this.urlInput?.value ?? '';
+        this.urlError = urlDialogValidationError(url);
+        if (this.urlInput) this.urlInput.invalid = this.urlError !== null;
+    };
+
     #onSubmit = (): void => {
         const editor = this.#editor;
         const seed = this.#seed;
         if (!editor || !seed) return;
 
+        const linkUrl = this.urlInput?.value ?? '';
+        this.urlError = urlDialogValidationError(linkUrl);
+        if (this.urlInput) this.urlInput.invalid = this.urlError !== null;
+        if (this.urlError) {
+            this.urlInput?.focus();
+            return;
+        }
+
         const next: ImageDialogSeed = {
             ...seed,
             alt: this.altInput?.value ?? '',
             title: this.titleInput?.value ?? '',
-            linkUrl: this.urlInput?.value ?? '',
+            linkUrl,
             openInNewTab: Boolean(this.newTabCheckbox?.checked),
             size: (this.sizeSelect?.value as ImageSize) || 'default',
             transform: this.transformSelect?.value ?? seed.transform,

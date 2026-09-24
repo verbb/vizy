@@ -88,3 +88,17 @@ it.each(['', 'small'])('resolves the original URL when clearing an initial %s tr
     await new Promise(resolve => setTimeout(resolve, 0));
     expect(element.previewImg?.src).toBe('https://example.test/original.jpg');
 });
+
+it('rejects an unsafe image link before changing the editor document', async () => {
+    const element = await mountDialog();
+    element.urlInput!.value = 'javascript:alert(1)';
+    element.urlInput!.dispatchEvent(new Event('input'));
+    await element.updateComplete;
+
+    const submit = element.shadowRoot!.querySelectorAll('pk-button')[1] as HTMLElement;
+    submit.click();
+    await element.updateComplete;
+
+    expect(element.urlInput!.invalid).toBe(true);
+    expect(element.urlError).toBe('Enter a safe URL or email address.');
+});

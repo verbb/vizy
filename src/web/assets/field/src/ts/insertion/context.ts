@@ -29,7 +29,7 @@ export function buildInsertionContext(
         from,
         to,
         selectionKind,
-        container: { kind: 'root' },
+        container: { kind: container.kind },
         contentType: container.contentType,
         directBlockCount,
         minBlocks: container.minBlocks,

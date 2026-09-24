@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import {
     readBlockInsertView,
     resolveBlockInsertView,
@@ -7,6 +7,9 @@ import {
 import { VizyInsertionListElement } from '../../src/web/assets/field/src/ts/components/VizyInsertionListElement';
 import { VizyBlockBrowseDialogElement } from '../../src/web/assets/field/src/ts/components/VizyBlockBrowseDialogElement';
 import type { AvailableInsertion, InsertionContext } from '../../src/web/assets/field/src/ts/insertion/types';
+import { installElementInternalsShim } from './support/element-internals';
+
+installElementInternalsShim();
 
 const stubContext = { editorId: 'test', surface: 'inline' } as InsertionContext;
 
@@ -131,5 +134,76 @@ describe('block grid picker policy', () => {
         expect(dialog.shadowRoot!.querySelector('pk-input')).toBeNull();
         expect(dialog.shadowRoot!.querySelector('.view-toggle')).toBeNull();
         expect(dialog.shadowRoot!.querySelectorAll('button.card').length).toBeGreaterThan(0);
+    });
+
+    it('uses roving focus and arrow keys for its listbox options', async () => {
+        const dialog = new VizyBlockBrowseDialogElement();
+        dialog.items = [blockEntry('block:a'), blockEntry('block:b'), blockEntry('block:c')];
+        dialog.filterable = false;
+        document.body.append(dialog);
+        await dialog.updateComplete;
+
+        const grid = dialog.shadowRoot!.querySelector<HTMLElement>('.grid')!;
+        const cards = [...grid.querySelectorAll<HTMLButtonElement>('button.card')];
+        expect(cards.map((card) => card.tabIndex)).toEqual([0, -1, -1]);
+        cards[0].focus();
+        cards[0].dispatchEvent(new KeyboardEvent('keydown', {
+            key: 'ArrowRight',
+            bubbles: true,
+            composed: true,
+        }));
+        await dialog.updateComplete;
+
+        expect(dialog.shadowRoot!.activeElement).toBe(cards[1]);
+        expect(cards.map((card) => card.tabIndex)).toEqual([-1, 0, -1]);
+    });
+
+    it('removes its body-level dialog after close completes', async () => {
+        const dialog = new VizyBlockBrowseDialogElement();
+        document.body.append(dialog);
+        dialog.open({
+            items: [blockEntry('block:a')],
+            onSelect: () => {},
+        });
+        await vi.waitFor(() => expect(document.body.querySelector('pk-dialog')).not.toBeNull());
+        const shell = document.body.querySelector('pk-dialog')!;
+        shell.dispatchEvent(new CustomEvent('pk-open-change', {
+            detail: { open: false },
+        }));
+
+        expect(document.body.querySelector('pk-dialog')).toBeNull();
+        expect(dialog.isConnected).toBe(false);
+    });
+
+    it('cancels a close issued before the async dialog mount completes', async () => {
+        const onClose = vi.fn();
+        const dialog = new VizyBlockBrowseDialogElement();
+        dialog.open({
+            items: [blockEntry('block:a')],
+            onSelect: () => {},
+            onClose,
+        });
+        expect(dialog.isOpen).toBe(true);
+        dialog.close();
+        await Promise.resolve();
+        await Promise.resolve();
+
+        expect(dialog.isOpen).toBe(false);
+        expect(document.body.querySelector('pk-dialog')).toBeNull();
+        expect(onClose).toHaveBeenCalledOnce();
+    });
+
+    it('can suppress a stale close callback during a view handoff', async () => {
+        const onClose = vi.fn();
+        const dialog = new VizyBlockBrowseDialogElement();
+        dialog.open({
+            items: [blockEntry('block:a')],
+            onSelect: () => {},
+            onClose,
+        });
+        await vi.waitFor(() => expect(document.body.querySelector('pk-dialog')).not.toBeNull());
+        dialog.close({ notify: false });
+
+        expect(onClose).not.toHaveBeenCalled();
     });
 });

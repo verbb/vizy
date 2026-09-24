@@ -18,7 +18,13 @@ import { activateLayoutControl } from '../../src/web/assets/field/src/ts/layout/
 import { findLayoutByUid } from '../../src/web/assets/field/src/ts/layout/lookup';
 import { DEFAULT_LAYOUT_PRESETS, gutterCandidates, resolveLayoutPresets } from '../../src/web/assets/field/src/ts/layout/presets';
 import { resizeLayoutColumns } from '../../src/web/assets/field/src/ts/layout/resize';
+import { addBlockAbove, deleteBlock, duplicateBlock, findBlockPosition, queryAddBlockAbove } from '../../src/web/assets/field/src/ts/blocks/actions';
+import {
+    syncBlockStructuralActions,
+    transactionChangesBlockStructure,
+} from '../../src/web/assets/field/src/ts/extensions';
 import type { EditorManifest } from '../../src/web/assets/field/src/ts/types';
+import type { VizyBlockElement } from '../../src/web/assets/field/src/ts/components/VizyBlockElement';
 
 const editors: Editor[] = [];
 afterEach(() => {
@@ -85,11 +91,16 @@ function makeEditor(content?: object, overrides: Partial<EditorManifest> = {}): 
             insertion,
         })),
         content,
+        onTransaction: ({ transaction }) => {
+            if (transaction.docChanged && transactionChangesBlockStructure(transaction)) {
+                syncBlockStructuralActions(editor, m, insertion);
+            }
+        },
     });
     insertion = createInsertionRegistry(
         { editor, manifest: m, documentRevision: () => 0, createUid: nextUid },
         'test',
-        [],
+        m.insertionItems ?? [],
     );
     registerLayoutInsertion(insertion, m);
     editors.push(editor);
@@ -135,6 +146,145 @@ describe('layout presets', () => {
 
     it('lists snapped gutter candidates for an adjacent pair', () => {
         expect(gutterCandidates(6, 6)).toEqual([[1, 11], [2, 10], [3, 9], [4, 8], [5, 7], [6, 6], [7, 5], [8, 4], [9, 3], [10, 2], [11, 1]]);
+    });
+
+    it('refreshes reused Block move and Add Above affordances after sibling changes', async () => {
+        const field: EditorManifest['field'] = {
+            ...manifest().field,
+            rootContentType: 'blocks',
+            allowedBlockTypeUids: ['card'],
+            insertableBlockTypeUids: ['card'],
+            minBlocks: null,
+            maxBlocks: 2,
+        };
+        const blockTypes: EditorManifest['blockTypes'] = {
+            card: { uid: 'card', name: 'Card', handle: 'card' },
+        };
+        const insertionItems: EditorManifest['insertionItems'] = [{
+            id: 'block:card', kind: 'block', blockTypeUid: 'card', label: 'Card',
+            description: null, icon: null, group: 'Content', keywords: ['card'], aliases: [],
+            order: 0, surfaces: ['inline'], requiresInput: false,
+        }];
+        const block = (blockUid: string) => ({
+            type: 'vizyBlock',
+            attrs: { blockUid, blockTypeUid: 'card', enabled: true, fieldSlots: {} },
+        });
+        const editor = makeEditor({
+            type: 'doc', attrs: { schemaVersion: 2 }, content: [block('a'), block('b')],
+        }, { field, blockTypes, insertionItems });
+        await Promise.resolve();
+        const view = (uid: string) => editor.view.nodeDOM(findBlockPosition(editor, uid)!) as VizyBlockElement;
+
+        expect(view('b').canMoveUp).toBe(true);
+        expect(view('b').canMoveDown).toBe(false);
+        expect(view('b').canAddAbove).toBe(false);
+
+        expect(deleteBlock(editor, 'a')).toBe(true);
+        expect(view('b').canMoveUp).toBe(false);
+        expect(view('b').canMoveDown).toBe(false);
+        expect(view('b').canAddAbove).toBe(true);
+
+        expect(await duplicateBlock(editor, 'b', {
+            manifest: manifest({ field, blockTypes, insertionItems }),
+            documentRevision: () => 0,
+            prefetchNewBlocks: async () => undefined,
+        })).toBe(true);
+        expect(view('b').canMoveDown).toBe(true);
+        expect(view('b').canAddAbove).toBe(false);
+
+        const duplicateUid = String(editor.state.doc.child(1).attrs.blockUid);
+        expect(deleteBlock(editor, duplicateUid)).toBe(true);
+        expect(view('b').canMoveDown).toBe(false);
+        expect(view('b').canAddAbove).toBe(true);
+    });
+
+    it('refreshes 500 sibling Block affordances with one container scan', () => {
+        const field: EditorManifest['field'] = {
+            ...manifest().field,
+            allowedBlockTypeUids: ['card'],
+            insertableBlockTypeUids: ['card'],
+        };
+        const blockTypes: EditorManifest['blockTypes'] = {
+            card: { uid: 'card', name: 'Card', handle: 'card' },
+        };
+        const insertionItems: EditorManifest['insertionItems'] = [{
+            id: 'block:card', kind: 'block', blockTypeUid: 'card', label: 'Card',
+            description: null, icon: null, group: 'Content', keywords: ['card'], aliases: [],
+            order: 0, surfaces: ['inline'], requiresInput: false,
+        }];
+        const editorManifest = manifest({ field, blockTypes, insertionItems });
+        const editor = makeEditor({
+            type: 'doc', attrs: { schemaVersion: 2 },
+            content: Array.from({ length: 500 }, (_, index) => ({
+                type: 'vizyBlock',
+                attrs: { blockUid: `scale-${index}`, blockTypeUid: 'card', enabled: true, fieldSlots: {} },
+            })),
+        }, editorManifest);
+        const insertion = createInsertionRegistry({
+            editor, manifest: editorManifest, documentRevision: () => 0, createUid: nextUid,
+        }, 'scale-actions', insertionItems);
+        const build = vi.spyOn(insertion, 'buildContext');
+
+        syncBlockStructuralActions(editor, editorManifest, insertion);
+
+        expect(build).toHaveBeenCalledTimes(1);
+        const lastPos = findBlockPosition(editor, 'scale-499');
+        expect(lastPos).not.toBeNull();
+        expect((editor.view.nodeDOM(lastPos!) as VizyBlockElement).canMoveDown).toBe(false);
+    });
+
+    it('does not rescan 500 Block affordances for ordinary typing', async () => {
+        const field: EditorManifest['field'] = {
+            ...manifest().field,
+            allowedBlockTypeUids: ['card'],
+            insertableBlockTypeUids: ['card'],
+        };
+        const blockTypes: EditorManifest['blockTypes'] = {
+            card: { uid: 'card', name: 'Card', handle: 'card' },
+        };
+        const insertionItems: EditorManifest['insertionItems'] = [{
+            id: 'block:card', kind: 'block', blockTypeUid: 'card', label: 'Card',
+            description: null, icon: null, group: 'Content', keywords: ['card'], aliases: [],
+            order: 0, surfaces: ['inline'], requiresInput: false,
+        }];
+        const editorManifest = manifest({ field, blockTypes, insertionItems });
+        const ui = new BlockUiStateRegistry();
+        const hosts = new FieldHostRegistry();
+        let editor!: Editor;
+        let insertion!: ReturnType<typeof createInsertionRegistry>;
+        editor = new Editor({
+            element: document.createElement('div'),
+            extensions: createEditorExtensions(editorManifest, () => nodeViewServices({
+                editor, manifest: editorManifest, ui, hosts, insertion,
+            })),
+            content: {
+                type: 'doc', attrs: { schemaVersion: 2 },
+                content: [
+                    ...Array.from({ length: 500 }, (_, index) => ({
+                        type: 'vizyBlock',
+                        attrs: { blockUid: `typing-${index}`, blockTypeUid: 'card', enabled: true, fieldSlots: {} },
+                    })),
+                    { type: 'paragraph', content: [{ type: 'text', text: 'Type here' }] },
+                ],
+            },
+            onTransaction: ({ transaction }) => {
+                if (transaction.docChanged && transactionChangesBlockStructure(transaction)) {
+                    syncBlockStructuralActions(editor, editorManifest, insertion);
+                }
+            },
+        });
+        insertion = createInsertionRegistry({
+            editor, manifest: editorManifest, documentRevision: () => 0, createUid: nextUid,
+        }, 'typing-actions', insertionItems);
+        editors.push(editor);
+        const query = vi.spyOn(insertion, 'query');
+        await Promise.resolve();
+        query.mockClear();
+
+        const paragraphPos = editor.state.doc.content.size - editor.state.doc.lastChild!.nodeSize + 1;
+        editor.commands.insertContentAt(paragraphPos, 'x');
+
+        expect(query).not.toHaveBeenCalled();
     });
 });
 
@@ -249,6 +399,72 @@ describe('layout resize and reorder', () => {
             if (node.type.name === 'column') uids.push(String(node.attrs.columnUid));
         });
         expect(uids).toEqual(['col-b', 'col-a']);
+    });
+});
+
+describe('Blocks nested in Layout columns', () => {
+    it('applies root min/max limits only to root Blocks', async () => {
+        const field: EditorManifest['field'] = {
+            ...manifest().field,
+            allowedBlockTypeUids: ['card'],
+            insertableBlockTypeUids: ['card'],
+            minBlocks: 1,
+            maxBlocks: 1,
+        };
+        const blockTypes: EditorManifest['blockTypes'] = {
+            card: { uid: 'card', name: 'Card', handle: 'card' },
+        };
+        const insertionItems: EditorManifest['insertionItems'] = [{
+            id: 'block:card', kind: 'block', blockTypeUid: 'card', label: 'Card',
+            description: null, icon: null, group: 'Content', keywords: ['card'], aliases: [],
+            order: 0, surfaces: ['inline'], requiresInput: false,
+        }];
+        const block = (blockUid: string) => ({
+            type: 'vizyBlock',
+            attrs: { blockUid, blockTypeUid: 'card', enabled: true, fieldSlots: {} },
+        });
+        const editor = makeEditor({
+            type: 'doc',
+            attrs: { schemaVersion: 2 },
+            content: [
+                block('root'),
+                {
+                    type: 'layout',
+                    attrs: { layoutUid: 'layout-limits', stack: 'small' },
+                    content: [
+                        { type: 'column', attrs: { columnUid: 'col-a', span: 6 }, content: [block('nested')] },
+                        { type: 'column', attrs: { columnUid: 'col-b', span: 6 }, content: [{ type: 'paragraph' }] },
+                    ],
+                },
+            ],
+        }, { field, blockTypes, insertionItems });
+        const editorManifest = manifest({ field, blockTypes, insertionItems });
+        const insertion = createInsertionRegistry({
+            editor,
+            manifest: editorManifest,
+            documentRevision: () => 0,
+            createUid: nextUid,
+        }, 'nested-limits', insertionItems);
+        const nestedPos = findBlockPosition(editor, 'nested');
+        expect(nestedPos).not.toBeNull();
+        const nestedView = editor.view.nodeDOM(nestedPos!) as VizyBlockElement;
+
+        expect(nestedView.canDuplicate).toBe(true);
+        expect(nestedView.canDelete).toBe(true);
+        expect(queryAddBlockAbove(editor, insertion, 'nested')).toHaveLength(1);
+        expect(await addBlockAbove(editor, insertion, 'nested')).toBe('inserted');
+        expect(await duplicateBlock(editor, 'root', {
+            manifest: editorManifest,
+            documentRevision: () => 0,
+            prefetchNewBlocks: async () => undefined,
+        })).toBe(false);
+        expect(deleteBlock(editor, 'root', field.minBlocks)).toBe(false);
+        expect(await duplicateBlock(editor, 'nested', {
+            manifest: editorManifest,
+            documentRevision: () => 0,
+            prefetchNewBlocks: async () => undefined,
+        })).toBe(true);
+        expect(deleteBlock(editor, 'nested', field.minBlocks)).toBe(true);
     });
 });
 

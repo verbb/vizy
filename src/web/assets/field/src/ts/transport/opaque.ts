@@ -1,5 +1,5 @@
 import { Extension, Node } from '@tiptap/core';
-import { Slice, type Schema } from '@tiptap/pm/model';
+import { Slice, type ContentMatch, type Schema } from '@tiptap/pm/model';
 import { Plugin } from '@tiptap/pm/state';
 import type { EditorView } from '@tiptap/pm/view';
 import { regenerateAuthoredUids, type IdentitySchema } from '../identity';
@@ -31,7 +31,10 @@ type Limits = { [Key in keyof typeof DEFAULT_LIMITS]: number };
 const DOCUMENT_LIMITS: Limits = Object.freeze({
     ...DEFAULT_LIMITS,
     maxDocumentBytes: Infinity,
+    maxRawBytes: Infinity,
     maxNodes: Infinity,
+    maxPlaceholders: Infinity,
+    maxPlacementAttempts: Infinity,
     maxObjectWidth: Infinity,
     // A Hosted envelope adds several JSON containers per editor level. Match
     // PHP's JSON depth boundary rather than the private clipboard's small budget.
@@ -128,21 +131,40 @@ const accepts = (schema: Schema, value: CanonicalNode): boolean => {
 };
 
 function place(schema: Schema, parent: CanonicalNode, children: Array<CanonicalNode | OpaqueRequest>, limits: Limits): CanonicalNode[] | null {
-    const indexes = children.flatMap((child, index) => isRequest(child) ? [index] : []);
-    const resolved = [...children] as CanonicalNode[];
+    const parentType = schema.nodes[parent.type];
+    if (!parentType) return null;
+
+    // Follow ProseMirror's content-expression automaton instead of trying every
+    // inline/block placeholder permutation. The automaton deduplicates equal
+    // states, keeping this linear for ordinary schemas even with hundreds of
+    // unknown siblings.
+    let states = new Map<ContentMatch, CanonicalNode[]>([[parentType.contentMatch, []]]);
     let attempts = 0;
-    const search = (cursor: number): boolean => {
-        if (++attempts > limits.maxPlacementAttempts) throw new TransportIntegrityError('placementAttemptsExceeded', '$');
-        if (cursor === indexes.length) return accepts(schema, { ...parent, content: resolved });
-        const index = indexes[cursor];
-        const item = children[index] as OpaqueRequest;
-        for (const type of ['unsupportedInlineNode', 'unsupportedNode']) {
-            resolved[index] = placeholder(type, item);
-            if (search(cursor + 1)) return true;
+
+    for (const child of children) {
+        const candidates = isRequest(child)
+            ? ['unsupportedInlineNode', 'unsupportedNode'].map((type) => placeholder(type, child))
+            : [child];
+        const nextStates = new Map<ContentMatch, CanonicalNode[]>();
+        for (const [match, placed] of states) {
+            for (const candidate of candidates) {
+                if (++attempts > limits.maxPlacementAttempts) {
+                    throw new TransportIntegrityError('placementAttemptsExceeded', '$');
+                }
+                const candidateType = schema.nodes[candidate.type];
+                const next = candidateType ? match.matchType(candidateType) : null;
+                if (!next || nextStates.has(next) || !accepts(schema, candidate)) continue;
+                nextStates.set(next, [...placed, candidate]);
+            }
         }
-        return false;
-    };
-    return search(0) ? resolved : null;
+        if (!nextStates.size) return null;
+        states = nextStates;
+    }
+
+    for (const [match, placed] of states) {
+        if (match.validEnd && accepts(schema, { ...parent, content: placed })) return placed;
+    }
+    return null;
 }
 
 export function adaptCanonicalForEditor(
@@ -333,6 +355,29 @@ function transportNode(name: string, inline: boolean) {
 export const UnsupportedNode = transportNode('unsupportedNode', false);
 export const UnsupportedInlineNode = transportNode('unsupportedInlineNode', true);
 
+function privateSliceContent(slice: unknown): { containsPrivate: boolean; containsOpaque: boolean } {
+    let containsPrivate = false;
+    let containsOpaque = false;
+    const walk = (value: unknown): void => {
+        if (!value || typeof value !== 'object') return;
+        const node = value as { type?: unknown; content?: unknown };
+        if (typeof node.type === 'string') {
+            if (RESERVED_TYPES.has(node.type)) {
+                containsPrivate = true;
+                containsOpaque = true;
+            } else if (node.type === 'vizyBlock') {
+                containsPrivate = true;
+            }
+        }
+        if (Array.isArray(node.content)) node.content.forEach(walk);
+    };
+    if (typeof slice === 'object' && slice) {
+        const content = (slice as { content?: unknown }).content;
+        if (Array.isArray(content)) content.forEach(walk);
+    }
+    return { containsPrivate, containsOpaque };
+}
+
 function assertInsertableBlockTypes(slice: OpaqueSliceJson, insertable: ReadonlySet<string>): void {
     const walk = (node: CanonicalNode, path: string): void => {
         if (node.type === 'vizyBlock') {
@@ -359,14 +404,28 @@ export const OpaqueClipboard = Extension.create<{
         const beforeCopy = this.options.beforeCopy;
         const copySelection = (view: EditorView, event: ClipboardEvent, cut: boolean): boolean => {
             const clipboard = event.clipboardData;
-            let encoded = JSON.stringify(view.state.selection.content().toJSON());
-            if (
-                !clipboard
-                || (!encoded.includes('"unsupported') && !encoded.includes('"blockUid"'))
-            ) return false;
+            let slice = view.state.selection.content().toJSON();
+            let inspection = privateSliceContent(slice);
+            if (!clipboard || !inspection.containsPrivate) return false;
+            const rejectOpaqueClipboard = (): boolean => {
+                event.preventDefault();
+                view.dom.dispatchEvent(new CustomEvent('vizy-clipboard-rejected', {
+                    bubbles: true,
+                    detail: { code: 'opaqueClipboardUnsupported', operation: cut ? 'cut' : 'copy' },
+                }));
+                return true;
+            };
+            // Unknown nodes are grandfathered by occurrence, not generally
+            // permitted by the destination schema. Copying or cutting one would
+            // create a clipboard payload that cannot be inserted safely.
+            if (inspection.containsOpaque) return rejectOpaqueClipboard();
             try {
                 beforeCopy?.();
-                encoded = JSON.stringify(view.state.selection.content().toJSON());
+                slice = view.state.selection.content().toJSON();
+                inspection = privateSliceContent(slice);
+                if (!inspection.containsPrivate) return false;
+                if (inspection.containsOpaque) return rejectOpaqueClipboard();
+                const encoded = JSON.stringify(slice);
                 // A cut must remain pasteable before its source is removed.
                 if (cut) {
                     const slice = validateOpaqueSlice(JSON.parse(encoded));
@@ -378,18 +437,28 @@ export const OpaqueClipboard = Extension.create<{
                 event.preventDefault();
                 view.dom.dispatchEvent(new CustomEvent('vizy-clipboard-rejected', {
                     bubbles: true,
-                    detail: { code: error instanceof TransportIntegrityError ? error.code : 'fieldCaptureFailed' },
+                    detail: {
+                        code: error instanceof TransportIntegrityError ? error.code : 'fieldCaptureFailed',
+                        operation: cut ? 'cut' : 'copy',
+                    },
                 }));
                 return true;
             }
-            const hasOpaque = encoded.includes('"unsupported');
-            const label = hasOpaque ? 'Unsupported content' : 'Vizy content';
+            const encoded = JSON.stringify(slice);
+            const label = 'Vizy content';
             clipboard.setData(OPAQUE_CLIPBOARD_MIME, encoded);
             clipboard.setData('text/plain', label);
             clipboard.setData('text/html', `<span class="vizy-private-clipboard">${label}</span>`);
             event.preventDefault();
             if (cut && view.editable) {
+                const before = view.state.doc;
                 view.dispatch(view.state.tr.deleteSelection().setMeta('uiEvent', 'cut').scrollIntoView());
+                if (view.state.doc.eq(before)) {
+                    view.dom.dispatchEvent(new CustomEvent('vizy-clipboard-rejected', {
+                        bubbles: true,
+                        detail: { code: 'policyRejected', operation: 'cut' },
+                    }));
+                }
             }
             return true;
         };
@@ -403,11 +472,19 @@ export const OpaqueClipboard = Extension.create<{
                         if (!encoded) return false;
                         event.preventDefault();
                         try {
-                            const validated = validateOpaqueSlice(JSON.parse(encoded));
+                            const parsed = JSON.parse(encoded);
+                            if (privateSliceContent(parsed).containsOpaque) {
+                                throw new TransportIntegrityError('opaqueClipboardUnsupported', '$clipboard');
+                            }
+                            const validated = validateOpaqueSlice(parsed);
                             assertInsertableBlockTypes(validated, insertableBlockTypes);
                             const json = regenerateAuthoredUids(validated, undefined, schemaIdentity);
                             const slice = Slice.fromJSON(view.state.schema, json);
+                            const before = view.state.doc;
                             view.dispatch(view.state.tr.replaceSelection(slice).scrollIntoView());
+                            if (view.state.doc.eq(before)) {
+                                throw new TransportIntegrityError('policyRejected', '$clipboard');
+                            }
                         } catch (error) {
                             // A malformed private payload is consumed without mutation.
                             view.dom.dispatchEvent(new CustomEvent('vizy-clipboard-rejected', {
@@ -416,6 +493,7 @@ export const OpaqueClipboard = Extension.create<{
                                     code: error instanceof TransportIntegrityError
                                         ? error.code
                                         : 'invalidPrivateSlice',
+                                    operation: 'paste',
                                 },
                             }));
                         }

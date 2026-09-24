@@ -256,14 +256,14 @@ describe('root block cardinality and allowances', () => {
         };
         const hosts = new FieldHostRegistry();
         const ui = new BlockUiStateRegistry();
-        const make = (content: CanonicalNode): Editor => {
+        const make = (content: CanonicalNode, effectiveManifest = policyManifest): Editor => {
             let insertion!: ReturnType<typeof createInsertionRegistry>;
             let editor!: Editor;
             editor = new Editor({
                 element: document.createElement('div'),
-                extensions: createEditorExtensions(policyManifest, () => nodeViewServices({
+                extensions: createEditorExtensions(effectiveManifest, () => nodeViewServices({
                     editor,
-                    manifest: policyManifest,
+                    manifest: effectiveManifest,
                     ui,
                     hosts,
                     insertion,
@@ -273,16 +273,17 @@ describe('root block cardinality and allowances', () => {
             insertion = createInsertionRegistry(
                 {
                     editor,
-                    manifest: policyManifest,
+                    manifest: effectiveManifest,
                     documentRevision: () => 0,
                     createUid: () => 'uid',
                 },
                 'test',
-                policyManifest.insertionItems ?? [],
+                effectiveManifest.insertionItems ?? [],
             );
             return editor;
         };
         // Root maxBlocks / allowlist — Content Area nesting retired.
+        const maxManifest = { ...policyManifest, field: { ...policyManifest.field, maxBlocks: 2 } };
         const overMax = make({
             type: 'doc',
             content: [
@@ -290,9 +291,32 @@ describe('root block cardinality and allowances', () => {
                 { type: 'vizyBlock', attrs: { blockUid: 'c2', blockTypeUid: 'parent', enabled: true, fieldSlots: {} }, content: [] },
                 { type: 'vizyBlock', attrs: { blockUid: 'c3', blockTypeUid: 'parent', enabled: true, fieldSlots: {} }, content: [] },
             ],
-        });
+        }, maxManifest);
         editors.push(overMax);
-        expect(isPolicyValid(overMax.state.doc, { ...policyManifest, field: { ...policyManifest.field, maxBlocks: 2 } })).toBe(false);
+        expect(isPolicyValid(overMax.state.doc, maxManifest)).toBe(false);
+        const extra = overMax.schema.nodeFromJSON({
+            type: 'vizyBlock',
+            attrs: { blockUid: 'c4', blockTypeUid: 'parent', enabled: true, fieldSlots: {} },
+        });
+        overMax.view.dispatch(overMax.state.tr.insert(overMax.state.doc.content.size, extra));
+        expect(overMax.state.doc.childCount).toBe(3);
+        const last = overMax.state.doc.lastChild!;
+        overMax.view.dispatch(overMax.state.tr.delete(
+            overMax.state.doc.content.size - last.nodeSize,
+            overMax.state.doc.content.size,
+        ));
+        expect(overMax.state.doc.childCount).toBe(2);
+
+        const minManifest = { ...policyManifest, field: { ...policyManifest.field, minBlocks: 2 } };
+        const underMin = make({
+            type: 'doc',
+            content: [
+                { type: 'vizyBlock', attrs: { blockUid: 'only', blockTypeUid: 'parent', enabled: true, fieldSlots: {} }, content: [] },
+            ],
+        }, minManifest);
+        editors.push(underMin);
+        underMin.view.dispatch(underMin.state.tr.delete(0, underMin.state.doc.firstChild!.nodeSize));
+        expect(underMin.state.doc.childCount).toBe(1);
 
         const disallowed = make({
             type: 'doc',

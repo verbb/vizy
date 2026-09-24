@@ -35,10 +35,10 @@ function findBlockByUid(doc: ProseMirrorNode, uid: string): { node: ProseMirrorN
  * Grip-drag session snapshot. WebKit can fire `dragend` (which nulls
  * `view.dragging`) before `drop`; keep enough state to still commit + settle.
  */
-let armedDragged: DraggedVizyBlock | null = null;
+let armedDragged: { sourceView: EditorView; dragged: DraggedVizyBlock } | null = null;
 
-export function armDraggedVizyBlock(dragged: DraggedVizyBlock): void {
-    armedDragged = dragged;
+export function armDraggedVizyBlock(sourceView: EditorView, dragged: DraggedVizyBlock): void {
+    armedDragged = { sourceView, dragged };
 }
 
 export function clearArmedDraggedVizyBlock(): void {
@@ -46,13 +46,14 @@ export function clearArmedDraggedVizyBlock(): void {
 }
 
 function resolveArmedDragged(view: EditorView): DraggedVizyBlock | null {
-    if (!armedDragged) return null;
+    if (!armedDragged || armedDragged.sourceView !== view) return null;
+    const dragged = armedDragged.dragged;
     // Refresh `from`/`to` from the live doc — positions can shift if the
     // document changed between dragstart and drop (rare; still safer).
-    const found = findBlockByUid(view.state.doc, armedDragged.uid);
+    const found = findBlockByUid(view.state.doc, dragged.uid);
     if (!found) return null;
     return {
-        ...armedDragged,
+        ...dragged,
         from: found.from,
         to: found.from + found.node.nodeSize,
         node: found.node,

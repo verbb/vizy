@@ -38,7 +38,7 @@ export interface InsertionContext {
     readonly from: number;
     readonly to: number;
     readonly selectionKind: 'text' | 'node' | 'gap';
-    readonly container: { readonly kind: 'root' };
+    readonly container: { readonly kind: 'root' | 'nested' };
     readonly contentType: 'rich' | 'blocks';
     readonly directBlockCount: number;
     readonly minBlocks: number | null;
@@ -87,6 +87,8 @@ export interface InsertionRuntime {
         block: Record<string, unknown>;
         destination: { kind: 'root' };
     }) => Promise<void>;
+    /** Forget a prefetched response when its Block will not be inserted. */
+    readonly discardPrefetchedBlock?: (blockUid: string) => void;
     /** Matrix-style grow-in after a successful Block insert. */
     readonly animateBlockInsert?: (blockUid: string) => void;
 }

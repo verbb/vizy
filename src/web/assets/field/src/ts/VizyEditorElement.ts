@@ -5,6 +5,7 @@ import { eagerFieldLayoutBlockUids } from './field-layout-mount-policy';
 import { getFieldAdapter } from './transport/adapters';
 import {
     adaptCanonicalForEditor,
+    OPAQUE_CLIPBOARD_MIME,
     restoreCanonicalFromEditor,
 } from './transport/opaque';
 import { createEditorExtensions } from './editor-schema';
@@ -54,6 +55,8 @@ import {
 import { playBlockInsertAnimation } from './blocks/block-insert-animation';
 import { duplicateBlock } from './blocks/actions';
 import { paintFieldBootFailure } from './field-boot-failure';
+import { syncBlockStructuralActions, transactionChangesBlockStructure } from './extensions';
+import { BLOCK_INSERT_KINDS } from './insertion/kinds';
 
 type FinalizationStatus = FinalizationResult['finalizationStatus'];
 export interface ServerDocumentResult extends FinalizationResult {
@@ -126,6 +129,8 @@ export class VizyEditorElement extends HTMLElement {
     #finalizationVersion = 0;
     #uploadNotice: HTMLDivElement | null = null;
     #unsupportedNotice: HTMLDivElement | null = null;
+    #clipboardNotice: HTMLDivElement | null = null;
+    #captureNotice: HTMLDivElement | null = null;
     #retryingUploads = false;
     #showUploadSuccess = false;
     #generation = 0;
@@ -135,6 +140,29 @@ export class VizyEditorElement extends HTMLElement {
     #disconnectTimer: number | null = null;
     /** True while an insertion palette choice is executing — skips gutter/summary work. */
     #insertionSuspended = false;
+    /** Retain the last caret while keyboard focus moves from ProseMirror into its toolbar. */
+    #toolbarInsertionWarm = false;
+
+    #usesRetainedToolbarSelection(): boolean {
+        if (!this.#editor) return false;
+        if (this.#editor.view.hasFocus()) return true;
+        return this.#toolbarInsertionWarm && Boolean(this.#toolbar?.matches(':focus-within'));
+    }
+
+    /** Keep toolbar insertion affordances aligned with live maxBlocks policy. */
+    #syncToolbarBlockAvailability(): void {
+        if (!this.#toolbar || !this.#editor || !this.#bootstrap) return;
+        if (!this.#insertion) {
+            this.#toolbar.canAddBlock = this.#bootstrap.manifest.field.insertableBlockTypeUids.length > 0;
+            return;
+        }
+        const position = this.#usesRetainedToolbarSelection()
+            ? this.#editor.state.selection.from
+            : 0;
+        const context = this.#insertion.buildContext('inline', position);
+        this.#toolbar.canAddBlock = context !== null
+            && this.#insertion.query({ context, kinds: BLOCK_INSERT_KINDS, limit: 1 }).length > 0;
+    }
 
     set bootstrap(value: EditorBootstrap) {
         if (this.#editor) throw new Error('editorAlreadyBootstrapped');
@@ -319,7 +347,10 @@ export class VizyEditorElement extends HTMLElement {
         this.#finalizationVersion++;
         this.#uploadNotice = null;
         this.#unsupportedNotice = null;
+        this.#clipboardNotice = null;
+        this.#captureNotice = null;
         this.#retryingUploads = false;
+        this.#toolbarInsertionWarm = false;
         for (const dispose of this.#disposals.splice(0)) dispose();
         this.#hosts.destroy();
         this.#ui.clear();
@@ -603,8 +634,58 @@ export class VizyEditorElement extends HTMLElement {
             'Vizy has preserved it and will keep it unchanged when you save.',
         ) ?? 'Vizy has preserved it and will keep it unchanged when you save.';
         this.#unsupportedNotice.append(unsupportedTitle, unsupportedBody);
-        shell.append(this.#uploadNotice, this.#unsupportedNotice, this.#mount);
+        this.#clipboardNotice = document.createElement('div');
+        this.#clipboardNotice.className = 'vizy-clipboard-status';
+        this.#clipboardNotice.dataset.vizyClipboardStatus = '';
+        this.#clipboardNotice.setAttribute('role', 'alert');
+        this.#clipboardNotice.hidden = true;
+        this.#captureNotice = document.createElement('div');
+        this.#captureNotice.className = 'vizy-capture-status';
+        this.#captureNotice.dataset.vizyCaptureStatus = '';
+        this.#captureNotice.setAttribute('role', 'alert');
+        this.#captureNotice.hidden = true;
+        shell.append(this.#uploadNotice, this.#unsupportedNotice, this.#clipboardNotice, this.#captureNotice, this.#mount);
         this.prepend(shell);
+        const clearClipboardNotice = () => {
+            if (!this.#clipboardNotice) return;
+            this.#clipboardNotice.hidden = true;
+            this.#clipboardNotice.textContent = '';
+        };
+        const onClipboardRejected = ((event: CustomEvent<{ code?: string; operation?: string }>) => {
+            if (!this.#clipboardNotice) return;
+            event.stopPropagation();
+            const code = event.detail?.code ?? 'invalidPrivateSlice';
+            const operation = event.detail?.operation ?? 'paste';
+            const messages: Record<string, string> = {
+                documentBytesExceeded: 'This Vizy content is too large to copy or paste safely. Split it into a smaller selection and try again.',
+                nodeCountExceeded: 'This Vizy content contains too many nodes to copy or paste safely. Split it into a smaller selection and try again.',
+                placeholderCountExceeded: 'This selection contains too many preserved items to copy or paste safely. Split it into a smaller selection and try again.',
+                objectWidthExceeded: 'This Vizy content is too large to copy or paste safely. Split it into a smaller selection and try again.',
+                placementAttemptsExceeded: 'This selection is too complex to copy or paste safely. Split it into a smaller selection and try again.',
+                blockTypeNotInsertable: 'This content contains a Block type that is not available in this field.',
+                fieldCaptureFailed: 'Vizy could not read every Block field, so the content was not copied or cut.',
+                opaqueClipboardUnsupported: 'This preserved content cannot be copied or cut because this editor does not understand its original type. It will remain unchanged when you save.',
+                policyRejected: 'This content cannot be inserted or removed because it would break this field’s Block limits.',
+                invalidPrivateSlice: 'Vizy could not paste this content because its private clipboard data is invalid or incompatible.',
+            };
+            const fallback = operation === 'paste'
+                ? 'Vizy could not paste this content.'
+                : `Vizy could not ${operation} this content.`;
+            this.#clipboardNotice.textContent = window.Craft?.t?.('vizy', messages[code] ?? fallback)
+                ?? messages[code]
+                ?? fallback;
+            this.#clipboardNotice.hidden = false;
+        }) as EventListener;
+        this.addEventListener('copy', clearClipboardNotice, true);
+        this.addEventListener('cut', clearClipboardNotice, true);
+        this.addEventListener('paste', clearClipboardNotice, true);
+        this.addEventListener('vizy-clipboard-rejected', onClipboardRejected);
+        this.#disposals.push(() => {
+            this.removeEventListener('copy', clearClipboardNotice, true);
+            this.removeEventListener('cut', clearClipboardNotice, true);
+            this.removeEventListener('paste', clearClipboardNotice, true);
+            this.removeEventListener('vizy-clipboard-rejected', onClipboardRejected);
+        });
         this.#acceptFinalization(this.#bootstrap.finalization ?? { finalizationStatus: 'complete' });
         let editor!: Editor;
         let insertion!: InsertionRegistry;
@@ -634,6 +715,7 @@ export class VizyEditorElement extends HTMLElement {
                         if (!this.#loader) return;
                         await this.#loader.prefetchNewBlocks(items);
                     },
+                    discardPrefetchedBlocks: (blockUids) => this.#loader?.discardPrefetchedBlocks(blockUids),
                     animateInsert: playBlockInsertAnimation,
                 });
             },
@@ -645,6 +727,7 @@ export class VizyEditorElement extends HTMLElement {
             },
             resumeInsertionSideEffects: () => {
                 this.#insertionSuspended = false;
+                this.#toolbarInsertionWarm = false;
                 this.#insertionOverlay?.sync();
                 this.#refreshSummaries();
             },
@@ -659,6 +742,10 @@ export class VizyEditorElement extends HTMLElement {
                 handleDOMEvents: {
                     paste(view, event) {
                         if (!manifest.field.pasteAsPlainText || !event.clipboardData) return false;
+                        // Vizy private slices carry the only lossless copy of Blocks
+                        // and preserved nodes. Let OpaqueClipboard consume those even
+                        // when ordinary external paste is configured as plain text.
+                        if (event.clipboardData.getData(OPAQUE_CLIPBOARD_MIME)) return false;
                         let text = event.clipboardData.getData('text/plain');
                         const html = event.clipboardData.getData('text/html');
                         if (!text && !html) return false;
@@ -689,6 +776,10 @@ export class VizyEditorElement extends HTMLElement {
                 this.#updateBlockRevisions(transaction.before, transaction.doc);
                 this.#reconcileLiveUids();
                 this.#syncUnsupportedNotice();
+                this.#syncToolbarBlockAvailability();
+                if (transactionChangesBlockStructure(transaction)) {
+                    syncBlockStructuralActions(editor, manifest, insertion);
+                }
             },
         });
         this.#editor = editor;
@@ -740,6 +831,7 @@ export class VizyEditorElement extends HTMLElement {
                         documentRevision: this.#revision,
                     });
                 },
+                discardPrefetchedBlock: (blockUid) => this.#loader?.discardPrefetchedBlocks([blockUid]),
                 animateBlockInsert: (blockUid) => playBlockInsertAnimation(blockUid),
             },
             editorId,
@@ -759,7 +851,11 @@ export class VizyEditorElement extends HTMLElement {
             const { action, invoker, hadEditorFocus } = event.detail ?? {};
             if (!invoker || !this.#insertionOverlay) return;
             if (action === 'insert-block') {
-                this.#insertionOverlay.openToolbarInsert(invoker, { hadEditorFocus: !!hadEditorFocus });
+                const warm = Boolean(hadEditorFocus) || this.#usesRetainedToolbarSelection();
+                this.#insertionOverlay.openToolbarInsert(invoker, {
+                    hadEditorFocus: warm,
+                    useCurrentSelection: warm,
+                });
             }
         }) as EventListener;
         this.#toolbar?.addEventListener('vizy-toolbar-ui', onToolbarUi);
@@ -767,7 +863,12 @@ export class VizyEditorElement extends HTMLElement {
         editor.on('selectionUpdate', () => {
             if (this.#insertionSuspended) return;
             this.#insertionOverlay?.sync();
+            this.#syncToolbarBlockAvailability();
             this.#syncBubbles();
+        });
+        editor.on('focus', () => {
+            this.#toolbarInsertionWarm = true;
+            this.#syncToolbarBlockAvailability();
         });
         editor.on('blur', () => {
             // Chromium often blurs the CE on mouseup when selecting a non-editable
@@ -786,6 +887,10 @@ export class VizyEditorElement extends HTMLElement {
                 // chip opened at top-center instead of the pointer.
                 const body = resolveEditorBody(this.#editor.view.dom);
                 if (body?.hasAttribute(EDITOR_FIELD_HAS_FOCUS_ATTR)) return;
+                if (!this.#toolbar?.matches(':focus-within')) {
+                    this.#toolbarInsertionWarm = false;
+                }
+                this.#syncToolbarBlockAvailability();
 
                 // Formatting strip was omitted here — click-off to Title kept it
                 // visible while selectionUpdate (in-editor) correctly hid it.
@@ -832,6 +937,7 @@ export class VizyEditorElement extends HTMLElement {
         // Preview URLs are session-only — hydrate before NodeViews paint.
         hydrateImagePreviews(this.#bootstrap.imagePreviews);
         this.#setAcceptedCanonical(this.#adaptForEditor(this.#bootstrap.document, manifest));
+        this.#syncToolbarBlockAvailability();
         this.#syncUnsupportedNotice();
         this.#adoptInitialFieldLayouts();
         // Compare like with like: the baseline is the projection of what was just
@@ -1292,17 +1398,34 @@ export class VizyEditorElement extends HTMLElement {
         const form = this.closest('form');
         if (!form || !this.#input) return;
         const fieldName = this.#input.name;
-        const submit = () => {
-            const metadata = this.#prepareSubmission('save', this.flush('submit'));
-            this.#writeNativeMetadata(form, metadata);
+        const submit = (event: SubmitEvent) => {
+            try {
+                const metadata = this.#prepareSubmission('save', this.flush('submit'));
+                this.#writeNativeMetadata(form, metadata);
+                this.#clearCaptureFailure();
+            } catch (error) {
+                // Exceptions from DOM listeners do not cancel submission. Explicitly
+                // stop the form so stale hidden JSON can never overwrite live fields.
+                event.preventDefault();
+                event.stopImmediatePropagation();
+                this.#reportCaptureFailure(error);
+            }
         };
         const formdata = (event: FormDataEvent) => {
-            const canonical = this.flush('serialize');
             for (const key of [...event.formData.keys()]) {
                 if (key.startsWith('vizyHost[') || key.includes('[vizyHost]')) event.formData.delete(key);
             }
-            event.formData.delete(fieldName);
-            event.formData.append(fieldName, canonical);
+            try {
+                const canonical = this.flush('serialize');
+                event.formData.delete(fieldName);
+                event.formData.append(fieldName, canonical);
+                this.#clearCaptureFailure();
+            } catch (error) {
+                // `formdata` is not cancellable. Removing the field is safer than
+                // posting its stale hidden value; normal submit was already blocked.
+                event.formData.delete(fieldName);
+                this.#reportCaptureFailure(error);
+            }
         };
         form.addEventListener('submit', submit, true);
         form.addEventListener('formdata', formdata);
@@ -1310,7 +1433,14 @@ export class VizyEditorElement extends HTMLElement {
         this.#disposals.push(() => form.removeEventListener('formdata', formdata));
 
         const serialize = (event: { data: { serialized: string } }) => {
-            const canonical = this.flush('autosave');
+            let canonical: string;
+            try {
+                canonical = this.flush('autosave');
+                this.#clearCaptureFailure();
+            } catch (error) {
+                this.#reportCaptureFailure(error);
+                throw error;
+            }
             const metadata = this.#prepareSubmission('autosave', canonical);
             // Must stay on encodeURIComponent (%20), not URLSearchParams (`+`): Craft's
             // ElementEditor round-trips this string with decodeURIComponent, which leaves
@@ -1344,6 +1474,21 @@ export class VizyEditorElement extends HTMLElement {
         };
         document.addEventListener('vizy:server-response', response);
         this.#disposals.push(() => document.removeEventListener('vizy:server-response', response));
+    }
+
+    #reportCaptureFailure(error: unknown): void {
+        if (!this.#captureNotice) return;
+        const message = 'Vizy could not read every Block field, so this entry was not saved. Check the Block errors and try again.';
+        this.#captureNotice.textContent = window.Craft?.t?.('vizy', message) ?? message;
+        this.#captureNotice.hidden = false;
+        this.#captureNotice.focus({ preventScroll: true });
+        console.error('[Vizy] Submission cancelled because Block fields could not be captured', error);
+    }
+
+    #clearCaptureFailure(): void {
+        if (!this.#captureNotice) return;
+        this.#captureNotice.hidden = true;
+        this.#captureNotice.textContent = '';
     }
 
     /**

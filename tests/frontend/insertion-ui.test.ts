@@ -490,6 +490,49 @@ describe('empty containers and inline insertion UI', () => {
         expect(anchors).toStrictEqual([]);
     });
 
+    it('isolates equal-sized inline-anchor caches between editors', () => {
+        const base = testManifest();
+        const blockManifest = testManifest({
+            field: {
+                ...base.field,
+                insertableBlockTypeUids: ['type-a'],
+                allowedBlockTypeUids: ['type-a'],
+            },
+            blockTypes: {
+                'type-a': { uid: 'type-a', name: 'Alpha', handle: 'alpha' },
+            },
+        });
+        const content = {
+            type: 'doc',
+            attrs: { schemaVersion: 2 },
+            content: [{ type: 'paragraph', content: [{ type: 'text', text: 'Same size' }] }],
+        };
+        const first = createHarness(blockManifest);
+        const second = createHarness();
+        first.editor.commands.setContent(content);
+        second.editor.commands.setContent(content);
+
+        const firstAnchors = findInlineAnchors(nodeViewServices({
+            editor: first.editor,
+            manifest: blockManifest,
+            ui: new BlockUiStateRegistry(),
+            hosts: new FieldHostRegistry(),
+            insertion: first.insertion,
+        }));
+        const secondAnchors = findInlineAnchors(nodeViewServices({
+            editor: second.editor,
+            manifest: testManifest(),
+            ui: new BlockUiStateRegistry(),
+            hosts: new FieldHostRegistry(),
+            insertion: second.insertion,
+        }));
+
+        expect(firstAnchors.length).toBeGreaterThan(0);
+        expect(secondAnchors).toStrictEqual([]);
+        first.editor.destroy();
+        second.editor.destroy();
+    });
+
     it('hides gutter anchors for Rich Text Only even when Block Types stay configured', () => {
         // richTextOnly zeros insertableBlockTypeUids but keeps allowedBlockTypeUids
         // for lossless mode switching — gutter must follow insertable (toolbar does).

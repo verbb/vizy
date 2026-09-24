@@ -10,7 +10,7 @@ export function directBlocks(node: ProseMirrorNode): ProseMirrorNode[] {
 }
 
 export type ResolvedContainer = {
-    kind: 'root';
+    kind: 'root' | 'nested';
     node: ProseMirrorNode;
     contentType: 'rich' | 'blocks';
     allowedBlockTypeUids: string[];
@@ -21,16 +21,20 @@ export type ResolvedContainer = {
 /** Root field policy only — Hosted nesting has its own editor/manifest. */
 export function resolveContainer(
     doc: ProseMirrorNode,
-    _pos: number,
+    pos: number,
     manifest: EditorManifest,
 ): ResolvedContainer {
+    const $pos = doc.resolve(Math.max(0, Math.min(pos, doc.content.size)));
+    const containerDepth = $pos.parent.isTextblock ? Math.max(0, $pos.depth - 1) : $pos.depth;
+    const node = $pos.node(containerDepth);
+    const root = node === doc;
     return {
-        kind: 'root',
-        node: doc,
-        contentType: manifest.field.rootContentType,
+        kind: root ? 'root' : 'nested',
+        node,
+        contentType: root ? manifest.field.rootContentType : 'rich',
         allowedBlockTypeUids: manifest.field.allowedBlockTypeUids,
-        minBlocks: manifest.field.minBlocks,
-        maxBlocks: manifest.field.maxBlocks,
+        minBlocks: root ? manifest.field.minBlocks : null,
+        maxBlocks: root ? manifest.field.maxBlocks : null,
     };
 }
 

@@ -95,11 +95,14 @@ interface Boundary {
     readonly measureSide: 'top' | 'bottom';
 }
 
-let inlineAnchorCache: { docSize: number; anchors: InsertionAnchor[] } | null = null;
+const inlineAnchorCache = new WeakMap<
+    NodeViewServices['editor'],
+    Map<InsertionSurface, { doc: import('@tiptap/pm/model').Node; anchors: InsertionAnchor[] }>
+>();
 
-/** Drop cached anchors when the document changes or a sync pass begins. */
-export function invalidateInlineAnchorCache(): void {
-    inlineAnchorCache = null;
+/** Drop one editor's cached anchors when a sync pass begins. */
+export function invalidateInlineAnchorCache(editor: NodeViewServices['editor']): void {
+    inlineAnchorCache.delete(editor);
 }
 
 export function findInlineAnchors(
@@ -107,9 +110,10 @@ export function findInlineAnchors(
     surface: InsertionSurface = 'inline',
 ): InsertionAnchor[] {
     const { editor } = services;
-    const docSize = editor.state.doc.content.size;
-    if (inlineAnchorCache?.docSize === docSize) {
-        return inlineAnchorCache.anchors;
+    const doc = editor.state.doc;
+    const cached = inlineAnchorCache.get(editor)?.get(surface);
+    if (cached?.doc === doc) {
+        return cached.anchors;
     }
     const anchors: InsertionAnchor[] = [];
     const visitContainer = (
@@ -154,6 +158,8 @@ export function findInlineAnchors(
         visitContainer(editor.state.doc, 0, services.manifest.field.rootContentType);
     }
 
-    inlineAnchorCache = { docSize, anchors };
+    const bySurface = inlineAnchorCache.get(editor) ?? new Map();
+    bySurface.set(surface, { doc, anchors });
+    inlineAnchorCache.set(editor, bySurface);
     return anchors;
 }
