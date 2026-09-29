@@ -1,21 +1,22 @@
 <p align="center"><img src="https://assets.verbb.io/plugins/vizy/vizy-icon.svg" width="100" height="100" alt="Vizy icon"></p>
 <h1 align="center">Vizy for Craft CMS</h1>
 
-Vizy is a Craft CMS plugin with a content editor field, combining everything you already know about [WYSIWYG](https://plugins.craftcms.com/redactor), the power of Matrix blocks and a sprinkle of [Neo](https://plugins.craftcms.com/neo) into an all-new editor experience.
+Vizy is a Craft CMS plugin that brings rich text and structured Craft content into one visual editor. Authors can write naturally, add purpose-built blocks exactly where they belong, and leave developers in control of the rendered HTML.
+
+Combine familiar formatting with structured Vizy blocks in the same editing surface. Each block can use existing Craft fields, UI elements and tabs, then render through a focused project-owned Twig template.
 
 ## Features
-- A fully-featured WYSIWYG field.
-- All content is stored as JSON blocks. No HTML-wrangling required.
-- 100% control over the output from a Vizy field.
-- Create blocks inline with content. Think Matrix blocks in between your formatted text.
-- Infinitely nest Vizy fields for some _crazy_ business.
-- Use existing fields for Vizy blocks. Even use UI elements in blocks.
-- Tabs support for blocks, to keep your UI lean.
-- Modularise block templates, by linking a Twig partial to blocks.
-- Performance focused. No more n+1 query issues - a single database call to fetch your content.
-- Query field nodes, just like you're used to with Matrix fields.
-- Configure buttons and editor options with field settings or config files.
-- GraphQL Support.
+
+- Give authors the rich-text controls they expect, including headings, lists, links and images.
+- Place project-specific components between paragraphs without switching to a separate page builder.
+- Tailor each field to the tools its content actually needs.
+- Reuse existing fields and organise larger blocks with tabs and UI elements.
+- Move, collapse, enable and disable blocks while keeping the document together.
+- Fetch the field's JSON in a single database call instead of loading every block as an element.
+- Filter, sort, limit and search nodes much like querying Matrix blocks.
+- Render each block through its own Twig partial.
+- Use Vizy fields inside blocks when the content model genuinely calls for another level.
+- Query generated HTML or raw nodes for headless delivery.
 
 ## Documentation
 Visit the [Vizy Plugin page](https://verbb.io/craft-plugins/vizy) for all documentation, guides, pricing and developer resources.
