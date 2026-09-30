@@ -43,10 +43,10 @@
         "@tiptap/pm": "3.30.5",
         "@tiptap/starter-kit": "3.30.5",
         "@tiptap/suggestion": "3.30.5",
-        "@verbb/plugin-kit-core": "^2.0.16",
-        "@verbb/plugin-kit-icons": "^2.0.16",
-        "@verbb/plugin-kit-tiptap-core": "^2.0.16",
-        "@verbb/plugin-kit-web": "^2.0.16",
+        "@verbb/plugin-kit-core": "^2.0.20",
+        "@verbb/plugin-kit-icons": "^2.0.20",
+        "@verbb/plugin-kit-tiptap-core": "^2.0.20",
+        "@verbb/plugin-kit-web": "^2.0.20",
         "lit": "3.3.3"
     }
 }

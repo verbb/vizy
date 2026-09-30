@@ -73,16 +73,18 @@ test('field settings expose one Block picker display policy and one shared searc
     await expect(availability).toBeHidden();
 });
 
-test('Editor Configs expose one shared icon override per control', async ({ page }) => {
+test('Editor Configs expose one visual shared icon override per configured control', async ({ page }) => {
     await login(page);
     await page.goto('/index.php?p=admin/vizy/settings/editor-configs/standard');
 
-    await expect(page.getByRole('heading', { name: 'Toolbar icons' })).toBeVisible();
-    const control = page.locator('select[data-icon-control]');
-    await expect(control).toBeVisible();
-    await expect(control.locator('option[value="bold"]')).toHaveCount(1);
-    await expect(control.locator('option[value="separator"]')).toHaveCount(0);
-    await control.selectOption('bold');
+    const icons = page.locator('[data-icon-details]');
+    await expect(icons.locator('summary')).toContainText('0 custom icons');
+    await icons.locator('summary').click();
+    const bold = page.locator('[data-icon-control="bold"]');
+    await expect(bold).toBeVisible();
+    await expect(page.locator('[data-icon-control="separator"]')).toHaveCount(0);
+    await bold.click();
+    await expect(bold).toHaveAttribute('aria-pressed', 'true');
 
     await expect(page.locator('[data-icon-picker] pk-image-browser')).toBeVisible();
     await expect(page.locator('input[name="iconsJson"]')).toHaveValue('{}');

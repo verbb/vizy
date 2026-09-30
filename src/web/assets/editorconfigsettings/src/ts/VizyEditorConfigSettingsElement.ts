@@ -217,13 +217,16 @@ class VizyEditorConfigSettingsElement extends HTMLElement {
     #mode: 'visual' | 'advanced' = 'visual';
 
     /**
-     * Whether the Content schema section is unfolded.
+     * Whether the Content Schema section is unfolded.
      *
      * Kept here rather than left to the `<details>` element, because ticking a box in it
      * re-renders the whole panel and would otherwise slam the section shut under the
      * author's hand — every tick closing the thing being edited.
      */
     #schemaOpen = false;
+
+    /** Kept across renders for the same reason as `#schemaOpen`. */
+    #iconsOpen = false;
 
     /**
      * Which placed item is selected, by builder and position.
@@ -1135,7 +1138,7 @@ class VizyEditorConfigSettingsElement extends HTMLElement {
     /**
      * What the editor may contain, folded away.
      *
-     * "Content schema" rather than "Capabilities", because that is literally what these
+     * "Content Schema" rather than "Capabilities", because that is literally what these
      * checkboxes are: the nodes and marks the ProseMirror schema is built from. The name is
      * technical on purpose — an Editor Config is a developer's screen, reached through Vizy's
      * settings rather than a field's, and the vaguer names were worse for the audience that
@@ -1160,10 +1163,10 @@ class VizyEditorConfigSettingsElement extends HTMLElement {
         ));
 
         return `
-            <details class="vizy-editor-config-section vizy-editor-config-schema" data-schema-details ${this.#schemaOpen ? 'open' : ''}>
+            <details class="vizy-editor-config-section vizy-editor-config-disclosure" data-schema-details ${this.#schemaOpen ? 'open' : ''}>
                 <summary>
-                    <span class="vizy-editor-config-schema-title">${t('vizy', 'Content schema')}</span>
-                    <span class="vizy-editor-config-schema-count">${t('vizy', '{allowed} of {total} content types allowed', {
+                    <span class="vizy-editor-config-disclosure-title">${t('vizy', 'Content Schema')}</span>
+                    <span class="vizy-editor-config-disclosure-count">${t('vizy', '{allowed} of {total} content types allowed', {
                         allowed: String(allowed.length),
                         total: String(options.length),
                     })}</span>
@@ -1305,15 +1308,38 @@ class VizyEditorConfigSettingsElement extends HTMLElement {
         `;
     }
 
-    /** Every real control that can receive one shared toolbar/Bubble/dropdown icon override. */
+    /**
+     * Controls this config uses, in authoring order, plus any otherwise-unused saved overrides.
+     *
+     * The icon editor is deliberately not another version of the toolbar palette. It previews
+     * the controls this config will actually draw: toolbar buttons and dropdowns first, each
+     * dropdown's active members next, then Bubble Menu-only controls. An override survives when
+     * its control is removed, so append those controls as well; otherwise valid stored state would
+     * become invisible and impossible to reset from the visual editor.
+     */
     #iconControlItems(): CatalogItem[] {
-        const items = new Map<string, CatalogItem>();
+        const catalog = new Map<string, CatalogItem>();
         for (const item of [...this.#toolbarCatalog, ...this.#dropdownCatalog, ...this.#bubbleCatalog]) {
-            if (item.kind === 'presentation' || items.has(item.id)) continue;
-            items.set(item.id, item);
+            if (item.kind === 'presentation' || catalog.has(item.id)) continue;
+            catalog.set(item.id, item);
         }
 
-        return [...items.values()].sort((a, b) => a.label.localeCompare(b.label));
+        const items = new Map<string, CatalogItem>();
+        const include = (id: string): void => {
+            const item = catalog.get(id);
+            if (item && !items.has(id)) items.set(id, item);
+        };
+
+        for (const entry of this.#state.toolbar) {
+            include(entry);
+            if (isDropdownKey(entry)) {
+                this.#dropdownMembers(dropdownName(entry)).forEach(include);
+            }
+        }
+        this.#state.bubble.items.forEach(include);
+        Object.keys(this.#state.icons).forEach(include);
+
+        return [...items.values()];
     }
 
     #iconSettingsHtml(): string {
@@ -1326,45 +1352,64 @@ class VizyEditorConfigSettingsElement extends HTMLElement {
         }
         const iconValue = this.#state.icons[this.#selectedIconControl] ?? '';
         const iconSvg = this.#iconSvgs[this.#selectedIconControl] ?? '';
+        const selectedControl = controls.find((item) => item.id === this.#selectedIconControl);
+        const customCount = Object.keys(this.#state.icons).length;
+        const customCountLabel = customCount === 1
+            ? t('vizy', '{count} custom icon', { count: String(customCount) })
+            : t('vizy', '{count} custom icons', { count: String(customCount) });
 
         return `
-            <section class="vizy-editor-config-section">
-                <h3>${t('vizy', 'Toolbar icons')}</h3>
-                <p class="instructions">${t('vizy', 'Choose a control and replace its icon everywhere this config uses it. Clear the icon to restore Vizy’s default.')}</p>
-                <div class="vizy-editor-config-icon-controls">
-                    <label class="vizy-editor-config-icon-control">
-                        <span class="vizy-editor-config-icon-label">${t('vizy', 'Control')}</span>
-                        <span class="select">
-                            <select data-icon-control>
-                                ${controls.map((item) => `
-                                    <option value="${escapeHtml(item.id)}" ${item.id === this.#selectedIconControl ? 'selected' : ''}>
-                                        ${escapeHtml(`${item.label} — ${item.id}`)}
-                                    </option>
-                                `).join('')}
-                            </select>
-                        </span>
-                    </label>
-                    <pk-field
-                        label="${escapeHtml(t('vizy', 'Icon'))}"
-                        instructions="${escapeHtml(t('vizy', 'Uses Vizy’s icon catalogue and SVG files from the configured icons path.'))}"
-                    >
-                        <vizy-image-browser
-                            name=""
-                            value="${escapeHtml(iconValue)}"
-                            mode="icon"
-                            label-mode="tooltip"
-                            placeholder="${escapeHtml(t('vizy', 'Use default icon'))}"
-                            search-placeholder="${escapeHtml(t('vizy', 'Search icons'))}"
-                            empty-message="${escapeHtml(t('vizy', 'No icons match your query.'))}"
-                            aria-label="${escapeHtml(t('vizy', 'Toolbar icon'))}"
-                            data-icon-picker
-                            data-catalog-url="${escapeHtml(this.#iconCatalogUrl)}"
-                            data-selected-label="${escapeHtml(iconValue)}"
-                            data-selected-preview="${escapeHtml(iconSvg)}"
-                        ></vizy-image-browser>
-                    </pk-field>
-                </div>
-            </section>
+            <details class="vizy-editor-config-section vizy-editor-config-disclosure" data-icon-details ${this.#iconsOpen ? 'open' : ''}>
+                <summary>
+                    <span class="vizy-editor-config-disclosure-title">${t('vizy', 'Icons')}</span>
+                    <span class="vizy-editor-config-disclosure-count">${escapeHtml(customCountLabel)}</span>
+                </summary>
+                <p class="instructions">${t('vizy', 'Choose a control to replace its icon everywhere this config uses it. Clear the icon to restore Vizy’s default.')}</p>
+                ${controls.length > 0 ? `
+                    <div class="vizy-editor-config-icon-designer">
+                        <div class="vizy-editor-config-icon-grid" role="group" aria-label="${escapeHtml(t('vizy', 'Controls'))}">
+                            ${controls.map((item) => {
+                                const selected = item.id === this.#selectedIconControl;
+                                const custom = Object.hasOwn(this.#state.icons, item.id);
+
+                                return `
+                                    <button
+                                        type="button"
+                                        class="vizy-editor-config-icon-option${selected ? ' is-selected' : ''}${custom ? ' is-custom' : ''}"
+                                        aria-pressed="${selected ? 'true' : 'false'}"
+                                        data-icon-control="${escapeHtml(item.id)}"
+                                    >
+                                        <span class="vizy-editor-config-icon-preview" aria-hidden="true">${this.#glyphHtml(item)}</span>
+                                        <span class="vizy-editor-config-icon-name">${escapeHtml(item.label)}</span>
+                                        ${custom ? `<span class="vizy-editor-config-icon-custom">${t('vizy', 'Custom')}</span>` : ''}
+                                    </button>
+                                `;
+                            }).join('')}
+                        </div>
+                        <div class="vizy-editor-config-icon-editor">
+                            <pk-field
+                                label="${escapeHtml(t('vizy', 'Icon for {label}', { label: selectedControl?.label ?? '' }))}"
+                                instructions="${escapeHtml(t('vizy', 'Uses Vizy’s icon catalogue and SVG files from the configured icons path.'))}"
+                            >
+                                <vizy-image-browser
+                                    name=""
+                                    value="${escapeHtml(iconValue)}"
+                                    mode="icon"
+                                    label-mode="tooltip"
+                                    placeholder="${escapeHtml(t('vizy', 'Use default icon'))}"
+                                    search-placeholder="${escapeHtml(t('vizy', 'Search icons'))}"
+                                    empty-message="${escapeHtml(t('vizy', 'No icons match your query.'))}"
+                                    aria-label="${escapeHtml(t('vizy', 'Choose an icon for {label}', { label: selectedControl?.label ?? '' }))}"
+                                    data-icon-picker
+                                    data-catalog-url="${escapeHtml(this.#iconCatalogUrl)}"
+                                    data-selected-label="${escapeHtml(iconValue)}"
+                                    data-selected-preview="${escapeHtml(iconSvg)}"
+                                ></vizy-image-browser>
+                            </pk-field>
+                        </div>
+                    </div>
+                ` : `<p class="vizy-editor-config-icon-empty">${t('vizy', 'Add controls to the Toolbar or Bubble Menu to customise their icons.')}</p>`}
+            </details>
         `;
     }
 
@@ -1817,14 +1862,12 @@ class VizyEditorConfigSettingsElement extends HTMLElement {
                             </div>
                         </section>
 
-                        ${this.#iconSettingsHtml()}
-
                         <section class="vizy-editor-config-section">
-                            <h3>${t('vizy', 'Block insertion')}</h3>
+                            <h3>${t('vizy', 'Block Insertion')}</h3>
                             <pk-field
                                 class="vizy-editor-config-toggle"
-                                label="${escapeHtml(t('vizy', 'Show gutter Add button'))}"
-                                instructions="${escapeHtml(t('vizy', 'The + chip beside each block. Independent of the toolbar Add Block control.'))}"
+                                label="${escapeHtml(t('vizy', 'Show Gutter Button'))}"
+                                instructions="${escapeHtml(t('vizy', 'Whether to show a + button in the gutter (to the side) of each block to open the Add Block palette.'))}"
                             >
                                 <pk-lightswitch
                                     data-gutter-insert
@@ -1833,8 +1876,8 @@ class VizyEditorConfigSettingsElement extends HTMLElement {
                             </pk-field>
                             <pk-field
                                 class="vizy-editor-config-toggle"
-                                label="${escapeHtml(t('vizy', 'Enable slash Add shortcut'))}"
-                                instructions="${escapeHtml(t('vizy', 'Typing / on a blank line opens the same Add Block palette as the gutter.'))}"
+                                label="${escapeHtml(t('vizy', 'Enable Slash Command'))}"
+                                instructions="${escapeHtml(t('vizy', 'Whether to enable the / shortcut on a blank line to open the Add Block palette.'))}"
                             >
                                 <pk-lightswitch
                                     data-slash-insert
@@ -1859,7 +1902,7 @@ class VizyEditorConfigSettingsElement extends HTMLElement {
                             -->
                             <pk-field
                                 class="vizy-editor-config-toggle"
-                                label="${escapeHtml(t('vizy', 'Show a Bubble Menu on selection'))}"
+                                label="${escapeHtml(t('vizy', 'Show Bubble Menu'))}"
                                 instructions="${escapeHtml(t('vizy', 'A small toolbar that appears over selected text, for formatting without reaching for the toolbar.'))}"
                             >
                                 <pk-lightswitch
@@ -1890,6 +1933,7 @@ class VizyEditorConfigSettingsElement extends HTMLElement {
                         </section>
 
                         ${this.#schemaSectionHtml()}
+                        ${this.#iconSettingsHtml()}
                     </div>
                 ` : `
                     <div class="vizy-editor-config-advanced">
@@ -1938,13 +1982,20 @@ class VizyEditorConfigSettingsElement extends HTMLElement {
             schema.addEventListener('toggle', () => { this.#schemaOpen = schema.open; });
         }
 
-        const iconControl = host.querySelector<HTMLSelectElement>('[data-icon-control]');
-        if (iconControl) {
-            iconControl.addEventListener('change', () => {
-                this.#selectedIconControl = iconControl.value;
-                this.render();
-            });
+        const icons = host.querySelector<HTMLDetailsElement>('[data-icon-details]');
+        if (icons) {
+            icons.addEventListener('toggle', () => { this.#iconsOpen = icons.open; });
         }
+
+        host.querySelectorAll<HTMLButtonElement>('[data-icon-control]').forEach((button) => {
+            button.addEventListener('click', () => {
+                this.#selectedIconControl = button.dataset.iconControl ?? '';
+                this.render();
+                [...this.querySelectorAll<HTMLButtonElement>('[data-icon-control]')]
+                    .find((control) => control.dataset.iconControl === this.#selectedIconControl)
+                    ?.focus({ preventScroll: true });
+            });
+        });
 
         const iconPicker = host.querySelector<HTMLElement>('[data-icon-picker]');
         if (iconPicker) {

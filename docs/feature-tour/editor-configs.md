@@ -22,7 +22,7 @@ The Bubble Menu appears when an editor selects text. It is a flat row of support
 
 ## Override Control Icons
 
-Use **Toolbar icons** to choose a control and replace its glyph with an icon from Vizy’s catalogue. An override belongs to the control ID, so Bold uses the same chosen icon in the toolbar, Bubble Menu, and any dropdown that contains it. Dropdown triggers can have their own overrides as well.
+Expand **Icons** at the bottom of the visual settings to select a control used by the config and replace its glyph with an icon from Vizy’s catalogue. Its summary reports how many overrides are active, and the visual grid follows the toolbar, dropdown, and Bubble Menu controls configured above it. An override belongs to the control ID, so Bold uses the same chosen icon in the toolbar, Bubble Menu, and any dropdown that contains it. Dropdown triggers can have their own overrides as well.
 
 The catalogue includes project SVG files from `iconsPath`. Clearing the selected icon restores Vizy’s default or the icon registered by an extension. Icon overrides affect the authoring interface only; they do not change saved content or rendered HTML.
 

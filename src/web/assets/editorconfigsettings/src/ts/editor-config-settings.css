@@ -58,7 +58,7 @@
  * state surviving a re-render — see `#schemaOpen`, which exists because ticking a box inside
  * rebuilds the panel.
  */
-.vizy-editor-config-schema {
+.vizy-editor-config-disclosure {
     border-top: 1px solid rgba(96, 125, 159, 0.2);
     padding-top: 16px;
 }
@@ -68,7 +68,7 @@
  * WebKit pseudo-element covers both spellings of "remove the native marker"; the chevron is
  * drawn below so it can be positioned and rotated.
  */
-.vizy-editor-config-schema > summary {
+.vizy-editor-config-disclosure > summary {
     display: flex;
     align-items: baseline;
     gap: 8px;
@@ -76,15 +76,15 @@
     cursor: pointer;
 }
 
-.vizy-editor-config-schema > summary::-webkit-details-marker {
+.vizy-editor-config-disclosure > summary::-webkit-details-marker {
     display: none;
 }
 
-.vizy-editor-config-schema-title {
+.vizy-editor-config-disclosure-title {
     font-weight: 600;
 }
 
-.vizy-editor-config-schema-title::before {
+.vizy-editor-config-disclosure-title::before {
     content: '';
     display: inline-block;
     width: 6px;
@@ -98,7 +98,7 @@
     opacity: 0.6;
 }
 
-.vizy-editor-config-schema[open] .vizy-editor-config-schema-title::before {
+.vizy-editor-config-disclosure[open] .vizy-editor-config-disclosure-title::before {
     transform: translateY(-2px) rotate(45deg);
 }
 
@@ -107,12 +107,12 @@
  * been narrowed says so without being opened, so "why is that button not offered" is
  * answerable from the closed state.
  */
-.vizy-editor-config-schema-count {
+.vizy-editor-config-disclosure-count {
     font-size: 12px;
     color: #596673;
 }
 
-.vizy-editor-config-schema > .instructions {
+.vizy-editor-config-disclosure > .instructions {
     margin-top: 12px;
 }
 
@@ -835,32 +835,109 @@ pk-checkbox-select {
     margin-bottom: 12px;
 }
 
-.vizy-editor-config-icon-controls {
-    display: grid;
-    grid-template-columns: minmax(14rem, 1fr) minmax(14rem, 1fr);
-    gap: 16px;
-    align-items: start;
-}
-
-.vizy-editor-config-icon-control {
+.vizy-editor-config-icon-designer {
     display: flex;
     flex-direction: column;
-    gap: 6px;
+    gap: 16px;
+    padding: 16px;
+    border: 1px solid rgba(96, 125, 159, 0.25);
+    border-radius: 4px;
+    background: #fff;
 }
 
-.vizy-editor-config-icon-label {
+.vizy-editor-config-icon-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+    gap: 8px;
+}
+
+.vizy-editor-config-icon-option {
+    position: relative;
+    display: grid;
+    grid-template-columns: 32px minmax(0, 1fr);
+    gap: 10px;
+    align-items: center;
+    min-width: 0;
+    min-height: 48px;
+    padding: 7px 12px;
+    border: 1px solid var(--pk-input-border-color, rgba(96, 125, 159, 0.4));
+    border-radius: 8px;
+    background: var(--pk-input-bg, #fbfcfe);
+    color: #1c2e36;
+    text-align: left;
+    cursor: pointer;
+}
+
+.vizy-editor-config-icon-option:hover {
+    border-color: var(--pk-color-slate-500, #607d9f);
+    background: var(--pk-color-gray-050, #f3f7fb);
+}
+
+.vizy-editor-config-icon-option:focus-visible {
+    outline: 2px solid var(--pk-focus-ring-color, #0d99f2);
+    outline-offset: 2px;
+}
+
+.vizy-editor-config-icon-option.is-selected {
+    border-color: var(--pk-color-blue-500, #0d99f2);
+    box-shadow: inset 0 0 0 1px var(--pk-color-blue-500, #0d99f2);
+    background: rgba(13, 153, 242, 0.06);
+}
+
+.vizy-editor-config-icon-option.is-custom {
+    padding-right: 52px;
+}
+
+.vizy-editor-config-icon-preview {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    border-radius: 6px;
+    background: rgba(96, 125, 159, 0.1);
+    font-size: 16px;
+    line-height: 1;
+}
+
+.vizy-editor-config-icon-preview svg {
+    display: block;
+    width: 1em;
+    height: 1em;
+    fill: currentColor;
+}
+
+.vizy-editor-config-icon-name {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
     font-weight: 600;
 }
 
-.vizy-editor-config-icon-control .select,
-.vizy-editor-config-icon-control select {
-    width: 100%;
+.vizy-editor-config-icon-custom {
+    position: absolute;
+    top: 4px;
+    right: 5px;
+    color: var(--pk-color-blue-600, #0879bd);
+    font-size: 9px;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
 }
 
-@media (max-width: 700px) {
-    .vizy-editor-config-icon-controls {
-        grid-template-columns: 1fr;
-    }
+.vizy-editor-config-icon-editor {
+    padding-top: 16px;
+    border-top: 1px solid rgba(96, 125, 159, 0.2);
+}
+
+.vizy-editor-config-icon-empty {
+    margin: 0;
+    padding: 16px;
+    border: 1px dashed rgba(96, 125, 159, 0.4);
+    border-radius: 4px;
+    color: #596673;
+    background: var(--pk-input-bg, #fbfcfe);
 }
 
 /* Sub-headings inside a section, e.g. splitting blocks from inline formatting. */

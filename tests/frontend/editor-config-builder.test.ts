@@ -31,7 +31,7 @@ type Initial = Parameters<typeof JSON.stringify>[0];
  * `members` is the fixed roster it may hold, as button IDs: the registration's `headingLevels`
  * shorthand is expanded to all six levels before it leaves PHP, so the panel draws a chip per
  * level and a config can trim them one at a time. All six, not the allowed ones — which levels a
- * config permits is the Content schema's answer, applied when the toolbar is built.
+ * config permits is the Content Schema's answer, applied when the toolbar is built.
  */
 const FORMATTING_DROPDOWN = {
     id: 'dropdown:formatting',
@@ -138,6 +138,33 @@ const iconState = (element: HTMLElement): Record<string, string> => {
 describe('icon overrides', () => {
     const CUSTOM_SVG = '<svg id="custom-bold" viewBox="0 0 16 16"><path d="M0 0h1v1z"/></svg>';
 
+    it('folds the icon designer away at the bottom and preserves its open state', () => {
+        const element = mount({
+            config: {
+                capabilities: { nodes: [], marks: ['bold', 'italic'] },
+                headings: { levels: [2, 3] },
+                toolbar: ['bold', 'italic'],
+                dropdowns: {},
+                bubble: { enabled: true, items: ['bold'] },
+                icons: { bold: 'custom-bold' },
+            },
+            iconSvgs: { bold: CUSTOM_SVG },
+        });
+        const details = element.querySelector<HTMLDetailsElement>('[data-icon-details]');
+
+        expect(details).not.toBeNull();
+        expect(details?.open).toBe(false);
+        expect(details?.querySelector('summary')?.textContent).toContain('1 custom icon');
+        const sections = [...element.querySelectorAll('.vizy-editor-config-section')];
+        expect(sections.indexOf(details as HTMLElement)).toBe(sections.length - 1);
+
+        Object.defineProperty(details as HTMLDetailsElement, 'open', { value: true, configurable: true });
+        details?.dispatchEvent(new Event('toggle'));
+        element.querySelector<HTMLButtonElement>('[data-icon-control="italic"]')?.click();
+
+        expect(element.querySelector<HTMLDetailsElement>('[data-icon-details]')?.hasAttribute('open')).toBe(true);
+    });
+
     it('previews one control override across toolbar and Bubble Menu and clears back to defaults', () => {
         const element = mount({
             config: {
@@ -154,8 +181,9 @@ describe('icon overrides', () => {
         expect(iconState(element)).toEqual({ bold: 'custom-bold' });
         expect(items(element, 'toolbar-active')[0]?.querySelector('#custom-bold')).not.toBeNull();
         expect(items(element, 'bubble-active')[0]?.querySelector('#custom-bold')).not.toBeNull();
-        expect(element.querySelector('option[value="bold"]')?.hasAttribute('selected')).toBe(true);
-        expect(element.querySelector('option[value="separator"]')).toBeNull();
+        expect(element.querySelector('[data-icon-control="bold"]')?.getAttribute('aria-pressed')).toBe('true');
+        expect(element.querySelector('[data-icon-control="bold"]')?.classList.contains('is-custom')).toBe(true);
+        expect(element.querySelector('[data-icon-control="separator"]')).toBeNull();
 
         element.querySelector('[data-icon-picker]')?.dispatchEvent(new CustomEvent('pk-change', {
             detail: { value: '' },
@@ -165,6 +193,45 @@ describe('icon overrides', () => {
         expect(iconState(element)).toEqual({});
         expect(items(element, 'toolbar-active')[0]?.querySelector('#custom-bold')).toBeNull();
         expect(items(element, 'bubble-active')[0]?.querySelector('#custom-bold')).toBeNull();
+    });
+
+    it('shows controls used by this config in toolbar, dropdown, and Bubble Menu order', () => {
+        const element = mount({
+            config: {
+                capabilities: { nodes: ['heading'], marks: ['bold', 'italic'] },
+                headings: { levels: [2] },
+                toolbar: ['italic', 'dropdown:formatting'],
+                dropdowns: { formatting: ['heading2', 'blockquote'] },
+                bubble: { enabled: true, items: ['bold'] },
+                // A saved override stays manageable after its control leaves every surface.
+                icons: { undo: 'custom-undo' },
+            },
+            iconSvgs: { undo: '<svg id="custom-undo"></svg>' },
+        });
+
+        expect([...element.querySelectorAll<HTMLElement>('[data-icon-control]')]
+            .map((control) => control.dataset.iconControl)).toEqual([
+            'italic',
+            'dropdown:formatting',
+            'heading2',
+            'blockquote',
+            'bold',
+            'undo',
+        ]);
+        expect(element.querySelector('[data-icon-control="italic"]')?.textContent).toContain('Italic');
+        expect(element.querySelector('[data-icon-control="italic"] code')).toBeNull();
+    });
+
+    it('selects a control visually without changing the configured icons', () => {
+        const element = mount();
+        const italic = element.querySelector<HTMLButtonElement>('[data-icon-control="italic"]');
+
+        italic?.click();
+
+        expect(italic?.isConnected).toBe(false);
+        expect(element.querySelector('[data-icon-control="italic"]')?.getAttribute('aria-pressed')).toBe('true');
+        expect(element.querySelector('pk-field[label="Icon for Italic"]')).not.toBeNull();
+        expect(iconState(element)).toEqual({});
     });
 
     it('uses the same override for a dropdown member preview', () => {
@@ -246,7 +313,7 @@ describe('the palette', () => {
         // Vizy 3's `"formatting": ["h2", "h3", "p"]`, as a gesture: clicking a member takes it
         // out of the dropdown. What is stored is every member that stays, levels named one by one
         // — which is not the freeze it looks like, because all six are always there and the
-        // Content schema decides which of them render.
+        // Content Schema decides which of them render.
         press(items(element, 'toolbar-members').find((item) => item.dataset.toolbarItem === 'codeBlock'));
         expect(dropdownState(element).formatting)
             .toEqual(['paragraph', 'heading2', 'heading3', 'heading5', 'blockquote']);
@@ -663,7 +730,7 @@ describe('the palette', () => {
         items(element, 'toolbar-active').at(-1)!.click();
 
         // Ordinary members rather than one row reading "Heading levels: H2, H3". That row was an
-        // attempt to keep the levels following the Content schema, which storing a *snapshot* of
+        // attempt to keep the levels following the Content Schema, which storing a *snapshot* of
         // the schema had broken — but all six always exist, so naming them all freezes nothing,
         // and it reads as the H1…H6 authors expect.
         expect(ids(element, 'toolbar-members')).toContain('heading2');
@@ -679,7 +746,7 @@ describe('the palette', () => {
 
         // Nothing was stored by any of this: leaving a member out is the schema's doing, not this
         // dropdown's, so the config stays untrimmed and keeps following the registration. Ticking
-        // the level under Content schema is the whole of the way back.
+        // the level under Content Schema is the whole of the way back.
         expect(dropdownState(element)).toEqual({});
     });
 
@@ -1559,12 +1626,12 @@ describe('editor config toolbar builder', () => {
             const element = mount(CONTENT);
             const details = element.querySelector<HTMLDetailsElement>('[data-schema-details]');
 
-            // Closed on arrival, and after the toolbar: it is the advanced half of the screen
-            // and most configs want it left alone, while nearly every visit is about buttons.
+            // Closed on arrival and immediately above the still rarer icon overrides: these are
+            // the two advanced disclosures at the bottom of the visual screen.
             expect(details).not.toBeNull();
             expect(details?.open).toBe(false);
             const sections = [...element.querySelectorAll('.vizy-editor-config-section')];
-            expect(sections.indexOf(details as HTMLElement)).toBe(sections.length - 1);
+            expect(sections.indexOf(details as HTMLElement)).toBe(sections.length - 2);
 
             // The count is why this is a fold rather than another tab: a narrowed schema says
             // so without being opened, so "why is that button not offered" is answerable from
@@ -1803,6 +1870,17 @@ describe('editor config toolbar builder', () => {
         });
     });
 
+    it('labels the block insertion settings by their actions', () => {
+        const element = mount();
+        const gutterToggle = element.querySelector('[data-gutter-insert]');
+        const slashToggle = element.querySelector('[data-slash-insert]');
+
+        expect(gutterToggle?.closest('pk-field')?.getAttribute('label')).toBe('Show Gutter Button');
+        expect(slashToggle?.closest('pk-field')?.getAttribute('label')).toBe('Enable Slash Command');
+        expect(gutterToggle?.closest('pk-field')?.getAttribute('instructions')).toBe('Whether to show a + button in the gutter (to the side) of each block to open the Add Block palette.');
+        expect(slashToggle?.closest('pk-field')?.getAttribute('instructions')).toBe('Whether to enable the / shortcut on a blank line to open the Add Block palette.');
+    });
+
     it('drops the Bubble Menu builder entirely when the menu is switched off', () => {
         const element = mount();
         expect(element.querySelector('[data-builder="bubble"]')).not.toBeNull();
@@ -1816,7 +1894,7 @@ describe('editor config toolbar builder', () => {
         // with whatever control it wraps. The switch itself carries no label, or the
         // control would be named twice over.
         const field = toggle.closest('pk-field');
-        expect(field?.getAttribute('label')).toBe('Show a Bubble Menu on selection');
+        expect(field?.getAttribute('label')).toBe('Show Bubble Menu');
         expect(field?.getAttribute('instructions')).not.toBeNull();
         expect(toggle.hasAttribute('label')).toBe(false);
 

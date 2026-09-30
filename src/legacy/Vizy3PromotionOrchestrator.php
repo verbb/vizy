@@ -61,7 +61,7 @@ final class Vizy3PromotionOrchestrator extends Component
     public function analyze(array $targetHandles = []): array
     {
         $projectConfig = Craft::$app->getProjectConfig();
-        $fields = $this->_unpackMap($projectConfig->get('fields') ?? []);
+        $fields = $this->_fieldConfigs();
         foreach (array_keys($fields) as $fieldUid) {
             if ($projectConfig->get(LegacySchemaMaps::PROJECT_CONFIG_PATH . '.' . $fieldUid) !== null) {
                 unset($fields[$fieldUid]);
@@ -285,9 +285,10 @@ final class Vizy3PromotionOrchestrator extends Component
     {
         $this->_assertSourceFingerprints($plan);
         $projectConfig = Craft::$app->getProjectConfig();
+        $fields = $this->_fieldConfigs();
         foreach ($plan['fields'] as $fieldUid => $fieldPlan) {
             $path = "fields.{$fieldUid}";
-            $config = ProjectConfigHelper::unpackAssociativeArrays($projectConfig->get($path));
+            $config = $fields[$fieldUid] ?? null;
             if (!is_array($config) || ($config['type'] ?? null) !== VizyField::class) {
                 throw new RuntimeException("Vizy field {$fieldUid} is no longer available for canonical reference update.");
             }
@@ -379,7 +380,7 @@ final class Vizy3PromotionOrchestrator extends Component
 
     private function _assertSourceFingerprints(array $plan): void
     {
-        $fields = $this->_unpackMap(Craft::$app->getProjectConfig()->get('fields') ?? []);
+        $fields = $this->_fieldConfigs();
         foreach ($plan['fields'] as $fieldUid => $fieldPlan) {
             $settings = is_array($fields[$fieldUid]['settings'] ?? null) ? $fields[$fieldUid]['settings'] : [];
             // Match Vizy3SchemaPromotion: omitted fieldData (common for V3 rich-text) ≡ [].
@@ -432,6 +433,22 @@ final class Vizy3PromotionOrchestrator extends Component
             }
         }
         return $result;
+    }
+
+    /**
+     * Craft 4 can have complete external field YAML without corresponding
+     * `fields.*` rows in its internal Project Config store. During a direct
+     * Craft 4 to 5 migration, plugin migrations run before Craft applies that
+     * external config, so use it only to fill internal gaps. Internal config
+     * always wins once Craft has loaded or promoted a field.
+     */
+    private function _fieldConfigs(): array
+    {
+        $projectConfig = Craft::$app->getProjectConfig();
+        $internal = $this->_unpackMap($projectConfig->get('fields') ?? []);
+        $external = $this->_unpackMap($projectConfig->get('fields', true) ?? []);
+
+        return $internal + $external;
     }
 
     private function _hash(mixed $value): string

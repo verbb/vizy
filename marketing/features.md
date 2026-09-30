@@ -15,7 +15,7 @@ Vizy has all the formatting authors expect — headings, lists, links, tables, i
 
 Blocks stay visible where they will matter in the finished piece. Move, collapse, enable or disable them without turning the document into a disconnected stack of fields.
 
-![Rich text and coloured Callout and Pull Quote blocks inside the Vizy editor.](../screenshots/output/feature-tour/vizy-editor.png)
+![Rich text and coloured Callout and Pull Quote blocks inside the Vizy editor.](../screenshots/vizy-editor.png)
 <!-- feature-media-end -->
 
 <!-- feature-media media-size="small" -->
@@ -25,7 +25,7 @@ Embed structured blocks directly between paragraphs — much like having Matrix 
 
 Add one from the toolbar, the gutter beside the document or a `/` shortcut on a blank line. Available Block Types remain searchable and grouped so the choices stay approachable as the project grows.
 
-![The Vizy Block Type chooser grouped into Components and Editorial Block Types.](../screenshots/output/feature-tour/vizy-commands.png)
+![The Vizy Block Type chooser grouped into Components and Editorial Block Types.](../screenshots/vizy-commands.png)
 <!-- feature-media-end -->
 
 <!-- feature-media -->
@@ -35,7 +35,7 @@ Named Editor Configs let a project define its toolbar, content capabilities, Bub
 
 Build configs visually with the real toolbar in front of you, or keep them in `config/vizy/*.json` when they belong in code and deployment workflows.
 
-![The Editorial Editor Config showing available controls, its toolbar preview and Block insertion settings.](../screenshots/output/feature-tour/vizy-settings.png)
+![The Editorial Editor Config showing available controls, its toolbar preview and Block insertion settings.](../screenshots/vizy-settings.png)
 <!-- feature-media-end -->
 
 <!-- feature-media -->
@@ -45,7 +45,7 @@ Hosted Vizy fields can live inside a Block Type alongside ordinary Craft fields.
 
 Use the extra level where it clarifies the model — for example, supporting copy inside a Latest News component — while simpler Blocks remain simple.
 
-![A rich-text Vizy editor nested inside a Latest News Block Type.](../screenshots/output/feature-tour/vizy-nested.png)
+![A rich-text Vizy editor nested inside a Latest News Block Type.](../screenshots/vizy-nested.png)
 <!-- feature-media-end -->
 
 <!-- feature-section -->

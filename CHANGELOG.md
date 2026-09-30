@@ -6,7 +6,7 @@
 - Added Craft-native Entry and current-user conditions for field-local Block Type availability, plus Entry-aware field and tab conditions inside Vizy Blocks. ([#178](https://github.com/verbb/vizy/issues/178))
 - Added native Craft element-card previews for Vizy field content. ([#332](https://github.com/verbb/vizy/issues/332))
 - Added automatic collapsed Block summaries from Hosted Vizy field content. ([#140](https://github.com/verbb/vizy/issues/140))
-- Added Editor Config icon overrides for toolbar, dropdown, and Bubble Menu controls. ([#342](https://github.com/verbb/vizy/issues/342))
+- Added a visual Editor Config icon designer for overriding toolbar, dropdown, and Bubble Menu controls. ([#342](https://github.com/verbb/vizy/issues/342))
 - Added field settings for choosing the available Block picker displays, their default, and whether search is shown. ([#341](https://github.com/verbb/vizy/issues/341))
 - Added durable Vizy content recovery records and commands to restore a field’s saved document, nested Matrix values, ownership, order, enabled states, and relations across sites. See [Content Recovery](https://verbb.io/craft-plugins/vizy/docs/v4/developers/content-recovery).
 - Added `block.owner` to Block Type templates for direct access to the durable Craft element containing the Vizy field. ([#285](https://github.com/verbb/vizy/issues/285))
@@ -21,6 +21,8 @@
 - Upgrade verification now compares nested content before committing each owner conversion.
 
 ### Fixed
+- Simplified the Block Type and Editor Config settings copy.
+- Fixed direct Vizy 2/Craft 4 to Vizy 4/Craft 5 upgrades missing legacy field schema that only exists in external Project Config.
 - Fixed Vizy 3 upgrades failing when historical Block Type layout identities are array-wrapped, and added actionable diagnostics for ambiguous layout identity data. ([#353](https://github.com/verbb/vizy/issues/353))
 - Fixed custom Entry sources being omitted from link pickers and restricted custom, Single, or Category sources being shown, including on Craft 5.9. ([#226](https://github.com/verbb/vizy/issues/226))
 - Fixed private Asset volumes being omitted from Vizy’s available-volume settings and asset picker, including default-transform previews and output for private originals. ([#256](https://github.com/verbb/vizy/issues/256))
