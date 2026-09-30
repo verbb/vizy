@@ -11,6 +11,8 @@ use verbb\vizy\services\BlockTypes;
 
 use Craft;
 use craft\base\Component;
+use craft\db\Query;
+use craft\db\Table;
 use craft\helpers\Json;
 use craft\helpers\ProjectConfig as ProjectConfigHelper;
 use craft\helpers\StringHelper;
@@ -436,19 +438,41 @@ final class Vizy3PromotionOrchestrator extends Component
     }
 
     /**
-     * Craft 4 can have complete external field YAML without corresponding
-     * `fields.*` rows in its internal Project Config store. During a direct
-     * Craft 4 to 5 migration, plugin migrations run before Craft applies that
-     * external config, so use it only to fill internal gaps. Internal config
-     * always wins once Craft has loaded or promoted a field.
+     * Craft 4 can lack `fields.*` rows in its internal Project Config store.
+     * During a direct Craft 4 to 5 migration, also recover missing definitions
+     * from external YAML or the field records Craft has already migrated. The
+     * latter must use raw database settings because Vizy 4 intentionally omits
+     * deprecated Vizy 3 settings from its canonical settings export.
      */
     private function _fieldConfigs(): array
     {
         $projectConfig = Craft::$app->getProjectConfig();
         $internal = $this->_unpackMap($projectConfig->get('fields') ?? []);
         $external = $this->_unpackMap($projectConfig->get('fields', true) ?? []);
+        $database = [];
+        $rows = (new Query())
+            ->select(['uid', 'settings'])
+            ->from(Table::FIELDS)
+            ->where(['context' => 'global', 'dateDeleted' => null])
+            ->indexBy('uid')
+            ->all();
 
-        return $internal + $external;
+        $fieldsService = Craft::$app->getFields();
+        foreach ($fieldsService->getAllFields('global') as $field) {
+            if (!is_string($field->uid) || !isset($rows[$field->uid])) {
+                continue;
+            }
+            $config = ProjectConfigHelper::unpackAssociativeArrays(
+                $fieldsService->createFieldConfig($field),
+            );
+            $settings = Json::decodeIfJson($rows[$field->uid]['settings']);
+            if (is_array($settings)) {
+                $config['settings'] = $settings;
+            }
+            $database[$field->uid] = $config;
+        }
+
+        return $internal + $external + $database;
     }
 
     private function _hash(mixed $value): string

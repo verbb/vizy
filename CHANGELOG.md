@@ -22,7 +22,7 @@
 
 ### Fixed
 - Simplified the Block Type and Editor Config settings copy.
-- Fixed direct Vizy 2/Craft 4 to Vizy 4/Craft 5 upgrades missing legacy field schema that only exists in external Project Config.
+- Fixed direct Vizy 2/Craft 4 to Vizy 4/Craft 5 upgrades missing legacy field schema that Craft 4 did not retain in its internal Project Config store.
 - Fixed Vizy 3 upgrades failing when historical Block Type layout identities are array-wrapped, and added actionable diagnostics for ambiguous layout identity data. ([#353](https://github.com/verbb/vizy/issues/353))
 - Fixed custom Entry sources being omitted from link pickers and restricted custom, Single, or Category sources being shown, including on Craft 5.9. ([#226](https://github.com/verbb/vizy/issues/226))
 - Fixed private Asset volumes being omitted from Vizy’s available-volume settings and asset picker, including default-transform previews and output for private originals. ([#256](https://github.com/verbb/vizy/issues/256))
