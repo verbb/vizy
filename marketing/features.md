@@ -13,7 +13,7 @@ Show don't tell is often the best approach. Give Vizy a test-drive with the demo
 
 Vizy has all the formatting authors expect — headings, lists, links, images and more — without stopping at rich text. Add purpose-built blocks exactly where they belong, tailor the available tools to the field and keep the whole story in one editing surface.
 
-![A populated Vizy field combining formatted copy with reusable structured blocks.](../screenshots/output/feature-tour/vizy-editor.png)
+![A populated Vizy field combining formatted copy with reusable structured blocks.](../screenshots/vizy-editor.png)
 
 <!-- feature-section-end -->
 
@@ -22,7 +22,7 @@ Vizy has all the formatting authors expect — headings, lists, links, images an
 
 Embed structured blocks directly between paragraphs — much like having Matrix blocks inline with your content. Each block can reuse Craft fields, UI elements and tabs, then be moved, collapsed and rendered through its own focused Twig template.
 
-![Vizy’s command palette offering formatting, media and structured block choices inline.](../screenshots/output/feature-tour/vizy-commands.png)
+![Vizy’s command palette offering formatting, media and structured block choices inline.](../screenshots/vizy-commands.png)
 
 <!-- feature-section-end -->
 
@@ -31,7 +31,7 @@ Embed structured blocks directly between paragraphs — much like having Matrix 
 
 Rather than treating generated HTML as the source of truth, Vizy stores a structured JSON document. Let Vizy render the whole field, take control of individual nodes and blocks, or expose the content to a headless front end.
 
-![A Vizy field configured with reusable Callout and Pull Quote blocks in Craft 5.](../screenshots/output/feature-tour/vizy-settings.png)
+![A Vizy field configured with reusable Callout and Pull Quote blocks in Craft 5.](../screenshots/vizy-settings.png)
 
 <!-- feature-section-end -->
 
