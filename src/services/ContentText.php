@@ -37,6 +37,7 @@ final class ContentText extends Component
         $data = $document instanceof VizyDocument ? $document->toArray() : $document;
         $nodes = is_array($data['content'] ?? null) ? $data['content'] : [];
         $cacheKey = $limit . ':' . hash('sha256', Json::encode($nodes));
+
         if (array_key_exists($cacheKey, $this->_cache)) {
             return $this->_cache[$cacheKey];
         }
@@ -45,6 +46,7 @@ final class ContentText extends Component
         $length = 0;
         $this->_collect($nodes, $parts, $length, $limit, 0);
         $text = trim(implode(' ', $parts));
+
         if ($text === '') {
             return $this->_remember($cacheKey, null);
         }
@@ -84,6 +86,7 @@ final class ContentText extends Component
 
             if (($node['type'] ?? null) === 'text' && is_string($node['text'] ?? null)) {
                 $text = trim(preg_replace('/\s+/u', ' ', $node['text']) ?? '');
+
                 if ($text !== '') {
                     $parts[] = $text;
                     $length += mb_strlen($text) + 1;

@@ -48,14 +48,17 @@ final class FieldLayoutForms extends Component
         object $item,
     ): array {
         $blockObject = $item->block ?? null;
+
         if (!is_object($blockObject)) {
             return $this->_fail('invalidBlock');
         }
         $blockHash = $this->blockHash($blockObject);
+
         if (!hash_equals($blockHash, (string)($item->blockHash ?? ''))) {
             return $this->_fail('staleBlockHash');
         }
         $destination = Json::decode(Json::encode($item->destination ?? null));
+
         if (!is_array($destination)) {
             return $this->_fail('invalidDestination');
         }
@@ -82,19 +85,23 @@ final class FieldLayoutForms extends Component
         object $item,
     ): array {
         $blockObject = $item->block ?? null;
+
         if (!is_object($blockObject)) {
             return $this->_fail('invalidBlock');
         }
         $blockHash = $this->blockHash($blockObject);
+
         if (!hash_equals($blockHash, (string)($item->blockHash ?? ''))) {
             return $this->_fail('staleBlockHash');
         }
         $destination = Json::decode(Json::encode($item->destination ?? null));
+
         if (!is_array($destination)) {
             return $this->_fail('invalidDestination');
         }
         $visibleElements = $this->_elementUidMap($item->visibleElements ?? null);
         $staticElements = $this->_elementUidMap($item->staticElements ?? null);
+
         if ($visibleElements === null || $staticElements === null) {
             return $this->_fail('invalidLayoutElements');
         }
@@ -162,12 +169,14 @@ final class FieldLayoutForms extends Component
         bool $refresh = false,
     ): array {
         $blockJson = Json::decode(Json::encode($blockObject));
+
         // Saved field values can legitimately be large. Loading their form must
         // not impose a smaller content budget than the canonical document path.
         if (!is_array($blockJson)) {
             return $this->_fail('invalidBlock');
         }
         $attrs = $blockJson['attrs'] ?? null;
+
         if (
             ($blockJson['type'] ?? null) !== 'vizyBlock'
             || !is_array($attrs)
@@ -181,15 +190,18 @@ final class FieldLayoutForms extends Component
         ) {
             return $this->_fail('invalidBlock');
         }
+
         if (!$this->_destinationIsWellFormed($destination)) {
             return $this->_fail('invalidDestination');
         }
 
         $blockType = Vizy::$plugin->getBlockTypes()->getBlockTypeByUid($attrs['blockTypeUid']);
+
         if (!$blockType || !$this->_destinationAllows($field, $blockType->uid, $destination)) {
             return $this->_fail('unknownBlockType');
         }
         $layout = $blockType->getFieldLayout();
+
         if (!$layout || !$layout->uid) {
             return $this->_fail('staleLayout');
         }
@@ -211,6 +223,7 @@ final class FieldLayoutForms extends Component
         // anchor so Craft Matrix inputHtml / create-entry resolve nested Entries.
         $anchor = null;
         $anchorUid = is_string($attrs['matrixAnchorUid'] ?? null) ? $attrs['matrixAnchorUid'] : null;
+
         if (Vizy::$plugin->getAnchors()->blockHasMatrixFields($layout)) {
             // Bind native Matrix's subsequent render-only row requests to this
             // authorized placement. The namespace travels with every widget,
@@ -229,9 +242,11 @@ final class FieldLayoutForms extends Component
                 $anchorUid,
                 AnchorDocuments::keyFromEditorContext($context),
             );
+
             if (!$anchor && $anchorUid) {
                 return $this->_fail('unresolvedMatrixContent');
             }
+
             if ($anchor) {
                 // Anchors loaded by UID have no FieldLayout until we attach the
                 // Block Type layout — required for Matrix getFieldValue.
@@ -248,9 +263,11 @@ final class FieldLayoutForms extends Component
         }
 
         $placements = [];
+
         foreach ($layout->getCustomFieldElements() as $placement) {
             $craftField = $placement->getField();
             $adapterId = $this->_adapterId($craftField);
+
             if ($adapterId === null) {
                 return $this->_fail('unsupportedFieldCapability', [
                     'placementUid' => $placement->uid,
@@ -260,6 +277,7 @@ final class FieldLayoutForms extends Component
                     'fieldTypeLabel' => $craftField::displayName(),
                 ]);
             }
+
             if ($craftField instanceof Matrix) {
                 // Redisplay submitted values after failed validation. Loading
                 // the saved anchor alone would silently replace the user's edits.
@@ -291,6 +309,7 @@ final class FieldLayoutForms extends Component
                 'adapterId' => $adapterId,
                 'wrapperId' => $wrapperId,
             ];
+
             if ($craftField instanceof Matrix && is_string($anchorUid)) {
                 $placementMeta['matrixAnchorUid'] = $anchorUid;
             }
@@ -307,6 +326,7 @@ final class FieldLayoutForms extends Component
         // `$wrapper`. Isolate to a clean namespace root for the whole render.
         $previousNamespace = $view->getNamespace();
         $view->setNamespace(null);
+
         // On an initial CP response, keep asset bundles/styles registered on the
         // page but capture field-instance JS. It must execute only after the
         // preloaded HTML has been adopted into its final NodeView hosts.
@@ -332,6 +352,7 @@ final class FieldLayoutForms extends Component
         HostedVizy::setEntryFieldUid($entryFieldUid !== '' ? $entryFieldUid : null);
         HostedVizy::setEntryPlacementUid($context['ownerPlacementUid'] ?? null);
         $form = null;
+
         try {
             try {
                 $html = $view->namespaceInputs(
@@ -373,35 +394,42 @@ final class FieldLayoutForms extends Component
                 : '';
             $view->setNamespace($previousNamespace);
         }
+
         if (!$form instanceof FieldLayoutForm) {
             return $this->_fail('fieldLayoutRenderFailed', [
                 'blockUid' => $attrs['blockUid'],
             ]);
         }
+
         foreach ($placements as $placement) {
             $html = $this->_decoratePlacementHtml($html, $placement);
         }
 
         $tabLabels = [];
+
         foreach ($form->tabs as $tab) {
             $tabLabels[] = $tab->getName();
         }
 
         $missingElements = [];
+
         if ($refresh) {
             foreach ($form->tabs as $tab) {
                 if (!$tab->getUid()) {
                     continue;
                 }
                 $elements = [];
+
                 foreach ($tab->elements as [$layoutElement, $conditional, $elementHtml, $static]) {
                     if (!$conditional) {
                         continue;
                     }
+
                     if (is_string($elementHtml)) {
                         // createForm() produced field-namespaced HTML while the
                         // outer callback held the Block namespace for scripts.
                         $elementHtml = $view->namespaceInputs($elementHtml, $namespace);
+
                         foreach ($placements as $placement) {
                             if ($placement['fieldLayoutElementUid'] === $layoutElement->uid) {
                                 $elementHtml = $this->_decoratePlacementHtml($elementHtml, $placement);
@@ -443,6 +471,7 @@ final class FieldLayoutForms extends Component
             'staticElements' => $form->getStaticElements(),
             'refreshable' => $refreshable,
         ];
+
         if ($refresh) {
             $data['missingElements'] = $missingElements;
         }
@@ -461,15 +490,19 @@ final class FieldLayoutForms extends Component
         // Clone the render layout so a shared field retains its configured mode.
         $renderLayout = clone $layout;
         $tabs = [];
+
         foreach ($layout->getTabs() as $tab) {
             $renderTab = clone $tab;
             $renderTab->setLayout($renderLayout);
             $elements = [];
+
             foreach ($tab->getElements() as $element) {
                 $renderElement = clone $element;
+
                 if ($renderElement instanceof CustomField) {
                     $renderElement->setField($element->getField());
                     $field = $renderElement->getField();
+
                     if ($field instanceof Matrix) {
                         $field->viewMode = Matrix::VIEW_MODE_BLOCKS;
                         $field->showCardsInGrid = false;
@@ -498,6 +531,7 @@ final class FieldLayoutForms extends Component
     {
         $scriptHtml = '';
         $scripts = $view->clearScriptBuffer();
+
         if (is_array($scripts)) {
             foreach ([View::POS_HEAD, View::POS_BEGIN, View::POS_END] as $pos) {
                 if (!empty($scripts[$pos])) {
@@ -531,6 +565,7 @@ final class FieldLayoutForms extends Component
             if ($tab->hasConditions()) {
                 return true;
             }
+
             foreach ($tab->getElements() as $element) {
                 if ($element->hasConditions() || $element->alwaysRefresh()) {
                     return true;
@@ -547,15 +582,18 @@ final class FieldLayoutForms extends Component
     private function _elementUidMap(mixed $value): ?array
     {
         $value = Json::decode(Json::encode($value));
+
         if (!is_array($value)) {
             return null;
         }
         $map = [];
+
         foreach ($value as $tabUid => $elementUids) {
             if (!is_string($tabUid) || !is_array($elementUids)) {
                 return null;
             }
             $map[$tabUid] = [];
+
             foreach ($elementUids as $elementUid) {
                 if (!is_string($elementUid)) {
                     return null;
@@ -650,33 +688,43 @@ final class FieldLayoutForms extends Component
         if ($field instanceof VizyField) {
             return 'vizy.hosted';
         }
+
         if ($field instanceof Matrix) {
             return 'craft.matrix';
         }
+
         if ($field instanceof Lightswitch) {
             return 'craft.lightswitch';
         }
+
         if ($field instanceof Assets) {
             return 'craft.assets';
         }
+
         if ($field instanceof Entries) {
             return 'craft.entries';
         }
+
         if ($field instanceof Categories) {
             return 'craft.categories';
         }
+
         if ($field instanceof Tags) {
             return 'craft.tags';
         }
+
         if ($field instanceof Users) {
             return 'craft.users';
         }
+
         if ($field instanceof PlainText) {
             return 'craft.plainText';
         }
+
         if ($field instanceof JsonField) {
             return 'craft.json';
         }
+
         if ($field instanceof Link) {
             return 'craft.link';
         }
@@ -699,6 +747,7 @@ final class FieldLayoutForms extends Component
             ksort($properties, SORT_STRING);
             return (object)array_map($this->_normalizeForHash(...), $properties);
         }
+
         if (is_array($value)) {
             if (!array_is_list($value)) {
                 ksort($value, SORT_STRING);

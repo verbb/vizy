@@ -114,6 +114,7 @@ final class Documents extends Component
         if (!array_is_list($value)) {
             throw new InvalidDocumentException('Unrecognized persisted Vizy representation.');
         }
+
         if ($legacySchemaMap === null) {
             throw new InvalidDocumentException(
                 $field

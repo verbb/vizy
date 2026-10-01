@@ -65,6 +65,7 @@ final class AssetUploads extends Component
     public function handleAfterSave(ElementEvent $event): void
     {
         $keys = $this->_registrationKeysForOwner($event->element);
+
         if ($keys === [] || $this->_hasActiveTransaction()) {
             return;
         }
@@ -88,6 +89,7 @@ final class AssetUploads extends Component
         if ($this->flushing) {
             return;
         }
+
         foreach (array_keys($this->registrations) as $key) {
             unset($this->results[$key]);
         }
@@ -98,6 +100,7 @@ final class AssetUploads extends Component
     {
         $owner = $persistedSnapshot->owner();
         $field = $persistedSnapshot->field();
+
         if (!$owner || !$owner->id || !$owner->siteId || !$field?->uid) {
             throw new RuntimeException('Asset finalization requires a persisted owner/site and Vizy field UID.');
         }
@@ -115,9 +118,11 @@ final class AssetUploads extends Component
     public function retryBatch(int $batchId): array
     {
         $batch = AssetUploadBatch::findOne($batchId);
+
         if (!$batch) {
             throw new RuntimeException("Unknown Vizy Asset upload batch {$batchId}.");
         }
+
         if (str_starts_with((string)$batch->derivativeKey, 'draft:') || $batch->derivativeKey === 'livePreview') {
             return $this->_result('pending', (int)$batch->id, (int)$batch->attempts, [], (string)$batch->lastError);
         }
@@ -133,6 +138,7 @@ final class AssetUploads extends Component
     {
         $owner = $document->owner();
         $field = $document->field();
+
         if (!$owner?->id || !$owner->siteId || !$field?->uid || $owner->getIsRevision()) {
             return null;
         }
@@ -146,6 +152,7 @@ final class AssetUploads extends Component
             'fieldUid' => $field->uid,
             'snapshotHash' => hash('sha256', Vizy::$plugin->getDocuments()->serializeValue($document)),
         ])->andWhere($this->_placementCondition($owner, $field))->orderBy(['id' => SORT_DESC])->one();
+
         if (!$batch) {
             return null;
         }
@@ -186,12 +193,14 @@ final class AssetUploads extends Component
     {
         $owner = $persistedSnapshot->owner();
         $field = $persistedSnapshot->field();
+
         if ($owner->getIsRevision()) {
             return $this->_result('nonFinalizable', null, 0, [], 'revisionAssetsNeverFinalize');
         }
 
         $snapshot = Vizy::$plugin->getDocuments()->serializeValue($persistedSnapshot);
         $work = $this->_discoverWork($persistedSnapshot);
+
         if ($work === []) {
             return $this->_result('complete');
         }
@@ -221,6 +230,7 @@ final class AssetUploads extends Component
             'uid' => StringHelper::UUID(),
         ], false, updateTimestamp: false);
         $batch = AssetUploadBatch::findOne($identity);
+
         if (!$batch) {
             throw new RuntimeException('Unable to register the Vizy Asset upload batch.');
         }
@@ -232,6 +242,7 @@ final class AssetUploads extends Component
             $batch->save(false);
             return $this->_result('pending', (int)$batch->id, (int)$batch->attempts, [], $reason);
         }
+
         if ($preflightErrors !== []) {
             $batch->attempts = (int)$batch->attempts + 1;
             $batch->status = 'failed';
@@ -246,15 +257,19 @@ final class AssetUploads extends Component
     private function _discoverWork(VizyDocument $document): array
     {
         $work = [];
+
         // TipTap + Hosted Blocks — DocumentWalk enters Hosted Vizy placements.
         foreach (\verbb\vizy\document\DocumentWalk::blocks($document, true) as $block) {
             $layout = $block->blockType()?->getFieldLayout();
+
             if (!$layout) {
                 continue;
             }
             $doc = $block->document();
+
             foreach ($layout->getCustomFieldElements() as $placement) {
                 $assetField = $placement->getField();
+
                 if (!$assetField instanceof Assets || !$block->hasRawFieldValue($placement->uid)) {
                     continue;
                 }
@@ -262,6 +277,7 @@ final class AssetUploads extends Component
                     $doc->blockElement($block)->getFieldValue($assetField->handle),
                     $doc->blockElement($block),
                 );
+
                 foreach (is_array($serialized) ? $serialized : [] as $assetId) {
                     if (is_numeric($assetId)) {
                         $this->_addWork($work, (int)$assetId, null, $this->_fieldPolicy($assetField), [
@@ -277,6 +293,7 @@ final class AssetUploads extends Component
 
         foreach (\verbb\vizy\document\DocumentWalk::tipTapNodes($document, true) as $visit) {
             $node = $visit['node'];
+
             if (($node['type'] ?? null) !== 'image' || !is_string($node['attrs']['assetUid'] ?? null)) {
                 continue;
             }
@@ -285,8 +302,10 @@ final class AssetUploads extends Component
                 Asset::class,
                 $visit['document']->siteId(),
             );
+
             if ($asset instanceof Asset) {
                 $isTemporary = Craft::$app->getAssets()->createTempAssetQuery()->id($asset->id)->exists();
+
                 if (!$isTemporary) {
                     continue;
                 }
@@ -304,6 +323,7 @@ final class AssetUploads extends Component
     {
         $fingerprint = hash('sha256', Json::encode($policy));
         $key = (string)$assetId;
+
         if (!isset($work[$key])) {
             $work[$key] = compact('assetId', 'assetUid', 'policy', 'fingerprint') + ['sources' => []];
         } elseif ($work[$key]['fingerprint'] !== $fingerprint) {
@@ -336,10 +356,12 @@ final class AssetUploads extends Component
         $work = Json::decode((string)$batch->workJson);
         $errors = [];
         $owner = null;
+
         try {
             [$owner, $currentDocument] = $this->_loadCurrentSnapshot($batch);
             $currentSnapshot = Vizy::$plugin->getDocuments()->serializeValue($currentDocument);
             $currentWork = $this->_discoverWork($currentDocument);
+
             if (
                 !hash_equals((string)$batch->snapshotHash, hash('sha256', $currentSnapshot))
                 || !hash_equals((string)$batch->workFingerprint, hash('sha256', Json::encode($currentWork)))
@@ -355,6 +377,7 @@ final class AssetUploads extends Component
                 $errors[] = "Asset {$item['assetId']} has conflicting destination policies.";
             }
         }
+
         if ($errors === [] && $owner) {
             foreach ($work as $item) {
                 try {
@@ -381,12 +404,14 @@ final class AssetUploads extends Component
     private function _executeItem(array $item, ElementInterface $owner): void
     {
         $asset = Craft::$app->getAssets()->getAssetById((int)$item['assetId']);
+
         if (!$asset) {
             throw new RuntimeException('Referenced Asset is unavailable.');
         }
 
         $policy = $item['policy'];
         $isTemporary = Craft::$app->getAssets()->createTempAssetQuery()->id($asset->id)->exists();
+
         if (($policy['kind'] ?? null) === 'semanticPending') {
             // Defense in depth: older batches may still list volume-resident
             // semantic Images; those are already finalized.
@@ -403,6 +428,7 @@ final class AssetUploads extends Component
         }
 
         $actor = Craft::$app->getUser()->getIdentity();
+
         // Temporary uploads belong to their uploader. Destination permission
         // alone never authorizes taking another user's pending file.
         if ($isTemporary && $actor && !Craft::$app->getElements()->canView($asset, $actor)) {
@@ -410,8 +436,10 @@ final class AssetUploads extends Component
         }
 
         $folder = null;
+
         if ($policy['kind'] === 'field') {
             $field = Craft::$app->getFields()->getFieldByUid($policy['fieldUid']);
+
             if (!$field instanceof Assets) {
                 throw new RuntimeException('Assets field policy is no longer resolvable.');
             }
@@ -419,25 +447,30 @@ final class AssetUploads extends Component
             $folder = Craft::$app->getAssets()->getFolderById($field->resolveDynamicPathToFolderId($owner));
         } else {
             $volume = Craft::$app->getVolumes()->getVolumeByUid($policy['volumeUid']);
+
             if (!$volume) {
                 throw new RuntimeException('Destination volume is unavailable.');
             }
             [$subpath, $folder] = AssetsHelper::resolveSubpath($volume, $policy['subpath'], $owner);
             $folder ??= Craft::$app->getAssets()->ensureFolderByFullPathAndVolume($subpath, $volume, false);
         }
+
         if (!$folder) {
             throw new RuntimeException('Destination folder is unavailable.');
         }
         $volume = $folder->getVolume();
+
         if ($actor && !$actor->can("saveAssets:{$volume->uid}")) {
             throw new RuntimeException('The current actor cannot save Assets to the trusted destination volume.');
         }
 
         $restrictionFolder = $folder;
+
         if ($policy['kind'] === 'field' && $policy['restrictLocation'] && $policy['allowSubfolders']) {
             $source = (string)$policy['volumeSource'];
             $parts = explode(':', $source, 2);
             $volume = count($parts) === 2 ? Craft::$app->getVolumes()->getVolumeByUid($parts[1]) : null;
+
             if (!$volume) {
                 throw new RuntimeException('Restricted Asset volume is unavailable.');
             }
@@ -453,6 +486,7 @@ final class AssetUploads extends Component
             || (!$policy['allowSubfolders'] && $asset->folderId !== $restrictionFolder->id)
             || ($policy['allowSubfolders'] && !str_starts_with($asset->folderPath, $restrictionFolder->path))
         );
+
         if (!$isTemporary && !$mustEnforceRestricted) {
             return;
         }
@@ -465,6 +499,7 @@ final class AssetUploads extends Component
         $moved = $this->moveAssetHandler
             ? ($this->moveAssetHandler)($asset, $folder)
             : Craft::$app->getAssets()->moveAsset($asset, $folder);
+
         if (!$moved) {
             throw new RuntimeException('Craft could not move the Asset.');
         }
@@ -473,14 +508,17 @@ final class AssetUploads extends Component
     private function _assertActorCanSaveToSource(string $source): void
     {
         [$kind, $uid] = array_pad(explode(':', $source, 2), 2, null);
+
         if ($kind !== 'volume' || !$uid) {
             throw new RuntimeException('Trusted Asset destination volume is invalid.');
         }
         $volume = Craft::$app->getVolumes()->getVolumeByUid($uid);
+
         if (!$volume) {
             throw new RuntimeException('Trusted Asset destination volume is unavailable.');
         }
         $actor = Craft::$app->getUser()->getIdentity();
+
         if ($actor && !$actor->can("saveAssets:{$volume->uid}")) {
             throw new RuntimeException('The current actor cannot save Assets to the trusted destination volume.');
         }
@@ -493,6 +531,7 @@ final class AssetUploads extends Component
         }
         [$kind, $uid] = array_pad(explode(':', (string)$policy['volumeSource'], 2), 2, null);
         $volume = $kind === 'volume' && $uid ? Craft::$app->getVolumes()->getVolumeByUid($uid) : null;
+
         if (!$volume || $asset->volumeId !== $volume->id) {
             return false;
         }
@@ -521,14 +560,17 @@ final class AssetUploads extends Component
             (string)$batch->ownerType,
             (int)$batch->siteId,
         );
+
         if (!$owner) {
             throw new RuntimeException("Asset upload batch {$batch->id} owner is unavailable.");
         }
         $field = FieldPlacements::field($owner, (string)$batch->fieldUid, $batch->ownerPlacementUid);
+
         if (!$field instanceof VizyField) {
             throw new RuntimeException("Asset upload batch {$batch->id} Vizy field is unavailable.");
         }
         $document = $owner->getFieldValue($field->handle);
+
         if (!$document instanceof VizyDocument) {
             $document = $field->normalizeValue($document, $owner);
         }
@@ -543,16 +585,20 @@ final class AssetUploads extends Component
 
         $this->flushing = true;
         $failed = [];
+
         try {
             $preflightErrors = $this->_registrationDestinationConflicts($keys);
+
             foreach ($keys as $key) {
                 $registration = $this->registrations[$key] ?? null;
                 unset($this->registrations[$key]);
+
                 if (!$registration) {
                     continue;
                 }
                 $result = $this->_finalizeSnapshot($registration['document'], $preflightErrors[$key] ?? []);
                 $this->results[$key] = $result;
+
                 if ($result['status'] === 'failed') {
                     $failed[] = $result;
                 }
@@ -569,25 +615,31 @@ final class AssetUploads extends Component
     private function _registrationDestinationConflicts(array $keys): array
     {
         $claims = [];
+
         foreach ($keys as $key) {
             $registration = $this->registrations[$key] ?? null;
+
             if (!$registration) {
                 continue;
             }
+
             if ($registration['owner']->getIsDraft() || $registration['owner']->getIsRevision()) {
                 // Derivatives never move Assets. In a publish transaction Craft
                 // may save the source draft beside the canonical owner; only
                 // finalizable canonical registrations can claim a destination.
                 continue;
             }
+
             foreach ($this->_discoverWork($registration['document']) as $item) {
                 if (($item['policy']['kind'] ?? null) !== 'field') {
                     continue;
                 }
                 $field = Craft::$app->getFields()->getFieldByUid($item['policy']['fieldUid']);
+
                 if (!$field instanceof Assets) {
                     continue;
                 }
+
                 try {
                     $this->_assertActorCanSaveToSource((string)$item['policy']['volumeSource']);
                     $folderId = $field->resolveDynamicPathToFolderId($registration['owner']);
@@ -605,11 +657,14 @@ final class AssetUploads extends Component
         }
 
         $errors = [];
+
         foreach ($claims as $assetId => $assetClaims) {
             $destinations = array_unique(array_column($assetClaims, 'destination'));
+
             if (count($destinations) < 2) {
                 continue;
             }
+
             foreach ($assetClaims as $claim) {
                 $errors[$claim['key']][] = "Asset {$assetId} has conflicting multisite destination contexts.";
             }
@@ -656,6 +711,7 @@ final class AssetUploads extends Component
         if ($owner->getIsRevision()) {
             return 'revision:' . (string)$owner->revisionId;
         }
+
         if ($owner->getIsDraft()) {
             return 'draft:' . (string)$owner->draftId;
         }

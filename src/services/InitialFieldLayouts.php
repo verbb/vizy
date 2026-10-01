@@ -41,6 +41,7 @@ final class InitialFieldLayouts extends Component
                 }
 
                 $content = is_array($node['content'] ?? null) ? $node['content'] : [];
+
                 if (($node['type'] ?? null) !== 'vizyBlock') {
                     // Walk layout/column prose; vizyBlock is a TipTap leaf.
                     $walk($content, $destination);
@@ -54,6 +55,7 @@ final class InitialFieldLayouts extends Component
                 $blockType = $blockTypeUid !== ''
                     ? Vizy::$plugin->getBlockTypes()->getBlockTypeByUid($blockTypeUid)
                     : null;
+
                 if ($blockType?->getFieldLayout()?->uid) {
                     $result = Vizy::$plugin->getFieldLayoutForms()->renderInitial(
                         $context,
@@ -62,6 +64,7 @@ final class InitialFieldLayouts extends Component
                         $node,
                         $destination,
                     );
+
                     if ($result['ok']) {
                         $layouts[] = ['ok' => true, ...$result['data']];
                     } else {

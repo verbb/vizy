@@ -80,6 +80,7 @@ final class Renderer extends Component
 
             $path = "{$pathPrefix}.{$index}";
             $type = $node['type'] ?? null;
+
             if (!is_string($type) || $type === '') {
                 continue;
             }
@@ -91,6 +92,7 @@ final class Renderer extends Component
             }
 
             $render = $extensions->getRender('node', $type);
+
             if ($render === null) {
                 continue;
             }
@@ -115,6 +117,7 @@ final class Renderer extends Component
         string $path,
     ): string {
         $class = $render['class'] ?? null;
+
         if (!is_string($class) || !is_a($class, NodeInterface::class, true)) {
             return '';
         }
@@ -141,11 +144,13 @@ final class Renderer extends Component
                 continue;
             }
             $markType = $mark['type'] ?? null;
+
             if (!is_string($markType) || $markType === '') {
                 continue;
             }
 
             $render = $extensions->getRender('mark', $markType);
+
             if ($render === null) {
                 continue;
             }
@@ -163,6 +168,7 @@ final class Renderer extends Component
     private function _renderTypeMark(string $html, array $mark, array $render, RenderContext $ctx): string
     {
         $class = $render['class'] ?? null;
+
         if (!is_string($class) || !is_a($class, MarkInterface::class, true)) {
             return $html;
         }
@@ -179,6 +185,7 @@ final class Renderer extends Component
         }
 
         $template = $config['blockTemplates'][$type->uid] ?? $type->template;
+
         if (!$template) {
             return '';
         }

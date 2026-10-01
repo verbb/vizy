@@ -32,7 +32,7 @@ class Icons extends Component
 
     public function getCustomIcons(): array
     {
-                $settings = Vizy::$plugin->getSettings();
+        $settings = Vizy::$plugin->getSettings();
         $iconsPath = $settings->getIconsPath();
 
         if (!is_dir($iconsPath)) {
@@ -166,6 +166,7 @@ class Icons extends Component
     public function blockTypeIconSvg(mixed $icon): ?string
     {
         $value = is_string($icon) ? trim($icon) : '';
+
         if ($value === '') {
             return null;
         }
@@ -176,8 +177,10 @@ class Icons extends Component
     public function blockTypeInsertionIcon(mixed $icon, ?string $color = null): array
     {
         $value = is_string($icon) ? trim($icon) : '';
+
         if ($value !== '') {
             $svg = $this->getSvgForValue($value);
+
             if ($svg !== null) {
                 return [
                     'name' => $value,
@@ -210,6 +213,7 @@ class Icons extends Component
         foreach ($this->getAvailableIconSets() as $iconGroup) {
             foreach ($iconGroup['icons'] ?? [] as $icon) {
                 $value = (string)($icon['value'] ?? '');
+
                 // First group wins, matching `getIconForValue()`'s precedence.
                 if ($value === '' || !isset($wanted[$value]) || isset($found[$value])) {
                     continue;
@@ -227,7 +231,7 @@ class Icons extends Component
 
     private function _getFiles(string $path, array $options): array
     {
-                $settings = Vizy::$plugin->getSettings();
+        $settings = Vizy::$plugin->getSettings();
 
         if (!is_dir($settings->getIconsPath())) {
             return [];
@@ -247,6 +251,7 @@ class Icons extends Component
     {
         $filename = pathinfo($filepath, PATHINFO_FILENAME);
         $contents = @file_get_contents($filepath);
+
         if ($contents === false) {
             return null;
         }
@@ -255,6 +260,7 @@ class Icons extends Component
         // embeddable fragments and the client deliberately accepts only values beginning with
         // `<svg`, so remove the document wrapper while retaining the sanitized element.
         $svg = preg_replace('/^\s*<\?xml[^>]*\?>\s*/i', '', $svg) ?? '';
+
         if (trim($svg) === '') {
             return null;
         }

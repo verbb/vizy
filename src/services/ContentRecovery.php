@@ -44,12 +44,14 @@ final class ContentRecovery extends Component
             return null;
         }
         $snapshot = $this->snapshot($owner, $field);
+
         if ($snapshot['sites'] === []) {
             return null;
         }
         $hash = $this->hash($snapshot);
         $existing = (new Query())->select(['id', 'reason'])->from(VizyTable::CONTENT_RECOVERY)
             ->where(['ownerId' => $owner->id, 'fieldUid' => $field->uid, 'snapshotHash' => $hash])->one();
+
         if ($existing) {
             // An explicit operation checkpoint must not remain classified as
             // automatic merely because the same state was captured earlier.
@@ -59,6 +61,7 @@ final class ContentRecovery extends Component
                     'reason' => $reason,
                 ], ['id' => $existing['id']])->execute();
             }
+
             if ($reason === 'owner-save') {
                 $this->pruneAutomatic(self::AUTOMATIC_RETENTION, (int)$owner->id);
             }
@@ -75,6 +78,7 @@ final class ContentRecovery extends Component
         ], false)->execute();
         $id = (int)(new Query())->select('id')->from(VizyTable::CONTENT_RECOVERY)
             ->where(['ownerId' => $owner->id, 'fieldUid' => $field->uid, 'snapshotHash' => $hash])->scalar();
+
         if ($reason === 'owner-save') {
             $this->pruneAutomatic(self::AUTOMATIC_RETENTION, (int)$owner->id);
         }
@@ -84,6 +88,7 @@ final class ContentRecovery extends Component
     public function captureUpgrade(array $fieldUids): void
     {
         $seen = [];
+
         foreach (Craft::$app->getElements()->getAllElementTypes() as $type) {
             foreach ($type::find()->site('*')->unique(false)->status(null)->drafts(null)
                 ->provisionalDrafts(null)->revisions(null)->trashed(null)->each(100) as $owner) {
@@ -92,6 +97,7 @@ final class ContentRecovery extends Component
                         continue;
                     }
                     $key = $owner->id . ':' . FieldPlacements::uid($owner, $field);
+
                     if (!isset($seen[$key])) {
                         $this->capture($owner, $field, 'before-schema-upgrade');
                         $seen[$key] = true;
@@ -109,24 +115,30 @@ final class ContentRecovery extends Component
         $sites = [];
         $references = [];
         $fallbackBlocks = [];
+
         foreach ($this->_rows(Table::ELEMENTS_SITES, ['elementId' => $owner->id], $lock) as $row) {
             $content = $this->_decode($row['content']);
+
             if ($placement === null || !array_key_exists($placement, $content)) {
                 continue;
             }
             $value = $content[$placement];
             $sites[] = ['siteId' => (int)$row['siteId'], 'value' => $value];
             $this->_references($value, $references);
+
             if ($field->id) {
                 $fieldId = (int)$field->id;
                 $documentKey = $rootDocumentKey ?? '';
                 $fallbackBlocks[$fieldId][$documentKey] ??= [];
                 $this->_rootBlockUids($value, $fallbackBlocks[$fieldId][$documentKey]);
             }
+
             try {
                 $document = Vizy::$plugin->getDocuments()->normalizeValue($value, $owner, $field);
+
                 foreach (DocumentWalk::blocks($document) as $block) {
                     $fieldId = $block->document()->field()?->id;
+
                     if ($fieldId) {
                         $documentKey = $block->document()->anchorDocumentKey() ?? '';
                         $fallbackBlocks[(int)$fieldId][$documentKey][$block->uid()] = true;
@@ -139,9 +151,11 @@ final class ContentRecovery extends Component
             }
         }
         $anchorConditions = ['or'];
+
         if ($references !== []) {
             $anchorConditions[] = ['e.uid' => array_keys($references)];
         }
+
         foreach ($fallbackBlocks as $fieldId => $documents) {
             foreach ($documents as $documentKey => $blockUids) {
                 if ($blockUids === []) {
@@ -162,10 +176,12 @@ final class ContentRecovery extends Component
             ->innerJoin(['e' => Table::ELEMENTS], '[[a.id]] = [[e.id]]')
             ->select('a.id')->where($anchorConditions)->column();
         $ids = array_map('intval', $anchors);
+
         // Follow the real ownership graph, including Matrix inside Matrix and
         // Vizy inside nested entries. UID references alone are not the content.
         do {
             $before = $ids;
+
             if ($ids !== []) {
                 $children = (new Query())->select('elementId')->from(Table::ELEMENTS_OWNERS)->where(['ownerId' => $ids])->column();
                 $primary = (new Query())->select('id')->from(Table::ENTRIES)->where(['primaryOwnerId' => $ids])->column();
@@ -175,15 +191,18 @@ final class ContentRecovery extends Component
             }
         } while ($ids !== $before);
         $tables = [];
+
         foreach ([Table::ELEMENTS => 'id', Table::ELEMENTS_SITES => 'elementId', Table::ENTRIES => 'id', VizyTable::MATRIX_ANCHORS => 'id', Table::RELATIONS => 'sourceId'] as $table => $column) {
             $tables[$table] = $ids === [] ? [] : $this->_rows($table, [$column => $ids], $lock);
         }
         $tables[Table::ELEMENTS_OWNERS] = $ids === [] ? [] : $this->_rows(Table::ELEMENTS_OWNERS, ['or', ['ownerId' => $ids], ['elementId' => $ids]], $lock);
+
         foreach ([Table::DRAFTS => 'draftId', Table::REVISIONS => 'revisionId'] as $table => $column) {
             $derivativeIds = array_values(array_filter(array_column($tables[Table::ELEMENTS], $column)));
             $tables[$table] = $derivativeIds === [] ? [] : $this->_rows($table, ['id' => $derivativeIds], $lock);
         }
         $schema = [];
+
         foreach (array_unique(array_column($tables[Table::ENTRIES], 'typeId')) as $typeId) {
             $type = Craft::$app->getEntries()->getEntryTypeById((int)$typeId);
             $schema[$typeId] = $type ? ['uid' => $type->uid, 'layout' => $type->getFieldLayout()?->getConfig()] : null;
@@ -209,8 +228,10 @@ final class ContentRecovery extends Component
                 if (($node['type'] ?? null) === 'vizyBlock') {
                     $block = $scope->blockFromNode($node, $path . '.' . $index);
                     $layout = $block->blockType()?->getFieldLayout();
+
                     foreach ($layout?->getCustomFieldElements() ?? [] as $placement) {
                         $field = $placement->getField();
+
                         if ($field instanceof Matrix) {
                             $element = $scope->blockElement($block);
                             $value = $block->hasRawFieldValue($placement->uid)
@@ -230,6 +251,7 @@ final class ContentRecovery extends Component
                     }
                     unset($node['attrs']['matrixAnchorUid']);
                 }
+
                 if (isset($node['content']) && is_array($node['content'])) {
                     $node['content'] = $walk($node['content'], $scope, $path . '.' . $index . '.content');
                 }
@@ -259,24 +281,29 @@ final class ContentRecovery extends Component
         $counts = [];
         $deleted = 0;
         $beforeId = null;
+
         do {
             $query = (new Query())->select(['id', 'ownerId', 'fieldUid', 'placementUid'])
                 ->from(VizyTable::CONTENT_RECOVERY)
                 ->where(['reason' => 'owner-save'])
                 ->andFilterWhere(['ownerId' => $ownerId]);
+
             if ($beforeId !== null) {
                 $query->andWhere(['<', 'id', $beforeId]);
             }
             $rows = $query->orderBy(['id' => SORT_DESC])->limit(500)->all();
             $deleteIds = [];
+
             foreach ($rows as $row) {
                 $beforeId = (int)$row['id'];
                 $key = $row['ownerId'] . ':' . $row['fieldUid'] . ':' . ($row['placementUid'] ?? '');
                 $counts[$key] = ($counts[$key] ?? 0) + 1;
+
                 if ($counts[$key] > $keep) {
                     $deleteIds[] = (int)$row['id'];
                 }
             }
+
             if ($deleteIds !== []) {
                 $deleted += Craft::$app->getDb()->createCommand()
                     ->delete(VizyTable::CONTENT_RECOVERY, ['id' => $deleteIds])
@@ -291,19 +318,23 @@ final class ContentRecovery extends Component
     public function restore(int $id): void
     {
         $record = (new Query())->from(VizyTable::CONTENT_RECOVERY)->where(['id' => $id])->one();
+
         if (!$record) {
             throw new RuntimeException("Unknown Vizy recovery record {$id}.");
         }
         $snapshot = Json::decode($record['snapshotJson']);
+
         if (($snapshot['version'] ?? null) !== 1 || !hash_equals($record['snapshotHash'], $this->hash($snapshot))) {
             throw new RuntimeException('The recovery record is corrupt or uses an unsupported format.');
         }
         $owner = Craft::$app->getElements()->getElementById($snapshot['ownerId'], $snapshot['ownerClass'], $snapshot['sites'][0]['siteId']);
         $field = $owner ? FieldPlacements::field($owner, $snapshot['fieldUid'], $snapshot['placementUid']) : null;
+
         if (!$owner || $owner->uid !== $snapshot['ownerUid'] || !$field instanceof VizyField) {
             throw new RuntimeException('Restore the original owner and Vizy field placement before restoring its content.');
         }
         $transaction = Craft::$app->getDb()->beginTransaction();
+
         try {
             $this->_rows(Table::ELEMENTS, ['id' => $owner->id], true);
             $this->snapshot($owner, $field, true);
@@ -317,6 +348,7 @@ final class ContentRecovery extends Component
             // Recreate every element identity first with those links detached,
             // then restore the metadata and reconnect the captured graph.
             $elementLinks = [];
+
             foreach ($tables[Table::ELEMENTS] as $row) {
                 $elementLinks[$row['id']] = array_intersect_key($row, array_flip([
                     'canonicalId',
@@ -326,6 +358,7 @@ final class ContentRecovery extends Component
                     // restoration must retain the captured timestamp exactly.
                     'dateUpdated',
                 ]));
+
                 foreach (['canonicalId', 'draftId', 'revisionId'] as $column) {
                     if (array_key_exists($column, $row)) {
                         $row[$column] = null;
@@ -333,14 +366,17 @@ final class ContentRecovery extends Component
                 }
                 $this->_restoreRow(Table::ELEMENTS, $row);
             }
+
             foreach ([Table::DRAFTS, Table::REVISIONS] as $table) {
                 foreach ($tables[$table] as $row) {
                     $this->_restoreRow($table, $row);
                 }
             }
+
             foreach ($elementLinks as $elementId => $links) {
                 Craft::$app->getDb()->createCommand()->update(Table::ELEMENTS, $links, ['id' => $elementId])->execute();
             }
+
             foreach ([Table::ENTRIES, VizyTable::MATRIX_ANCHORS, Table::ELEMENTS_SITES] as $table) {
                 foreach ($tables[$table] as $row) {
                     $this->_restoreRow($table, $row);
@@ -350,15 +386,18 @@ final class ContentRecovery extends Component
             // remain available in the before-restore journal, never globally purged.
             Craft::$app->getDb()->createCommand()->delete(Table::RELATIONS, ['sourceId' => $ids])->execute();
             Craft::$app->getDb()->createCommand()->delete(Table::ELEMENTS_OWNERS, ['or', ['ownerId' => $ids], ['elementId' => $ids]])->execute();
+
             foreach ([Table::ELEMENTS_OWNERS, Table::RELATIONS] as $table) {
                 foreach ($tables[$table] as $row) {
                     Craft::$app->getDb()->createCommand()->insert($table, $row)->execute();
                 }
             }
+
             // Read back every captured row before changing the active document.
             foreach ($tables as $table => $rows) {
                 foreach ($rows as $row) {
                     $key = isset($row['id']) ? ['id' => $row['id']] : ['elementId' => $row['elementId'], 'ownerId' => $row['ownerId']];
+
                     // Recovery records are durable across additive schema
                     // migrations. Verify every captured value without making a
                     // historical snapshot invent columns that did not exist.
@@ -367,9 +406,11 @@ final class ContentRecovery extends Component
                     }
                 }
             }
+
             foreach ($snapshot['sites'] as $site) {
                 $where = ['elementId' => $owner->id, 'siteId' => $site['siteId']];
                 $raw = (new Query())->select('content')->from(Table::ELEMENTS_SITES)->where($where)->scalar();
+
                 if ($raw === false) {
                     throw new RuntimeException('A recovery site is missing. Restore the owner locale first.');
                 }
@@ -377,6 +418,7 @@ final class ContentRecovery extends Component
                 $content[$snapshot['placementUid']] = $site['value'];
                 Craft::$app->getDb()->createCommand()->update(Table::ELEMENTS_SITES, ['content' => $content], $where)->execute();
                 $stored = $this->_decode((new Query())->select('content')->from(Table::ELEMENTS_SITES)->where($where)->scalar());
+
                 if ($stored[$snapshot['placementUid']] !== $site['value']) {
                     throw new RuntimeException('The restored document did not match its recovery record.');
                 }
@@ -401,6 +443,7 @@ final class ContentRecovery extends Component
         if (!is_array($value)) {
             return $value;
         }
+
         if (!array_is_list($value)) {
             ksort($value);
         }
@@ -415,6 +458,7 @@ final class ContentRecovery extends Component
             }
         }
         $rowId = $values['id'] ?? null;
+
         if ($rowId === null) {
             throw new RuntimeException("Recovery row for {$table} has no primary identity.");
         }
@@ -437,6 +481,7 @@ final class ContentRecovery extends Component
             return $value;
         }
         $rows = $value !== [];
+
         foreach ($value as $item) {
             if (!is_array($item) || !isset($item['type'], $item['fields'])) {
                 $rows = false;
@@ -451,33 +496,41 @@ final class ContentRecovery extends Component
         foreach ($snapshot['schema'] ?? [] as $typeId => $expected) {
             $type = Craft::$app->getEntries()->getEntryTypeById((int)$typeId);
             $actual = $type ? ['uid' => $type->uid, 'layout' => $type->getFieldLayout()?->getConfig()] : null;
+
             if (!$actual || $actual !== $expected) {
                 throw new RuntimeException('A nested entry type or field layout has changed. Restore its schema before restoring this content.');
             }
         }
+
         foreach ($snapshot['references'] as $uid) {
             if (!in_array($uid, array_column($snapshot['tables'][Table::ELEMENTS], 'uid'), true)) {
                 throw new RuntimeException("Recovery record does not contain the referenced Matrix content {$uid}. Choose an earlier complete record.");
             }
         }
+
         foreach ($snapshot['tables'][Table::ELEMENTS] as $row) {
             $current = (new Query())->from(Table::ELEMENTS)->where(['id' => $row['id']])->one();
+
             if ($current && $current['uid'] !== $row['uid']) {
                 throw new RuntimeException('An element identity has been reused; recovery refused to overwrite it.');
             }
         }
         $outside = (new Query())->from(Table::ELEMENTS_OWNERS)
             ->where(['elementId' => $ids])->andWhere(['not', ['ownerId' => $ids]])->exists();
+
         if ($outside) {
             throw new RuntimeException('Nested content is shared with another owner; resolve its ownership before restoring.');
         }
+
         foreach ($snapshot['tables'][VizyTable::MATRIX_ANCHORS] as $row) {
             $element = array_values(array_filter($snapshot['tables'][Table::ELEMENTS], static fn(array $e): bool => $e['id'] == $row['id']))[0];
             $anchor = new \verbb\vizy\elements\MatrixAnchor(['id' => $row['id'], 'uid' => $element['uid'], 'parentOwnerId' => $row['parentOwnerId']]);
+
             if (Vizy::$plugin->getAnchors()->hasExternalReferences($anchor)) {
                 throw new RuntimeException('An anchor is referenced by another owner; resolve its ownership before restoring.');
             }
         }
+
         // A removed field, site, type or relation target must cause an atomic
         // failure, not a partial restoration that silently drops those values.
         foreach ($snapshot['tables'][Table::RELATIONS] as $row) {
@@ -501,6 +554,7 @@ final class ContentRecovery extends Component
             return [];
         }
         $decoded = is_string($value) ? Json::decode($value) : $value;
+
         if (!is_array($decoded)) {
             throw new RuntimeException('Stored owner content could not be decoded. No content has been replaced.');
         }
@@ -518,13 +572,16 @@ final class ContentRecovery extends Component
                 return;
             }
         }
+
         if (!is_array($value)) {
             return;
         }
+
         foreach ($value as $key => $child) {
             if ($key === 'matrixAnchorUid' && is_string($child) && $child !== '') {
                 $references[$child] = true;
             }
+
             if (is_array($child)) {
                 $this->_references($child, $references);
             }
@@ -541,16 +598,20 @@ final class ContentRecovery extends Component
                 return;
             }
         }
+
         if (!is_array($value)) {
             return;
         }
+
         if (($value['type'] ?? null) === 'vizyBlock') {
             $uid = $value['attrs']['blockUid'] ?? $value['attrs']['id'] ?? null;
+
             if (is_string($uid) && $uid !== '') {
                 $blockUids[$uid] = true;
             }
             return;
         }
+
         foreach ($value['content'] ?? $value as $child) {
             if (is_array($child)) {
                 $this->_rootBlockUids($child, $blockUids);

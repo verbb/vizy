@@ -82,6 +82,7 @@ final class Extensions extends Component
         $this->trigger(self::EVENT_REGISTER_EXTENSIONS, $event);
 
         $definitions = [];
+
         foreach ([
             'mark' => $event->marks,
             'node' => $event->nodes,
@@ -90,9 +91,11 @@ final class Extensions extends Component
             if (!is_array($classes) || !array_is_list($classes)) {
                 throw new RuntimeException("RegisterExtensionsEvent::{$kind}s must be a list of class names.");
             }
+
             foreach ($classes as $index => $class) {
                 $normalized = $this->_compileClass($kind, $class, $index);
                 $key = $normalized['kind'] . ':' . $normalized['name'];
+
                 if (isset($definitions[$key])) {
                     throw new RuntimeException("Duplicate Vizy extension definition: {$key}.");
                 }
@@ -139,6 +142,7 @@ final class Extensions extends Component
     public function getRender(string $kind, string $name): ?array
     {
         $definition = $this->getDefinition($kind, $name);
+
         if ($definition === null) {
             return null;
         }
@@ -156,6 +160,7 @@ final class Extensions extends Component
                 continue;
             }
             $render = $definition['render'] ?? null;
+
             if (!is_array($render) || !isset($render['strategy']) || !is_string($render['strategy'])) {
                 throw new RuntimeException("Vizy extension {$key} lacks a valid render strategy.");
             }
@@ -173,8 +178,10 @@ final class Extensions extends Component
         $this->trigger(self::EVENT_REGISTER_TOOLBAR_DROPDOWNS, $event);
 
         $dropdowns = [];
+
         foreach ($event->dropdowns as $index => $dropdown) {
             $normalized = $this->_normalizeDropdown($dropdown, $index);
+
             if (isset($dropdowns[$normalized['name']])) {
                 throw new RuntimeException("Duplicate Vizy toolbar dropdown: {$normalized['name']}.");
             }
@@ -212,6 +219,7 @@ final class Extensions extends Component
     public function resolveEnabled(array $nodes, array $marks, array $extensions = []): array
     {
         $requested = [];
+
         foreach (['node' => $nodes, 'mark' => $marks, 'extension' => $extensions] as $kind => $names) {
             foreach ($names as $name) {
                 if (!is_string($name) || $name === '') {
@@ -219,9 +227,11 @@ final class Extensions extends Component
                 }
                 $key = "{$kind}:{$name}";
                 $definition = $this->getDefinitions()[$key] ?? null;
+
                 if (!$definition || !$definition['installed']) {
                     throw new RuntimeException("Unknown or unavailable Vizy capability {$key}.");
                 }
+
                 if (!$definition['authorSelectable']) {
                     throw new RuntimeException("Internal Vizy capability {$key} cannot be selected.");
                 }
@@ -241,14 +251,17 @@ final class Extensions extends Component
                 return;
             }
             $definition = $this->getDefinitions()[$key] ?? null;
+
             if (!$definition || !$definition['installed']) {
                 throw new RuntimeException("Required Vizy capability {$key} is unavailable.");
             }
             $enabled[$key] = true;
+
             foreach ([...$definition['dependencies'], ...$definition['implies']] as $related) {
                 $visit($related);
             }
         };
+
         foreach (array_keys($requested) as $key) {
             $visit($key);
         }
@@ -260,6 +273,7 @@ final class Extensions extends Component
             'internalNodes' => [],
             'modules' => [],
         ];
+
         foreach (array_keys($enabled) as $key) {
             $definition = $this->getDefinitions()[$key];
             $bucket = match ($definition['kind']) {
@@ -268,11 +282,13 @@ final class Extensions extends Component
                 default => 'extensions',
             };
             $resolved[$bucket][] = $definition['name'];
+
             if ($definition['kind'] === 'node' && $definition['internal']) {
                 $resolved['internalNodes'][] = $definition['name'];
             }
             $resolved['modules'][] = $definition['module'];
         }
+
         foreach ($resolved as &$values) {
             $values = array_values(array_unique($values));
             sort($values);
@@ -300,14 +316,17 @@ final class Extensions extends Component
                 continue;
             }
             $type = $node['type'] ?? null;
+
             if (is_string($type) && $type !== '') {
                 $definition = $this->getDefinition('node', $type);
                 $class = $definition['render']['class'] ?? null;
+
                 if (is_string($class) && is_a($class, NodeInterface::class, true)) {
                     // Don't invent an attrs key when TipTap omitted it (e.g. text nodes).
                     $hadAttrs = array_key_exists('attrs', $node);
                     $attrs = is_array($node['attrs'] ?? null) ? $node['attrs'] : [];
                     $normalized = $class::normalizeAttrs($attrs, $ctx);
+
                     if ($hadAttrs || $normalized !== []) {
                         $node['attrs'] = $normalized;
                     }
@@ -320,15 +339,18 @@ final class Extensions extends Component
                         continue;
                     }
                     $markType = $mark['type'] ?? null;
+
                     if (!is_string($markType) || $markType === '') {
                         continue;
                     }
                     $definition = $this->getDefinition('mark', $markType);
                     $class = $definition['render']['class'] ?? null;
+
                     if (is_string($class) && is_a($class, MarkInterface::class, true)) {
                         $hadAttrs = array_key_exists('attrs', $mark);
                         $attrs = is_array($mark['attrs'] ?? null) ? $mark['attrs'] : [];
                         $normalized = $class::normalizeAttrs($attrs, $ctx);
+
                         if ($hadAttrs || $normalized !== []) {
                             $mark['attrs'] = $normalized;
                         }
@@ -404,6 +426,7 @@ final class Extensions extends Component
         if (!is_string($class) || $class === '') {
             throw new RuntimeException("Vizy {$kind} registration at index {$index} must be a class-string.");
         }
+
         if (!class_exists($class)) {
             throw new RuntimeException("Vizy {$kind} class {$class} does not exist.");
         }
@@ -413,22 +436,27 @@ final class Extensions extends Component
             'node' => NodeInterface::class,
             default => ExtensionInterface::class,
         };
+
         if (!is_a($class, $interface, true)) {
             throw new RuntimeException("Vizy {$kind} class {$class} must implement {$interface}.");
         }
 
         $name = $class::id();
+
         if (!is_string($name) || !preg_match('/^[A-Za-z][A-Za-z0-9]*$/', $name)) {
             throw new RuntimeException("Invalid Vizy type id() from {$class}.");
         }
+
         if (in_array($name, self::RESERVED_TYPES, true)) {
             throw new RuntimeException("Reserved Vizy transport type {$name} cannot be registered.");
         }
 
         $module = $class::moduleId();
+
         if (!is_string($module) || !preg_match('#^[A-Za-z0-9@][A-Za-z0-9@/_\-.]*$#', $module)) {
             throw new RuntimeException("Invalid moduleId() from {$class}.");
         }
+
         if ($module === $name) {
             throw new RuntimeException("Vizy {$kind}:{$name} moduleId() must not equal id().");
         }
@@ -439,10 +467,12 @@ final class Extensions extends Component
         $label = trim((string)$class::label());
 
         $surfaces = $class::surfaces();
+
         if (!is_array($surfaces) || !array_is_list($surfaces)) {
             throw new RuntimeException("Vizy {$kind}:{$name} surfaces() must return a list.");
         }
         $surfaces = array_values(array_unique(array_map('strval', $surfaces)));
+
         foreach ($surfaces as $surface) {
             if (!in_array($surface, [EditorSurface::Toolbar, EditorSurface::Bubble], true)) {
                 throw new RuntimeException("Vizy {$kind}:{$name} has unknown surface {$surface}.");
@@ -454,12 +484,14 @@ final class Extensions extends Component
         $controlId = $surfaces === [] ? null : $name;
 
         $icon = $class::icon();
+
         if ($icon !== null && (!is_string($icon) || trim($icon) === '')) {
             throw new RuntimeException("Vizy {$kind}:{$name} icon() must be a non-empty string when set.");
         }
         $icon = is_string($icon) ? trim($icon) : null;
 
         $group = $class::group();
+
         if ($group !== null && (!is_string($group) || trim($group) === '')) {
             throw new RuntimeException("Vizy {$kind}:{$name} group() must be a non-empty string when set.");
         }
@@ -506,6 +538,7 @@ final class Extensions extends Component
 
         if ($kind === 'mark') {
             $tag = $class::tag();
+
             if ($tag === null || $tag === '') {
                 return ['strategy' => 'omit', 'class' => $class];
             }
@@ -536,6 +569,7 @@ final class Extensions extends Component
             throw new RuntimeException("Vizy extension {$kind}:{$name} {$attribute} must be a list.");
         }
         $values = array_values(array_unique(array_map('strval', $values)));
+
         foreach ($values as $value) {
             if (!preg_match('/^(node|mark|extension):[A-Za-z][A-Za-z0-9]*$/', $value)) {
                 throw new RuntimeException("Invalid related capability {$value} on {$kind}:{$name}.");
@@ -583,17 +617,21 @@ final class Extensions extends Component
             throw new RuntimeException("Vizy toolbar dropdown {$index} must be an array.");
         }
         $name = $dropdown['name'] ?? null;
+
         if (!is_string($name) || !preg_match('/^[A-Za-z][A-Za-z0-9]*$/', $name)) {
             throw new RuntimeException("Invalid Vizy toolbar dropdown identity at index {$index}.");
         }
         $label = trim((string)($dropdown['label'] ?? ''));
+
         if ($label === '') {
             throw new RuntimeException("Vizy toolbar dropdown {$name} must have a label.");
         }
         $members = $dropdown['members'] ?? [];
+
         if (!is_array($members) || !array_is_list($members) || $members === []) {
             throw new RuntimeException("Vizy toolbar dropdown {$name} must have at least one member.");
         }
+
         foreach ($members as $member) {
             if (!is_string($member) || $member === '') {
                 throw new RuntimeException("Vizy toolbar dropdown {$name} members must be strings.");
@@ -614,14 +652,18 @@ final class Extensions extends Component
     {
         $reserved = $this->_reservedControlIds();
         $controls = [];
+
         foreach ($definitions as $key => $definition) {
             $controlId = $definition['controlId'] ?? null;
+
             if (!is_string($controlId) || $controlId === '') {
                 continue;
             }
+
             if (isset($reserved[$controlId])) {
                 throw new RuntimeException("Vizy control id {$controlId} on {$key} collides with a built-in toolbar token.");
             }
+
             if (isset($controls[$controlId])) {
                 $other = $controls[$controlId]['kind'] . ':' . $controls[$controlId]['name'];
                 throw new RuntimeException("Duplicate Vizy control id {$controlId} ({$other} and {$key}).");
@@ -646,6 +688,7 @@ final class Extensions extends Component
             'tableToggleHeaderRow', 'tableToggleHeaderColumn', 'tableToggleHeaderCell',
             'tableDelete',
         ];
+
         for ($level = 1; $level <= 6; $level++) {
             $ids[] = 'heading' . $level;
         }
@@ -669,6 +712,7 @@ final class Extensions extends Component
     private function _assertRenderShape(string $kind, string $name, array $render): void
     {
         $strategy = $render['strategy'] ?? null;
+
         if (!is_string($strategy)) {
             throw new RuntimeException("Vizy extension {$kind}:{$name} requires a render strategy.");
         }
@@ -678,12 +722,14 @@ final class Extensions extends Component
             'extension' => self::EXTENSION_STRATEGIES,
             default => self::NODE_STRATEGIES,
         };
+
         if (!in_array($strategy, $allowed, true)) {
             throw new RuntimeException("Vizy extension {$kind}:{$name} has invalid render strategy {$strategy}.");
         }
 
         if ($strategy === 'type' || $strategy === 'block') {
             $class = $render['class'] ?? null;
+
             if (!is_string($class) || $class === '' || !class_exists($class)) {
                 throw new RuntimeException("Vizy extension {$kind}:{$name} requires an existing class.");
             }
@@ -697,6 +743,7 @@ final class Extensions extends Component
                 return array_map(static fn(mixed $value) => is_array($value) ? $normalize($value) : $value, $item);
             }
             ksort($item);
+
             foreach ($item as &$value) {
                 if (is_array($value)) {
                     $value = $normalize($value);
@@ -711,6 +758,7 @@ final class Extensions extends Component
     private function _definitionsByKind(string $kind): array
     {
         $definitions = [];
+
         foreach ($this->getDefinitions() as $definition) {
             if ($definition['kind'] === $kind) {
                 $definitions[$definition['name']] = $definition;

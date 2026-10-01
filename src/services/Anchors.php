@@ -48,22 +48,27 @@ class Anchors extends Component
         ?string $documentKey = null,
     ): ?MatrixAnchor {
         $documentKey ??= AnchorDocuments::key($parentOwner, $vizyField);
+
         while ($parentOwner instanceof Block) {
             $parentOwner = $parentOwner->getOwner();
         }
+
         if (!$parentOwner->id) {
             return null;
         }
 
         $owners = [$parentOwner];
+
         if ($anchorUid) {
             if ($parentOwner->duplicateOf) {
                 $owners[] = $parentOwner->duplicateOf;
             }
+
             if ($parentOwner->getIsDerivative()) {
                 $owners[] = $parentOwner->getCanonical();
             }
         }
+
         foreach ($owners as $candidate) {
             if (!$candidate?->id) {
                 continue;
@@ -77,10 +82,12 @@ class Anchors extends Component
                 ? MatrixAnchorRecord::findOne([...$condition, 'documentKey' => $documentKey])
                     ?? MatrixAnchorRecord::findOne([...$condition, 'documentKey' => ''])
                 : MatrixAnchorRecord::findOne($condition);
+
             if (!$record) {
                 continue;
             }
             $anchor = Craft::$app->getElements()->getElementById($record->id, MatrixAnchor::class, $parentOwner->siteId);
+
             if (!$anchor instanceof MatrixAnchor || ($anchorUid && $anchor->uid !== $anchorUid)) {
                 continue;
             }
@@ -101,9 +108,11 @@ class Anchors extends Component
         ?string $documentKey = null,
     ): ?MatrixAnchor {
         $documentKey ??= AnchorDocuments::key($parentOwner, $vizyField);
+
         while ($parentOwner instanceof Block) {
             $parentOwner = $parentOwner->getOwner();
         }
+
         if (!$parentOwner->id) {
             return null;
         }
@@ -158,6 +167,7 @@ class Anchors extends Component
                         ['documentKey' => $documentKey],
                         ['id' => $anchor->id, 'documentKey' => ''],
                     )->execute();
+
                     if ($claimed === 1) {
                         $anchor->documentKey = $documentKey;
                     } else {
@@ -172,6 +182,7 @@ class Anchors extends Component
 
             $transaction = Craft::$app->getDb()->beginTransaction();
             $creatingAnchor = false;
+
             try {
                 // A saved block can be removed and then restored by undo or a
                 // revision. Reuse its ownership record and restore only children
@@ -182,28 +193,34 @@ class Anchors extends Component
                     'blockInstanceId' => $blockInstanceId,
                     'documentKey' => $documentKey ?? '',
                 ]);
+
                 if ($record) {
                     // The identity can exist while its requested site row does
                     // not. Repair localization under the same creation lock.
                     $existing = MatrixAnchor::find()->id($record->id)->site('*')->trashed(null)->one();
+
                     if ($existing) {
                         $existing->setParentOwner($parentOwner);
+
                         if ($existing->dateDeleted !== null) {
                             if (!Craft::$app->getElements()->restoreElement($existing)) {
                                 throw new RuntimeException('Unable to restore the Vizy Matrix anchor.');
                             }
                             $this->_restoreMatrixFields($existing);
                         }
+
                         if ($existing->siteId !== $parentOwner->siteId) {
                             // Resave the owner so Craft also propagates its
                             // Matrix rows; propagating only the element leaves
                             // a valid but empty anchor on a newly enabled site.
                             $existing->setFieldLayout($fieldLayout);
                             $existing->resaving = true;
+
                             if (!Craft::$app->getElements()->saveElement($existing, false, true, false)) {
                                 throw new RuntimeException('Unable to localize the Vizy Matrix anchor.');
                             }
                             $existing = $this->getAnchor($parentOwner, $vizyField, $blockInstanceId, null, $documentKey);
+
                             if (!$existing) {
                                 throw new RuntimeException('The Vizy Matrix anchor is missing its requested site.');
                             }
@@ -220,17 +237,22 @@ class Anchors extends Component
                 // duplicateOf link, so the exact persisted foreign reference is
                 // the only authority for recovering their surviving content.
                 $source = $referencedAnchor;
+
                 if (!$source) {
                     $sourceOwner = $parentOwner->duplicateOf;
+
                     if (!$sourceOwner && $parentOwner->getIsDerivative()) {
                         $sourceOwner = $parentOwner->getCanonical();
                     }
+
                     if ($sourceOwner && $sourceOwner->id !== $parentOwner->id) {
                         $source = $this->getAnchor($sourceOwner, $vizyField, $blockInstanceId, null, $documentKey);
                     }
                 }
+
                 if ($anchor && $source && $source->id !== $anchor->id && $fieldLayout) {
                     $source->setFieldLayout($fieldLayout);
+
                     foreach ($fieldLayout->getCustomFields() as $field) {
                         if ($field instanceof Matrix) {
                             $this->copyMatrixField($field, $source, $anchor);
@@ -241,12 +263,14 @@ class Anchors extends Component
                 return $anchor;
             } catch (\Throwable $e) {
                 $transaction->rollBack();
+
                 // A host-local mutex cannot serialize other web servers. The
                 // unique ownership key still selects a winner, but MySQL's
                 // previous transaction snapshot cannot see it until rollback.
                 // Never end or retry a caller's surrounding owner transaction.
                 if ($creatingAnchor && $e instanceof IntegrityException && !Craft::$app->getDb()->getTransaction()?->getIsActive()) {
                     $existing = $this->getAnchor($parentOwner, $vizyField, $blockInstanceId, null, $documentKey);
+
                     if ($existing) {
                         return $this->_applyFieldLayout($existing, $fieldLayout);
                     }
@@ -269,11 +293,13 @@ class Anchors extends Component
             // may submit its unchanged value; leave those rows entirely alone.
             $stored = $field->serializeValue(MatrixHelper::nestedEntryQuery($field, $anchor, deduplicate: false), $anchor);
             $submitted = $field->serializeValue($fieldValue, $anchor);
+
             if ($stored === $submitted) {
                 return;
             }
             throw new RuntimeException('This Matrix content is still referenced by another owner or historical draft. Run vizy/anchors/backfill --drafts --revisions --trashed to give derivatives independent content before editing it. No content has been replaced.');
         }
+
         if ($fieldLayout = $anchor->getFieldLayout()) {
             $anchor->setFieldLayout($fieldLayout);
         }
@@ -297,6 +323,7 @@ class Anchors extends Component
         $value = MatrixHelper::nestedEntryQuery($field, $anchor, deduplicate: false);
         $rows = $value->all();
         $unique = MatrixHelper::deduplicateEntries($rows);
+
         if (count($unique) !== count($rows)) {
             // Use Craft's normal removal lifecycle; never delete by UID across
             // unrelated owners or bypass nested-entry cleanup.
@@ -314,6 +341,7 @@ class Anchors extends Component
         // Loaded anchors have no persisted FieldLayout. Discover the fields from
         // their actual children so cleanup also works after schema removal.
         $fields = $this->_matrixFieldsForAnchor($anchor);
+
         // Matrix entry queries bind their site from the owner during prepare.
         // Pass every localized owner so site-specific rows are also cleaned up.
         // Use the captured identity: a parent hard-delete may already have
@@ -322,6 +350,7 @@ class Anchors extends Component
             $localized = clone $anchor;
             $localized->siteId = $siteId;
             $localized->hardDelete = $hardDelete;
+
             foreach ($fields as $field) {
                 if (!$field->beforeElementDelete($localized)) {
                     throw new RuntimeException('Unable to delete the Vizy Matrix field content.');
@@ -339,6 +368,7 @@ class Anchors extends Component
         if ($parentOwner instanceof Block || $parentOwner instanceof MatrixAnchor) {
             return;
         }
+
         if (!$parentOwner->id) {
             return;
         }
@@ -361,16 +391,19 @@ class Anchors extends Component
         $references = [];
         $legacyReferences = [];
         $rawAnchorUids = [];
+
         foreach ($owners as $owner) {
             foreach ($owner->getFieldLayout()?->getCustomFields() ?? [] as $field) {
                 if (!$field instanceof VizyField) {
                     continue;
                 }
                 $document = $owner->getFieldValue($field->handle);
+
                 if (!$document instanceof VizyDocument) {
                     continue;
                 }
                 $rawAnchorUids += $this->_referencedAnchorUids($document->content()->nodes());
+
                 foreach (DocumentWalk::blocks($document) as $block) {
                     $fieldId = $block->document()->field()?->id;
                     $documentKey = $block->document()->anchorDocumentKey() ?? '';
@@ -389,6 +422,7 @@ class Anchors extends Component
             $exactReference = isset($references[$record->vizyFieldId . ':' . $record->documentKey . ':' . $record->blockInstanceId]);
             $legacyReference = $record->documentKey === ''
                 && isset($legacyReferences[$record->vizyFieldId . ':' . $record->blockInstanceId]);
+
             if (!$exactReference && !$legacyReference) {
                 $anchor = Craft::$app->getElements()->getElementById($record->id, MatrixAnchor::class, $parentOwner->siteId);
 
@@ -404,6 +438,7 @@ class Anchors extends Component
         if (!$owner->id) {
             return;
         }
+
         foreach ($owner->getFieldLayout()?->getCustomFields() ?? [] as $field) {
             if ($field instanceof VizyField) {
                 Vizy::$plugin->getContentRecovery()->capture($owner, $field, 'owner-deletion');
@@ -421,6 +456,7 @@ class Anchors extends Component
             ->status(null)
             ->trashed(null)
             ->all();
+
         foreach ($anchors as $anchor) {
             if ($this->hasExternalReferences($anchor)) {
                 throw new RuntimeException('Cannot delete this owner while its Matrix content is referenced by another owner or historical draft. Run vizy/anchors/backfill --drafts --revisions --trashed first.');
@@ -428,6 +464,7 @@ class Anchors extends Component
         }
         $handler = [$this, 'handleOwnerDeleted'];
         $owner->off(Element::EVENT_AFTER_DELETE, $handler);
+
         if ($anchors !== []) {
             $owner->on(Element::EVENT_AFTER_DELETE, $handler, $anchors);
         }
@@ -437,6 +474,7 @@ class Anchors extends Component
     {
         $owner = $event->sender;
         $owner->off(Element::EVENT_AFTER_DELETE, [$this, __FUNCTION__]);
+
         foreach ($event->data as $anchor) {
             if (!$owner->hardDelete && $anchor->trashed) {
                 continue;
@@ -457,6 +495,7 @@ class Anchors extends Component
             ->trashed(true)
             ->andWhere(['elements.deletedWithOwner' => true])
             ->all();
+
         foreach ($anchors as $anchor) {
             if (!Craft::$app->getElements()->restoreElement($anchor)) {
                 throw new RuntimeException('Unable to restore the Vizy Matrix anchor.');
@@ -507,6 +546,7 @@ class Anchors extends Component
 
         $documentKey ??= AnchorDocuments::key($owner, $field);
         $owned = $this->getAnchor($owner, $field, $blockUid, $uid, $documentKey);
+
         if ($owned) {
             return $owned;
         }
@@ -521,6 +561,7 @@ class Anchors extends Component
                 'e.uid' => $uid,
             ])
             ->one();
+
         if (!$record) {
             return null;
         }
@@ -541,6 +582,7 @@ class Anchors extends Component
                     ->status(null)
                     ->trashed(null)
                     ->one();
+
             if ($anchor instanceof MatrixAnchor) {
                 $anchor->setParentOwner($owner);
             }
@@ -557,6 +599,7 @@ class Anchors extends Component
             ->siteId($owner->siteId)
             ->status(null)
             ->one();
+
         if (!$anchor instanceof MatrixAnchor) {
             return null;
         }
@@ -583,6 +626,7 @@ class Anchors extends Component
             return null;
         }
         $anchor = $this->getStoredReferencedAnchor($owner, $field, $blockUid, $uid, $documentKey);
+
         if ($anchor) {
             return $anchor;
         }
@@ -592,6 +636,7 @@ class Anchors extends Component
     public function elementNeedsMatrixAnchorBackfill(ElementInterface $element, VizyField $vizyField): bool
     {
         $placementField = $element->getFieldLayout()?->getFieldByHandle($vizyField->handle);
+
         if (!$placementField instanceof VizyField || $placementField->id !== $vizyField->id) {
             return false;
         }
@@ -616,6 +661,7 @@ class Anchors extends Component
         VizyField $vizyField,
     ): bool {
         $layout = $block->blockType()?->getFieldLayout();
+
         if (!$this->blockHasMatrixFields($layout) || !$parentOwner->id) {
             return false;
         }
@@ -631,12 +677,15 @@ class Anchors extends Component
             $block->matrixAnchorUid(),
             $block->document()->anchorDocumentKey(),
         );
+
         if (!$anchor || $anchor->parentOwnerId !== (int)$parentOwner->id) {
             return true;
         }
+
         foreach ($layout->getCustomFields() as $field) {
             if ($field instanceof Matrix) {
                 $rows = MatrixHelper::nestedEntryQuery($field, $anchor, deduplicate: false)->all();
+
                 if (count($rows) !== count(MatrixHelper::deduplicateEntries($rows))) {
                     return true;
                 }
@@ -654,21 +703,26 @@ class Anchors extends Component
         // Preserve references inside temporarily unresolved Block Types and
         // Hosted placements. Cleanup must not require a complete current schema.
         $uids = [];
+
         foreach ($nodes as $node) {
             if (!is_array($node)) {
                 continue;
             }
+
             if (($node['type'] ?? null) === 'vizyBlock') {
                 $uid = $node['attrs']['matrixAnchorUid'] ?? null;
+
                 if (is_string($uid) && $uid !== '') {
                     $uids[$uid] = true;
                 }
+
                 foreach ($node['attrs']['fieldSlots'] ?? [] as $value) {
                     if (DocumentWalk::isHostedEnvelope($value)) {
                         $uids += $this->_referencedAnchorUids($value['content']);
                     }
                 }
             }
+
             if (is_array($node['content'] ?? null)) {
                 $uids += $this->_referencedAnchorUids($node['content']);
             }
@@ -679,9 +733,11 @@ class Anchors extends Component
     private function _restoreMatrixFields(MatrixAnchor $anchor): void
     {
         $fields = $this->_matrixFieldsForAnchor($anchor);
+
         foreach (Craft::$app->getSites()->getAllSiteIds() as $siteId) {
             $localized = clone $anchor;
             $localized->siteId = $siteId;
+
             foreach ($fields as $field) {
                 $field->afterElementRestore($localized);
             }
@@ -697,8 +753,10 @@ class Anchors extends Component
             ->where(['primaryOwnerId' => $anchor->id])
             ->column();
         $fields = [];
+
         foreach ($fieldIds as $fieldId) {
             $field = Craft::$app->getFields()->getFieldById($fieldId);
+
             if ($field instanceof Matrix) {
                 $fields[] = $field;
             }
@@ -775,6 +833,7 @@ class Anchors extends Component
         if ($depth > 64) {
             return false;
         }
+
         if (is_string($value)) {
             try {
                 $decoded = Json::decode($value);
@@ -784,6 +843,7 @@ class Anchors extends Component
             return is_array($decoded)
                 && $this->_containsStoredAnchorReference($decoded, $blockUid, $anchorUid, $depth + 1);
         }
+
         if (!is_array($value)) {
             return false;
         }
@@ -796,6 +856,7 @@ class Anchors extends Component
             ?? $values['matrixAnchorUid']
             ?? $content['matrixAnchorUid']
             ?? null;
+
         if (
             ($value['type'] ?? null) === 'vizyBlock'
             && $storedBlockUid === $blockUid
@@ -841,6 +902,7 @@ class Anchors extends Component
         if ($depth > 64) {
             return 0;
         }
+
         if (is_string($value)) {
             try {
                 $value = Json::decode($value);
@@ -848,6 +910,7 @@ class Anchors extends Component
                 return 0;
             }
         }
+
         if (!is_array($value)) {
             return 0;
         }
@@ -860,6 +923,7 @@ class Anchors extends Component
             && ($attrs['matrixAnchorUid'] ?? $values['matrixAnchorUid'] ?? $content['matrixAnchorUid'] ?? null) === $anchorUid
             ? 1
             : 0;
+
         foreach ($value as $child) {
             $count += $this->_countStoredAnchorReferences($child, $blockUid, $anchorUid, $depth + 1);
         }

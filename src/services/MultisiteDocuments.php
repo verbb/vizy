@@ -38,6 +38,7 @@ final class MultisiteDocuments extends Component
         $sourceOwner = $source->owner();
         $targetOwner = $target->owner();
         $field = $source->field();
+
         if (!$sourceOwner || !$targetOwner || !$field) {
             throw new RuntimeException('Craft propagation guard requires exact source, target, and field context.');
         }
@@ -48,11 +49,13 @@ final class MultisiteDocuments extends Component
             (string)$targetOwner->siteId,
             (string)$field->uid,
         ]);
+
         if (isset($this->activePropagations[$key])) {
             throw new RuntimeException("Recursive Vizy propagation was prevented for {$key}.");
         }
 
         $this->activePropagations[$key] = true;
+
         try {
             if ($this->propagationProbe) {
                 ($this->propagationProbe)($source, $target);
@@ -68,6 +71,7 @@ final class MultisiteDocuments extends Component
         $sourceOwner = $source->owner();
         $targetOwner = $target->owner();
         $field = $source->field();
+
         if (!$sourceOwner || !$targetOwner || !$field || $target->field() !== $field) {
             throw new RuntimeException('Multisite merge requires source and target documents for the same field with exact owner context.');
         }
@@ -111,6 +115,7 @@ final class MultisiteDocuments extends Component
     public function duplicateForCraftOwner(VizyDocument $source, ElementInterface $newOwner): VizyDocument
     {
         $field = $source->field();
+
         if (!$field || !$newOwner->uid) {
             throw new RuntimeException('Craft owner duplication requires field context and the new owner UID.');
         }
@@ -130,6 +135,7 @@ final class MultisiteDocuments extends Component
     private function _indexBlocks(VizyDocument $document): array
     {
         $indexed = [];
+
         foreach ($document->blocks(null) as $block) {
             if (isset($indexed[$block->uid()])) {
                 throw new RuntimeException("Duplicate Vizy Block UID {$block->uid()} prevents multisite merge.");
@@ -146,6 +152,7 @@ final class MultisiteDocuments extends Component
                 $uid = $node['attrs']['blockUid'];
                 $sourceBlock = $sourceBlocks[$uid];
                 $targetBlock = $targetBlocks[$uid] ?? null;
+
                 if ($targetBlock) {
                     $node['attrs']['fieldSlots'] = $this->_mergeFieldSlots($sourceBlock, $targetBlock);
                 }
@@ -164,6 +171,7 @@ final class MultisiteDocuments extends Component
     {
         $merged = $source->rawFieldValues();
         $layout = $source->blockType()?->getFieldLayout();
+
         if (!$layout) {
             // Unresolved source schema cannot reinterpret either side; target raw
             // slots win for the surviving logical Block.
@@ -171,6 +179,7 @@ final class MultisiteDocuments extends Component
         }
 
         $resolved = [];
+
         foreach ($layout->getCustomFieldElements() as $placement) {
             $uid = $placement->uid;
             $resolved[$uid] = true;

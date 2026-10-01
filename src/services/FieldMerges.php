@@ -27,23 +27,29 @@ final class FieldMerges extends Component
 
         $outgoing = $this->_field($outgoingSelector, 'outgoing');
         $persisting = $this->_field($persistingSelector, 'persisting');
+
         if ($outgoing->uid === $persisting->uid) {
             throw new InvalidArgumentException('The outgoing and persisting fields must be different fields.');
         }
 
         $diagnostics = [];
+
         if (!$outgoing instanceof MergeableFieldInterface) {
             $diagnostics[] = $this->_diagnostic('error', 'outgoingNotMergeable', "The outgoing field {$outgoing->handle} does not support Craft field merges.");
         }
+
         if (!$persisting instanceof MergeableFieldInterface) {
             $diagnostics[] = $this->_diagnostic('error', 'persistingNotMergeable', "The persisting field {$persisting->handle} does not support Craft field merges.");
         }
+
         if ($outgoing instanceof MergeableFieldInterface && $persisting instanceof MergeableFieldInterface) {
             $reason = null;
+
             if (!$outgoing->canMergeInto($persisting, $reason)) {
                 $diagnostics[] = $this->_diagnostic('error', 'cannotMergeInto', $reason ?: 'The outgoing field cannot be merged into the persisting field.');
             }
             $reason = null;
+
             if (!$persisting->canMergeFrom($outgoing, $reason)) {
                 $diagnostics[] = $this->_diagnostic('error', 'cannotMergeFrom', $reason ?: 'The persisting field cannot accept the outgoing field.');
             }
@@ -51,12 +57,15 @@ final class FieldMerges extends Component
 
         $layouts = Craft::$app->getFields()->findFieldUsages($outgoing);
         $layoutPlans = [];
+
         foreach ($layouts as $layout) {
             $layoutPlan = $this->_layoutPlan($layout, $outgoing, $persisting);
             $layoutPlans[] = $layoutPlan;
+
             if (!$layout->id && !$layout->uid) {
                 $diagnostics[] = $this->_diagnostic('error', 'unsavableLayout', 'An outgoing-field layout has neither an ID nor a UID.', $layoutPlan);
             }
+
             if ($layoutPlan['ambiguous']) {
                 $diagnostics[] = $this->_diagnostic('error', 'ambiguousLayout', 'Both fields occur in a layout that does not support repeated instances.', $layoutPlan);
             }
@@ -81,6 +90,7 @@ final class FieldMerges extends Component
             $siteIds[(int)$context['siteId']] = true;
 
             $sample = $this->_contentLocation($context);
+
             if (count($samples) < $sampleLimit) {
                 $samples[] = $sample;
             }
@@ -89,6 +99,7 @@ final class FieldMerges extends Component
             // the stable schema route that a later apply step must preserve.
             $schemaPath = $this->_schemaPath($context);
             $key = hash('sha256', Json::encode($schemaPath));
+
             if (!isset($groups[$key])) {
                 $groups[$key] = ['path' => $schemaPath, 'occurrences' => 0];
             }
@@ -142,11 +153,13 @@ final class FieldMerges extends Component
     private function _field(string $selector, string $role): FieldInterface
     {
         $selector = trim($selector);
+
         if ($selector === '') {
             throw new InvalidArgumentException("A {$role} field handle or UID is required.");
         }
         $field = Craft::$app->getFields()->getFieldByHandle($selector)
             ?? Craft::$app->getFields()->getFieldByUid($selector);
+
         if (!$field) {
             throw new InvalidArgumentException("The {$role} field '{$selector}' was not found.");
         }
@@ -168,6 +181,7 @@ final class FieldMerges extends Component
     {
         $outgoingPlacements = [];
         $persistingPlacements = [];
+
         foreach ($layout->getCustomFieldElements() as $placement) {
             $details = [
                 'layoutUid' => $layout->uid,
@@ -176,9 +190,11 @@ final class FieldMerges extends Component
                 'toFieldUid' => $persisting->uid,
                 'handle' => $placement->handle,
             ];
+
             if ($placement->getFieldUid() === $outgoing->uid) {
                 $outgoingPlacements[] = $details;
             }
+
             if ($placement->getFieldUid() === $persisting->uid) {
                 $persistingPlacements[] = [
                     'layoutUid' => $layout->uid,
@@ -224,6 +240,7 @@ final class FieldMerges extends Component
     private function _schemaPath(array $context): array
     {
         $path = [$context['rootPlacementUid']];
+
         foreach (array_slice($context['path'], 1) as $segment) {
             if (!is_array($segment)) {
                 continue;

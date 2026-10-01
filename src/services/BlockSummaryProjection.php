@@ -38,6 +38,7 @@ final class BlockSummaryProjection
     public function inferenceFor(BlockType $type): BlockSummaryInference
     {
         $uid = (string)$type->uid;
+
         if (isset($this->inferenceCache[$uid])) {
             return $this->inferenceCache[$uid];
         }
@@ -46,6 +47,7 @@ final class BlockSummaryProjection
         $subtitle = [];
         $media = [];
         $layout = $type->getFieldLayout();
+
         if ($layout) {
             foreach ($layout->getCustomFieldElements() as $element) {
                 if (!$element instanceof CustomField) {
@@ -53,6 +55,7 @@ final class BlockSummaryProjection
                 }
                 $placementUid = (string)$element->uid;
                 $field = $element->getField();
+
                 // Hosted Vizy is another authored text surface. Keep it in the same
                 // FieldLayout-ordered inference as Plain Text rather than requiring a
                 // separate summary setting; the raw document projector below already
@@ -61,9 +64,11 @@ final class BlockSummaryProjection
                     $title[] = $placementUid;
                     continue;
                 }
+
                 if ($field instanceof Assets) {
                     $settings = $field->settings ?? [];
                     $max = (int)($settings['maxRelations'] ?? $settings['limit'] ?? 1);
+
                     if ($max <= 0 || $max === 1) {
                         $media[] = $placementUid;
                     }
@@ -91,8 +96,10 @@ final class BlockSummaryProjection
         BlockSummaryInference $inference,
     ): string {
         $fallback = $type->name !== '' ? $type->name : $type->handle;
+
         foreach ($this->_candidatePlacements($explicitPlacementUid, $inference->titleCandidates) as $placementUid) {
             $text = $this->_textFromSlot($fieldSlots, $placementUid);
+
             if ($text !== null && $text !== '') {
                 return BlockSummaryTexts::boundTitle($text, $fallback);
             }
@@ -107,6 +114,7 @@ final class BlockSummaryProjection
     ): ?string {
         foreach ($this->_candidatePlacements($explicitPlacementUid, $inference->subtitleCandidates) as $placementUid) {
             $text = $this->_textFromSlot($fieldSlots, $placementUid);
+
             if ($text !== null && $text !== '') {
                 return BlockSummaryTexts::boundSubtitle($text);
             }
@@ -123,6 +131,7 @@ final class BlockSummaryProjection
     ): ?BlockSummaryMedia {
         foreach ($this->_candidatePlacements($explicitPlacementUid, $inference->mediaCandidates) as $placementUid) {
             $reference = $this->_assetReferenceFromSlot($fieldSlots, $placementUid);
+
             if ($reference === null) {
                 continue;
             }
@@ -142,6 +151,7 @@ final class BlockSummaryProjection
         if (!$placementUid) {
             return false;
         }
+
         foreach ($layout->getCustomFieldElements() as $element) {
             if ((string)$element->uid === $placementUid) {
                 return true;
@@ -181,16 +191,20 @@ final class BlockSummaryProjection
             return null;
         }
         $raw = $fieldSlots[$placementUid];
+
         if (is_int($raw)) {
             return $raw;
         }
+
         if (is_string($raw) && ctype_digit($raw)) {
             return (int)$raw;
         }
+
         if (!is_array($raw)) {
             return null;
         }
         $ids = array_values(array_filter($raw, static fn(mixed $item) => is_int($item) || (is_string($item) && ctype_digit($item))));
+
         if (count($ids) !== 1) {
             return null;
         }
@@ -203,9 +217,11 @@ final class BlockSummaryProjection
         if (is_string($raw) || is_numeric($raw)) {
             return (string)$raw;
         }
+
         if (!is_array($raw)) {
             return null;
         }
+
         if (($raw['type'] ?? null) === 'doc' || isset($raw['content'])) {
             return Vizy::$plugin->getContentText()->project($raw, self::DOCUMENT_TEXT_LIMIT);
         }

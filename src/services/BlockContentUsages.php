@@ -16,8 +16,10 @@ final class BlockContentUsages extends Component
     public function countBlockTypesInDocument(VizyDocument $document): array
     {
         $counts = [];
+
         foreach ($document->blocks(null) as $block) {
             $uid = $block->blockTypeUid();
+
             if ($uid === '') {
                 continue;
             }
@@ -29,6 +31,7 @@ final class BlockContentUsages extends Component
     public function findBlockTypeUids(VizyDocument $document, string $blockTypeUid): array
     {
         $matches = [];
+
         foreach ($document->blocks(null) as $block) {
             if ($block->blockTypeUid() === $blockTypeUid) {
                 $matches[] = $block->uid();
@@ -43,10 +46,12 @@ final class BlockContentUsages extends Component
         $walk = function(array $current) use (&$walk, &$matches, $blockTypeUid): void {
             if (($current['type'] ?? null) === 'vizyBlock') {
                 $attrs = $current['attrs'] ?? [];
+
                 if (($attrs['blockTypeUid'] ?? null) === $blockTypeUid && is_string($attrs['blockUid'] ?? null)) {
                     $matches[] = $attrs['blockUid'];
                 }
             }
+
             foreach ($current['content'] ?? [] as $child) {
                 if (is_array($child)) {
                     $walk($child);

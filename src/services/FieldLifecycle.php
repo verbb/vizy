@@ -202,9 +202,11 @@ final class FieldLifecycle extends Component
     {
         $inventory = $this->classify($field);
         $name = method_exists($field, 'getName') ? (string)$field->getName() : '';
+
         if ($name === '' && $field instanceof Field) {
             $name = (string)$field->name;
         }
+
         if ($name === '') {
             $name = $field::displayName();
         }

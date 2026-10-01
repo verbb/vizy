@@ -57,22 +57,27 @@ final class EditorAcknowledgements extends Component
     public function collect(ElementInterface $owner, VizyField $field, VizyDocument $document): void
     {
         $request = Craft::$app->getRequest();
+
         if ($request->getIsConsoleRequest()) {
             return;
         }
         $all = $request->getBodyParam('vizyTransport', []);
+
         if (!is_array($all)) {
             return;
         }
+
         foreach ($all as $metadata) {
             if (!is_array($metadata) || ($metadata['fieldUid'] ?? null) !== $field->uid) {
                 continue;
             }
+
             try {
                 $context = Vizy::$plugin->getEditorContexts()->verify((string)($metadata['editorContextToken'] ?? ''));
             } catch (\Throwable) {
                 continue;
             }
+
             if (
                 !$this->_contextMatches($context, $owner, $field)
                 || !is_numeric($metadata['generation'] ?? null)
@@ -103,11 +108,13 @@ final class EditorAcknowledgements extends Component
 
         $route = (string)(Craft::$app->requestedRoute ?? '');
         $response = $event->sender;
+
         if (!$response instanceof Response || !str_starts_with($route, 'elements/') || !is_array($response->data)) {
             return;
         }
 
         $results = [];
+
         foreach ($accepted as $item) {
             $metadata = $item['metadata'];
             $assetResult = Vizy::$plugin->getAssetUploads()->resultForOwner($item['owner'], $item['field'])
@@ -133,6 +140,7 @@ final class EditorAcknowledgements extends Component
         $signed = base64_decode($encoded, true);
         $json = $signed === false ? false : Craft::$app->getSecurity()->validateData($signed);
         $payload = is_string($json) ? Json::decode($json) : null;
+
         if (
             !is_array($payload)
             || ($payload['purpose'] ?? null) !== self::RETRY_PURPOSE
@@ -143,6 +151,7 @@ final class EditorAcknowledgements extends Component
             throw new RuntimeException('invalidRetryToken');
         }
         $batch = AssetUploadBatch::findOne((int)($payload['batchId'] ?? 0));
+
         foreach (['ownerType', 'ownerId', 'siteId', 'derivativeKey', 'fieldUid', 'ownerPlacementUid', 'snapshotHash', 'workFingerprint'] as $key) {
             if (!$batch || (string)$batch->{$key} !== (string)($payload[$key] ?? null)) {
                 throw new RuntimeException('staleRetryToken');
@@ -180,6 +189,7 @@ final class EditorAcknowledgements extends Component
     private function _issueRetryToken(int $batchId, array $metadata): string
     {
         $batch = AssetUploadBatch::findOne($batchId);
+
         if (!$batch) {
             throw new RuntimeException('missingRetryBatch');
         }

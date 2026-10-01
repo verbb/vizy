@@ -55,6 +55,7 @@ final class EditorConfigs extends Component
             return $this->configs;
         }
         $raw = Craft::$app->getProjectConfig()->get(self::PROJECT_CONFIG_PATH) ?? [];
+
         if (!is_array($raw)) {
             $raw = [];
         }
@@ -64,6 +65,7 @@ final class EditorConfigs extends Component
 
         $this->configs = [];
         $this->fileNames = [];
+
         foreach ($raw as $id => $config) {
             if (is_string($id) && is_array($config)) {
                 $normalized = $this->_normalize($id, $config, $config);
@@ -83,6 +85,7 @@ final class EditorConfigs extends Component
                 );
                 continue;
             }
+
             try {
                 $normalized = $this->_normalize($id, $file['config'], null);
             } catch (Throwable $exception) {
@@ -146,6 +149,7 @@ final class EditorConfigs extends Component
     public function fileContents(string $id): ?string
     {
         $file = $this->_readFileConfigs()[$id] ?? null;
+
         if ($file === null) {
             return null;
         }
@@ -153,6 +157,7 @@ final class EditorConfigs extends Component
         $path = Craft::$app->getPath()->getConfigPath()
             . DIRECTORY_SEPARATOR . self::FILE_CONFIG_DIR
             . DIRECTORY_SEPARATOR . $file['filename'];
+
         if (!is_file($path)) {
             return null;
         }
@@ -167,6 +172,7 @@ final class EditorConfigs extends Component
         return array_values(array_map(
             static function(string $id, array $config): array {
                 $label = (string)$config['label'];
+
                 // Provenance in the select itself, so a field settings screen that never opens
                 // the Editor Configs index still tells an author which ones are on disk.
                 if (($config['source'] ?? null) === self::SOURCE_FILE) {
@@ -190,6 +196,7 @@ final class EditorConfigs extends Component
     public function fingerprintAuthorable(array $config): string
     {
         $label = trim((string)($config['label'] ?? ''));
+
         if ($label === '') {
             $config['label'] = 'Imported manual config';
         }
@@ -200,6 +207,7 @@ final class EditorConfigs extends Component
     public function saveConfig(string $id, array $config): bool
     {
         $baseline = Craft::$app->getProjectConfig()->get(self::PROJECT_CONFIG_PATH . '.' . $id);
+
         // Creating under a file's ID would leave that file permanently shadowed. Updating an
         // existing Project Config entry is fine — the colliding file stays ignored.
         if ($baseline === null && $this->fileOwnsId($id)) {
@@ -235,6 +243,7 @@ final class EditorConfigs extends Component
     public function authorablePayload(array $config): array
     {
         $dropdowns = $config['dropdowns'] ?? [];
+
         // Empty must stay an object shape (`{}`), not a list (`[]`) — normalize refuses a
         // list, and PHP's empty array is ambiguous between the two once it hits JSON.
         if ($dropdowns === [] || !is_array($dropdowns) || array_is_list($dropdowns)) {
@@ -258,6 +267,7 @@ final class EditorConfigs extends Component
             'gutterInsert' => (bool)($config['gutterInsert'] ?? true),
             'slashInsert' => (bool)($config['slashInsert'] ?? true),
         ];
+
         if ($dropdowns !== null) {
             $payload['dropdowns'] = $dropdowns;
         }
@@ -299,6 +309,7 @@ final class EditorConfigs extends Component
     public function preflightExternalConfigs(array $incoming): void
     {
         $baseline = Craft::$app->getProjectConfig()->get(self::PROJECT_CONFIG_PATH) ?? [];
+
         foreach ($incoming as $id => $config) {
             if (!is_string($id) || !is_array($config)) {
                 throw new RuntimeException('Incoming Vizy Editor Config schema must be an ID-keyed map.');
@@ -310,6 +321,7 @@ final class EditorConfigs extends Component
     public function validateFieldReference(VizyField $field): bool
     {
         $id = $field->editorConfig !== '' ? $field->editorConfig : self::DEFAULT_ID;
+
         if ($this->getConfig($id)) {
             return true;
         }
@@ -319,6 +331,7 @@ final class EditorConfigs extends Component
         $baseline = is_string($field->uid) && $field->uid !== ''
             ? Craft::$app->getProjectConfig()->get("fields.{$field->uid}.settings.editorConfig")
             : null;
+
         if (is_string($baseline) && hash_equals($baseline, $id)) {
             return true;
         }
@@ -337,6 +350,7 @@ final class EditorConfigs extends Component
         $this->configs = null;
         $this->fileNames = null;
         $this->fileConfigs = null;
+
         if (\verbb\vizy\Vizy::$plugin?->has('editorManifests')) {
             \verbb\vizy\Vizy::$plugin->getEditorManifests()->invalidate();
         }
@@ -361,6 +375,7 @@ final class EditorConfigs extends Component
         }
 
         $dir = Craft::$app->getPath()->getConfigPath() . DIRECTORY_SEPARATOR . self::FILE_CONFIG_DIR;
+
         if (!is_dir($dir)) {
             return $this->fileConfigs = [];
         }
@@ -375,9 +390,11 @@ final class EditorConfigs extends Component
         }
 
         $files = [];
+
         foreach ($paths as $path) {
             $filename = basename($path);
             $id = pathinfo($filename, PATHINFO_FILENAME);
+
             if (!preg_match('/^[a-z][a-z0-9_-]*$/', $id)) {
                 Craft::warning(
                     "Vizy Editor Config file `{$filename}` is ignored because its name is not a valid Config ID.",
@@ -395,6 +412,7 @@ final class EditorConfigs extends Component
                 );
                 continue;
             }
+
             if (!is_array($decoded) || array_is_list($decoded)) {
                 Craft::warning(
                     "Vizy Editor Config file `{$filename}` must contain a JSON object.",
@@ -427,17 +445,21 @@ final class EditorConfigs extends Component
             throw new RuntimeException("Invalid Vizy Editor Config ID: {$id}.");
         }
         $unknownKeys = array_diff(array_keys($config), ['label', 'capabilities', 'headings', 'toolbar', 'dropdowns', 'bubble', 'icons', 'gutterInsert', 'slashInsert', 'dateModified']);
+
         if ($unknownKeys !== []) {
             throw new RuntimeException("Unknown Vizy Editor Config keys for {$id}: " . implode(', ', $unknownKeys) . '.');
         }
         $label = trim((string)($config['label'] ?? ''));
+
         if ($label === '') {
             throw new RuntimeException("Vizy Editor Config {$id} requires a label.");
         }
         $capabilities = $config['capabilities'] ?? [];
+
         if (!is_array($capabilities)) {
             throw new RuntimeException("Vizy Editor Config {$id} capabilities must be an object.");
         }
+
         if ($keys = array_diff(array_keys($capabilities), ['nodes', 'marks', 'extensions'])) {
             throw new RuntimeException("Unknown Vizy Editor Config capability keys for {$id}: " . implode(', ', $keys) . '.');
         }
@@ -453,14 +475,17 @@ final class EditorConfigs extends Component
         $activeMarks = [];
         $activeExtensions = [];
         $diagnostics = [];
+
         foreach ([
             'node' => [$nodes, $baselineNodes, &$activeNodes],
             'mark' => [$marks, $baselineMarks, &$activeMarks],
             'extension' => [$capabilityExtensions, $baselineExtensions, &$activeExtensions],
         ] as $kind => $values) {
             [$requested, $existing, &$active] = $values;
+
             foreach ($requested as $name) {
                 $definition = \verbb\vizy\Vizy::$plugin->getExtensions()->getDefinition($kind, $name);
+
                 if ($definition && $definition['installed'] && $definition['authorSelectable']) {
                     $active[] = $name;
                 } elseif (in_array($name, $existing, true)) {
@@ -472,9 +497,11 @@ final class EditorConfigs extends Component
         }
 
         $headings = $config['headings'] ?? [];
+
         if (!is_array($headings)) {
             throw new RuntimeException("Vizy Editor Config {$id} headings must be an object.");
         }
+
         // `defaultLevel` is accepted and discarded rather than rejected. It was the level a bare
         // Heading button applied, and both are gone: a heading button names its level. Stored
         // configs still carrying it are cleaned on the way through, as retired toolbar tokens
@@ -484,6 +511,7 @@ final class EditorConfigs extends Component
         }
         $levels = array_values(array_unique(array_map('intval', $headings['levels'] ?? [2, 3, 4])));
         sort($levels);
+
         foreach ($levels as $level) {
             if ($level < 1 || $level > 6) {
                 throw new RuntimeException("Vizy Editor Config {$id} heading levels must be 1–6.");
@@ -557,11 +585,13 @@ final class EditorConfigs extends Component
         if ($icons === null || $icons === []) {
             return [];
         }
+
         if (!is_array($icons) || array_is_list($icons)) {
             throw new RuntimeException("Vizy Editor Config {$id} icons must be an object keyed by control ID.");
         }
 
         $known = [];
+
         foreach ([
             EditorConfigPresentation::toolbarCatalog(),
             EditorConfigPresentation::dropdownCatalog(),
@@ -569,6 +599,7 @@ final class EditorConfigs extends Component
         ] as $catalog) {
             foreach ($catalog as $item) {
                 $controlId = (string)($item['id'] ?? '');
+
                 if ($controlId !== '' && !EditorConfigPresentation::isPresentationItem($controlId)) {
                     $known[$controlId] = true;
                 }
@@ -576,26 +607,33 @@ final class EditorConfigs extends Component
         }
 
         $normalized = [];
+
         foreach ($icons as $controlId => $icon) {
             $controlId = trim((string)$controlId);
+
             if ($controlId === '') {
                 throw new RuntimeException("Vizy Editor Config {$id} icon control IDs must be non-empty strings.");
             }
             $controlId = VizyToolbarTokenDeprecations::canonicalize($controlId, "Editor Config {$id} icon");
+
             if (str_starts_with($controlId, EditorConfigPresentation::DROPDOWN_PREFIX)) {
                 $name = substr($controlId, strlen(EditorConfigPresentation::DROPDOWN_PREFIX));
                 $controlId = EditorConfigPresentation::DROPDOWN_PREFIX . EditorConfigPresentation::dropdownAlias($name);
             }
+
             if (!isset($known[$controlId])) {
                 throw new RuntimeException("Unknown Vizy Editor Config icon control ID in {$id}: {$controlId}.");
             }
+
             if (!is_string($icon) || trim($icon) === '') {
                 throw new RuntimeException("Vizy Editor Config {$id} icon for {$controlId} must name an available icon.");
             }
             $icon = trim($icon);
+
             if (ToolbarIcons::glyph($icon) === null) {
                 throw new RuntimeException("Unknown Vizy icon in Editor Config {$id}: {$icon}.");
             }
+
             if (isset($normalized[$controlId])) {
                 throw new RuntimeException("Duplicate Vizy Editor Config {$id} icon control ID: {$controlId}.");
             }
@@ -612,6 +650,7 @@ final class EditorConfigs extends Component
             throw new RuntimeException("Vizy Editor Config {$label} IDs must be a list.");
         }
         $normalized = array_map('strval', $values);
+
         if (count($normalized) !== count(array_unique($normalized))) {
             throw new RuntimeException("Duplicate Vizy Editor Config {$label} ID.");
         }
@@ -640,11 +679,13 @@ final class EditorConfigs extends Component
         if ($toolbar === null) {
             return EditorConfigPresentation::defaultToolbar();
         }
+
         if (!is_array($toolbar) || !array_is_list($toolbar)) {
             throw new RuntimeException("Vizy Editor Config {$id} toolbar must be a list.");
         }
 
         $normalized = [];
+
         foreach ($toolbar as $item) {
             // Every dropdown shape from before the contents were frozen lands here, and is
             // dropped rather than rejected: there is no honest way to turn a member list back
@@ -653,16 +694,19 @@ final class EditorConfigs extends Component
             if (is_array($item)) {
                 continue;
             }
+
             if (!is_string($item) || $item === '') {
                 throw new RuntimeException("Vizy Editor Config {$id} toolbar items must be strings.");
             }
             // Vizy 3 spellings (`h2`, `align-left`, …) → canonical before retired /
             // member-only checks so shims are not silently discarded as unknown.
             $item = VizyToolbarTokenDeprecations::canonicalize($item, "Editor Config {$id} toolbar");
+
             // Retired tokens are dropped, not rejected — see RETIRED_TOOLBAR_IDS.
             if (in_array($item, EditorConfigPresentation::RETIRED_TOOLBAR_IDS, true)) {
                 continue;
             }
+
             // So is a control a dropdown owns. Same treatment for the same reason: a Vizy 3
             // toolbar naming `h2` or `align-left` is a config that should open with those
             // buttons missing, not one that refuses to load. See MEMBER_ONLY_IDS — this is the
@@ -674,14 +718,17 @@ final class EditorConfigs extends Component
             // registered it. Kept out here rather than left to render as nothing, so a toolbar
             // does not carry a token nothing can explain.
             $prefix = EditorConfigPresentation::DROPDOWN_PREFIX;
+
             if (str_starts_with($item, $prefix)) {
                 // Renames are followed rather than treated as a disappearance, which from here
                 // they are indistinguishable from. See `DROPDOWN_ALIASES`.
                 $name = EditorConfigPresentation::dropdownAlias(substr($item, strlen($prefix)));
+
                 if (EditorConfigPresentation::dropdownRoster($name) === null) {
                     continue;
                 }
                 $item = $prefix . $name;
+
                 // A rename can collide with the new name already being present, and a toolbar
                 // holds one of each dropdown.
                 if (in_array($item, $normalized, true)) {
@@ -730,6 +777,7 @@ final class EditorConfigs extends Component
         if ($dropdowns === null) {
             return [];
         }
+
         if (!is_array($dropdowns) || array_is_list($dropdowns)) {
             throw new RuntimeException("Vizy Editor Config {$id} dropdowns must be an object keyed by dropdown name.");
         }
@@ -742,21 +790,25 @@ final class EditorConfigs extends Component
         ), true);
 
         $normalized = [];
+
         foreach ($dropdowns as $name => $members) {
             // The toolbar has already been aliased by the time it gets here, so a stored `align`
             // membership has to follow its dropdown's new name or it would look unplaced.
             $name = EditorConfigPresentation::dropdownAlias((string)$name);
             $roster = EditorConfigPresentation::dropdownRoster($name);
+
             if (!isset($placed[$name]) || $roster === null) {
                 continue;
             }
             $members = $this->_normalizeIds($members, "{$id} dropdown {$name} member");
+
             if ($members === []) {
                 throw new RuntimeException("Vizy Editor Config {$id} dropdown {$name} must hold at least one member.");
             }
 
             $allowed = array_fill_keys($roster, true);
             $kept = [];
+
             foreach ($members as $member) {
                 if ($member === '') {
                     throw new RuntimeException("Vizy Editor Config {$id} dropdown {$name} members must be non-empty strings.");
@@ -801,20 +853,24 @@ final class EditorConfigs extends Component
         if ($bubble === null) {
             return EditorConfigPresentation::defaultBubble();
         }
+
         if (!is_array($bubble)) {
             throw new RuntimeException("Vizy Editor Config {$id} bubble must be an object.");
         }
+
         if ($keys = array_diff(array_keys($bubble), ['enabled', 'items'])) {
             throw new RuntimeException('Unknown Vizy Editor Config bubble keys for ' . $id . ': ' . implode(', ', $keys) . '.');
         }
 
         $enabled = (bool)($bubble['enabled'] ?? true);
         $items = $bubble['items'] ?? [];
+
         if (!is_array($items) || !array_is_list($items)) {
             throw new RuntimeException("Vizy Editor Config {$id} bubble items must be a list.");
         }
 
         $normalized = [];
+
         foreach ($items as $item) {
             if (!is_string($item) || $item === '') {
                 throw new RuntimeException("Vizy Editor Config {$id} bubble items must be strings.");
@@ -849,6 +905,7 @@ final class EditorConfigs extends Component
     private function _ensureExternalPreflight(): void
     {
         $projectConfig = Craft::$app->getProjectConfig();
+
         if ($this->externalPreflightComplete || !$projectConfig->getIsApplyingExternalChanges()) {
             return;
         }
@@ -864,6 +921,7 @@ final class EditorConfigs extends Component
                 return array_map(static fn(mixed $value) => is_array($value) ? $normalize($value) : $value, $item);
             }
             ksort($item);
+
             foreach ($item as &$value) {
                 if (is_array($value)) {
                     $value = $normalize($value);

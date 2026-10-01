@@ -41,6 +41,7 @@ final class EditorManifests extends Component
         $configId = $field->editorConfig !== '' ? $field->editorConfig : EditorConfigs::DEFAULT_ID;
         $editorConfigs = Vizy::$plugin->getEditorConfigs();
         $config = $editorConfigs->getConfig($configId);
+
         if ($config !== null && $this->hasEventHandlers(self::EVENT_MODIFY_EDITOR_CONFIG)) {
             // Runtime changes are authorable input, never mutations of Project Config or a
             // finished manifest. Resolve them here so dependencies, validation, revisions and
@@ -76,20 +77,24 @@ final class EditorManifests extends Component
             : \verbb\vizy\Vizy::$plugin->getExtensions()->resolveEnabled([], []);
 
         $blockTypes = [];
+
         foreach (\verbb\vizy\Vizy::$plugin->getBlockTypes()->getAllBlockTypes() as $type) {
             $layout = $type->getFieldLayout();
             $layoutConfig = $layout?->getConfig() ?? [];
             $layoutTabLabels = [];
             $fieldSlotKinds = [];
+
             if ($layout) {
                 foreach ($layout->getCustomFieldElements() as $placement) {
                     $slotField = $placement->getField();
+
                     if ($slotField instanceof VizyField) {
                         $fieldSlotKinds[$placement->uid] = 'hosted';
                     } elseif ($slotField instanceof \craft\fields\Matrix) {
                         $fieldSlotKinds[$placement->uid] = 'matrix';
                     }
                 }
+
                 foreach ($layout->getTabs() as $tab) {
                     $layoutTabLabels[] = (string)$tab->name;
                 }
@@ -164,6 +169,7 @@ final class EditorManifests extends Component
             'config' => $configIdentity,
             'schema' => $schemaRevision,
         ]));
+
         if (isset($this->cache[$cacheKey])) {
             return $this->cache[$cacheKey];
         }
@@ -225,8 +231,10 @@ final class EditorManifests extends Component
                 $identity = $this->_stableNodeIdentity($node);
                 $nodePath = "block:{$nodeBlockUid}/node:{$identity}";
                 $type = $node['type'];
+
                 if (!isset($allowedNodes[$type])) {
                     $key = "node:{$type}:{$nodeBlockUid}:{$identity}";
+
                     if (($used[$key] ?? 0) >= ($trusted[$key] ?? 0)) {
                         $violations[] = ['code' => 'disallowedNode', 'path' => $nodePath, 'kind' => 'node', 'name' => $type];
                     }
@@ -238,8 +246,10 @@ final class EditorManifests extends Component
                 // the levels never invalidates a document that already contained one. It is
                 // still a heading, so the walk carries on into its content either way.
                 $level = $this->_headingLevel($node);
+
                 if ($level !== null && !in_array($level, $allowedLevels, true)) {
                     $key = "level:{$level}:{$nodeBlockUid}:{$identity}";
+
                     if (($used[$key] ?? 0) >= ($trusted[$key] ?? 0)) {
                         $violations[] = [
                             'code' => 'disallowedHeadingLevel',
@@ -250,16 +260,19 @@ final class EditorManifests extends Component
                     }
                     $used[$key] = ($used[$key] ?? 0) + 1;
                 }
+
                 foreach ($node['marks'] ?? [] as $mark) {
                     if (!is_array($mark) || !is_string($mark['type'] ?? null) || isset($allowedMarks[$mark['type']])) {
                         continue;
                     }
                     $key = "mark:{$mark['type']}:{$nodeBlockUid}:{$identity}";
+
                     if (($used[$key] ?? 0) >= ($trusted[$key] ?? 0)) {
                         $violations[] = ['code' => 'disallowedMark', 'path' => $nodePath, 'kind' => 'mark', 'name' => $mark['type']];
                     }
                     $used[$key] = ($used[$key] ?? 0) + 1;
                 }
+
                 // vizyBlock is a TipTap leaf — nesting is Hosted fieldSlots.
                 if (($node['type'] ?? null) !== 'vizyBlock' && is_array($node['content'] ?? null)) {
                     $walk($node['content'], $nodeBlockUid);
@@ -316,10 +329,12 @@ final class EditorManifests extends Component
         $dropdownMembers = $config['dropdowns'] ?? [];
 
         $controls = [];
+
         foreach ($config['toolbar'] ?? [] as $item) {
             if (!is_string($item)) {
                 continue;
             }
+
             // Presentation rather than a command, so it resolves to nothing actionable. Checked
             // first because `controlFor` would find no capability behind it.
             if (EditorConfigPresentation::isPresentationItem($item)) {
@@ -342,6 +357,7 @@ final class EditorManifests extends Component
                 $dropdownMembers,
                 $enabledExtensions,
             );
+
             if ($control !== null) {
                 $controls[] = $this->_applyIconOverrides($control, $config['icons'] ?? []);
             }
@@ -362,6 +378,7 @@ final class EditorManifests extends Component
         $nodes = $config['schema']['nodes'] ?? [];
         $extensions = $config['schema']['extensions'] ?? [];
         $controls = [];
+
         foreach ($bubble['items'] ?? [] as $item) {
             if (!is_string($item)) {
                 continue;
@@ -369,6 +386,7 @@ final class EditorManifests extends Component
             // Marks-first by convention, but any control advertised on the bubble surface
             // may resolve when its capability is enabled (partner nodes / extensions).
             $control = EditorConfigPresentation::controlFor($item, $marks, $nodes, [], [], $extensions);
+
             if ($control === null) {
                 continue;
             }
@@ -393,8 +411,10 @@ final class EditorManifests extends Component
     {
         $controlId = (string)($control['id'] ?? '');
         $iconName = $icons[$controlId] ?? null;
+
         if (is_string($iconName)) {
             $svg = ToolbarIcons::glyph($iconName);
+
             if ($svg !== null) {
                 $control['icon'] = $svg;
             }
@@ -427,10 +447,13 @@ final class EditorManifests extends Component
         $blockOrder = [];
         $blockGroups = [];
         $order = 0;
+
         foreach ($field->blockTypePickerGroups as $group) {
             $groupName = (string)($group['name'] ?? 'Blocks');
+
             foreach ($group['blockTypeUids'] ?? [] as $uid) {
                 $uid = (string)$uid;
+
                 if (!isset($blockTypes[$uid]) || isset($blockOrder[$uid])) {
                     continue;
                 }
@@ -438,8 +461,10 @@ final class EditorManifests extends Component
                 $blockGroups[$uid] = $groupName !== '' ? $groupName : 'Blocks';
             }
         }
+
         foreach ($field->getAllowedBlockTypeUids() as $uid) {
             $uid = (string)$uid;
+
             if (!isset($blockTypes[$uid]) || isset($blockOrder[$uid])) {
                 continue;
             }
@@ -496,6 +521,7 @@ final class EditorManifests extends Component
         ];
         $nodeOrder = 0;
         $extensions = Vizy::$plugin->getExtensions();
+
         foreach ($enabledNodes as $nodeName) {
             if (!is_string($nodeName) || isset($internal[$nodeName]) || !isset($enabled[$nodeName])) {
                 continue;
@@ -505,8 +531,10 @@ final class EditorManifests extends Component
             // Extensions once installed + enabled on the Editor Config.
             $label = $nodeLabels[$nodeName] ?? null;
             $group = $nodeGroups[$nodeName] ?? null;
+
             if ($label === null) {
                 $definition = $extensions->getDefinition('node', $nodeName);
+
                 if ($definition === null || !($definition['installed'] ?? false)) {
                     continue;
                 }
@@ -532,10 +560,12 @@ final class EditorManifests extends Component
 
         usort($items, static function(array $a, array $b): int {
             $group = strcmp((string)$a['group'], (string)$b['group']);
+
             if ($group !== 0) {
                 return $group;
             }
             $order = ((int)$a['order']) <=> ((int)$b['order']);
+
             if ($order !== 0) {
                 return $order;
             }
@@ -558,6 +588,7 @@ final class EditorManifests extends Component
     private function _insertionIconForNode(string $nodeName): ?array
     {
         $svg = ToolbarIcons::svgFor($nodeName);
+
         if ($svg === null) {
             return null;
         }
@@ -597,6 +628,7 @@ final class EditorManifests extends Component
                     ? $node['attrs']['blockUid']
                     : $blockUid;
                 $identity = $this->_stableNodeIdentity($node);
+
                 if (!isset($allowedNodes[$node['type']])) {
                     $key = "node:{$node['type']}:{$nodeBlockUid}:{$identity}";
                     $inventory[$key] = ($inventory[$key] ?? 0) + 1;
@@ -605,16 +637,19 @@ final class EditorManifests extends Component
                 // Counted on the same key the validating walk looks up, so a heading already in
                 // the trusted baseline is spent against itself rather than reported.
                 $level = $this->_headingLevel($node);
+
                 if ($level !== null && !in_array($level, $allowedLevels, true)) {
                     $key = "level:{$level}:{$nodeBlockUid}:{$identity}";
                     $inventory[$key] = ($inventory[$key] ?? 0) + 1;
                 }
+
                 foreach ($node['marks'] ?? [] as $mark) {
                     if (is_array($mark) && is_string($mark['type'] ?? null) && !isset($allowedMarks[$mark['type']])) {
                         $key = "mark:{$mark['type']}:{$nodeBlockUid}:{$identity}";
                         $inventory[$key] = ($inventory[$key] ?? 0) + 1;
                     }
                 }
+
                 if (($node['type'] ?? null) !== 'vizyBlock' && is_array($node['content'] ?? null)) {
                     $walk($node['content'], $nodeBlockUid);
                 }
@@ -641,6 +676,7 @@ final class EditorManifests extends Component
                 return array_map(static fn(mixed $value) => is_array($value) ? $normalize($value) : $value, $item);
             }
             ksort($item);
+
             foreach ($item as &$value) {
                 if (is_array($value)) {
                     $value = $normalize($value);

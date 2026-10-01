@@ -69,10 +69,12 @@ final class EditorContexts extends Component
         $encoded .= str_repeat('=', (4 - strlen($encoded) % 4) % 4);
         $signed = base64_decode($encoded, true);
         $json = $signed === false ? false : Craft::$app->getSecurity()->validateData($signed);
+
         if (!is_string($json)) {
             throw new RuntimeException('invalidContext');
         }
         $payload = Json::decode($json);
+
         if (
             !is_array($payload)
             || ($payload['version'] ?? null) !== self::VERSION
@@ -83,6 +85,7 @@ final class EditorContexts extends Component
         // Craft owns login expiry and reauthentication. This metadata stays
         // usable by the same authenticated user; callers reauthorize the owner.
         $userId = (int)Craft::$app->getUser()->getId();
+
         if ($userId <= 0 || (int)($payload['userId'] ?? 0) !== $userId) {
             throw new RuntimeException('wrongUser');
         }
@@ -121,6 +124,7 @@ final class EditorContexts extends Component
             'fieldUid' => $renderFieldUid,
             'issuedAt' => time(),
         ];
+
         if ($hosted !== null) {
             $payload = [...$payload, ...$hosted];
         }
@@ -133,6 +137,7 @@ final class EditorContexts extends Component
     {
         if ($owner instanceof Entry) {
             $typeId = null;
+
             if ($owner->sectionId || ($owner->fieldId && $owner->ownerId)) {
                 $typeId = $owner->getTypeId();
             }

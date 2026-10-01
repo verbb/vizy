@@ -43,6 +43,7 @@ class BlockPreviewImages extends Component
         }
 
         $root = $this->getRootPath();
+
         if ($root === '' || !is_dir($root)) {
             return $this->_catalog = [];
         }
@@ -56,9 +57,11 @@ class BlockPreviewImages extends Component
 
         foreach (FileHelper::findDirectories($root, ['recursive' => false]) as $folder) {
             $subdir = trim(str_replace($root, '', $folder), DIRECTORY_SEPARATOR);
+
             if ($subdir === '' || str_contains($subdir, '..')) {
                 continue;
             }
+
             foreach ($this->_filesIn($folder) as $filepath) {
                 $value = $subdir . '/' . pathinfo($filepath, PATHINFO_BASENAME);
                 $items[] = $this->_entry($value, $filepath);
@@ -76,6 +79,7 @@ class BlockPreviewImages extends Component
     public function getSuggestions(): array
     {
         $byGroup = [];
+
         foreach ($this->getCatalog() as $item) {
             $slash = strrpos($item['value'], '/');
             $group = $slash === false
@@ -85,6 +89,7 @@ class BlockPreviewImages extends Component
         }
 
         $suggestions = [];
+
         foreach ($byGroup as $label => $data) {
             $suggestions[] = [
                 'label' => $label,
@@ -105,6 +110,7 @@ class BlockPreviewImages extends Component
     public function getBrowserGroups(): array
     {
         $byGroup = [];
+
         foreach ($this->getCatalog() as $item) {
             $slash = strrpos($item['value'], '/');
             $group = $slash === false
@@ -118,6 +124,7 @@ class BlockPreviewImages extends Component
         }
 
         $groups = [];
+
         foreach ($byGroup as $name => $items) {
             $groups[] = [
                 'name' => $name,
@@ -131,6 +138,7 @@ class BlockPreviewImages extends Component
     public function resolveUrl(?string $value): ?string
     {
         $path = $this->resolveAbsolutePath($value);
+
         if ($path === null) {
             return null;
         }
@@ -146,11 +154,13 @@ class BlockPreviewImages extends Component
     public function resolveAbsolutePath(?string $value): ?string
     {
         $relative = $this->normalizeValue($value);
+
         if ($relative === null) {
             return null;
         }
 
         $root = $this->getRootPath();
+
         if ($root === '' || !is_dir($root)) {
             return null;
         }
@@ -158,17 +168,21 @@ class BlockPreviewImages extends Component
         $candidate = FileHelper::normalizePath($root . DIRECTORY_SEPARATOR . str_replace('/', DIRECTORY_SEPARATOR, $relative));
         $rootReal = realpath($root);
         $fileReal = realpath($candidate);
+
         if ($rootReal === false || $fileReal === false) {
             return null;
         }
+
         if (!str_starts_with($fileReal, $rootReal . DIRECTORY_SEPARATOR) && $fileReal !== $rootReal) {
             return null;
         }
+
         if (!is_file($fileReal)) {
             return null;
         }
 
         $ext = strtolower(pathinfo($fileReal, PATHINFO_EXTENSION));
+
         if (!in_array($ext, ['png', 'jpg', 'jpeg', 'webp', 'gif'], true)) {
             return null;
         }
@@ -183,9 +197,11 @@ class BlockPreviewImages extends Component
         }
         $value = str_replace('\\', '/', trim($value));
         $value = ltrim($value, '/');
+
         if ($value === '' || str_contains($value, '..') || str_starts_with($value, './')) {
             return null;
         }
+
         // Only root or one nested folder: `file.png` or `group/file.png`.
         if (!preg_match('/^[A-Za-z0-9._-]+(?:\/[A-Za-z0-9._-]+)?$/', $value)) {
             return null;
@@ -196,7 +212,7 @@ class BlockPreviewImages extends Component
 
     public function getRootPath(): string
     {
-                $settings = Vizy::$plugin->getSettings();
+        $settings = Vizy::$plugin->getSettings();
 
         return $settings->getBlockPreviewImagesPath();
     }

@@ -52,6 +52,7 @@ final class BlockSummaries extends Component
     public function getSummaries(iterable $blocks, ?array $validationState = null): array
     {
         $blockList = is_array($blocks) ? $blocks : iterator_to_array($blocks, false);
+
         if (!$blockList) {
             return [];
         }
@@ -62,12 +63,14 @@ final class BlockSummaries extends Component
 
         foreach ($blockList as $block) {
             $cacheKey = $this->_cacheKey($block, $validationState);
+
             if (isset($this->requestCache[$cacheKey])) {
                 $summaries[$block->uid()] = $this->requestCache[$cacheKey];
                 continue;
             }
 
             $type = $block->blockType();
+
             if (!$type) {
                 $summary = $this->_unresolvedSummary($block, $validationState);
                 $summaries[$block->uid()] = $this->_remember($cacheKey, $summary);
@@ -90,12 +93,14 @@ final class BlockSummaries extends Component
             $subtitle = $this->projection->subtitleFromSlots($fieldSlots, $subtitlePlacement, $inference);
 
             $mediaReference = null;
+
             if ($mediaPlacement) {
                 $mediaReference = $this->_extractAssetReference($fieldSlots, $mediaPlacement)
                     ?? $this->_firstInferredAssetReference($fieldSlots, $inference);
             } else {
                 $mediaReference = $this->_firstInferredAssetReference($fieldSlots, $inference);
             }
+
             if ($mediaReference !== null) {
                 $assetReferences[(string)$mediaReference] = $mediaReference;
             }
@@ -115,15 +120,18 @@ final class BlockSummaries extends Component
         }
 
         $assetMetadata = $this->_resolveAssetMetadata($assetReferences, $blockList[0]->document()->siteId());
+
         foreach ($summaries as $uid => $summary) {
             if ($summary->media !== null) {
                 continue;
             }
             $block = $this->_findBlockByUid($blockList, $uid);
+
             if (!$block) {
                 continue;
             }
             $type = $block->blockType();
+
             if (!$type) {
                 continue;
             }
@@ -136,6 +144,7 @@ final class BlockSummaries extends Component
                 $inference,
                 $assetMetadata,
             );
+
             if ($media === null) {
                 continue;
             }
@@ -185,6 +194,7 @@ final class BlockSummaries extends Component
     private function _schemaRevision(): string
     {
         $configs = [];
+
         foreach (Vizy::$plugin->getBlockTypes()->getAllBlockTypes() as $type) {
             $configs[(string)$type->uid] = $type->toConfig();
         }
@@ -201,11 +211,13 @@ final class BlockSummaries extends Component
         $event = new RegisterBlockSummaryProvidersEvent();
         $this->trigger(self::EVENT_REGISTER_PROVIDERS, $event);
         $this->providers = [];
+
         foreach ($event->providers as $handle => $definition) {
             if (!is_string($handle) || $handle === '' || !is_array($definition)) {
                 continue;
             }
             $callable = $definition['callable'] ?? null;
+
             if (!is_callable($callable)) {
                 continue;
             }
@@ -224,6 +236,7 @@ final class BlockSummaries extends Component
         ?array $validationState,
     ): void {
         $provider = $this->_providers()[$handle] ?? null;
+
         if (!$provider) {
             return;
         }
@@ -239,16 +252,19 @@ final class BlockSummaries extends Component
         } catch (\Throwable) {
             return;
         }
+
         if (!is_array($results)) {
             return;
         }
 
         foreach ($blocks as $block) {
             $payload = $results[$block->uid()] ?? null;
+
             if (!is_array($payload)) {
                 continue;
             }
             $existing = $summaries[$block->uid()] ?? null;
+
             if (!$existing) {
                 continue;
             }
@@ -257,6 +273,7 @@ final class BlockSummaries extends Component
                 ? BlockSummaryTexts::boundSubtitle(is_string($payload['subtitle']) ? $payload['subtitle'] : null)
                 : $existing->subtitle;
             $media = $existing->media;
+
             if (array_key_exists('media', $payload) && is_array($payload['media'])) {
                 $mediaPayload = $payload['media'];
                 $media = new BlockSummaryMedia(
@@ -299,6 +316,7 @@ final class BlockSummaries extends Component
     private function _validPlacement(BlockType $type, ?string $placementUid): ?string
     {
         $layout = $type->getFieldLayout();
+
         if (!$layout || !$placementUid) {
             return null;
         }
@@ -311,16 +329,20 @@ final class BlockSummaries extends Component
             return null;
         }
         $raw = $fieldSlots[$placementUid];
+
         if (is_int($raw)) {
             return $raw;
         }
+
         if (is_string($raw) && ctype_digit($raw)) {
             return (int)$raw;
         }
+
         if (!is_array($raw)) {
             return null;
         }
         $ids = array_values(array_filter($raw, static fn(mixed $item) => is_int($item) || (is_string($item) && ctype_digit($item))));
+
         if (count($ids) !== 1) {
             return null;
         }
@@ -331,6 +353,7 @@ final class BlockSummaries extends Component
     {
         foreach ($inference->mediaCandidates as $placementUid) {
             $reference = $this->_extractAssetReference($fieldSlots, $placementUid);
+
             if ($reference !== null) {
                 return $reference;
             }
@@ -353,6 +376,7 @@ final class BlockSummaries extends Component
             ->all();
 
         $metadata = [];
+
         foreach ($assets as $asset) {
             $metadata[(string)$asset->id] = [
                 'alt' => $asset->title ?: null,
@@ -365,6 +389,7 @@ final class BlockSummaries extends Component
     private function _errorCount(VizyBlock $block, ?array $validationState, bool $descendants): int
     {
         $state = $validationState['blocks'][$block->uid()] ?? null;
+
         if (!is_array($state)) {
             return 0;
         }

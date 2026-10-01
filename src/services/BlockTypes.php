@@ -29,6 +29,7 @@ final class BlockTypes extends Component
     public static function consecutiveSameTypeDepth(array $ancestorTypeUids, string $blockTypeUid): int
     {
         $depth = 1;
+
         for ($i = count($ancestorTypeUids) - 1; $i >= 0; $i--) {
             if ($ancestorTypeUids[$i] === $blockTypeUid) {
                 $depth++;
@@ -76,6 +77,7 @@ final class BlockTypes extends Component
 
         $configs = Craft::$app->getProjectConfig()->get(self::PROJECT_CONFIG_PATH) ?? [];
         $records = [];
+
         if (Craft::$app->getDb()->tableExists(Table::BLOCK_TYPES)) {
             foreach (BlockTypeRecord::find()->all() as $record) {
                 $records[$record->uid] = $record;
@@ -83,18 +85,22 @@ final class BlockTypes extends Component
         }
 
         $this->all = [];
+
         foreach ($configs as $uid => $config) {
             if (!is_string($uid) || !is_array($config)) {
                 continue;
             }
             $model = BlockType::fromConfig($uid, ProjectConfigHelper::unpackAssociativeArrays($config));
+
             if (isset($records[$uid])) {
                 $model->id = (int)$records[$uid]->id;
+
                 if ($model->getFieldLayout() && $records[$uid]->fieldLayoutId) {
                     $model->getFieldLayout()->id = (int)$records[$uid]->fieldLayoutId;
                 }
             }
             $this->all[] = $model;
+
             if ($model->id) {
                 $this->byId[$model->id] = $model;
             }
@@ -120,6 +126,7 @@ final class BlockTypes extends Component
         if (!$uid) {
             return null;
         }
+
         if (!array_key_exists($uid, $this->byUid)) {
             $this->getAllBlockTypes();
             $this->byUid[$uid] ??= null;
@@ -133,6 +140,7 @@ final class BlockTypes extends Component
             return null;
         }
         $key = strtolower($handle);
+
         if (!array_key_exists($key, $this->byHandle)) {
             $this->getAllBlockTypes();
             $this->byHandle[$key] ??= null;
@@ -144,6 +152,7 @@ final class BlockTypes extends Component
     {
         $valid = $blockType->validate();
         $candidate = [];
+
         foreach ($this->getAllBlockTypes() as $existing) {
             $candidate[$existing->uid] = $existing;
         }
@@ -154,10 +163,12 @@ final class BlockTypes extends Component
     public function saveBlockType(BlockType $blockType): bool
     {
         $blockType->uid ??= StringHelper::UUID();
+
         if ($blockType->handle === '') {
             $blockType->handle = StringHelper::toHandle($blockType->name);
         }
         $layout = $blockType->getFieldLayout();
+
         if (!$layout) {
             $layout = new FieldLayout(['type' => Block::class, 'uid' => StringHelper::UUID()]);
             $layout->setTabs([]);
@@ -207,6 +218,7 @@ final class BlockTypes extends Component
     public function deleteBlockType(BlockType $blockType, bool $force = false): bool
     {
         $usages = $this->getBlockTypeSchemaUsages((string)$blockType->uid);
+
         if ($usages !== []) {
             $blockType->addError('uid', 'Block Type is referenced by project schema and cannot be deleted.');
             return false;
@@ -221,17 +233,20 @@ final class BlockTypes extends Component
     {
         $this->_ensureExternalPreflight();
         $uid = $event->tokenMatches[0] ?? null;
+
         if (!is_string($uid) || !is_array($event->newValue)) {
             return;
         }
         $model = BlockType::fromConfig($uid, ProjectConfigHelper::unpackAssociativeArrays($event->newValue));
         $layout = $model->getFieldLayout();
+
         if (!$layout) {
             throw new RuntimeException("Block Type {$uid} has no FieldLayout.");
         }
         $layout->type = Block::class;
 
         $transaction = Craft::$app->getDb()->beginTransaction();
+
         try {
             if (!Craft::$app->getFields()->saveLayout($layout)) {
                 throw new RuntimeException("Unable to synchronize FieldLayout for Block Type {$uid}.");
@@ -255,13 +270,16 @@ final class BlockTypes extends Component
     {
         $this->_ensureExternalPreflight();
         $uid = $event->tokenMatches[0] ?? null;
+
         if (!is_string($uid)) {
             return;
         }
         $record = BlockTypeRecord::findOne(['uid' => $uid]);
+
         if ($record) {
             $layout = Craft::$app->getFields()->getLayoutById((int)$record->fieldLayoutId);
             $record->delete();
+
             if ($layout) {
                 Craft::$app->getFields()->deleteLayout($layout, true);
             }
@@ -277,16 +295,19 @@ final class BlockTypes extends Component
     {
         $layout = $event->layout;
         $projectConfig = Craft::$app->getProjectConfig();
+
         if ($event->isNew || $layout->type !== Block::class || !$projectConfig->muteEvents) {
             return;
         }
 
         $configs = $projectConfig->get(self::PROJECT_CONFIG_PATH) ?? [];
+
         foreach ($configs as $uid => $packedConfig) {
             if (!is_string($uid) || !is_array($packedConfig)) {
                 continue;
             }
             $config = ProjectConfigHelper::unpackAssociativeArrays($packedConfig);
+
             if (($config['fieldLayout']['uid'] ?? null) !== $layout->uid) {
                 continue;
             }
@@ -318,10 +339,12 @@ final class BlockTypes extends Component
     {
         $usages = [];
         $fieldConfigs = Craft::$app->getProjectConfig()->get('fields') ?? [];
+
         foreach ($fieldConfigs as $fieldUid => $config) {
             // Craft packs associative picker groups in Project Config. Inspect
             // their unpacked values so saved schema references prevent deletion.
             $config = ProjectConfigHelper::unpackAssociativeArrays($config);
+
             foreach (($config['settings']['blockTypePickerGroups'] ?? []) as $groupIndex => $group) {
                 if (in_array($blockTypeUid, $group['blockTypeUids'] ?? [], true)) {
                     $usages[] = ['fieldUid' => $fieldUid, 'group' => $groupIndex];
@@ -335,6 +358,7 @@ final class BlockTypes extends Component
     {
         $baseline = $this->_indexByUid($this->getAllBlockTypes());
         $models = [];
+
         foreach ($incomingBlockTypes as $uid => $config) {
             if (is_string($uid) && is_array($config)) {
                 if (isset($config['uid']) && $config['uid'] !== $uid) {
@@ -343,8 +367,10 @@ final class BlockTypes extends Component
                 $models[$uid] = BlockType::fromConfig($uid, ProjectConfigHelper::unpackAssociativeArrays($config));
             }
         }
+
         if (!$this->_validateSchema($models, $baseline, null, false, $allowMatrixGrandfatherImport)) {
             $errors = [];
+
             foreach ($models as $uid => $model) {
                 if ($model->hasErrors()) {
                     $errors[$uid] = $model->getErrors();
@@ -367,15 +393,16 @@ final class BlockTypes extends Component
         ?BlockType $focus = null,
         bool $rejectMissing = true,
         bool $allowMatrixGrandfatherImport = false,
-    ): bool
-    {
+    ): bool {
         $valid = true;
         $handles = [];
         $schemaUids = [];
+
         // Claim every authoritative Block Type map key first. This makes
         // collisions with nested owned UIDs independent of iteration order.
         foreach ($candidate as $uid => $type) {
             $schemaUids[$uid] = "Block Type {$uid}";
+
             if ($type->uid !== $uid) {
                 $type->addError('uid', "Block Type map key {$uid} does not match model UID {$type->uid}.");
                 $valid = false;
@@ -387,16 +414,19 @@ final class BlockTypes extends Component
                 $valid = false;
             }
             $baselineType = $baseline[$uid] ?? null;
+
             foreach ($type->getFieldLayout()?->getCustomFieldElements() ?? [] as $placement) {
                 $field = $placement->getField();
                 $fieldClass = $field::class;
                 $lifecycle = \verbb\vizy\Vizy::$plugin->getFieldLifecycle();
                 $inventory = $lifecycle->classify($field);
+
                 // Matrix is supported through anchors. Other nested-owner fields
                 // may remain in unchanged legacy schemas, but cannot be added.
                 if (!$lifecycle->permitsNewPlacement($field)) {
                     $grandfatherImport = $allowMatrixGrandfatherImport
                         && ($inventory['capability'] ?? null) === \verbb\vizy\services\FieldLifecycle::MATRIX_ANCHOR;
+
                     if (!$this->_isUnchangedUnsafePlacement($baselineType, $placement->uid, $field->uid, $fieldClass) && !$grandfatherImport) {
                         // Author-facing copy first; class/reason stay in diagnostics for support.
                         $type->addError('fieldLayout', $lifecycle->placementRejectionMessage($field));
@@ -410,6 +440,7 @@ final class BlockTypes extends Component
                         ];
                     }
                 }
+
                 if (!$lifecycle->customTranslationKeyIsSupported($field)) {
                     if (!$this->_isUnchangedUnsafePlacement($baselineType, $placement->uid, $field->uid, $fieldClass)) {
                         $type->addError(
@@ -426,6 +457,7 @@ final class BlockTypes extends Component
                     }
                 }
             }
+
             foreach ($this->_ownedLayoutUids($type) as [$ownedUid, $attribute]) {
                 if (isset($schemaUids[$ownedUid])) {
                     $type->addError(
@@ -437,6 +469,7 @@ final class BlockTypes extends Component
                 $schemaUids[$ownedUid] = "{$attribute} owned by Block Type {$uid}";
             }
             $handle = strtolower($type->handle);
+
             if (isset($handles[$handle]) && $handles[$handle] !== $uid) {
                 $type->addError('handle', 'Block Type handles must be globally unique.');
                 $valid = false;
@@ -450,6 +483,7 @@ final class BlockTypes extends Component
     private function _indexByUid(array $types): array
     {
         $indexed = [];
+
         foreach ($types as $type) {
             $indexed[(string)$type->uid] = $type;
         }
@@ -468,6 +502,7 @@ final class BlockTypes extends Component
 
         foreach ($baseline->getFieldLayout()?->getCustomFieldElements() ?? [] as $placement) {
             $field = $placement->getField();
+
             if ($placement->uid === $placementUid && $field->uid === $fieldUid && $field::class === $fieldClass) {
                 return true;
             }
@@ -481,6 +516,7 @@ final class BlockTypes extends Component
         $handle = StringHelper::toHandle($base);
         $candidate = $handle;
         $suffix = 2;
+
         while ($this->getBlockTypeByHandle($candidate)) {
             $candidate = $handle . $suffix++;
         }
@@ -493,6 +529,7 @@ final class BlockTypes extends Component
         $this->byId = [];
         $this->byUid = [];
         $this->byHandle = [];
+
         if (\verbb\vizy\Vizy::$plugin?->has('editorManifests')) {
             \verbb\vizy\Vizy::$plugin->getEditorManifests()->invalidate();
         }
@@ -505,11 +542,13 @@ final class BlockTypes extends Component
     private function _ensureExternalPreflight(): void
     {
         $projectConfig = Craft::$app->getProjectConfig();
+
         if ($this->externalPreflightComplete || !$projectConfig->getIsApplyingExternalChanges()) {
             return;
         }
 
         $incoming = $projectConfig->get(self::PROJECT_CONFIG_PATH, true) ?? [];
+
         if (!is_array($incoming)) {
             $incoming = [];
         }
@@ -520,13 +559,16 @@ final class BlockTypes extends Component
     private function _ownedLayoutUids(BlockType $type): array
     {
         $layout = $type->getFieldLayout();
+
         if (!$layout) {
             return [];
         }
 
         $uids = [[$layout->uid, 'layout']];
+
         foreach ($layout->getTabs() as $tab) {
             $uids[] = [$tab->uid, 'tab'];
+
             foreach ($tab->getElements() as $element) {
                 $uids[] = [$element->uid, 'placement'];
             }

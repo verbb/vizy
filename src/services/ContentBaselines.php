@@ -50,24 +50,29 @@ final class ContentBaselines extends Component
     public function document(ElementInterface $owner, VizyField $field): ?VizyDocument
     {
         $key = $this->_key($owner, $field);
+
         if ($key === null) {
             return null;
         }
+
         if (array_key_exists($key, $this->documents)) {
             return $this->documents[$key];
         }
 
         $ownerId = $owner->id;
         $siteId = $owner->siteId;
+
         if ((!$ownerId || !$siteId) && $owner->duplicateOf instanceof ElementInterface) {
             $ownerId = $owner->duplicateOf->id;
             $siteId = $owner->duplicateOf->siteId;
         }
+
         if (!$ownerId || !$siteId || !$field->uid) {
             return null;
         }
 
         $placementUid = FieldPlacements::uid($owner, $field);
+
         if ($placementUid === null) {
             return $this->documents[$key] = null;
         }
@@ -77,12 +82,14 @@ final class ContentBaselines extends Component
             ->from('{{%elements_sites}}')
             ->where(['elementId' => $ownerId, 'siteId' => $siteId])
             ->scalar();
+
         if ($content === false || $content === null) {
             return $this->documents[$key] = null;
         }
 
         try {
             $content = is_string($content) ? Json::decode($content) : $content;
+
             if (!is_array($content) || !array_key_exists($placementUid, $content)) {
                 return $this->documents[$key] = null;
             }
@@ -113,10 +120,12 @@ final class ContentBaselines extends Component
         // elements_sites lookup with a null or borrowed Matrix anchor ID.
         if ($owner instanceof Block) {
             $documentKey = AnchorDocuments::key($owner, $field);
+
             if ($documentKey === null) {
                 return null;
             }
             $durableOwner = $owner;
+
             while ($durableOwner instanceof Block) {
                 try {
                     $nextOwner = $durableOwner->getOwner();
@@ -129,10 +138,12 @@ final class ContentBaselines extends Component
             }
             $ownerId = $durableOwner->id;
             $siteId = $durableOwner->siteId;
+
             if ((!$ownerId || !$siteId) && $durableOwner->duplicateOf instanceof ElementInterface) {
                 $ownerId = $durableOwner->duplicateOf->id;
                 $siteId = $durableOwner->duplicateOf->siteId;
             }
+
             if (!$ownerId || !$siteId) {
                 return null;
             }
@@ -148,6 +159,7 @@ final class ContentBaselines extends Component
 
         $ownerId = $owner->id;
         $siteId = $owner->siteId;
+
         // Craft validates duplicate clones before IDs are assigned. Fall back to
         // the source owner so migration/checkpoint trust survives duplicateElement().
         if ((!$ownerId || !$siteId) && $owner->duplicateOf instanceof ElementInterface) {

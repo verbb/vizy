@@ -54,6 +54,7 @@ class Nodes extends Component
         );
 
         $byType = [];
+
         foreach ($this->getRegisteredNodes() as $registeredNode) {
             if (is_string($registeredNode) && class_exists($registeredNode) && isset($registeredNode::$type)) {
                 $byType[$registeredNode::$type] = $registeredNode;
@@ -90,6 +91,7 @@ class Nodes extends Component
         );
 
         $byType = [];
+
         foreach ($this->getRegisteredMarks() as $registeredMark) {
             if (is_string($registeredMark) && class_exists($registeredMark) && isset($registeredMark::$type)) {
                 $byType[$registeredMark::$type] = $registeredMark;

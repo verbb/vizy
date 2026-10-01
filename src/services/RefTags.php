@@ -47,6 +47,7 @@ final class RefTags extends Component
                             $query = '';
                         }
                     }
+
                     if ($hash && str_contains($parsed, $hash)) {
                         $url .= $hash;
                         $hash = '';

@@ -45,12 +45,14 @@ final class MatrixPersistence extends Component
     public function syncBlockNode(VizyDocument $document, VizyBlock $block, array &$node): void
     {
         $layout = $block->blockType()?->getFieldLayout();
+
         if (!$layout) {
             return;
         }
 
         foreach ($layout->getCustomFieldElements() as $placement) {
             $field = $placement->getField();
+
             if (!$field instanceof Matrix) {
                 continue;
             }
@@ -76,19 +78,23 @@ final class MatrixPersistence extends Component
                 continue;
             }
             $path = "{$basePath}.{$index}";
+
             if (($node['type'] ?? null) === 'vizyBlock') {
                 $block = $document->blockFromNode($node, $path);
                 $this->syncBlockNode($document, $block, $node);
 
                 // Hosted Vizy: sync nested documents before embedding them.
                 $layout = $block->blockType()?->getFieldLayout();
+
                 if ($layout) {
                     foreach ($layout->getCustomFieldElements() as $placement) {
                         $field = $placement->getField();
+
                         if (!$field instanceof VizyField) {
                             continue;
                         }
                         $raw = $node['attrs']['fieldSlots'][$placement->uid] ?? null;
+
                         if (!DocumentWalk::isHostedEnvelope($raw)) {
                             continue;
                         }
@@ -123,9 +129,11 @@ final class MatrixPersistence extends Component
     ): void {
         $owner = $document->owner();
         $vizyField = $document->field();
+
         while ($owner instanceof Block) {
             $owner = $owner->getOwner();
         }
+
         if (!$owner || !$vizyField || !$owner->id) {
             throw new RuntimeException('Matrix persistence requires a saved Vizy owner.');
         }
@@ -150,6 +158,7 @@ final class MatrixPersistence extends Component
             $block->matrixAnchorUid(),
             $documentKey,
         );
+
         if (!$anchor) {
             throw new RuntimeException('Unable to persist the Vizy Matrix anchor.');
         }
@@ -167,8 +176,10 @@ final class MatrixPersistence extends Component
             // Publishing a persisted draft/revision must copy its snapshot over
             // the existing canonical anchor, even when no Matrix POST is present.
             $sourceOwner = $owner->duplicateOf;
+
             if ($priorAnchor && $sourceOwner && $sourceOwner->id !== $owner->id) {
                 $source = Vizy::$plugin->getAnchors()->getAnchor($sourceOwner, $vizyField, $block->uid(), null, $documentKey);
+
                 if ($source) {
                     $source->setFieldLayout($layout);
                     Vizy::$plugin->getAnchors()->copyMatrixField($field, $source, $anchor);
