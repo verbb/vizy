@@ -17,6 +17,7 @@ use Craft;
 use craft\base\Element;
 use craft\base\Plugin;
 use craft\elements\ContentBlock;
+use craft\elements\Entry;
 use craft\events\CreateFieldLayoutFormEvent;
 use craft\events\DefineFieldLayoutCustomFieldsEvent;
 use craft\events\InvalidateElementCachesEvent;
@@ -175,11 +176,13 @@ class Vizy extends Plugin
         // (New-field type menus are gated separately via vizyBlockTypeLayout + JS.)
         Event::on(FieldLayout::class, FieldLayout::EVENT_DEFINE_CUSTOM_FIELDS, function(DefineFieldLayoutCustomFieldsEvent $event) {
             $layout = $event->sender;
+
             if (!$layout instanceof FieldLayout || $layout->type !== BlockElement::class) {
                 return;
             }
 
             $lifecycle = self::getInstance()?->getFieldLifecycle();
+
             if (!$lifecycle) {
                 return;
             }
@@ -203,11 +206,13 @@ class Vizy extends Plugin
         // from Craft’s field-type menu when the designer passes vizyBlockTypeLayout=1.
         Event::on(Fields::class, Fields::EVENT_REGISTER_FIELD_TYPES, function(RegisterComponentTypesEvent $event) {
             $request = Craft::$app->getRequest();
+
             if ($request->getIsConsoleRequest() || !$request->getParam('vizyBlockTypeLayout')) {
                 return;
             }
 
             $lifecycle = self::getInstance()?->getFieldLifecycle();
+
             if (!$lifecycle) {
                 return;
             }

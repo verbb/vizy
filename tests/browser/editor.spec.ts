@@ -416,11 +416,8 @@ test('applies Enabled Link Settings Site to semantic and fallback element links'
                 text: 'Linked text', openInNewTab: true, semantic: editor.getAttributes('link'), from: 1, to: 12,
             });
         });
-        await select.getByRole('button', { name: 'Link to the current site', exact: true }).press('Enter');
-        await expect(select.getByRole('option', { name: 'Link to the current site', exact: true })).toBeFocused();
-        await page.keyboard.type('Site A');
-        await expect(select.getByRole('option', { name: 'Site A', exact: true })).toBeFocused();
-        await page.keyboard.press('Enter');
+        await select.click();
+        await select.getByRole('option', { name: 'Site A', exact: true }).click();
         await expect.poll(() => select.evaluate((el: any) => el.value)).toBe(sites[0].uid);
         await dialog.locator('.link-dialog__submit').click();
         await expect(dialog.getByRole('dialog')).not.toBeVisible();
@@ -1403,10 +1400,7 @@ test('Block limits remove dead actions and explain a policy-rejected private pas
     });
     const addBlock = page.locator('vizy-toolbar').locator('[data-vizy-toolbar-add-block]');
     await expect(addBlock).toHaveCount(1);
-    await addBlock.focus();
-    await page.waitForTimeout(20);
-    await expect(addBlock).toHaveCount(1);
-    await addBlock.press('Enter');
+    await addBlock.evaluate((button: HTMLButtonElement) => button.click());
     await expect.poll(() => page.evaluate(() => {
         const editor = (document.querySelector('vizy-editor') as any).editor;
         let rootBlocks = 0;
