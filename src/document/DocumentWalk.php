@@ -63,9 +63,11 @@ final class DocumentWalk
                 continue;
             }
             $path = "{$basePath}.{$index}";
+
             if (($node['type'] ?? null) === 'vizyBlock') {
                 $block = $document->blockFromNode($node, $path);
                 yield $block;
+
                 if ($includeHosted) {
                     yield from self::_hostedBlocks($document, $block);
                 }
@@ -129,23 +131,29 @@ final class DocumentWalk
     private static function _hostedDocuments(VizyDocument $document, VizyBlock $block): iterable
     {
         $layout = $block->blockType()?->getFieldLayout();
+
         if (!$layout) {
             return;
         }
+
         foreach ($layout->getCustomFieldElements() as $placement) {
             $field = $placement->getField();
+
             if (!$field instanceof VizyField) {
                 continue;
             }
+
             if ($document->owner() && $document->field()) {
                 $nested = $document->blockElement($block)->getFieldValue($field->handle);
             } else {
                 $raw = $block->rawFieldValue($placement->uid);
+
                 if (!self::isHostedEnvelope($raw)) {
                     continue;
                 }
                 $nested = Vizy::$plugin->getDocuments()->normalizeDetached($raw);
             }
+
             if ($nested instanceof VizyDocument) {
                 yield $nested;
             }

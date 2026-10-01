@@ -22,6 +22,7 @@ final class FeedMeDocumentAdapter
         if (is_string($value) && $value !== '') {
             try {
                 $decoded = Json::decode($value);
+
                 if (is_array($decoded)) {
                     $value = $decoded;
                 }
@@ -51,6 +52,7 @@ final class FeedMeDocumentAdapter
                 : (($value['type'] ?? null) === 'doc' && is_array($value['content'] ?? null)
                     ? $value['content']
                     : null);
+
             if ($content !== null) {
                 return $this->validateEnvelope($content);
             }

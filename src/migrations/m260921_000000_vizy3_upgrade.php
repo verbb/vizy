@@ -55,6 +55,7 @@ final class m260921_000000_vizy3_upgrade extends Migration
         }
 
         $plan = $orchestrator->analyze();
+
         if (($plan['status'] ?? null) !== 'ready') {
             throw new RuntimeException('The automatic Vizy 3 upgrade is blocked: ' . Json::encode($plan['diagnostics'] ?? []));
         }

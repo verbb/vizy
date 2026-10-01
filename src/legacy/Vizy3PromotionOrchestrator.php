@@ -64,15 +64,19 @@ final class Vizy3PromotionOrchestrator extends Component
     {
         $projectConfig = Craft::$app->getProjectConfig();
         $fields = $this->_fieldConfigs();
+
         foreach (array_keys($fields) as $fieldUid) {
             if ($projectConfig->get(LegacySchemaMaps::PROJECT_CONFIG_PATH . '.' . $fieldUid) !== null) {
                 unset($fields[$fieldUid]);
             }
         }
+
         foreach (SchemaPromotion::find()->all() as $promotion) {
             $boundPlan = Json::decode((string)$promotion->planJson);
+
             foreach ($boundPlan['fields'] ?? [] as $fieldUid => $fieldPlan) {
                 $fieldData = $fields[$fieldUid]['settings']['fieldData'] ?? null;
+
                 if (is_array($fieldData) && ($fieldPlan['sourceFingerprint'] ?? null) === $this->_hash($fieldData)) {
                     // A durable run already owns this exact source snapshot.
                     // Operators resume that run rather than planning duplicate schema.
@@ -110,6 +114,7 @@ final class Vizy3PromotionOrchestrator extends Component
         $this->_preflight($plan);
 
         $existing = SchemaPromotion::findOne(['planHash' => $plan['planHash']]);
+
         if ($existing) {
             if (Json::decode((string)$existing->ownerScopeJson) !== $ownerScope) {
                 throw new RuntimeException('This immutable upgrade plan is already bound to a different owner scope.');
@@ -132,6 +137,7 @@ final class Vizy3PromotionOrchestrator extends Component
     public function resume(string $runUid): array
     {
         $record = SchemaPromotion::findOne(['runUid' => $runUid]);
+
         if (!$record) {
             throw new RuntimeException("Unknown Vizy 3 upgrade {$runUid}.");
         }
@@ -141,6 +147,7 @@ final class Vizy3PromotionOrchestrator extends Component
     public function status(?string $runUid = null): array
     {
         $query = SchemaPromotion::find()->orderBy(['id' => SORT_ASC]);
+
         if ($runUid !== null) {
             $query->andWhere(['runUid' => $runUid]);
         }
@@ -160,6 +167,7 @@ final class Vizy3PromotionOrchestrator extends Component
         $plan = Json::decode((string)$record->planJson);
         $ownerScope = Json::decode((string)$record->ownerScopeJson);
         $this->_assertPlan($plan);
+
         if (!hash_equals((string)$record->planHash, (string)$plan['planHash'])) {
             throw new RuntimeException('Persisted upgrade plan hash is stale or corrupt.');
         }
@@ -167,14 +175,18 @@ final class Vizy3PromotionOrchestrator extends Component
         $record->status = 'running';
         $record->lastError = null;
         $this->_save($record);
+
         try {
             $stageIndex = array_search((string)$record->stage, self::STAGES, true);
+
             if ($stageIndex === false) {
                 throw new RuntimeException("Unknown Vizy 3 upgrade stage {$record->stage}.");
             }
+
             if ($stageIndex === 0) {
                 Vizy::$plugin->getContentRecovery()->captureUpgrade(array_keys($plan['fields']));
             }
+
             for ($index = $stageIndex + 1; $index < count(self::STAGES); $index++) {
                 $stage = self::STAGES[$index];
                 $this->_executeStage($stage, $plan, $ownerScope, (string)$record->runUid);
@@ -215,11 +227,14 @@ final class Vizy3PromotionOrchestrator extends Component
     private function _applyEditorConfigs(array $plan): void
     {
         (new ManualEditorConfigMigrator())->applyMints($plan['fields'] ?? []);
+
         foreach ($plan['fields'] as $fieldUid => $fieldPlan) {
             $id = $fieldPlan['canonicalFieldSettings']['editorConfig'] ?? '';
+
             if (!is_string($id) || $id === '') {
                 continue;
             }
+
             if (Vizy::$plugin->getEditorConfigs()->getConfig($id) === null) {
                 throw new RuntimeException("Upgraded Editor Config {$id} for field {$fieldUid} is missing after the editorConfigs stage.");
             }
@@ -231,10 +246,12 @@ final class Vizy3PromotionOrchestrator extends Component
         $this->_assertSourceFingerprints($plan);
         $projectConfig = Craft::$app->getProjectConfig();
         $candidate = $projectConfig->get(BlockTypes::PROJECT_CONFIG_PATH) ?? [];
+
         foreach ($plan['fields'] as $fieldPlan) {
             foreach ($fieldPlan['blockTypes'] as $target) {
                 $uid = $target['uid'];
                 $packed = ProjectConfigHelper::packAssociativeArrays($target['config']);
+
                 if (isset($candidate[$uid]) && $this->_normalizedBlockTypeConfig($uid, $candidate[$uid]) !== $this->_normalizedBlockTypeConfig($uid, $target['config'])) {
                     throw new RuntimeException("Target Block Type {$uid} changed outside this upgrade plan.");
                 }
@@ -250,20 +267,24 @@ final class Vizy3PromotionOrchestrator extends Component
     {
         $this->_preflight($plan);
         $projectConfig = Craft::$app->getProjectConfig();
+
         foreach ($plan['fields'] as $fieldPlan) {
             foreach ($fieldPlan['blockTypes'] as $target) {
                 $uid = $target['uid'];
                 $path = BlockTypes::PROJECT_CONFIG_PATH . '.' . $uid;
                 $expected = $this->_normalizedBlockTypeConfig($uid, $target['config']);
                 $current = $projectConfig->get($path);
+
                 if ($current === null) {
                     $projectConfig->set($path, ProjectConfigHelper::packAssociativeArrays($target['config']));
                     $current = $projectConfig->get($path);
                 }
+
                 if ($this->_normalizedBlockTypeConfig($uid, $current) !== $expected) {
                     throw new RuntimeException("Global Block Type {$uid} did not round-trip through Project Config.");
                 }
                 $record = BlockTypeRecord::findOne(['uid' => $uid]);
+
                 if (!$record || !$record->fieldLayoutId || !Craft::$app->getFields()->getLayoutById((int)$record->fieldLayoutId)) {
                     throw new RuntimeException("Global Block Type {$uid} did not synchronize its runtime record and FieldLayout.");
                 }
@@ -274,9 +295,11 @@ final class Vizy3PromotionOrchestrator extends Component
     private function _applyProvenance(array $plan): void
     {
         $this->_assertSourceFingerprints($plan);
+
         foreach ($plan['fields'] as $fieldUid => $fieldPlan) {
             Vizy::$plugin->getLegacySchemaMaps()->saveProvenance($fieldUid, $fieldPlan);
             $loaded = Vizy::$plugin->getLegacySchemaMaps()->getProvenance($fieldUid);
+
             if (($loaded['sourceFingerprint'] ?? null) !== $fieldPlan['sourceFingerprint']) {
                 throw new RuntimeException("Vizy 3 upgrade mapping {$fieldUid} did not reload immutably.");
             }
@@ -288,9 +311,11 @@ final class Vizy3PromotionOrchestrator extends Component
         $this->_assertSourceFingerprints($plan);
         $projectConfig = Craft::$app->getProjectConfig();
         $fields = $this->_fieldConfigs();
+
         foreach ($plan['fields'] as $fieldUid => $fieldPlan) {
             $path = "fields.{$fieldUid}";
             $config = $fields[$fieldUid] ?? null;
+
             if (!is_array($config) || ($config['type'] ?? null) !== VizyField::class) {
                 throw new RuntimeException("Vizy field {$fieldUid} is no longer available for canonical reference update.");
             }
@@ -298,6 +323,7 @@ final class Vizy3PromotionOrchestrator extends Component
             // Keep fieldData as migration input; VizyField::getSettings() remains
             // canonical and never treats it as live Vizy 4 schema.
             $config['settings'] = [...$settings, ...$fieldPlan['canonicalFieldSettings']];
+
             // Rich-text V3 fields often omitted fieldData; persist an empty list so
             // provenance/fingerprint checks and retirement tooling still see a key.
             if (!array_key_exists('fieldData', $config['settings'])) {
@@ -306,8 +332,10 @@ final class Vizy3PromotionOrchestrator extends Component
             $projectConfig->set($path, $config);
 
             $reloaded = ProjectConfigHelper::unpackAssociativeArrays($projectConfig->get($path));
+
             foreach ($fieldPlan['canonicalFieldSettings'] as $key => $value) {
                 $actual = $reloaded['settings'][$key] ?? null;
+
                 if (!$this->_canonicalSettingEquals($actual, $value)) {
                     throw new RuntimeException(
                         "Canonical Vizy field {$fieldUid} setting {$key} did not round-trip: "
@@ -318,6 +346,7 @@ final class Vizy3PromotionOrchestrator extends Component
             $reloadedFieldData = array_key_exists('fieldData', $reloaded['settings'] ?? [])
                 ? $reloaded['settings']['fieldData']
                 : [];
+
             // Craft may drop empty fieldData arrays from Project Config; treat omit as [].
             if (!is_array($reloadedFieldData)) {
                 throw new RuntimeException("Canonical Vizy field {$fieldUid} lost its retained legacy migration input.");
@@ -331,6 +360,7 @@ final class Vizy3PromotionOrchestrator extends Component
         if ($this->_stable($actual) === $this->_stable($expected)) {
             return true;
         }
+
         if (($expected === [] || $expected === null) && ($actual === [] || $actual === null)) {
             return true;
         }
@@ -342,8 +372,10 @@ final class Vizy3PromotionOrchestrator extends Component
         if (($ownerScope['complete'] ?? false) !== true) {
             throw new RuntimeException('Owner migration scope must be explicitly marked complete before writes.');
         }
+
         foreach ($ownerScope['jobs'] ?? [] as $index => $job) {
             $fieldUid = $job['fieldUid'] ?? null;
+
             if (!is_string($fieldUid) || !isset($plan['fields'][$fieldUid])) {
                 throw new RuntimeException("Owner job {$index} references a field outside the immutable plan.");
             }
@@ -353,6 +385,7 @@ final class Vizy3PromotionOrchestrator extends Component
                 (int)($job['siteId'] ?? 0),
             );
             $field = $owner ? FieldPlacements::field($owner, $fieldUid, $job['ownerPlacementUid'] ?? null) : null;
+
             if (!$owner || !$field instanceof VizyField || !is_array($job['mapping'] ?? null)) {
                 throw new RuntimeException("Owner job {$index} cannot resolve its exact owner, field, or mapping.");
             }
@@ -365,6 +398,7 @@ final class Vizy3PromotionOrchestrator extends Component
                 true,
                 $jobRunUid,
             );
+
             if ($result['state'] !== 'verified') {
                 throw new RuntimeException("Owner job {$index} stopped in {$result['state']}: " . Json::encode($result['errors']));
             }
@@ -383,10 +417,12 @@ final class Vizy3PromotionOrchestrator extends Component
     private function _assertSourceFingerprints(array $plan): void
     {
         $fields = $this->_fieldConfigs();
+
         foreach ($plan['fields'] as $fieldUid => $fieldPlan) {
             $settings = is_array($fields[$fieldUid]['settings'] ?? null) ? $fields[$fieldUid]['settings'] : [];
             // Match Vizy3SchemaPromotion: omitted fieldData (common for V3 rich-text) ≡ [].
             $fieldData = array_key_exists('fieldData', $settings) ? $settings['fieldData'] : [];
+
             if (!is_array($fieldData) || !hash_equals((string)$fieldPlan['sourceFingerprint'], $this->_hash($fieldData))) {
                 throw new RuntimeException("Vizy field {$fieldUid} source Project Config changed after analysis.");
             }
@@ -398,6 +434,7 @@ final class Vizy3PromotionOrchestrator extends Component
         $hash = $plan['planHash'] ?? null;
         $copy = $plan;
         unset($copy['planHash']);
+
         if (
             ($plan['status'] ?? null) !== 'ready'
             || !is_string($hash)
@@ -429,6 +466,7 @@ final class Vizy3PromotionOrchestrator extends Component
     private function _unpackMap(mixed $map): array
     {
         $result = [];
+
         foreach (is_array($map) ? $map : [] as $uid => $config) {
             if (is_string($uid) && is_array($config)) {
                 $result[$uid] = ProjectConfigHelper::unpackAssociativeArrays($config);
@@ -458,6 +496,7 @@ final class Vizy3PromotionOrchestrator extends Component
             ->all();
 
         $fieldsService = Craft::$app->getFields();
+
         foreach ($fieldsService->getAllFields('global') as $field) {
             if (!is_string($field->uid) || !isset($rows[$field->uid])) {
                 continue;
@@ -466,6 +505,7 @@ final class Vizy3PromotionOrchestrator extends Component
                 $fieldsService->createFieldConfig($field),
             );
             $settings = Json::decodeIfJson($rows[$field->uid]['settings']);
+
             if (is_array($settings)) {
                 $config['settings'] = $settings;
             }
@@ -487,9 +527,11 @@ final class Vizy3PromotionOrchestrator extends Component
         if (!is_array($value)) {
             return $value;
         }
+
         if (!array_is_list($value)) {
             ksort($value);
         }
+
         foreach ($value as $key => $child) {
             $value[$key] = $this->_stable($child);
         }

@@ -37,6 +37,7 @@ class VizyMarkInterface extends BaseInterfaceType
             'fields' => self::class . '::getFieldDefinitions',
             'resolveType' => static function($value) {
                 $mark = $value instanceof GqlMark ? $value : null;
+
                 if ($mark === null) {
                     throw new InvalidArgumentException('VizyMarkInterface requires a GqlMark source.');
                 }

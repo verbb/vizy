@@ -102,6 +102,7 @@ class ArrayType extends ScalarType
 
         if ($valueNode instanceof ListValueNode) {
             $list = [];
+
             foreach ($valueNode->values as $item) {
                 $list[] = $this->_literalToPhp($item, $variables);
             }
@@ -111,6 +112,7 @@ class ArrayType extends ScalarType
 
         if ($valueNode instanceof ObjectValueNode) {
             $object = [];
+
             foreach ($valueNode->fields as $field) {
                 $object[$field->name->value] = $this->_literalToPhp($field->value, $variables);
             }
@@ -120,6 +122,7 @@ class ArrayType extends ScalarType
 
         if ($valueNode instanceof VariableNode) {
             $name = $valueNode->name->value;
+
             if (!array_key_exists($name, $variables)) {
                 throw new Error("Variable \"\${$name}\" is not defined.");
             }

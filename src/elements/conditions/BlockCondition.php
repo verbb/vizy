@@ -68,6 +68,7 @@ class BlockCondition extends ElementCondition
         }
 
         $owner = $element->getOwner();
+
         foreach ($this->getConditionRules() as $rule) {
             if (
                 str_starts_with($rule::class, 'craft\\elements\\conditions\\entries\\')
@@ -76,6 +77,7 @@ class BlockCondition extends ElementCondition
                 return false;
             }
             $target = $rule instanceof FieldConditionRuleInterface ? $element : $owner;
+
             if (!$rule->matchElement($target)) {
                 return false;
             }

@@ -40,6 +40,7 @@ final class FieldImageOptions
     public static function defaultTransformHandle(VizyField $field): string
     {
         $configured = (string)($field->defaultTransform ?? '');
+
         if ($configured === '') {
             return '';
         }

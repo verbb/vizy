@@ -25,6 +25,7 @@ final class Vizy3SchemaPromotion
         $plans = [];
         $claimedSchemaUids = array_fill_keys(array_keys($existingBlockTypes), 'globalBlockType');
         $claimedHandles = [];
+
         foreach ($existingBlockTypes as $uid => $config) {
             if (is_string($config['handle'] ?? null)) {
                 $claimedHandles[strtolower($config['handle'])][] = "global:{$uid}";
@@ -36,6 +37,7 @@ final class Vizy3SchemaPromotion
                 continue;
             }
             $settings = is_array($fieldConfig['settings'] ?? null) ? $fieldConfig['settings'] : [];
+
             // Canonical Vizy 4 fields carry blockTypePickerGroups and no fieldData.
             if (!array_key_exists('fieldData', $settings) && array_key_exists('blockTypePickerGroups', $settings)) {
                 // Already-canonical fields are outside the legacy promotion set.
@@ -44,6 +46,7 @@ final class Vizy3SchemaPromotion
             // Vizy 3 rich-text fields often omit fieldData entirely (Craft PC drops empty
             // arrays). Treat a missing key as an empty group list so prose-only fields promote.
             $fieldData = array_key_exists('fieldData', $settings) ? $settings['fieldData'] : [];
+
             if (!is_array($fieldData) || !array_is_list($fieldData)) {
                 $this->_diagnostic($diagnostics, 'invalidFieldData', 'error', $fieldUid, 'Vizy 3 fieldData must be a group list.');
                 continue;
@@ -51,6 +54,7 @@ final class Vizy3SchemaPromotion
 
             $factory = new DeterministicUidFactory("vizy3-schema-promotion:{$fieldUid}");
             $editorPlan = (new ManualEditorConfigMigrator())->plan($settings, $fieldUid);
+
             foreach ($editorPlan['diagnostics'] as $diagnostic) {
                 $diagnostics[] = $diagnostic;
             }
@@ -67,9 +71,11 @@ final class Vizy3SchemaPromotion
                     'maxBlocks' => $this->_nullableInt($settings['maxBlocks'] ?? null),
                 ],
             ];
+
             if ($editorPlan['mint'] !== null) {
                 $fieldPlan['editorConfigMint'] = $editorPlan['mint'];
             }
+
             if ($editorPlan['fingerprint'] !== null) {
                 $fieldPlan['editorConfigFingerprint'] = $editorPlan['fingerprint'];
             }
@@ -82,17 +88,21 @@ final class Vizy3SchemaPromotion
                 }
                 $allowed = [];
                 $disabled = [];
+
                 foreach ($group['blockTypes'] as $typeIndex => $legacyType) {
                     $location = "{$fieldUid}.groups.{$groupIndex}.blockTypes.{$typeIndex}";
+
                     if (!is_array($legacyType)) {
                         $this->_diagnostic($diagnostics, 'invalidBlockType', 'error', $location, 'Block Type data must be an object.');
                         continue;
                     }
                     $legacyId = $legacyType['id'] ?? null;
+
                     if (!is_string($legacyId) || $legacyId === '') {
                         $this->_diagnostic($diagnostics, 'missingLegacyTypeId', 'error', $location, 'A legacy Block Type ID is required.');
                         continue;
                     }
+
                     if (isset($legacyIds[$legacyId])) {
                         $this->_diagnostic($diagnostics, 'duplicateLegacyTypeId', 'error', $location, "Legacy Block Type ID {$legacyId} occurs more than once in the field.");
                         continue;
@@ -111,6 +121,7 @@ final class Vizy3SchemaPromotion
                     $handleKey = "{$fieldUid}:{$legacyId}";
                     $sourceHandle = is_string($legacyType['handle'] ?? null) ? $legacyType['handle'] : '';
                     $targetHandle = $targetHandles[$handleKey] ?? $sourceHandle;
+
                     if (!$this->_validHandle($targetHandle)) {
                         $this->_diagnostic($diagnostics, 'invalidTargetHandle', 'error', $location, "Block Type {$legacyId} requires an explicit valid target handle.");
                     }
@@ -124,6 +135,7 @@ final class Vizy3SchemaPromotion
                         $diagnostics,
                         $location,
                     );
+
                     if (($legacyType['minBlocks'] ?? null) !== null || ($legacyType['maxBlocks'] ?? null) !== null) {
                         $this->_diagnostic(
                             $diagnostics,
@@ -152,9 +164,11 @@ final class Vizy3SchemaPromotion
                         'blockTypeUid' => $targetUid,
                         'placementUids' => $placementMap,
                     ];
+
                     if (($settings['editorMode'] ?? VizyField::MODE_COMBINED) !== VizyField::MODE_RICH_TEXT) {
                         // Disabled types still own existing content; only insertion is disabled.
                         $allowed[] = $targetUid;
+
                         if (($legacyType['enabled'] ?? true) !== true) {
                             $disabled[] = $targetUid;
                         }
@@ -177,6 +191,7 @@ final class Vizy3SchemaPromotion
         foreach ($claimedHandles as $handle => $owners) {
             if ($handle !== '' && count($owners) > 1) {
                 sort($owners);
+
                 foreach ($owners as $owner) {
                     if (!str_starts_with($owner, 'global:')) {
                         $this->_diagnostic(
@@ -193,6 +208,7 @@ final class Vizy3SchemaPromotion
 
         usort($diagnostics, static fn(array $a, array $b) => [$a['location'], $a['code'], $a['message']] <=> [$b['location'], $b['code'], $b['message']]);
         $blocked = false;
+
         foreach ($diagnostics as $diagnostic) {
             if ($diagnostic['severity'] === 'error') {
                 $blocked = true;
@@ -246,6 +262,7 @@ final class Vizy3SchemaPromotion
         string $location,
     ): array {
         $layout = $legacyType['layoutConfig'] ?? null;
+
         if (!is_array($layout)) {
             $this->_diagnostic($diagnostics, 'missingLayoutConfig', 'error', $location, 'Block Type layoutConfig is required for the Vizy 3 upgrade.');
             $layout = ['tabs' => []];
@@ -261,6 +278,7 @@ final class Vizy3SchemaPromotion
             $diagnostics,
             "{$location}.layoutConfig.uid",
         );
+
         if ($outsideUid !== null && $insideUid !== null && $outsideUid !== $insideUid) {
             $this->_diagnostic($diagnostics, 'ambiguousLayoutUid', 'error', $location, 'layoutUid disagrees with layoutConfig.uid.');
         }
@@ -274,6 +292,7 @@ final class Vizy3SchemaPromotion
             "{$location}.layout",
             'layout',
         );
+
         if (!$this->_validUuid($candidate)) {
             $this->_diagnostic($diagnostics, 'generatedLayoutUid', 'warning', "{$location}.layout", 'Missing or invalid layout identity was deterministically mapped.');
         }
@@ -303,12 +322,14 @@ final class Vizy3SchemaPromotion
         if ($value === null) {
             return null;
         }
+
         if (is_string($value)) {
             return $value;
         }
 
         $candidate = null;
         $shape = null;
+
         if (is_array($value)) {
             if (array_is_list($value) && count($value) === 1 && is_string($value[0])) {
                 $candidate = $value[0];
@@ -354,6 +375,7 @@ final class Vizy3SchemaPromotion
                 continue;
             }
             $childLocation = "{$location}.{$key}";
+
             if (isset($child['elements']) && is_array($child['elements'])) {
                 $candidate = is_string($child['uid'] ?? null) ? $child['uid'] : null;
                 $child['uid'] = $this->_claimUid(
@@ -365,10 +387,12 @@ final class Vizy3SchemaPromotion
                     $childLocation,
                     'tab',
                 );
+
                 if (!$this->_validUuid($candidate)) {
                     $this->_diagnostic($diagnostics, 'generatedTabUid', 'warning', $childLocation, 'Missing or invalid tab identity was deterministically mapped.');
                 }
             }
+
             if (($child['type'] ?? null) === CustomField::class || isset($child['fieldUid'])) {
                 $this->_promotePlacement(
                     $child,
@@ -405,16 +429,19 @@ final class Vizy3SchemaPromotion
             'placement',
         );
         $placement['uid'] = $canonical;
+
         if (!$this->_validUuid($legacyPlacement)) {
             $this->_diagnostic($diagnostics, 'generatedPlacementUid', 'warning', $location, 'Missing or invalid placement identity was deterministically mapped.');
         }
 
         $fieldUid = $placement['fieldUid'] ?? null;
         $fieldConfig = is_string($fieldUid) ? ($fieldConfigs[$fieldUid] ?? null) : null;
+
         if (!is_array($fieldConfig)) {
             $this->_diagnostic($diagnostics, 'missingPlacedField', 'error', $location, 'The placed global Craft field is missing.');
         } else {
             $fieldType = $fieldConfig['type'] ?? null;
+
             if (is_string($fieldType) && ($fieldType === 'craft\\fields\\Matrix' || str_ends_with($fieldType, '\\fields\\Matrix'))) {
                 // Matrix placements retain their persisted anchors through promotion.
                 $this->_diagnostic(
@@ -436,6 +463,7 @@ final class Vizy3SchemaPromotion
             is_string($placement['handle'] ?? null) ? $placement['handle'] : null,
             is_array($fieldConfig) && is_string($fieldConfig['handle'] ?? null) ? $fieldConfig['handle'] : null,
         ], static fn(mixed $key) => is_string($key) && $key !== '');
+
         foreach (array_unique($acceptedKeys) as $key) {
             if (isset($placementMap[$key]) && $placementMap[$key] !== $canonical) {
                 $this->_diagnostic($diagnostics, 'ambiguousLegacyPlacementKey', 'error', $location, "Legacy placement key {$key} identifies multiple placements.");
@@ -458,10 +486,12 @@ final class Vizy3SchemaPromotion
             $claimed[$candidate] = "{$kind}:{$location}";
             return $candidate;
         }
+
         if ($candidate !== null) {
             $this->_diagnostic($diagnostics, 'schemaUidCollisionRemapped', 'warning', $location, "Unsafe {$kind} UID {$candidate} was deterministically remapped.");
         }
         $uid = $factory->uid("{$key}:uid");
+
         if (isset($claimed[$uid])) {
             throw new \LogicException("Deterministic UID collision for {$key}.");
         }
@@ -511,9 +541,11 @@ final class Vizy3SchemaPromotion
         if (!is_array($value)) {
             return $value;
         }
+
         if (!array_is_list($value)) {
             ksort($value);
         }
+
         foreach ($value as $key => $child) {
             $value[$key] = $this->_stable($child);
         }

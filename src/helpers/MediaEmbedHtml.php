@@ -15,6 +15,7 @@ final class MediaEmbedHtml
     public static function resolve(string $rawUrl): ?array
     {
         $url = self::normalizeHttpsUrl($rawUrl);
+
         if ($url === null) {
             return null;
         }
@@ -53,16 +54,20 @@ final class MediaEmbedHtml
     public static function normalizeHttpsUrl(string $raw): ?string
     {
         $trimmed = trim($raw);
+
         if ($trimmed === '') {
             return null;
         }
+
         if (!preg_match('#^https?://#i', $trimmed)) {
             $trimmed = 'https://' . $trimmed;
         }
         $parts = parse_url($trimmed);
+
         if (!is_array($parts) || empty($parts['scheme']) || empty($parts['host'])) {
             return null;
         }
+
         if (!in_array(strtolower((string)$parts['scheme']), ['http', 'https'], true)) {
             return null;
         }
@@ -86,13 +91,16 @@ final class MediaEmbedHtml
     private static function _buildUrl(array $parts): string
     {
         $url = ($parts['scheme'] ?? 'https') . '://' . ($parts['host'] ?? '');
+
         if (!empty($parts['port'])) {
             $url .= ':' . $parts['port'];
         }
         $url .= $parts['path'] ?? '';
+
         if (!empty($parts['query'])) {
             $url .= '?' . $parts['query'];
         }
+
         if (!empty($parts['fragment'])) {
             $url .= '#' . $parts['fragment'];
         }

@@ -116,18 +116,22 @@ final class FieldLinkOptions
             $sectionSiteSettings = $section->getSiteSettings();
             $hasUrls = Collection::make($sectionSiteSettings)
                 ->contains(fn(Section_SiteSettings $settings) => $settings->hasUrls);
+
             if (!$hasUrls) {
                 continue;
             }
+
             if (!$element || !$user->checkPermission("viewEntries:$section->uid")) {
                 $canViewEveryLinkableSection = false;
                 continue;
             }
             $sectionIds[] = $section->id;
+
             if ($section->type === Section::TYPE_SINGLE) {
                 $showSingles = true;
                 continue;
             }
+
             foreach ($sites as $site) {
                 if (isset($sectionSiteSettings[$site->id]) && $sectionSiteSettings[$site->id]->hasUrls) {
                     $sources[] = 'section:' . $section->uid;
@@ -141,6 +145,7 @@ final class FieldLinkOptions
         if ($showSingles) {
             array_unshift($sources, 'singles');
         }
+
         if ($canViewEveryLinkableSection && $sectionIds !== []) {
             array_unshift($sources, '*');
         }
@@ -155,12 +160,14 @@ final class FieldLinkOptions
     private static function _categorySources(?ElementInterface $element, array &$groupIds): array
     {
         $groupIds = [];
+
         if (!$element) {
             return [];
         }
 
         $groups = Collection::make(Craft::$app->getCategories()->getAllGroups())
-            ->filter(fn(CategoryGroup $group) =>
+            ->filter(
+                fn(CategoryGroup $group) =>
                 Craft::$app->getUser()->checkPermission("viewCategories:$group->uid") &&
                 ($group->getSiteSettings()[$element->siteId]?->hasUrls ?? false)
             );
@@ -178,6 +185,7 @@ final class FieldLinkOptions
     private static function _assetSources(VizyField $field, array &$volumeIds): array
     {
         $volumeIds = [];
+
         if (!$field->availableVolumes) {
             return [];
         }

@@ -19,9 +19,11 @@ final class AnchorDocuments
     public static function key(ElementInterface $owner, VizyField $field): ?string
     {
         $placementUid = FieldPlacements::uid($owner, $field);
+
         if ($placementUid === null) {
             return null;
         }
+
         if (!$owner instanceof Block) {
             return hash('sha256', Json::encode([
                 'placementUid' => $placementUid,
@@ -53,6 +55,7 @@ final class AnchorDocuments
     {
         $rootPlacementUid = $context['ownerPlacementUid'] ?? null;
         $rootFieldUid = $context['entryFieldUid'] ?? $context['fieldUid'] ?? null;
+
         if (!is_string($rootPlacementUid) || $rootPlacementUid === '' || !is_string($rootFieldUid) || $rootFieldUid === '') {
             return null;
         }
@@ -61,6 +64,7 @@ final class AnchorDocuments
             'placementUid' => $rootPlacementUid,
             'fieldUid' => $rootFieldUid,
         ]));
+
         foreach ($context['hostedPath'] ?? [] as $step) {
             if (
                 !is_array($step)

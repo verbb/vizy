@@ -36,6 +36,7 @@ class Iframe extends Node
     public static function tagForAttrs(array $attrs): string|array|null
     {
         $src = $attrs['src'] ?? null;
+
         if (!is_string($src) || $src === '') {
             return null;
         }
@@ -55,6 +56,7 @@ class Iframe extends Node
 
         // Allowlist iframe HTML attrs only — drop anything else from storage.
         $out = [];
+
         if ($safe !== null) {
             $out['src'] = $safe;
         }
@@ -68,6 +70,7 @@ class Iframe extends Node
         if (array_key_exists('frameborder', $attrs)) {
             $out['frameborder'] = $attrs['frameborder'];
         }
+
         if (!empty($attrs['allowfullscreen'])) {
             $out['allowfullscreen'] = true;
         }

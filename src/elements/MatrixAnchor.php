@@ -101,6 +101,7 @@ class MatrixAnchor extends Element
     public function setFieldLayout(?FieldLayout $fieldLayout): void
     {
         $this->_fieldLayout = $fieldLayout;
+
         foreach ($fieldLayout?->getCustomFields() ?? [] as $field) {
             if ($field instanceof Matrix) {
                 MatrixHelper::bindToLayout($field);
@@ -115,6 +116,7 @@ class MatrixAnchor extends Element
         if ($this->_parentOwner && $this->_parentOwner->id === $this->parentOwnerId) {
             return $this->_parentOwner;
         }
+
         if (!$this->parentOwnerId) {
             return null;
         }
@@ -131,6 +133,7 @@ class MatrixAnchor extends Element
     public function getSupportedSites(): array
     {
         $owner = $this->getParentOwner();
+
         if (!$owner) {
             return [$this->siteId ?? Craft::$app->getSites()->getPrimarySite()->id];
         }

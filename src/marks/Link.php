@@ -39,6 +39,7 @@ class Link extends Mark
     public static function tagForAttrs(array $attrs): string|array|null
     {
         $href = $attrs['href'] ?? null;
+
         if (!is_string($href) || $href === '') {
             return null;
         }
@@ -84,8 +85,10 @@ class Link extends Mark
     {
         if (($attrs['siteMode'] ?? 'current') === 'fixed') {
             $siteUid = $attrs['siteUid'] ?? null;
+
             if (is_string($siteUid) && $siteUid !== '') {
                 $site = Craft::$app->getSites()->getSiteByUid($siteUid);
+
                 if ($site) {
                     return (int)$site->id;
                 }
@@ -106,6 +109,7 @@ class Link extends Mark
         $candidate = null;
 
         $legacyHref = $attrs['href'] ?? null;
+
         if (is_string($legacyHref) && $legacyHref !== '') {
             $candidate = Vizy::$plugin->getRefTags()->parse($legacyHref, $siteId);
         }
@@ -133,11 +137,13 @@ class Link extends Mark
                     'category' => Category::class,
                     default => null,
                 };
+
                 if ($elementType !== null) {
                     $element = $ctx !== null
                         ? $ctx->elementByUid($targetUid, $elementType, $siteId)
                         : Craft::$app->getElements()->getElementByUid($targetUid, $elementType, $siteId);
                     $url = $element?->getUrl();
+
                     if (is_string($url) && $url !== '') {
                         $suffix = $attrs['suffix'] ?? null;
                         $candidate = is_string($suffix) && $suffix !== '' ? $url . $suffix : $url;

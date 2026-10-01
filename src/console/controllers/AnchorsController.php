@@ -79,27 +79,33 @@ class AnchorsController extends Controller
                 ->provisionalDrafts($this->drafts ? null : false)
                 ->revisions($this->revisions ? null : false)->trashed($this->trashed ? null : false)
                 ->orderBy(['elements.id' => SORT_ASC, 'elements_sites.siteId' => SORT_ASC]);
+
             if ($this->elementId) {
                 $query->id($this->elementId);
             }
+
             foreach ($query->each($this->batchSize) as $element) {
                 if ($this->limit !== null && $position >= $this->limit) {
                     break 2;
                 }
                 $position++;
+
                 try {
                     $needsBackfill = false;
+
                     foreach ($element->getFieldLayout()?->getCustomFields() ?? [] as $field) {
                         if ($field instanceof VizyField && $anchors->elementNeedsMatrixAnchorBackfill($element, $field)) {
                             $needsBackfill = true;
                             break;
                         }
                     }
+
                     if (!$needsBackfill) {
                         $skipped++;
                         continue;
                     }
                     $this->stdout("  {$elementType} #{$element->id}, site {$element->siteId}: ");
+
                     if ($this->dryRun) {
                         $saved++;
                         $this->stdout("would save\n");
@@ -108,6 +114,7 @@ class AnchorsController extends Controller
                     // Each locale is processed independently. Resave semantics
                     // preserve editorial dates and avoid search-index work.
                     $element->resaving = true;
+
                     if (!$elementsService->saveElement($element, true, false, false)) {
                         throw new \RuntimeException(implode(', ', $element->getErrorSummary(true)));
                     }

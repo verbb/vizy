@@ -29,6 +29,7 @@ final class MatrixAnchorRows
     ): array {
         $parentBlockUid = (string)($mapping['parentBlockUid'] ?? '');
         $legacyPlacementUid = (string)($mapping['legacyMatrixPlacementUid'] ?? '');
+
         if ($parentBlockUid === '' || $legacyPlacementUid === '') {
             throw new RuntimeException('MatrixAnchor migration requires explicit parent Block and legacy Matrix placement UIDs.');
         }
@@ -37,6 +38,7 @@ final class MatrixAnchorRows
         $attrs = $node['attrs'] ?? [];
         $anchorUid = $attrs['values']['matrixAnchorUid'] ?? null;
         $legacyTypeId = $attrs['values']['type'] ?? null;
+
         if (!is_string($anchorUid) || $anchorUid === '' || !is_string($legacyTypeId) || $legacyTypeId === '') {
             throw new RuntimeException("Legacy Block {$parentBlockUid} has no valid MatrixAnchor/type identity.");
         }
@@ -48,9 +50,11 @@ final class MatrixAnchorRows
             $parentBlockUid,
             $anchorUid,
         );
+
         if (!$anchor || $anchor->uid !== $anchorUid) {
             throw new RuntimeException("MatrixAnchor {$anchorUid} is missing or does not match the persisted legacy Block.");
         }
+
         if (
             $anchor->parentOwnerId !== (int)$owner->getCanonicalId()
             || $anchor->vizyFieldId !== $vizyField->id
@@ -67,6 +71,7 @@ final class MatrixAnchorRows
             true,
         );
         $rows = [];
+
         foreach ($entries as $index => $entry) {
             if (
                 !$entry instanceof Entry
@@ -78,9 +83,11 @@ final class MatrixAnchorRows
             }
 
             $fields = [];
+
             foreach ($entry->getFieldLayout()?->getCustomFieldElements() ?? [] as $placement) {
                 $field = $placement->getField();
                 $capability = Vizy::$plugin->getFieldLifecycle()->classify($field);
+
                 if ($capability['capability'] === \verbb\vizy\services\FieldLifecycle::UNSUPPORTED) {
                     throw new RuntimeException("Matrix Entry {$entry->uid} contains unsupported field " . $field::class . '.');
                 }
@@ -112,6 +119,7 @@ final class MatrixAnchorRows
                     continue;
                 }
                 $layout = FieldLayout::createFromConfig($legacyType['layoutConfig']);
+
                 foreach ($layout->getCustomFieldElements() as $placement) {
                     if ($placement->uid === $placementUid && $placement->getField() instanceof Matrix) {
                         return [$layout, $placement->getField()];
@@ -129,9 +137,11 @@ final class MatrixAnchorRows
             if (!is_array($node)) {
                 continue;
             }
+
             if (($node['type'] ?? null) === 'vizyBlock' && ($node['attrs']['id'] ?? null) === $uid) {
                 return $node;
             }
+
             if (is_array($node['content'] ?? null)) {
                 try {
                     return $this->_findLegacyBlock($node['content'], $uid);

@@ -67,6 +67,7 @@ class VizyNodeGenerator implements GeneratorInterface
                 'description' => 'Resolved Asset for attrs.assetUid when present.',
                 'resolve' => static function(GqlNode $node): ?Asset {
                     $uid = $node->attrs()['assetUid'] ?? null;
+
                     if (!is_string($uid) || $uid === '') {
                         return null;
                     }

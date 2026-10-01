@@ -31,6 +31,7 @@ final class GqlElementAccess
         // Use public-query defaults; the Elements service explicitly includes
         // disabled elements, drafts, and revisions in its UID lookup.
         $element = $elementType::find()->uid($uid)->siteId($siteId)->one();
+
         if (!$element instanceof $elementType) {
             return null;
         }
@@ -54,12 +55,14 @@ final class GqlElementAccess
         if (!$element->enabled || !$element->getEnabledForSite() || $element->getIsDerivative() || $element->trashed) {
             return false;
         }
+
         if ($element instanceof Entry && $element->getStatus() !== Entry::STATUS_LIVE) {
             return false;
         }
 
         try {
             $site = Craft::$app->getSites()->getSiteById($element->siteId);
+
             if (!$site || !GqlHelper::isSchemaAwareOf('sites.' . $site->uid)) {
                 return false;
             }
@@ -81,6 +84,7 @@ final class GqlElementAccess
                 // Section-owned entries: section scope. Nested entries: field scope.
                 if ($element->sectionId) {
                     $section = $element->getSection();
+
                     if ($section === null) {
                         return false;
                     }
@@ -90,6 +94,7 @@ final class GqlElementAccess
 
                 if ($element->fieldId) {
                     $field = Craft::$app->getFields()->getFieldById($element->fieldId);
+
                     if ($field === null) {
                         return false;
                     }

@@ -54,6 +54,7 @@ final class FieldSlotValues
         // or legitimate `["red","blue"]` content becomes an array and throws.
         if (self::_needsLegacyJsonTextDecode($field) && is_string($raw) && $raw !== '' && ($raw[0] === '{' || $raw[0] === '[')) {
             $decoded = Json::decodeIfJson($raw);
+
             if ($decoded !== $raw) {
                 $raw = $decoded;
             }
@@ -81,6 +82,7 @@ final class FieldSlotValues
 
             // Same as PHP last-wins for duplicate form names.
             $last = null;
+
             foreach ($value[$key] as $item) {
                 if (is_string($item) || is_int($item) || is_float($item)) {
                     $last = (string)$item;

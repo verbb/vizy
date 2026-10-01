@@ -22,7 +22,7 @@ class VizyBlock extends Node
         return [
             [
                 'tag' => 'vizy-block',
-                'getAttrs' => function ($DOMNode) {
+                'getAttrs' => function($DOMNode) {
                     $content = $DOMNode->textContent;
 
                     if (is_string($content) && Json::isJsonObject($content)) {

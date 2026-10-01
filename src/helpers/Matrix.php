@@ -46,6 +46,7 @@ class Matrix
         // and persistence. Omitted placements are handled by the caller; an
         // explicitly submitted empty value must remain an intentional clear.
         $content = self::sanitizeMatrixContent($field, $content, $owner);
+
         if (self::isCraft5MatrixContent($content)) {
             return $field->normalizeValueFromRequest(self::ensureSortOrder($content), $owner);
         }
@@ -72,6 +73,7 @@ class Matrix
         if ($content === '') {
             $content = [];
         }
+
         if (!is_array($content)) {
             throw new RuntimeException('Matrix content is incomplete or malformed. The stored content and submitted values have been retained.');
         }
@@ -81,6 +83,7 @@ class Matrix
             if (!is_array($content['entries']) || !array_key_exists('sortOrder', $content) || !is_array($content['sortOrder'])) {
                 throw new RuntimeException('The Matrix submission is missing its entries or complete ordering. Reload the field before retrying; stored content has not been cleared.');
             }
+
             foreach ($content['entries'] as $row) {
                 if (!is_array($row)) {
                     throw new RuntimeException('A Matrix row could not be resolved. No rows have been discarded.');
@@ -94,6 +97,7 @@ class Matrix
         $blocks = self::_filterContent($content['blocks'] ?? $content, $entryTypes, $blockFields);
         $entries = [];
         $identities = new DeterministicUidFactory('vizy-matrix:' . ($owner?->uid ?? '') . ':' . $field->uid);
+
         foreach ($blocks as $key => $block) {
             // Historical payloads can use temporary keys such as "new1".
             // PostgreSQL pads those in Craft's char(36) UID column, so they
@@ -129,11 +133,13 @@ class Matrix
 
         $seen = [];
         $unique = [];
+
         foreach ($sortOrder as $identity) {
             if (!is_string($identity) && !is_int($identity)) {
                 throw new RuntimeException('A Matrix row has an invalid ordering identity. No rows have been discarded.');
             }
             $key = preg_replace('/^uid:/', '', (string)$identity);
+
             if (!isset($seen[$key])) {
                 $seen[$key] = true;
                 $unique[] = $key;
@@ -177,12 +183,14 @@ class Matrix
             $entries = is_array($content['entries'] ?? null) ? $content['entries'] : [];
             $nextEntries = [];
             $uidMap = [];
+
             foreach ($entries as $entryKey => $entry) {
                 if (!is_array($entry)) {
                     continue;
                 }
                 $newUid = StringHelper::UUID();
                 $uidMap[(string)$entryKey] = $newUid;
+
                 if (str_starts_with((string)$entryKey, 'uid:')) {
                     $uidMap[substr((string)$entryKey, 4)] = $newUid;
                 }
@@ -192,10 +200,12 @@ class Matrix
                 $nextEntries[$newUid] = $entry;
             }
             $sortOrder = [];
+
             foreach (is_array($content['sortOrder'] ?? null) ? $content['sortOrder'] : [] as $item) {
                 $key = (string)$item;
                 $sortOrder[] = $uidMap[$key] ?? $uidMap['uid:' . $key] ?? StringHelper::UUID();
             }
+
             if ($sortOrder === [] && $nextEntries !== []) {
                 $sortOrder = array_keys($nextEntries);
             }
@@ -207,6 +217,7 @@ class Matrix
         }
 
         $next = [];
+
         foreach ($content as $blockKey => $block) {
             if (!is_array($block)) {
                 continue;
@@ -259,8 +270,10 @@ class Matrix
         // does. Callers must scope rows to a single field, owner, and site.
         $result = [];
         $positions = [];
+
         foreach ($entries as $entry) {
             $uid = (string)$entry->uid;
+
             if ($uid === '' || !isset($positions[$uid])) {
                 if ($uid !== '') {
                     $positions[$uid] = count($result);
@@ -272,9 +285,11 @@ class Matrix
                     $row->typeId, $row->title, $row->slug, $row->enabled, $row->enabledForSite,
                     $row->getSerializedFieldValues(),
                 ];
+
                 if ($content($previous) != $content($entry)) {
                     throw new RuntimeException("Matrix rows {$previous->id} and {$entry->id} share UID {$uid} but contain different content. Resolve the conflicting rows before saving; neither has been discarded.");
                 }
+
                 if ($entry->id > $previous->id) {
                     $result[$positions[$uid]] = $entry;
                 }
@@ -303,6 +318,7 @@ class Matrix
         if (!is_array($content)) {
             return [];
         }
+
         foreach ($content as $blockKey => $block) {
             if (!is_array($block)) {
                 throw new RuntimeException("Matrix row {$blockKey} is malformed. No rows have been discarded.");

@@ -91,11 +91,13 @@ final class GqlNode
         }
 
         $content = $this->_node['content'] ?? null;
+
         if (!is_array($content)) {
             return [];
         }
 
         $children = [];
+
         foreach ($content as $index => $child) {
             if (!is_array($child)) {
                 continue;
@@ -109,11 +111,13 @@ final class GqlNode
     public function marks(): array
     {
         $marks = $this->_node['marks'] ?? null;
+
         if (!is_array($marks)) {
             return [];
         }
 
         $out = [];
+
         foreach ($marks as $mark) {
             if (is_array($mark)) {
                 $out[] = GqlMark::fromRaw($mark);
@@ -139,6 +143,7 @@ final class GqlNode
     public function isUnknown(): bool
     {
         $type = $this->type();
+
         if ($type === '' || $type === 'vizyBlock') {
             return false;
         }

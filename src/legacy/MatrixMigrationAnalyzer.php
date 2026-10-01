@@ -39,15 +39,19 @@ final class MatrixMigrationAnalyzer
     public function analyzeVizyField(VizyField $field): array
     {
         $placements = [];
+
         foreach ($field->getFieldData() as $group) {
             foreach ($group['blockTypes'] ?? [] as $legacyType) {
                 $layoutConfig = $legacyType['layoutConfig'] ?? null;
+
                 if (!is_array($layoutConfig)) {
                     continue;
                 }
                 $layout = FieldLayout::createFromConfig($layoutConfig);
+
                 foreach ($layout->getCustomFieldElements() as $placement) {
                     $matrix = $placement->getField();
+
                     if (!$matrix instanceof Matrix) {
                         continue;
                     }
@@ -71,12 +75,14 @@ final class MatrixMigrationAnalyzer
         $tier = count($matrix->getEntryTypes()) > 1 ? 2 : 1;
         $reasons = [];
         $entryTypes = [];
+
         foreach ($matrix->getEntryTypes() as $entryType) {
             $entryReport = [
                 'uid' => $entryType->uid,
                 'handle' => $entryType->handle,
                 'placements' => [],
             ];
+
             if ($entryType->showSlugField) {
                 $tier = max($tier, 3);
                 $reasons[] = 'entrySlugSemanticsChange';
@@ -84,6 +90,7 @@ final class MatrixMigrationAnalyzer
                 $tier = max($tier, 2);
                 $reasons[] = 'entryTitleMappingRequired';
             }
+
             foreach ($entryType->getFieldLayout()->getCustomFieldElements() as $entryPlacement) {
                 $inner = $entryPlacement->getField();
                 $capability = Vizy::$plugin->getFieldLifecycle()->classify($inner);
@@ -92,6 +99,7 @@ final class MatrixMigrationAnalyzer
                     'fieldUid' => $inner->uid,
                     ...$capability,
                 ];
+
                 if ($capability['capability'] === FieldLifecycle::MIGRATION_ONLY) {
                     $tier = max($tier, 2);
                     $reasons[] = 'nestedStructuredField';
@@ -124,11 +132,14 @@ final class MatrixMigrationAnalyzer
             if (!is_array($node)) {
                 continue;
             }
+
             if (($node['type'] ?? null) === 'vizyBlock' && ($node['attrs']['id'] ?? null) === $blockUid) {
                 return (string)($node['attrs']['values']['matrixAnchorUid'] ?? '');
             }
+
             if (is_array($node['content'] ?? null)) {
                 $uid = $this->_anchorUid($node['content'], $blockUid);
+
                 if ($uid !== '') {
                     return $uid;
                 }

@@ -20,10 +20,12 @@ final class RawContentAdapter
     public function captureSchema(FieldInterface $field): array
     {
         $types = [];
+
         // Stored content may use types no longer offered in the field's picker.
         foreach (Vizy::$plugin->getBlockTypes()->getAllBlockTypes() as $type) {
             $placements = [];
             $layout = $type->getFieldLayout();
+
             foreach ($layout?->getCustomFieldElements() ?? [] as $placement) {
                 $placements[$placement->uid] = ['placementUid' => $placement->uid, 'fieldUid' => $placement->getFieldUid(), 'layoutUid' => $layout->uid];
             }

@@ -38,6 +38,7 @@ class MediaEmbed extends Node
     {
         // Decode HTML entities that may arrive from older oEmbed payloads.
         $html = $attrs['data']['html'] ?? null;
+
         if (is_string($html) && $html !== '') {
             $attrs['data']['html'] = Html::decode($html);
         }
@@ -54,6 +55,7 @@ class MediaEmbed extends Node
         // Known providers: rebuild trusted shells from URL (ignore stored oEmbed HTML).
         if (is_string($url) && $url !== '') {
             $resolved = MediaEmbedHtml::resolve($url);
+
             if ($resolved !== null && is_string($resolved['html'] ?? null) && $resolved['html'] !== '') {
                 return $resolved['html'];
             }
@@ -62,6 +64,7 @@ class MediaEmbed extends Node
         // Migrated / unknown-provider oEmbed HTML — Craft HtmlPurifier (SafeIframe), never raw.
         if ($storedHtml !== null) {
             $clean = SafeHtml::purifyEmbedHtml($storedHtml);
+
             if ($clean !== '') {
                 return $clean;
             }
@@ -70,6 +73,7 @@ class MediaEmbed extends Node
         // Last resort: encoded link when we have a safe http(s) URL.
         if (is_string($url) && $url !== '') {
             $safeHref = SafeHtml::sanitizeUri($url, SafeHtml::RESOURCE_SCHEMES);
+
             if ($safeHref !== null) {
                 return Html::tag('p', Html::a($safeHref, $safeHref, [
                     'rel' => 'noopener noreferrer',

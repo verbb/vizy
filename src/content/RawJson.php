@@ -44,15 +44,18 @@ final class RawJson
         if (self::same($before, $after)) {
             return $original;
         }
+
         if (!is_array($before) || !is_array($after) || array_is_list($before) !== array_is_list($after)) {
             return $after;
         }
         $result = $original instanceof \stdClass ? new \stdClass() : [];
+
         foreach ($after as $key => $value) {
             if (array_key_exists($key, $before)) {
                 $old = $original instanceof \stdClass ? $original->{(string)$key} : $original[$key];
                 $value = self::_merge($old, $before[$key], $value);
             }
+
             if ($result instanceof \stdClass) {
                 $result->{(string)$key} = $value;
             } else {

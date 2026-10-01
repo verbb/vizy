@@ -46,6 +46,7 @@ final class ManualEditorConfigMigrator
         }
 
         $raw = $settings['manualConfig'] ?? '';
+
         if (!is_string($raw) || trim($raw) === '') {
             return $this->_fail($fieldUid, 'manualEditorConfigEmpty', 'Inline manual Editor Config is empty; choose a file config or paste valid JSON.');
         }
@@ -64,6 +65,7 @@ final class ManualEditorConfigMigrator
             $authorable = $this->toAuthorablePayload($decoded, $fieldUid);
             $fingerprint = Vizy::$plugin->getEditorConfigs()->fingerprintAuthorable($authorable);
             $existingId = $this->_findExistingId($fingerprint);
+
             if ($existingId !== null) {
                 return [
                     'editorConfig' => $existingId,
@@ -100,16 +102,20 @@ final class ManualEditorConfigMigrator
     public function applyMints(array $fieldPlans): void
     {
         $written = [];
+
         foreach ($fieldPlans as $fieldPlan) {
             $mint = $fieldPlan['editorConfigMint'] ?? null;
+
             if (!is_array($mint) || !is_string($mint['id'] ?? null) || !is_array($mint['config'] ?? null)) {
                 continue;
             }
             $id = $mint['id'];
+
             if (isset($written[$id])) {
                 continue;
             }
             $configs = Vizy::$plugin->getEditorConfigs();
+
             if ($configs->getConfig($id) !== null) {
                 $written[$id] = true;
                 continue;
@@ -134,6 +140,7 @@ final class ManualEditorConfigMigrator
                 'toolbar' => array_values($legacy['toolbar'] ?? EditorConfigPresentation::defaultToolbar()),
                 'bubble' => $legacy['bubble'] ?? EditorConfigPresentation::defaultBubble(),
             ];
+
             if (isset($legacy['dropdowns']) && is_array($legacy['dropdowns']) && !array_is_list($legacy['dropdowns'])) {
                 $payload['dropdowns'] = $legacy['dropdowns'];
             }
@@ -158,43 +165,53 @@ final class ManualEditorConfigMigrator
                 continue;
             }
             $id = VizyToolbarTokenDeprecations::canonicalize($button, "manual Editor Config {$context}");
+
             if (in_array($id, EditorConfigPresentation::RETIRED_TOOLBAR_IDS, true)) {
                 continue;
             }
+
             if (preg_match('/^heading([1-6])$/', $id, $m)) {
                 $needsFormatting = true;
                 $headingLevels[] = (int)$m[1];
                 continue;
             }
+
             if ($id === 'paragraph') {
                 $needsFormatting = true;
                 continue;
             }
+
             // Same ownership as headings: keep the node, fold into the Formatting roster.
             if (in_array($id, ['blockquote', 'codeBlock'], true)) {
                 $needsFormatting = true;
+
                 if (!in_array($id, $formattingMembersFromButtons, true)) {
                     $formattingMembersFromButtons[] = $id;
                 }
                 continue;
             }
+
             if (in_array($id, ['alignLeft', 'alignCenter', 'alignRight', 'alignJustify'], true)) {
                 $needsAlignment = true;
                 continue;
             }
+
             if ($id === 'table' || str_starts_with($id, 'table')) {
                 $needsTable = true;
                 continue;
             }
+
             if (EditorConfigPresentation::isMemberOnlyToolbarId($id)) {
                 continue;
             }
+
             if (!in_array($id, $toolbar, true)) {
                 $toolbar[] = $id;
             }
         }
 
         $dropdowns = [];
+
         if ($needsFormatting) {
             if (!in_array('dropdown:formatting', $toolbar, true)) {
                 array_unshift($toolbar, 'dropdown:formatting');
@@ -208,28 +225,34 @@ final class ManualEditorConfigMigrator
                     'paragraph',
                     ...array_map(static fn(int $level) => 'heading' . $level, $headingLevels ?: [2, 3, 4]),
                 ]));
+
             // Append button-derived quote/code even when `formatting` was an explicit heading list.
             foreach ($formattingMembersFromButtons as $member) {
                 if (!in_array($member, $members, true)) {
                     $members[] = $member;
                 }
             }
+
             if ($members !== []) {
                 $dropdowns['formatting'] = $members;
             }
         }
+
         if ($needsAlignment && !in_array('dropdown:alignment', $toolbar, true)) {
             $toolbar[] = 'dropdown:alignment';
         }
+
         if ($needsTable) {
             if (!in_array('dropdown:table', $toolbar, true)) {
                 $toolbar[] = 'dropdown:table';
             }
+
             if ($table !== null) {
                 $members = VizyToolbarTokenDeprecations::canonicalizeList(
                     array_values(array_filter($table, 'is_string')),
                     "manual Editor Config {$context} table",
                 );
+
                 if ($members !== []) {
                     $dropdowns['table'] = $members;
                 }
@@ -259,6 +282,7 @@ final class ManualEditorConfigMigrator
             'toolbar' => $toolbar !== [] ? $toolbar : EditorConfigPresentation::defaultToolbar(),
             'bubble' => EditorConfigPresentation::defaultBubble(),
         ];
+
         if ($dropdowns !== []) {
             $payload['dropdowns'] = $dropdowns;
         }
@@ -299,6 +323,7 @@ final class ManualEditorConfigMigrator
     private function _findExistingId(string $fingerprint): ?string
     {
         $configs = Vizy::$plugin->getEditorConfigs();
+
         foreach ($configs->getAllConfigs() as $id => $config) {
             if (hash_equals($fingerprint, $configs->fingerprintAuthorable($configs->authorablePayload($config)))) {
                 return $id;
@@ -310,6 +335,7 @@ final class ManualEditorConfigMigrator
     private function _mintId(string $fingerprint): string
     {
         $id = 'imported-' . substr($fingerprint, 0, 12);
+
         if (Vizy::$plugin->getEditorConfigs()->getConfig($id) !== null) {
             $id = 'imported-' . substr($fingerprint, 0, 8) . '-' . strtolower(StringHelper::randomString(4));
         }
@@ -324,16 +350,19 @@ final class ManualEditorConfigMigrator
                 $nodes[] = $node;
             }
         };
+
         if ($headingLevels !== [] || isset($dropdowns['formatting']) || in_array('dropdown:formatting', $toolbar, true)) {
             $add('heading');
         }
         $formattingMembers = $dropdowns['formatting'] ?? [];
+
         foreach (['bulletList', 'orderedList', 'blockquote', 'codeBlock', 'horizontalRule', 'image', 'table', 'iframe', 'mediaEmbed', 'layout'] as $node) {
             // Quote/code live in Formatting, not the flat toolbar — still enable the node.
             if (in_array($node, $toolbar, true) || in_array($node, $formattingMembers, true)) {
                 $add($node);
             }
         }
+
         if (in_array('dropdown:table', $toolbar, true)) {
             $add('table');
         }
@@ -343,6 +372,7 @@ final class ManualEditorConfigMigrator
     private function _inferMarks(array $toolbar): array
     {
         $marks = [];
+
         foreach (['bold', 'italic', 'underline', 'strike', 'code', 'link', 'subscript', 'superscript', 'highlight'] as $mark) {
             if (in_array($mark, $toolbar, true)) {
                 $marks[] = $mark;

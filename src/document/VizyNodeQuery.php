@@ -73,6 +73,7 @@ final class VizyNodeQuery extends ArrayQuery
         // Apply the scope outside the whole expression, so OR cannot accidentally
         // expose disabled blocks. Explicit enabled predicates own their filtering.
         $this->where = $this->_normalizeNullEnabledPredicates($condition);
+
         if ($this->enabledFilter !== null && !$this->_hasEnabledPredicate($condition)) {
             $this->where = ['and', ['enabled' => $this->enabledFilter], $this->where];
         }
@@ -93,6 +94,7 @@ final class VizyNodeQuery extends ArrayQuery
     {
         if (is_array($condition) && !array_is_list($condition) && array_key_exists('enabled', $condition)) {
             $enabled = $condition['enabled'];
+
             if ($enabled !== null && !is_bool($enabled)) {
                 throw new InvalidArgumentException('The enabled filter must be true, false, or null.');
             }
@@ -108,12 +110,14 @@ final class VizyNodeQuery extends ArrayQuery
         if (!is_array($condition)) {
             return $condition;
         }
+
         if (!array_is_list($condition)) {
             if (array_key_exists('enabled', $condition) && $condition['enabled'] === null) {
                 unset($condition['enabled']);
             }
             return $condition;
         }
+
         if (in_array(strtolower((string)($condition[0] ?? '')), ['and', 'or', 'not'], true)) {
             foreach (array_slice($condition, 1, null, true) as $index => $operand) {
                 $condition[$index] = $this->_normalizeNullEnabledPredicates($operand);
@@ -127,11 +131,13 @@ final class VizyNodeQuery extends ArrayQuery
         if (!is_array($condition)) {
             return false;
         }
+
         if (!array_is_list($condition)) {
             return array_key_exists('enabled', $condition);
         }
 
         $operator = strtolower((string)($condition[0] ?? ''));
+
         if (in_array($operator, ['and', 'or', 'not'], true)) {
             foreach (array_slice($condition, 1) as $operand) {
                 if ($this->_hasEnabledPredicate($operand)) {

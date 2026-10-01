@@ -91,6 +91,7 @@ final class PromotionOperatorMessages
     public static function nextStepForAnalyze(array $plan): string
     {
         $status = (string)($plan['status'] ?? '');
+
         if ($status === 'blocked') {
             return Craft::t(
                 'vizy',

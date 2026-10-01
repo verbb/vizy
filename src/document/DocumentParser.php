@@ -25,8 +25,7 @@ final class DocumentParser
         array $value,
         ?ElementInterface $owner = null,
         ?VizyField $field = null,
-    ): VizyDocument
-    {
+    ): VizyDocument {
         $value = $this->upgrader->upgrade($value);
 
         // Type normalizeAttrs — semantic shaping only; resolve stays on render out.
@@ -56,6 +55,7 @@ final class DocumentParser
         }
 
         $content = $value['content'] ?? null;
+
         if (!is_array($content) || !array_is_list($content)) {
             throw new InvalidDocumentException('Canonical document content must be a node list.');
         }
@@ -94,9 +94,11 @@ final class DocumentParser
                 if (!is_array($mark) || !is_string($mark['type'] ?? null) || trim($mark['type']) === '') {
                     throw new InvalidDocumentException("Malformed mark at {$path}.marks.{$markIndex}.");
                 }
+
                 if (isset($mark['attrs']) && !is_array($mark['attrs'])) {
                     throw new InvalidDocumentException("Malformed mark attrs at {$path}.marks.{$markIndex}.");
                 }
+
                 if (($mark['type'] ?? null) === 'link') {
                     $this->semanticValidator->validateLinkMark($mark, "{$path}.marks.{$markIndex}");
                 }
@@ -121,10 +123,12 @@ final class DocumentParser
             if (!is_array($node['content']) || !array_is_list($node['content'])) {
                 throw new InvalidDocumentException("Malformed child content at {$path}.");
             }
+
             // vizyBlock is a TipTap leaf — do not walk children (validated empty above).
             if ($node['type'] === 'vizyBlock') {
                 return;
             }
+
             foreach ($node['content'] as $index => $child) {
                 $this->_validateNode($child, "{$path}.content.{$index}", $node['type']);
             }
@@ -134,11 +138,13 @@ final class DocumentParser
     private function _validateBlock(array $node, string $path): void
     {
         $attrs = $node['attrs'] ?? [];
+
         foreach (['blockUid', 'blockTypeUid'] as $attribute) {
             if (!is_string($attrs[$attribute] ?? null) || $attrs[$attribute] === '') {
                 throw new InvalidDocumentException("Block at {$path} requires attrs.{$attribute}.");
             }
         }
+
         if (!is_bool($attrs['enabled'] ?? null) || !is_array($attrs['fieldSlots'] ?? null)) {
             throw new InvalidDocumentException("Block at {$path} requires boolean enabled and object fieldSlots.");
         }
@@ -153,6 +159,7 @@ final class DocumentParser
         // Non-empty TipTap children are healed in DocumentUpgrader before this check.
         if (array_key_exists('content', $node)) {
             $content = $node['content'];
+
             if ($content !== null && (!is_array($content) || $content !== [])) {
                 throw new InvalidDocumentException("Vizy Block at {$path} must be a leaf (empty or omitted content).");
             }
@@ -162,38 +169,46 @@ final class DocumentParser
     private function _validateLayout(array $node, string $path): void
     {
         $attrs = $node['attrs'] ?? [];
+
         if (!is_string($attrs['layoutUid'] ?? null) || $attrs['layoutUid'] === '') {
             throw new InvalidDocumentException("Layout at {$path} requires attrs.layoutUid.");
         }
         $stack = $attrs['stack'] ?? 'small';
+
         if (!in_array($stack, ['small', 'never'], true)) {
             throw new InvalidDocumentException("Layout at {$path} has invalid stack intent.");
         }
         $children = $node['content'] ?? [];
+
         if (!is_array($children) || count($children) < 2 || count($children) > 4) {
             throw new InvalidDocumentException("Layout at {$path} requires 2–4 columns.");
         }
         $spanTotal = 0;
         $columnUids = [];
+
         foreach ($children as $index => $child) {
             if (!is_array($child) || ($child['type'] ?? null) !== 'column') {
                 throw new InvalidDocumentException("Layout at {$path} may contain columns only.");
             }
             $columnAttrs = $child['attrs'] ?? [];
             $columnUid = $columnAttrs['columnUid'] ?? null;
+
             if (!is_string($columnUid) || $columnUid === '') {
                 throw new InvalidDocumentException("Column at {$path}.content.{$index} requires attrs.columnUid.");
             }
+
             if (isset($columnUids[$columnUid])) {
                 throw new InvalidDocumentException("Duplicate column UID {$columnUid} in layout at {$path}.");
             }
             $columnUids[$columnUid] = true;
             $span = (int)($columnAttrs['span'] ?? 0);
+
             if ($span < 1 || $span > 12) {
                 throw new InvalidDocumentException("Column at {$path}.content.{$index} span must be 1–12.");
             }
             $spanTotal += $span;
         }
+
         if ($spanTotal !== 12) {
             throw new InvalidDocumentException("Layout at {$path} column spans must total 12.");
         }
@@ -205,13 +220,16 @@ final class DocumentParser
             throw new InvalidDocumentException("Column at {$path} must be a direct child of layout.");
         }
         $attrs = $node['attrs'] ?? [];
+
         if (!is_string($attrs['columnUid'] ?? null) || $attrs['columnUid'] === '') {
             throw new InvalidDocumentException("Column at {$path} requires attrs.columnUid.");
         }
         $span = (int)($attrs['span'] ?? 0);
+
         if ($span < 1 || $span > 12) {
             throw new InvalidDocumentException("Column at {$path} span must be 1–12.");
         }
+
         foreach ($node['content'] ?? [] as $index => $child) {
             if (is_array($child) && ($child['type'] ?? null) === 'layout') {
                 throw new InvalidDocumentException("Nested layout at {$path}.content.{$index} is not allowed.");

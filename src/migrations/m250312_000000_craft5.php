@@ -92,7 +92,7 @@ class m250312_000000_craft5 extends Migration
                 }
             }
         }
-        
+
         return true;
     }
 

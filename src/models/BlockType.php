@@ -93,9 +93,11 @@ final class BlockType extends Model
         }
         $value = str_replace('\\', '/', trim($value));
         $value = ltrim($value, '/');
+
         if ($value === '' || str_contains($value, '..')) {
             return null;
         }
+
         if (!preg_match('/^[A-Za-z0-9._-]+(?:\/[A-Za-z0-9._-]+)?$/', $value)) {
             return null;
         }
@@ -114,6 +116,7 @@ final class BlockType extends Model
         }
 
         $value = trim($value);
+
         if ($value === '' || $value === '__blank__') {
             return null;
         }
@@ -173,6 +176,7 @@ final class BlockType extends Model
     {
         $layout = $this->getFieldLayout();
         $layoutConfig = $layout?->getConfig() ?? [];
+
         if ($layout) {
             $layoutConfig = ['uid' => $layout->uid, 'type' => Block::class] + $layoutConfig;
         }
@@ -203,6 +207,7 @@ final class BlockType extends Model
                 if ($this->color === null) {
                     return;
                 }
+
                 if (!preg_match('/^#[0-9a-f]{6}$/', $this->color)) {
                     $this->addError('color', Craft::t('vizy', 'Color must be a hex value like #3b82f6.'));
                 }
@@ -212,6 +217,7 @@ final class BlockType extends Model
             // reported against `fieldLayout`, which is what the settings screen surfaces.
             [['uid'], function(): void {
                 $layout = $this->getFieldLayout();
+
                 if (!$layout || $layout->type !== Block::class || !$layout->uid) {
                     $this->addError('fieldLayout', 'Block Types require UID-addressed elements\\Block FieldLayout.');
                 }

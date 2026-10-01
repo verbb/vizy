@@ -14,11 +14,14 @@ final class FieldPlacements
     {
         $uid = isset($field->layoutElement) ? $field->layoutElement?->uid : null;
         $matches = [];
+
         foreach ($owner->getFieldLayout()?->getCustomFieldElements() ?? [] as $placement) {
             $placed = $placement->getField();
+
             if ($placed->uid !== $field->uid) {
                 continue;
             }
+
             if ($uid !== null) {
                 if ($placement->uid === $uid) {
                     return $uid;
@@ -33,8 +36,10 @@ final class FieldPlacements
     public static function field(ElementInterface $owner, string $fieldUid, ?string $placementUid): ?VizyField
     {
         $matches = [];
+
         foreach ($owner->getFieldLayout()?->getCustomFieldElements() ?? [] as $placement) {
             $field = $placement->getField();
+
             if ($field instanceof VizyField && $field->uid === $fieldUid) {
                 if ($placementUid !== null && $placement->uid === $placementUid) {
                     return $field;

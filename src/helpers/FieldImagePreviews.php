@@ -22,6 +22,7 @@ final class FieldImagePreviews
     {
         $uids = [];
         self::_collectAssetUids($document, $uids);
+
         if ($uids === []) {
             return [];
         }
@@ -63,6 +64,7 @@ final class FieldImagePreviews
 
         if (($value['type'] ?? null) === 'image') {
             $assetUid = $value['attrs']['assetUid'] ?? null;
+
             if (is_string($assetUid) && StringHelper::isUUID($assetUid)) {
                 $uids[$assetUid] = true;
             }

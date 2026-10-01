@@ -31,6 +31,7 @@ class VizyBlockTypeGenerator extends Generator implements GeneratorInterface, Si
         }
 
         $gqlTypes = [];
+
         foreach ($blockTypes as $blockType) {
             $type = static::generateType($blockType);
             $gqlTypes[$type->name] = $type;

@@ -30,12 +30,14 @@ class BlockPreviewsController extends Controller
     public function actionView(): Response
     {
         $this->requireCpRequest();
+
         if (!Craft::$app->getUser()->checkPermission('accessCp')) {
             throw new ForbiddenHttpException('Not permitted.');
         }
 
         $file = (string)$this->request->getRequiredQueryParam('file');
         $path = Vizy::$plugin->getBlockPreviewImages()->resolveAbsolutePath($file);
+
         if ($path === null) {
             throw new NotFoundHttpException('Preview image not found.');
         }

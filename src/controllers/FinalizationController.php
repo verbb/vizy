@@ -35,10 +35,12 @@ final class FinalizationController extends Controller
             (int)$payload['siteId'],
         );
         $user = static::currentUser();
+
         if (!$owner || !$user || !Craft::$app->getElements()->canSave($owner, $user)) {
             throw new ForbiddenHttpException('forbidden');
         }
         $field = FieldPlacements::field($owner, (string)$payload['fieldUid'], $payload['ownerPlacementUid'] ?? null);
+
         if (!$field instanceof VizyField) {
             throw new ForbiddenHttpException('staleField');
         }
@@ -47,6 +49,7 @@ final class FinalizationController extends Controller
         // fingerprint. It never invokes saveElement() on the owner.
         $result = Vizy::$plugin->getAssetUploads()->retryBatch((int)$payload['batchId']);
         $document = $owner->getFieldValue($field->handle);
+
         if (!$document instanceof \verbb\vizy\document\VizyDocument) {
             $document = $field->normalizeValue($document, $owner);
         }

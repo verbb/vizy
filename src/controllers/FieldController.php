@@ -70,6 +70,7 @@ class FieldController extends Controller
         foreach ($fieldLayout->getAvailableCustomFields() as $key => $fieldLayoutElements) {
             foreach ($fieldLayoutElements as $fieldLayoutElement) {
                 $candidate = $fieldLayoutElement->getField();
+
                 if ($candidate && !$lifecycle->permitsNewPlacement($candidate)) {
                     continue;
                 }
@@ -138,15 +139,18 @@ class FieldController extends Controller
             } catch (\Throwable $exception) {
                 throw new BadRequestHttpException('Invalid Vizy Matrix editor context.', 0, $exception);
             }
+
             if (!$resolved) {
                 throw new BadRequestHttpException('The Vizy Matrix placement has changed. Reload the editor.');
             }
             [$context, $parentOwner, $vizyField] = $resolved;
+
             if ((int)$context['siteId'] !== (int)$siteId) {
                 throw new BadRequestHttpException('Vizy Matrix site does not match its editor.');
             }
             $blockInstanceId = $context['matrixBlockUid'] ?? '';
             $blockType = Vizy::$plugin->getBlockTypes()->getBlockTypeByUid($context['matrixBlockTypeUid'] ?? '');
+
             if (!$blockType || !in_array($blockType->uid, $vizyField->getAllowedBlockTypeUids(), true)) {
                 throw new BadRequestHttpException('Vizy Matrix block type is no longer available.');
             }
@@ -159,15 +163,18 @@ class FieldController extends Controller
             $blockInstanceId = $resolved['blockInstanceId'];
             $matrixAnchorUid = $resolved['matrixAnchorUid'];
             $parentOwner = $resolved['parentOwner'];
+
             if (!$parentOwner || !$elementsService->canSave($parentOwner, $user)) {
                 throw new ForbiddenHttpException('User not authorized to create this element.');
             }
             $blockType = $this->_resolveBlockType($vizyField, $blockInstanceId, $parentOwner);
         }
         $field = $blockType?->getFieldLayout()?->getFieldById($fieldId);
+
         if (!$field instanceof Matrix) {
             throw new BadRequestHttpException('Matrix field is not placed in this Vizy block type.');
         }
+
         if (!in_array((int)$entryType->id, array_map(static fn($type): int => (int)$type->id, $field->getEntryTypes()), true)) {
             throw new BadRequestHttpException('Entry type is not available for this Matrix field.');
         }
@@ -175,9 +182,11 @@ class FieldController extends Controller
             ? AnchorDocuments::keyFromEditorContext($context)
             : null;
         $anchor = Vizy::$plugin->getAnchors()->getAnchor($parentOwner, $vizyField, $blockInstanceId, $matrixAnchorUid, $documentKey);
+
         if (!$anchor && $matrixAnchorUid) {
             throw new BadRequestHttpException('Stored Matrix content could not be resolved. Restore it before adding rows.');
         }
+
         if (!$anchor) {
             $anchor = new \verbb\vizy\elements\MatrixAnchor([
                 'parentOwnerId' => $parentOwner->id,
@@ -204,6 +213,7 @@ class FieldController extends Controller
         // provisional draft during this render-only request. The submitted row
         // is saved atomically with the outer Vizy owner later.
         $sourceId = $this->request->getBodyParam('duplicate');
+
         if ($sourceId) {
             if (!$anchor->id) {
                 throw new BadRequestHttpException('Matrix rows can only be duplicated from persisted content.');
@@ -218,6 +228,7 @@ class FieldController extends Controller
                 ->drafts(null)
                 ->status(null)
                 ->one();
+
             if (!$source) {
                 throw new BadRequestHttpException("Invalid source element ID: $sourceId");
             }
@@ -230,6 +241,7 @@ class FieldController extends Controller
             }
 
             $source->setOwner($anchor);
+
             if (!$elementsService->canDuplicateAsDraft($source, $user)) {
                 throw new ForbiddenHttpException('User not authorized to duplicate this element.');
             }
@@ -318,12 +330,14 @@ class FieldController extends Controller
             $vizyFieldId = $vizyFieldId ?: $anchor->vizyFieldId;
             $blockInstanceId = $blockInstanceId ?: $anchor->blockInstanceId;
             $matrixAnchorUid = $matrixAnchorUid ?: $anchor->uid;
+
             if ($anchor->parentOwnerId) {
                 $parent = Craft::$app->getElements()->getElementById(
                     (int)$anchor->parentOwnerId,
                     Entry::class,
                     $siteId,
                 );
+
                 if ($parent instanceof Entry) {
                     $parentOwner = $parent;
                 }
@@ -339,6 +353,7 @@ class FieldController extends Controller
         }
 
         $vizyField = Craft::$app->getFields()->getFieldById((int)$vizyFieldId);
+
         if (!$vizyField instanceof VizyField) {
             throw new BadRequestHttpException("Invalid Vizy field ID: $vizyFieldId");
         }
@@ -410,6 +425,7 @@ class FieldController extends Controller
             if (preg_match('/vizyHost\[[^\]]+\]\[([^\]]+)\]/', $namespace, $matches)) {
                 return $matches[1];
             }
+
             // Vizy 3: vizyData[blockUid]…
             if (preg_match('/vizyData\[([^\]]+)\]/', $namespace, $matches)) {
                 return $matches[1];

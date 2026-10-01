@@ -131,6 +131,7 @@ trait VizyNodeInstanceHtmlDeprecations
     public function getTag(): array
     {
         $tagName = $this->tagName ?? static::tag();
+
         if ($tagName === null || $tagName === '') {
             return [];
         }

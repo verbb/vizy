@@ -12,6 +12,7 @@
 - Added `block.owner` to Block Type templates for direct access to the durable Craft element containing the Vizy field. ([#285](https://github.com/verbb/vizy/issues/285))
 
 ### Changed
+- Removed an obsolete Matrix eager-loading interception hook that no longer had a runtime producer.
 - Reorganised the Feature Tour around the editor, Vizy blocks, field configuration, editor capabilities, Block Types, nested content, and content-planning guidance.
 - Expanded the custom mark and node guides with complete, CLI-safe Craft module setup, AssetBundle loading, Editor Config steps, end-to-end verification, and troubleshooting. ([#269](https://github.com/verbb/vizy/issues/269))
 - Clarified that complete Vizy documents must be round-tripped as JSON rather than HTML, which cannot represent Craft field values inside Blocks. ([#357](https://github.com/verbb/vizy/issues/357))

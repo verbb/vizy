@@ -44,6 +44,7 @@ class BlockTypesController extends Controller
 
         if ($blockType === null) {
             $blockType = $uid ? Vizy::$plugin->getBlockTypes()->getBlockTypeByUid($uid) : null;
+
             if ($uid && !$blockType) {
                 throw new NotFoundHttpException('Block Type not found.');
             }
@@ -112,6 +113,7 @@ class BlockTypesController extends Controller
         $this->requirePostRequest();
 
         $blockType = $this->_populateBlockTypeFromPost();
+
         if (!Vizy::$plugin->getBlockTypes()->saveBlockType($blockType)) {
             return $this->asModelFailure(
                 $blockType,
@@ -153,6 +155,7 @@ class BlockTypesController extends Controller
         $uid = (string)($this->request->getBodyParam('uid') ?? $this->request->getRequiredBodyParam('id'));
 
         $blockType = Vizy::$plugin->getBlockTypes()->getBlockTypeByUid($uid);
+
         if (!$blockType) {
             throw new NotFoundHttpException('Block Type not found.');
         }
@@ -174,6 +177,7 @@ class BlockTypesController extends Controller
 
         $uid = $this->request->getRequiredBodyParam('uid');
         $source = Vizy::$plugin->getBlockTypes()->getBlockTypeByUid($uid);
+
         if (!$source) {
             throw new NotFoundHttpException('Block Type not found.');
         }
@@ -237,6 +241,7 @@ class BlockTypesController extends Controller
 
         $layoutConfig = Json::decodeIfJson($this->request->getBodyParam('fieldLayout')) ?? [];
         $layoutConfig['type'] = Block::class;
+
         if ($existing?->getFieldLayout()?->uid) {
             $layoutConfig['uid'] ??= $existing->getFieldLayout()->uid;
         }

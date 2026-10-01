@@ -74,6 +74,7 @@ final class DocumentUpgrader
             }
 
             $type = $node['type'] ?? null;
+
             if (
                 is_string($type)
                 && in_array($parentType, ['bulletList', 'orderedList'], true)
@@ -88,10 +89,12 @@ final class DocumentUpgrader
 
             if (($node['type'] ?? null) === 'listItem') {
                 $content = $node['content'] ?? [];
+
                 if (!is_array($content) || $content === []) {
                     $node['content'] = [['type' => 'paragraph']];
                 } else {
                     $firstType = is_array($content[0] ?? null) ? ($content[0]['type'] ?? null) : null;
+
                     if ($firstType !== 'paragraph') {
                         $node['content'] = [[
                             'type' => 'paragraph',

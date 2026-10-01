@@ -47,10 +47,12 @@ final class EditorConfigPresentation
 
         $collect = static function(array $definitions, array $exclude = []): array {
             $items = [];
+
             foreach ($definitions as $name => $definition) {
                 if (empty($definition['authorConfigurable']) || empty($definition['installed'])) {
                     continue;
                 }
+
                 if (in_array($name, $exclude, true)) {
                     continue;
                 }
@@ -132,6 +134,7 @@ final class EditorConfigPresentation
                 'group' => $action['group'],
                 'icon' => ToolbarIcons::svgFor($id),
             ];
+
             // Only the table operations have one. Carried in the same keys a node button
             // uses, so the builder gates it without needing to know that an action can be
             // gated at all.
@@ -168,6 +171,7 @@ final class EditorConfigPresentation
             if (empty($definition['authorSelectable']) || empty($definition['installed']) || self::_isCarrierMark($name)) {
                 continue;
             }
+
             if (!self::_definitionOffersSurface($definition, 'toolbar')) {
                 continue;
             }
@@ -201,19 +205,23 @@ final class EditorConfigPresentation
             // capability with its own columns UI had no way onto a toolbar.
             'layout' => 'Layout',
         ];
+
         foreach (Vizy::$plugin->getExtensions()->getNodes() as $name => $definition) {
             if (empty($definition['authorSelectable']) || empty($definition['installed'])) {
                 continue;
             }
+
             if (!self::_definitionOffersSurface($definition, 'toolbar')) {
                 continue;
             }
+
             // Paragraph / hard break / bare heading are assembled above as always-on
             // or levelled controls — not as a single capability-toggled button.
             if (in_array($name, ['paragraph', 'hardBreak', 'heading'], true)) {
                 continue;
             }
             $group = $definition['group'] ?? ($nodeGroups[$name] ?? null);
+
             if ($group === null) {
                 if (str_starts_with((string)$definition['module'], 'vizy/core/')) {
                     continue;
@@ -238,6 +246,7 @@ final class EditorConfigPresentation
             if (empty($definition['authorSelectable']) || empty($definition['installed'])) {
                 continue;
             }
+
             if (!self::_definitionOffersSurface($definition, 'toolbar')) {
                 continue;
             }
@@ -285,6 +294,7 @@ final class EditorConfigPresentation
     {
         $items = [];
         $registry = Vizy::$plugin->getExtensions();
+
         foreach ([
             ...array_values($registry->getMarks()),
             ...array_values($registry->getNodes()),
@@ -293,9 +303,11 @@ final class EditorConfigPresentation
             if (empty($definition['authorSelectable']) || empty($definition['installed'])) {
                 continue;
             }
+
             if (($definition['kind'] ?? null) === 'mark' && self::_isCarrierMark((string)$definition['name'])) {
                 continue;
             }
+
             if (!self::_definitionOffersSurface($definition, 'bubble')) {
                 continue;
             }
@@ -322,6 +334,7 @@ final class EditorConfigPresentation
     public static function iconForDefinition(array $definition, string $fallbackId): ?string
     {
         $icon = $definition['icon'] ?? null;
+
         if (is_string($icon) && $icon !== '') {
             if (str_starts_with(ltrim($icon), '<')) {
                 return $icon;
@@ -406,11 +419,13 @@ final class EditorConfigPresentation
     public static function dropdownRoster(string $name): ?array
     {
         $definition = Vizy::$plugin->getExtensions()->getToolbarDropdown(self::dropdownAlias($name));
+
         if ($definition === null) {
             return null;
         }
 
         $roster = [];
+
         foreach ($definition['members'] as $member) {
             if ($member === self::HEADING_LEVELS_TOKEN) {
                 array_push($roster, ...self::HEADING_LEVEL_IDS);
@@ -481,6 +496,7 @@ final class EditorConfigPresentation
             // extension, so without the capability there is nothing to run and the button
             // would be dead rather than merely useless.
             $capability = self::ACTIONS[$id]['capability'] ?? null;
+
             if ($capability !== null && !in_array($capability, $enabledNodes, true)) {
                 return null;
             }
@@ -502,6 +518,7 @@ final class EditorConfigPresentation
         // `abbr` stays as the fallback for a build with no glyph for a level.
         if (preg_match('/^heading([1-6])$/', $id, $matches) === 1) {
             $level = (int)$matches[1];
+
             if (!in_array('heading', $enabledNodes, true) || !in_array($level, array_map('intval', $headingLevels), true)) {
                 return null;
             }
@@ -553,6 +570,7 @@ final class EditorConfigPresentation
 
         // Registry controls (core + third-party) resolve by controlId (often equal to TipTap name).
         $definition = Vizy::$plugin->getExtensions()->getControl($id);
+
         if ($definition !== null) {
             return self::_controlFromDefinition(
                 $definition,
@@ -609,6 +627,7 @@ final class EditorConfigPresentation
         // The groups are flattened away here: they are how the sequence is written, not something
         // the palette knows about. See `PALETTE_ORDER`.
         $rank = [];
+
         foreach (self::PALETTE_ORDER as $ids) {
             foreach ($ids as $id) {
                 $rank[$id] = count($rank);
@@ -624,6 +643,7 @@ final class EditorConfigPresentation
         // additions landing after everything Vizy names, which is the part worth guaranteeing.
         $unnamed = count($rank);
         $positions = [];
+
         foreach ($items as $index => $item) {
             $positions[$index] = $rank[$item['id']] ?? $unnamed + $index;
         }
@@ -645,6 +665,7 @@ final class EditorConfigPresentation
     private static function _definitionOffersSurface(array $definition, string $surface): bool
     {
         $controlId = $definition['controlId'] ?? null;
+
         if (!is_string($controlId) || $controlId === '') {
             return false;
         }
@@ -809,6 +830,7 @@ final class EditorConfigPresentation
         array $enabledExtensions = [],
     ): ?array {
         $definition = Vizy::$plugin->getExtensions()->getToolbarDropdown($name);
+
         if ($definition === null) {
             return null;
         }
@@ -819,6 +841,7 @@ final class EditorConfigPresentation
         $members ??= self::dropdownRoster($name) ?? [];
 
         $items = [];
+
         foreach ($members as $member) {
             // A dropdown is not a member of anything, so nesting is not on the table: a member
             // naming one resolves through the same branch and would open a menu inside a menu.
@@ -833,6 +856,7 @@ final class EditorConfigPresentation
                 $dropdownMembers,
                 $enabledExtensions,
             );
+
             if ($control !== null) {
                 $items[] = $control;
             }

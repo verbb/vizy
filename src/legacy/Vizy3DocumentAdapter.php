@@ -23,6 +23,7 @@ final class Vizy3DocumentAdapter
 
         $seenBlockUids = [];
         $content = [];
+
         foreach ($legacyNodes as $index => $node) {
             $content[] = $this->_convertNode($node, $schemaMap, $seenBlockUids, "content.{$index}", null);
         }
@@ -44,8 +45,7 @@ final class Vizy3DocumentAdapter
         array &$seenBlockUids,
         string $path,
         ?string $parentType,
-    ): array
-    {
+    ): array {
         if (!is_array($node) || !is_string($node['type'] ?? null) || $node['type'] === '') {
             throw new LegacyDocumentConversionException("Malformed legacy node at {$path}.");
         }
@@ -65,6 +65,7 @@ final class Vizy3DocumentAdapter
             if (!is_array($node['content']) || !array_is_list($node['content'])) {
                 throw new LegacyDocumentConversionException("Malformed legacy child content at {$path}.");
             }
+
             foreach ($node['content'] as $index => $child) {
                 $node['content'][$index] = $this->_convertNode(
                     $child,
@@ -80,6 +81,7 @@ final class Vizy3DocumentAdapter
             if (!is_array($node['marks']) || !array_is_list($node['marks'])) {
                 throw new LegacyDocumentConversionException("Malformed legacy marks at {$path}.");
             }
+
             foreach ($node['marks'] as $index => $mark) {
                 if (!is_array($mark)) {
                     throw new LegacyDocumentConversionException("Malformed legacy mark at {$path}.marks.{$index}.");
@@ -110,6 +112,7 @@ final class Vizy3DocumentAdapter
         }
 
         $content = $node['content'] ?? [];
+
         if (!is_array($content) || $content === []) {
             $node['content'] = [['type' => 'paragraph']];
 
@@ -117,6 +120,7 @@ final class Vizy3DocumentAdapter
         }
 
         $firstType = is_array($content[0] ?? null) ? ($content[0]['type'] ?? null) : null;
+
         if ($firstType !== 'paragraph') {
             $node['content'] = [[
                 'type' => 'paragraph',
@@ -137,18 +141,21 @@ final class Vizy3DocumentAdapter
         }
 
         $attrs = is_array($mark['attrs'] ?? null) ? $mark['attrs'] : [];
+
         // Already canonical (no href, has type).
         if (isset($attrs['type']) && !array_key_exists('href', $attrs)) {
             return $mark;
         }
 
         $href = $attrs['href'] ?? $attrs['url'] ?? '';
+
         if (!is_string($href)) {
             throw new LegacyDocumentConversionException("Legacy link at {$path} has a non-string href.");
         }
 
         $linkType = 'url';
         $value = $href;
+
         if (str_starts_with($href, 'mailto:')) {
             $linkType = 'email';
             $value = substr($href, strlen('mailto:'));
@@ -179,6 +186,7 @@ final class Vizy3DocumentAdapter
     private function _convertImage(array $node, string $path): array
     {
         $attrs = is_array($node['attrs'] ?? null) ? $node['attrs'] : [];
+
         if (isset($attrs['assetUid']) && !isset($attrs['src'])) {
             return $node;
         }
@@ -186,6 +194,7 @@ final class Vizy3DocumentAdapter
         $src = is_string($attrs['src'] ?? null) ? $attrs['src'] : '';
         $assetUid = null;
         $assetId = null;
+
         if (preg_match('/#asset:(\d+)(?::|$)/', $src, $m)) {
             $assetId = (int)$m[1];
         } elseif (isset($attrs['id']) && is_numeric($attrs['id'])) {
@@ -194,6 +203,7 @@ final class Vizy3DocumentAdapter
 
         if ($assetId) {
             $uid = \craft\helpers\Db::uidById(\craft\db\Table::ELEMENTS, $assetId);
+
             if (is_string($uid) && $uid !== '') {
                 $assetUid = $uid;
             }
@@ -222,6 +232,7 @@ final class Vizy3DocumentAdapter
                 'href' => $attrs['url'],
                 'target' => $attrs['target'] ?? null,
             ]], $path . '.link')['attrs'];
+
             if (is_string($attrs['linkClass'] ?? null) && $attrs['linkClass'] !== '') {
                 $link['class'] = $attrs['linkClass'];
             }
@@ -247,6 +258,7 @@ final class Vizy3DocumentAdapter
             throw new LegacyDocumentConversionException("No explicit Block Type mapping exists for '{$legacyTypeId}' at {$path}.");
         }
         $mapping = $schemaMap[$legacyTypeId];
+
         if (!is_string($mapping['blockTypeUid'] ?? null) || $mapping['blockTypeUid'] === '') {
             throw new LegacyDocumentConversionException("Block Type mapping '{$legacyTypeId}' is incomplete.");
         }
@@ -257,23 +269,28 @@ final class Vizy3DocumentAdapter
             ?? $values['content']['matrixAnchorUid']
             ?? $attrs['matrixAnchorUid']
             ?? null;
+
         if ($matrixAnchorUid !== null && (!is_string($matrixAnchorUid) || $matrixAnchorUid === '')) {
             throw new LegacyDocumentConversionException("Malformed MatrixAnchor identity at {$path}.");
         }
 
         $legacyFields = $values['content']['fields'] ?? [];
+
         if (!is_array($legacyFields)) {
             throw new LegacyDocumentConversionException("Legacy Block fields at {$path} are malformed.");
         }
 
         $fieldSlots = [];
+
         foreach ($legacyFields as $legacyPlacement => $value) {
             $canonicalPlacement = $mapping['placementUids'][$legacyPlacement] ?? null;
+
             if (!is_string($canonicalPlacement) || $canonicalPlacement === '') {
                 throw new LegacyDocumentConversionException(
                     "No explicit placement mapping exists for '{$legacyPlacement}' on legacy Block Type '{$legacyTypeId}'."
                 );
             }
+
             if (array_key_exists($canonicalPlacement, $fieldSlots)) {
                 throw new LegacyDocumentConversionException(
                     "Multiple legacy placement keys claim canonical placement '{$canonicalPlacement}' on legacy Block Type '{$legacyTypeId}'."
@@ -296,6 +313,7 @@ final class Vizy3DocumentAdapter
                 'fieldSlots' => $fieldSlots,
             ],
         ];
+
         if (is_string($matrixAnchorUid)) {
             $converted['attrs']['matrixAnchorUid'] = $matrixAnchorUid;
         }

@@ -52,6 +52,7 @@ class VizyMarkGenerator implements GeneratorInterface
                 'description' => 'Resolved Entry/Asset/Category for attrs.targetUid when present.',
                 'resolve' => static function(GqlMark $mark, array $args, $context): mixed {
                     $siteId = null;
+
                     if (is_array($context) && isset($context['siteId'])) {
                         $siteId = (int)$context['siteId'];
                     }
@@ -65,6 +66,7 @@ class VizyMarkGenerator implements GeneratorInterface
                 'description' => 'Resolved URL convenience (element URL, or value for url/email/tel/sms).',
                 'resolve' => static function(GqlMark $mark, array $args, $context): ?string {
                     $siteId = null;
+
                     if (is_array($context) && isset($context['siteId'])) {
                         $siteId = (int)$context['siteId'];
                     }

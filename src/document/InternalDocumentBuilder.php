@@ -41,6 +41,7 @@ final class InternalDocumentBuilder
         return $this->_atomic('insert', $destination, function() use ($destination, $nodes): void {
             $path = $this->_resolveDestinationPath($destination);
             $list = $this->_valueAt($path);
+
             if (!is_array($list) || !array_is_list($list) || $destination->index > count($list)) {
                 throw new DocumentMutationException('The insertion destination index is unresolved.');
             }
@@ -64,9 +65,11 @@ final class InternalDocumentBuilder
             $destinationPath = $this->_resolveDestinationPath($destination);
             $destinationList = $this->_valueAt($destinationPath);
             $index = $destination->index;
+
             if ($destinationPath === $sourceListPath && $sourceIndex < $index) {
                 $index--;
             }
+
             if (!is_array($destinationList) || !array_is_list($destinationList) || $index > count($destinationList)) {
                 throw new DocumentMutationException('The move destination is unresolved.');
             }
@@ -107,6 +110,7 @@ final class InternalDocumentBuilder
         return $this->_atomic('setRawPlacement', null, function() use ($blockUid, $placementUid, $value): void {
             $path = [...$this->_uniqueBlockPath($blockUid), 'attrs', 'fieldSlots'];
             $slots = $this->_valueAt($path);
+
             if (!is_array($slots)) {
                 throw new DocumentMutationException("Block {$blockUid} has no canonical fieldSlots map.");
             }
@@ -120,6 +124,7 @@ final class InternalDocumentBuilder
         return $this->_atomic('unsetRawPlacement', null, function() use ($blockUid, $placementUid): void {
             $path = [...$this->_uniqueBlockPath($blockUid), 'attrs', 'fieldSlots'];
             $slots = $this->_valueAt($path);
+
             if (!is_array($slots)) {
                 throw new DocumentMutationException("Block {$blockUid} has no canonical fieldSlots map.");
             }
@@ -173,12 +178,14 @@ final class InternalDocumentBuilder
     {
         $before = $this->working;
         $copySequence = $this->copySequence;
+
         try {
             $mutation();
             $this->_validateWorking($operation, $location);
         } catch (\Throwable $exception) {
             $this->working = $before;
             $this->copySequence = $copySequence;
+
             if ($exception instanceof DocumentMutationException) {
                 throw $exception;
             }
@@ -195,6 +202,7 @@ final class InternalDocumentBuilder
             $this->source->field(),
         );
         $seen = [];
+
         foreach ($document->blocks(null) as $block) {
             if (isset($seen[$block->uid()])) {
                 throw new DocumentMutationException("Duplicate Block UID {$block->uid()}.");
@@ -203,6 +211,7 @@ final class InternalDocumentBuilder
         }
 
         $result = ($this->schemaValidator)($document, $operation, $location);
+
         if ($result === false) {
             throw new DocumentMutationException("Schema validation rejected {$operation}.");
         }
@@ -219,6 +228,7 @@ final class InternalDocumentBuilder
     {
         $matches = [];
         $this->_collectBlockPaths($this->working['content'], ['content'], $blockUid, $matches);
+
         if (count($matches) !== 1) {
             throw new DocumentMutationException(
                 count($matches) === 0
@@ -236,9 +246,11 @@ final class InternalDocumentBuilder
                 continue;
             }
             $path = [...$base, $index];
+
             if (($node['type'] ?? null) === 'vizyBlock' && ($node['attrs']['blockUid'] ?? null) === $uid) {
                 $matches[] = $path;
             }
+
             // Walk layout/column subtrees; vizyBlock is a leaf (no TipTap children).
             if (($node['type'] ?? null) !== 'vizyBlock' && is_array($node['content'] ?? null)) {
                 $this->_collectBlockPaths($node['content'], [...$path, 'content'], $uid, $matches);
@@ -250,6 +262,7 @@ final class InternalDocumentBuilder
     {
         $path = $this->_resolveDestinationPath($destination);
         $list = $this->_valueAt($path);
+
         if (!is_array($list) || !array_is_list($list) || $destination->index > count($list)) {
             throw new DocumentMutationException('The copy destination index is unresolved.');
         }
@@ -264,8 +277,7 @@ final class InternalDocumentBuilder
         ?array &$sharedMap = null,
         ?VizyField $contextField = null,
         ?string $contextDocumentKey = null,
-    ): array
-    {
+    ): array {
         $contextField ??= $this->source->field();
         $contextDocumentKey ??= $this->source->anchorDocumentKey();
         $type = $node['type'] ?? null;
@@ -277,6 +289,7 @@ final class InternalDocumentBuilder
                 ? $this->uidFactory->uid("{$key}.layout.{$old}")
                 : ($sharedMap[$old] ??= $this->uidFactory->uid("ownerDuplicate.layout.{$old}"));
         }
+
         if ($type === 'column' && is_string($node['attrs']['columnUid'] ?? null)) {
             $old = (string)$node['attrs']['columnUid'];
             $node['attrs']['columnUid'] = $sharedMap === null
@@ -294,6 +307,7 @@ final class InternalDocumentBuilder
                 ? $this->uidFactory->uid("{$key}.block.{$oldUid}")
                 : ($sharedMap[$oldUid] ??= $this->uidFactory->uid("ownerDuplicate.block.{$oldUid}"));
             $node['attrs']['blockUid'] = $newUid;
+
             if ($rootUid === '') {
                 $rootUid = $newUid;
             }
@@ -302,17 +316,21 @@ final class InternalDocumentBuilder
 
             // Hosted Vizy envelopes only — never rewrite opaque Craft field JSON.
             $slots = $node['attrs']['fieldSlots'] ?? null;
+
             if (is_array($slots)) {
                 $layout = Vizy::$plugin->getBlockTypes()->getBlockTypeByUid((string)($node['attrs']['blockTypeUid'] ?? ''))?->getFieldLayout();
+
                 foreach ($layout?->getCustomFieldElements() ?? [] as $placement) {
                     $nestedField = $placement->getField();
                     $placementUid = $placement->uid;
                     $raw = $slots[$placementUid] ?? null;
+
                     if (!$nestedField instanceof VizyField || !DocumentWalk::isHostedEnvelope($raw)) {
                         continue;
                     }
                     $nestedRoot = '';
                     $raw['content'] = is_array($raw['content'] ?? null) ? $raw['content'] : [];
+
                     foreach ($raw['content'] as $nestedIndex => $nestedNode) {
                         if (is_array($nestedNode)) {
                             $raw['content'][$nestedIndex] = $this->_regenerateBlockUids(
@@ -373,14 +391,15 @@ final class InternalDocumentBuilder
         string $oldBlockUid,
         ?VizyField $vizyField,
         ?string $documentKey,
-    ): void
-    {
+    ): void {
         $typeUid = (string)($node['attrs']['blockTypeUid'] ?? '');
+
         if ($typeUid === '') {
             return;
         }
 
         $layout = Vizy::$plugin->getBlockTypes()->getBlockTypeByUid($typeUid)?->getFieldLayout();
+
         if (!$layout || !Vizy::$plugin->getAnchors()->blockHasMatrixFields($layout)) {
             return;
         }
@@ -395,6 +414,7 @@ final class InternalDocumentBuilder
             : null;
 
         $anchor = null;
+
         if ($owner && $vizyField && $oldBlockUid !== '') {
             $anchor = Vizy::$plugin->getAnchors()->getAnchor(
                 $owner,
@@ -407,11 +427,13 @@ final class InternalDocumentBuilder
 
         foreach ($layout->getCustomFieldElements() as $placement) {
             $field = $placement->getField();
+
             if (!$field instanceof Matrix) {
                 continue;
             }
 
             $existing = $node['attrs']['fieldSlots'][$placement->uid] ?? null;
+
             if (array_key_exists($placement->uid, $node['attrs']['fieldSlots'])) {
                 $node['attrs']['fieldSlots'][$placement->uid] = MatrixHelper::payloadForIndependentCopy($existing);
                 continue;
@@ -437,6 +459,7 @@ final class InternalDocumentBuilder
     private function _valueAt(array $path): mixed
     {
         $value = $this->working;
+
         foreach ($path as $segment) {
             if (!is_array($value) || !array_key_exists($segment, $value)) {
                 throw new DocumentMutationException('A canonical working location became unresolved.');
@@ -448,12 +471,13 @@ final class InternalDocumentBuilder
 
     private function _setAt(array $path, mixed $value): void
     {
-        $cursor =& $this->working;
+        $cursor = & $this->working;
+
         foreach ($path as $segment) {
             if (!is_array($cursor) || !array_key_exists($segment, $cursor)) {
                 throw new DocumentMutationException('A canonical working location became unresolved.');
             }
-            $cursor =& $cursor[$segment];
+            $cursor = & $cursor[$segment];
         }
         $cursor = $value;
     }

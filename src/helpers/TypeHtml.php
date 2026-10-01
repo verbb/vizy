@@ -46,6 +46,7 @@ final class TypeHtml
         }
 
         $names = [];
+
         foreach ($tag as $name) {
             if (is_string($name) && $name !== '') {
                 $names[] = $name;
@@ -66,6 +67,7 @@ final class TypeHtml
         // Marks emit flat HTML attrs; strip onclick/srcdoc before beginTag.
         $attrs = SafeHtml::filterEmitAttrs($attrs);
         $tag = $class::tagForAttrs($attrs);
+
         if ($tag === null || $tag === '') {
             return $innerHtml;
         }
@@ -90,12 +92,14 @@ final class TypeHtml
         // (e.g. data.html). Filter only the default tag path so nested payloads
         // are not dropped as non-scalars.
         $custom = $class::renderOccurrenceHtml($children, $attrs, $ctx);
+
         if ($custom !== null) {
             return $class::modifyRenderedHtml($custom, $ctx);
         }
 
         $attrs = SafeHtml::filterEmitAttrs($attrs);
         $tag = $class::tagForAttrs($attrs);
+
         if ($tag === null || $tag === '') {
             // No tag — children only (omit-like carriers should not reach here with content).
             return $class::modifyRenderedHtml($children, $ctx);

@@ -125,6 +125,7 @@ final class VizyDocument
     public function query(): VizyNodeQuery
     {
         $items = [];
+
         foreach ($this->content()->nodes() as $index => $node) {
             if (!is_array($node)) {
                 continue;
@@ -161,12 +162,14 @@ final class VizyDocument
     {
         if ($this->blockUidIndex === null) {
             $this->blockUidIndex = [];
+
             foreach ($this->blocks(null) as $block) {
                 $this->blockUidIndex[$block->uid()][] = $block;
             }
         }
 
         $matches = $this->blockUidIndex[$blockUid] ?? [];
+
         if (count($matches) > 1) {
             throw new UnexpectedValueException("Duplicate Vizy Block UID makes lookup ambiguous: {$blockUid}.");
         }
@@ -223,6 +226,7 @@ final class VizyDocument
 
         $type = $block->blockType();
         $layout = $type?->getFieldLayout();
+
         if (!$type || !$layout) {
             throw new LogicException("Cannot project unresolved Vizy Block {$block->uid()}.");
         }
@@ -237,6 +241,7 @@ final class VizyDocument
 
         // Matrix-in-Block: hydrate Matrix values from MatrixAnchor (not fieldSlots).
         $anchor = null;
+
         if (Vizy::$plugin->getAnchors()->blockHasMatrixFields($layout)) {
             $anchor = Vizy::$plugin->getAnchors()->getAnchor(
                 $this->owner,
@@ -245,6 +250,7 @@ final class VizyDocument
                 $block->matrixAnchorUid(),
                 $this->anchorDocumentKey(),
             );
+
             if (!$anchor && $block->matrixAnchorUid()) {
                 // Vizy 3 could persist a duplicate owner with the source
                 // owner's anchor UID. Hydrate that exact stored reference
@@ -256,10 +262,12 @@ final class VizyDocument
                     $block->matrixAnchorUid(),
                     $this->anchorDocumentKey(),
                 );
+
                 if ($storedAnchor?->dateDeleted === null) {
                     $anchor = $storedAnchor;
                 }
             }
+
             if ($anchor) {
                 $anchor->setFieldLayout($layout);
                 $element->id = $anchor->id;
@@ -273,12 +281,14 @@ final class VizyDocument
         foreach ($layout->getCustomFieldElements() as $placement) {
             $uid = $placement->uid;
             $craftField = $placement->getField();
+
             if ($craftField instanceof \craft\fields\Matrix) {
                 if ($anchor) {
                     $element->setFieldValue($craftField->handle, MatrixHelper::nestedEntryQuery($craftField, $anchor));
                 }
                 continue;
             }
+
             if ($block->hasRawFieldValue($uid)) {
                 $element->setFieldValue(
                     $craftField->handle,

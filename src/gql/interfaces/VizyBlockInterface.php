@@ -36,6 +36,7 @@ class VizyBlockInterface extends VizyNodeInterface
             'fields' => self::class . '::getFieldDefinitions',
             'resolveType' => static function($value) {
                 $node = $value instanceof GqlNode ? $value : null;
+
                 if ($node === null || !$node->isBlock()) {
                     throw new InvalidArgumentException('VizyBlockInterface requires a Block GqlNode source.');
                 }

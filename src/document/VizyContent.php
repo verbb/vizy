@@ -77,6 +77,7 @@ final class VizyContent
             if (($node['type'] ?? null) === 'vizyBlock') {
                 // Leaf blocks: nested docs live in Hosted fieldSlots, not TipTap children.
                 $block = $this->document->blockFromNode($node, "{$this->path}.{$index}");
+
                 if ($enabled === null || $block->isEnabled() === $enabled) {
                     $blocks[] = $block;
                 }
@@ -97,6 +98,7 @@ final class VizyContent
     {
         foreach ($this->nodes as $node) {
             yield $node;
+
             if (is_array($node['content'] ?? null)) {
                 yield from $this->_traverseNodes($node['content']);
             }
@@ -121,6 +123,7 @@ final class VizyContent
     {
         foreach ($nodes as $node) {
             yield $node;
+
             if (is_array($node['content'] ?? null)) {
                 yield from $this->_traverseNodes($node['content']);
             }

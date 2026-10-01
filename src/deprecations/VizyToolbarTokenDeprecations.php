@@ -32,11 +32,13 @@ final class VizyToolbarTokenDeprecations
     public static function canonicalizeList(array $ids, ?string $context = null): array
     {
         $out = [];
+
         foreach ($ids as $id) {
             if (!is_string($id) || $id === '') {
                 continue;
             }
             $canonical = self::canonicalize($id, $context);
+
             if ($canonical === '' || in_array($canonical, $out, true)) {
                 continue;
             }
@@ -49,6 +51,7 @@ final class VizyToolbarTokenDeprecations
     private static function _warn(string $legacy, string $canonical, ?string $context): void
     {
         $key = $legacy . ':' . ($context ?? '');
+
         if (isset(self::$warned[$key])) {
             return;
         }

@@ -53,6 +53,7 @@ class EditorConfigsController extends Controller
         }
 
         $normalized = [];
+
         foreach ($dropdowns as $name => $members) {
             if (!is_array($members) || !array_is_list($members)) {
                 continue;
@@ -97,11 +98,13 @@ class EditorConfigsController extends Controller
             $id = '';
         } else {
             $config = $service->getConfig($id);
+
             if (!$config) {
                 throw new NotFoundHttpException('Editor Config not found.');
             }
             $isFile = ($config['source'] ?? null) === EditorConfigs::SOURCE_FILE;
             $filename = is_string($config['filename'] ?? null) ? $config['filename'] : null;
+
             if ($isFile) {
                 $fileJson = $service->fileContents($id);
             }
@@ -268,11 +271,13 @@ class EditorConfigsController extends Controller
         $this->requirePostRequest();
 
         $id = (string)$this->request->getRequiredBodyParam('id');
+
         if ($id === EditorConfigs::DEFAULT_ID) {
             return $this->asFailure(Craft::t('vizy', 'The standard Editor Config cannot be deleted.'));
         }
 
         $service = Vizy::$plugin->getEditorConfigs();
+
         if ($service->isFileConfig($id)) {
             return $this->asFailure(Craft::t('vizy', 'Editor configs that live in files cannot be deleted from the control panel.'));
         }
@@ -292,8 +297,10 @@ class EditorConfigsController extends Controller
     private function _buildPayloadFromRequest(): array
     {
         $advanced = (string)$this->request->getBodyParam('advancedConfig', '');
+
         if ($advanced !== '') {
             $decoded = Json::decodeIfJson($advanced);
+
             if (!is_array($decoded)) {
                 throw new \InvalidArgumentException(Craft::t('vizy', 'Invalid JSON.'));
             }

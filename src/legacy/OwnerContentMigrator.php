@@ -75,20 +75,24 @@ final class OwnerContentMigrator extends Component
         $sourceHash = $this->_hashSnapshot($source);
 
         $checkpoint = OwnerMigration::findOne($identity);
+
         if (!$checkpoint && FieldPlacements::field($owner, $field->uid, null)) {
             // Retain pre-placement checkpoints only while their target is unambiguous.
             $checkpoint = OwnerMigration::findOne([...$identity, 'ownerPlacementUid' => null]);
         }
         $checkpoint ??= new OwnerMigration($identity);
+
         if (!$checkpoint->getIsNewRecord()) {
             if ($checkpoint->mappingHash !== $mappingHash) {
                 throw new RuntimeException('Migration run identity is already bound to a different mapping hash.');
             }
+
             if ($checkpoint->sourceSnapshotHash !== $sourceHash
                 && !in_array($checkpoint->state, ['persisted', 'verified', 'persisting'], true)
             ) {
                 return $this->_fail($checkpoint, 'staleSourceSnapshot', 'Owner content changed after this migration run was analyzed.');
             }
+
             if ($checkpoint->state === 'verified') {
                 return $this->_result($checkpoint);
             }
@@ -146,11 +150,13 @@ final class OwnerContentMigrator extends Component
         ?string $runUid = null,
     ): array {
         $analysis = $this->analyzeOwner($owner, $field, $mapping, $runUid);
+
         if (!$persist || $analysis['state'] !== 'ready') {
             return $analysis;
         }
 
         $checkpoint = OwnerMigration::findOne($analysis['id']);
+
         if (!$checkpoint) {
             throw new RuntimeException('Owner migration checkpoint disappeared before persistence.');
         }
@@ -161,9 +167,11 @@ final class OwnerContentMigrator extends Component
     public function resume(int $checkpointId): array
     {
         $checkpoint = OwnerMigration::findOne($checkpointId);
+
         if (!$checkpoint) {
             throw new RuntimeException("Unknown owner migration checkpoint {$checkpointId}.");
         }
+
         if ($checkpoint->state === 'verified') {
             return $this->_result($checkpoint);
         }
@@ -200,6 +208,7 @@ final class OwnerContentMigrator extends Component
     public function status(?string $runUid = null): array
     {
         $query = OwnerMigration::find()->orderBy(['id' => SORT_ASC]);
+
         if ($runUid !== null) {
             $query->andWhere(['runUid' => $runUid]);
         }
@@ -224,15 +233,18 @@ final class OwnerContentMigrator extends Component
             (string)$checkpoint->ownerType,
             (int)$checkpoint->siteId,
         );
+
         if (!$owner || $owner->getIsDraft() || $owner->getIsRevision()) {
             throw new RuntimeException('Exact canonical owner could not be reloaded for persistence.');
         }
         $field = FieldPlacements::field($owner, (string)$checkpoint->fieldUid, $checkpoint->ownerPlacementUid);
+
         if (!$field instanceof VizyField) {
             throw new RuntimeException('Exact Vizy field could not be reloaded for persistence.');
         }
 
         $currentSource = $this->_readRawValue($owner, $field);
+
         if ($this->_hashSnapshot($currentSource) !== $checkpoint->sourceSnapshotHash) {
             // Already migrated by a crashed prior attempt?
             if ($this->_liveContentMatchesCandidate($checkpoint)) {
@@ -245,6 +257,7 @@ final class OwnerContentMigrator extends Component
         }
 
         $key = implode(':', [$owner::class, $owner->id, $owner->siteId, $field->uid, FieldPlacements::uid($owner, $field)]);
+
         if (isset($this->saving[$key])) {
             return $this->_fail($checkpoint, 'recursiveOwnerMigration', 'Recursive owner migration was prevented.');
         }
@@ -256,11 +269,13 @@ final class OwnerContentMigrator extends Component
         $this->_saveCheckpoint($checkpoint);
         $this->saving[$key] = true;
         $transaction = Craft::$app->getDb()->beginTransaction();
+
         try {
             $candidateArray = Json::decode((string)$checkpoint->candidateJson);
             $candidate = (new DocumentParser())->parse($candidateArray, $owner, $field);
             Vizy::$plugin->getContentBaselines()->trust($owner, $field, $candidate);
             $owner->setFieldValue($field->handle, $candidate);
+
             // ContentBaselines trust lets Editor Config preserve unknown/disabled capabilities
             // on this save; VizyField no longer validates on SCENARIO_ESSENTIALS so Craft
             // revision duplication cannot reject those same preserved nodes.
@@ -272,6 +287,7 @@ final class OwnerContentMigrator extends Component
             $checkpoint->persistedAt = $this->_now();
             $this->_saveCheckpoint($checkpoint);
             $verified = $this->_verifyCheckpoint($checkpoint);
+
             if ($verified['state'] !== 'verified') {
                 throw new RuntimeException(Json::encode($verified['errors']));
             }
@@ -314,6 +330,7 @@ final class OwnerContentMigrator extends Component
                 (int)$checkpoint->siteId,
             );
             $field = $owner ? FieldPlacements::field($owner, (string)$checkpoint->fieldUid, $checkpoint->ownerPlacementUid) : null;
+
             if (!$owner || !$field instanceof VizyField) {
                 return false;
             }
@@ -337,6 +354,7 @@ final class OwnerContentMigrator extends Component
                 (int)$checkpoint->siteId,
             );
             $field = $owner ? FieldPlacements::field($owner, (string)$checkpoint->fieldUid, $checkpoint->ownerPlacementUid) : null;
+
             if (!$owner || !$field instanceof VizyField) {
                 throw new RuntimeException('Exact persisted owner or Vizy field could not be reloaded.');
             }
@@ -350,6 +368,7 @@ final class OwnerContentMigrator extends Component
             $matches = isset($verification['contentHash'])
                 ? Vizy::$plugin->getContentRecovery()->contentHash($persisted) === $verification['contentHash']
                 : $persistedHash === $checkpoint->candidateHash;
+
             // A persisted Matrix payload moves from fieldSlots into its anchor.
             // The semantic hash checks the actual rows as well as all document
             // content; raw slot counts describe storage, not content equality.
@@ -407,11 +426,13 @@ final class OwnerContentMigrator extends Component
         }
 
         $schemaMap = $mapping['schemaMap'] ?? null;
+
         if (!is_array($schemaMap)) {
             throw new RuntimeException('A bare Vizy 3 source requires an approved leaf schemaMap (mapping or field provenance).');
         }
 
         $verification['sourceShape'] = 'bareList';
+
         try {
             $canonical = (new Vizy3DocumentAdapter())->convert($decoded, $schemaMap);
         } catch (LegacyDocumentConversionException $exception) {
@@ -435,6 +456,7 @@ final class OwnerContentMigrator extends Component
 
         if (!array_key_exists('schemaMap', $mapping) || $mapping['schemaMap'] === null) {
             $fromField = $field->getLegacySchemaMap();
+
             if ($fromField === null) {
                 throw new RuntimeException(
                     'Cannot migrate this owner’s Vizy content: field “'
@@ -457,6 +479,7 @@ final class OwnerContentMigrator extends Component
         if (isset($mapping['nested'])) {
             throw new RuntimeException('Nested Vizy → Content Area migration is retired; Hosted Vizy is the sole nesting model.');
         }
+
         if (!empty($mapping['matrices'])) {
             throw new RuntimeException('Matrix → Content Area migration is retired; Hosted Vizy is the sole nesting model.');
         }
@@ -465,8 +488,10 @@ final class OwnerContentMigrator extends Component
     private function _validateCandidate(ElementInterface $owner, VizyField $field, VizyDocument $candidate): void
     {
         $candidate = (new DocumentParser())->parse($this->_canonicalArray($candidate), $owner, $field);
+
         foreach ($candidate->blocks(null) as $block) {
             $type = $block->blockType();
+
             if (!$type || !$type->getFieldLayout()) {
                 throw new RuntimeException("Candidate Block {$block->uid()} has unresolved Block Type {$block->blockTypeUid()}.");
             }
@@ -480,6 +505,7 @@ final class OwnerContentMigrator extends Component
         // checkpoint source, so it is the trusted preservation baseline for
         // this migration-only validation call.
         $field->validateBlocks($validationOwner, $candidate);
+
         if ($validationOwner->hasErrors()) {
             throw new RuntimeException('Candidate failed Vizy/Craft field validation: ' . Json::encode($validationOwner->getErrors()));
         }
@@ -496,6 +522,7 @@ final class OwnerContentMigrator extends Component
     private function _persistedDocument(mixed $raw, ElementInterface $owner, VizyField $field): VizyDocument
     {
         $value = $this->_decodeSource($raw);
+
         if (!is_array($value)) {
             throw new RuntimeException('Persisted owner content is not a canonical Vizy document.');
         }
@@ -519,19 +546,23 @@ final class OwnerContentMigrator extends Component
         $walk = function(array $nodes) use (&$walk, &$profile, &$slots, $known): void {
             foreach ($nodes as $node) {
                 $type = (string)($node['type'] ?? '');
+
                 if (!isset($known[$type])) {
                     $profile['unknownNodeCount']++;
                 }
+
                 if ($type === 'vizyBlock') {
                     $attrs = $node['attrs'];
                     $profile['blockCount']++;
                     $profile['blockOrder'][] = $attrs['blockUid'];
                     $profile['enabled'][] = $attrs['enabled'];
+
                     foreach ($attrs['fieldSlots'] as $placementUid => $value) {
                         $slots[] = [$attrs['blockUid'], $placementUid, $value];
                         $profile['rawSlotCount']++;
                     }
                 }
+
                 if (is_array($node['content'] ?? null)) {
                     $walk($node['content']);
                 }
@@ -545,6 +576,7 @@ final class OwnerContentMigrator extends Component
     private function _readRawValue(ElementInterface $owner, VizyField $field): mixed
     {
         $placementUid = FieldPlacements::uid($owner, $field);
+
         if ($placementUid === null) {
             throw new RuntimeException('Owner migration requires an exact Vizy field placement.');
         }
@@ -553,10 +585,12 @@ final class OwnerContentMigrator extends Component
             ->from('{{%elements_sites}}')
             ->where(['elementId' => $owner->id, 'siteId' => $owner->siteId])
             ->scalar();
+
         if ($content === false || $content === null) {
             throw new RuntimeException('Exact owner/site content row is missing.');
         }
         $content = is_string($content) ? Json::decode($content) : $content;
+
         if (!is_array($content) || !array_key_exists($placementUid, $content)) {
             throw new RuntimeException(
                 'Exact persisted Vizy source value is missing from owner content. Available keys: '
@@ -570,6 +604,7 @@ final class OwnerContentMigrator extends Component
     {
         $placementUid = FieldPlacements::uid($owner, $field);
         $placed = $placementUid ? FieldPlacements::field($owner, $field->uid, $placementUid) : null;
+
         if (!$placed) {
             throw new RuntimeException('Owner migration requires an exact Vizy field instance.');
         }
@@ -581,6 +616,7 @@ final class OwnerContentMigrator extends Component
         if (!is_string($source)) {
             return $source;
         }
+
         try {
             return Json::decode($source);
         } catch (Throwable $exception) {
@@ -593,13 +629,16 @@ final class OwnerContentMigrator extends Component
         if (!$owner->id || !$owner->siteId) {
             throw new RuntimeException('Owner migration requires an exact persisted owner and site.');
         }
+
         if (!$field->uid || !is_string($mapping['revision'] ?? null) || $mapping['revision'] === '') {
             throw new RuntimeException('Owner migration requires a field UID and non-empty mapping revision.');
         }
+
         // Retired CA transforms still reach buildCandidate; leaf runs need schemaMap.
         if (isset($mapping['nested']) || !empty($mapping['matrices'])) {
             return;
         }
+
         if (!array_key_exists('schemaMap', $mapping) || !is_array($mapping['schemaMap'])) {
             throw new RuntimeException('Owner migration requires a leaf schemaMap (explicit or from field provenance).');
         }
@@ -623,6 +662,7 @@ final class OwnerContentMigrator extends Component
         if (($owner->revisionId ?? null) !== null) {
             return 'revision:' . $owner->revisionId;
         }
+
         if (($owner->draftId ?? null) !== null) {
             return 'draft:' . $owner->draftId;
         }
@@ -700,9 +740,11 @@ final class OwnerContentMigrator extends Component
         if (!is_array($value)) {
             return $value;
         }
+
         if (!array_is_list($value)) {
             ksort($value);
         }
+
         foreach ($value as $key => $child) {
             $value[$key] = $this->_stable($child);
         }

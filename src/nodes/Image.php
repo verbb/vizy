@@ -56,6 +56,7 @@ class Image extends Node
                 Asset::class,
                 $siteId,
             );
+
             if (!$asset instanceof Asset) {
                 $asset = null;
             }
@@ -65,34 +66,40 @@ class Image extends Node
         // Honor a persisted handle for legacy content; otherwise the field's
         // default transform lets private originals render from a public transform FS.
         $transform = $attrs['transform'] ?? null;
+
         if ((!is_string($transform) || $transform === '') && ($field = $ctx->fieldOrNull())) {
             $transform = FieldImageOptions::defaultTransformHandle($field);
         }
         ArrayHelper::remove($attrs, 'transform');
 
         $src = $attrs['src'] ?? null;
+
         if ((!is_string($src) || $src === '') && $asset) {
             $transformArg = is_string($transform) && $transform !== '' ? $transform : null;
             $attrs['src'] = (string)($asset->getUrl($transformArg) ?: '');
         }
 
         $src = $attrs['src'] ?? '';
+
         if (is_string($src) && $src !== '') {
             $attrs['src'] = Nodes::parseRefTags($src, $siteId);
         }
 
         // Semantic size → output class (authoring size is not an HTML attribute).
         $size = $attrs['size'] ?? 'default';
+
         if (is_string($size) && $size !== '' && $size !== 'default') {
             $attrs['class'] = trim(($attrs['class'] ?? '') . ' vizy-image--' . $size);
         }
 
         // Alt modes: decorative keeps empty string; asset pulls Craft alt text.
         $altMode = $attrs['altMode'] ?? 'asset';
+
         if ($altMode === 'decorative') {
             $attrs['alt'] = '';
         } elseif ($altMode === 'asset' && $asset) {
             $assetAlt = $asset->alt;
+
             if (is_string($assetAlt)) {
                 $attrs['alt'] = $assetAlt;
             }
@@ -136,8 +143,10 @@ class Image extends Node
 
         // Resource URL via HTMLPurifier AttrDef_URI (http/https only).
         $src = $imgAttrs['src'] ?? null;
+
         if (is_string($src) && $src !== '') {
             $safeSrc = SafeHtml::sanitizeUri($src, SafeHtml::RESOURCE_SCHEMES);
+
             if ($safeSrc === null) {
                 unset($imgAttrs['src']);
             } else {
@@ -154,10 +163,12 @@ class Image extends Node
 
         // Keep decorative alt="" — array_filter would drop empty strings.
         $emitAttrs = [];
+
         foreach ($imgAttrs as $key => $value) {
             if ($value === null) {
                 continue;
             }
+
             if ($value === '' && $key !== 'alt') {
                 continue;
             }
@@ -170,8 +181,10 @@ class Image extends Node
 
         $href = null;
         $markAttrs = [];
+
         if ($semanticLink !== null) {
             $href = Link::resolveHref($semanticLink, $ctx->siteId, $ctx);
+
             if ($href !== null) {
                 $markAttrs = [
                     'href' => $href,

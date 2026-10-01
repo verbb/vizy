@@ -36,6 +36,7 @@ class Vizy extends Field implements FieldInterface
         $value = $this->fetchValue() ?? null;
 
         $adapter = new FeedMeDocumentAdapter();
+
         if ($canonical = $adapter->canonicalize($value)) {
             return $canonical;
         }
@@ -47,18 +48,18 @@ class Vizy extends Field implements FieldInterface
         $editor = new Editor([
             'content' => $value,
             'extensions' => [
-                new StarterKit,
-                new Nodes\Image,
-                new Marks\Highlight,
-                new Marks\Link,
-                new Marks\Subscript,
-                new Marks\Superscript,
-                new Nodes\Table,
-                new Nodes\TableCell,
-                new Nodes\TableHeader,
-                new Nodes\TableRow,
-                new Marks\Underline,
-                new VizyBlock,
+                new StarterKit(),
+                new Nodes\Image(),
+                new Marks\Highlight(),
+                new Marks\Link(),
+                new Marks\Subscript(),
+                new Marks\Superscript(),
+                new Nodes\Table(),
+                new Nodes\TableCell(),
+                new Nodes\TableHeader(),
+                new Nodes\TableRow(),
+                new Marks\Underline(),
+                new VizyBlock(),
             ],
         ]);
 

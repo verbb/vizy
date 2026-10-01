@@ -56,6 +56,7 @@ final class GqlHelpers
         if ($node->isBlock()) {
             $block = $node->block();
             $blockType = $block?->blockType();
+
             if ($blockType instanceof BlockType) {
                 return self::blockTypeName($blockType);
             }
@@ -65,6 +66,7 @@ final class GqlHelpers
         }
 
         $type = $node->type();
+
         if ($type === '' || $node->isUnknown()) {
             return 'VizyUnknownNode';
         }
@@ -88,6 +90,7 @@ final class GqlHelpers
     public static function queryRootNodes(VizyDocument $document, array $args = []): array
     {
         $query = $document->query();
+
         if (isset($args['where'])) {
             $query->where($args['where']);
         }
@@ -95,6 +98,7 @@ final class GqlHelpers
         if (isset($args['limit'])) {
             $query->limit((int)$args['limit']);
         }
+
         if (isset($args['orderBy']) && is_string($args['orderBy']) && $args['orderBy'] !== '') {
             $query->orderBy($args['orderBy']);
         }
@@ -111,6 +115,7 @@ final class GqlHelpers
     public static function queryBlocks(VizyDocument $document, array $args = []): array
     {
         $query = (new VizyNodeQuery())->from($document->blocks(null));
+
         if (isset($args['where'])) {
             $query->where($args['where']);
         }
@@ -118,6 +123,7 @@ final class GqlHelpers
         if (isset($args['limit'])) {
             $query->limit((int)$args['limit']);
         }
+
         if (isset($args['orderBy']) && is_string($args['orderBy']) && $args['orderBy'] !== '') {
             $query->orderBy($args['orderBy']);
         }

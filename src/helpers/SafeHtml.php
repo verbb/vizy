@@ -56,6 +56,7 @@ final class SafeHtml
     public static function sanitizeUri(string $uri, array $schemes = self::LINK_SCHEMES): ?string
     {
         $trimmed = trim($uri);
+
         if ($trimmed === '') {
             return null;
         }
@@ -63,6 +64,7 @@ final class SafeHtml
         $config = HTMLPurifier_Config::createDefault();
         $config->autoFinalize = false;
         $allowed = [];
+
         foreach ($schemes as $scheme) {
             $allowed[strtolower($scheme)] = true;
         }
@@ -116,6 +118,7 @@ final class SafeHtml
     public static function filterEmitAttrs(array $attrs): array
     {
         $out = [];
+
         foreach ($attrs as $key => $value) {
             if (!is_string($key) || !self::isSafeEmitAttrName($key)) {
                 continue;

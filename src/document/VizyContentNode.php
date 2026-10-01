@@ -15,9 +15,9 @@ final class VizyContentNode implements \ArrayAccess
     // =========================================================================
 
     public function __construct(
-    private VizyDocument $document,
-    private array $node,
-    private string $path,
+        private VizyDocument $document,
+        private array $node,
+        private string $path,
     ) {
     }
 

@@ -36,8 +36,10 @@ final class FieldLayoutController extends Controller
     {
         $this->requirePostRequest();
         $this->requireAcceptsJson();
+
         try {
             $verified = $this->_verifiedRequest();
+
             if ($verified === null) {
                 return $this->_conflict('staleField');
             }
@@ -52,6 +54,7 @@ final class FieldLayoutController extends Controller
             // against the browser's `"fieldSlots":{}`. Decoding to objects keeps
             // empty objects distinguishable.
             $body = $this->_rawBodyObject();
+
             if ($body === null) {
                 return $this->_conflict('invalidBlock');
             }
@@ -74,14 +77,17 @@ final class FieldLayoutController extends Controller
     {
         $this->requirePostRequest();
         $this->requireAcceptsJson();
+
         try {
             $verified = $this->_verifiedRequest();
+
             if ($verified === null) {
                 return $this->_conflict('staleField');
             }
             [$context, $owner, $field] = $verified;
 
             $body = $this->_rawBodyObject();
+
             if ($body === null) {
                 return $this->_conflict('invalidBlock');
             }
@@ -110,8 +116,10 @@ final class FieldLayoutController extends Controller
     {
         $this->requirePostRequest();
         $this->requireAcceptsJson();
+
         try {
             $verified = $this->_verifiedRequest();
+
             if ($verified === null) {
                 return $this->_conflict('staleField');
             }
@@ -119,11 +127,13 @@ final class FieldLayoutController extends Controller
 
             $body = $this->_rawBodyObject();
             $items = $body->items ?? null;
+
             if (!is_array($items) || $items === [] || count($items) > self::BATCH_LIMIT) {
                 return $this->_conflict('invalidBatch');
             }
 
             $results = [];
+
             foreach ($items as $item) {
                 if (!is_object($item)) {
                     $results[] = ['ok' => false, 'blockUid' => null, 'error' => 'invalidBlock'];
@@ -166,10 +176,12 @@ final class FieldLayoutController extends Controller
         );
         $owner = $this->_resolveOwner($context);
         $user = static::currentUser();
+
         if (!$user || !Craft::$app->getElements()->canSave($owner, $user)) {
             throw new ForbiddenHttpException('forbidden');
         }
         $field = $this->_placedField($owner, $context);
+
         if (!$field) {
             return null;
         }
@@ -199,11 +211,13 @@ final class FieldLayoutController extends Controller
     private function _resolveOwner(array $context): ElementInterface
     {
         $class = $context['ownerClass'] ?? null;
+
         if (!is_string($class) || !is_subclass_of($class, ElementInterface::class)) {
             throw new \RuntimeException('invalidOwnerClass');
         }
         $query = $class::find()->siteId((int)$context['siteId'])->status(null);
         $owner = null;
+
         if ($context['revisionId'] ?? null) {
             $owner = (clone $query)->revisionId((int)$context['revisionId'])->one();
         } elseif ($context['draftId'] ?? null) {
@@ -213,6 +227,7 @@ final class FieldLayoutController extends Controller
         } elseif ($context['ownerUid'] ?? null) {
             $owner = Craft::$app->getElements()->getElementByUid((string)$context['ownerUid'], $class, (int)$context['siteId']);
         }
+
         if (!$owner) {
             // Only contexts issued for a genuinely unsaved owner may construct
             // one. A deleted saved entry/draft/revision must never become new.
@@ -229,10 +244,12 @@ final class FieldLayoutController extends Controller
                 ...$defining,
             ]);
         }
+
         if (!$owner instanceof ElementInterface) {
             throw new \RuntimeException('ownerNotFound');
         }
         $owner->setScenario((string)$context['scenario']);
+
         foreach (($context['definingAttributes'] ?? []) as $attribute => $value) {
             if (!in_array($attribute, ['sectionId', 'typeId', 'fieldId', 'ownerId', 'primaryOwnerId'], true)) {
                 throw new \RuntimeException('invalidDefiningAttribute');
@@ -240,6 +257,7 @@ final class FieldLayoutController extends Controller
             $actual = $attribute === 'typeId' && method_exists($owner, 'getTypeId')
                 ? $owner->getTypeId()
                 : ($owner->{$attribute} ?? null);
+
             if ((string)$actual !== (string)$value) {
                 throw new \RuntimeException('staleOwnerDefinition');
             }
@@ -250,6 +268,7 @@ final class FieldLayoutController extends Controller
     private function _placedField(ElementInterface $owner, array $context): ?VizyField
     {
         $layout = $owner->getFieldLayout();
+
         if (($context['ownerLayoutUid'] ?? null) !== $layout?->uid) {
             return null;
         }
@@ -257,6 +276,7 @@ final class FieldLayoutController extends Controller
         $authFieldUid = $context['entryFieldUid'] ?? $context['fieldUid'];
         $placementUid = $context['ownerPlacementUid'] ?? null;
         $field = $placementUid === null ? null : FieldPlacements::field($owner, $authFieldUid, $placementUid);
+
         if (!$field) {
             return null;
         }
@@ -272,6 +292,7 @@ final class FieldLayoutController extends Controller
     {
         $path = $context['hostedPath'] ?? null;
         $depth = (int)($context['hostedDepth'] ?? 0);
+
         if (!is_array($path) || !array_is_list($path) || !HostedVizy::allowsDepth($depth) || count($path) !== $depth) {
             return null;
         }
@@ -285,19 +306,23 @@ final class FieldLayoutController extends Controller
             $typeUid = (string)($step['blockTypeUid'] ?? '');
             $type = Vizy::$plugin->getBlockTypes()->getBlockTypeByUid($typeUid);
             $layout = $type?->getFieldLayout();
+
             if (!$type || !$parent->allowsBlockTypeUid($typeUid) || !$layout || $layout->uid !== ($step['layoutUid'] ?? null)) {
                 return null;
             }
             $nested = null;
+
             foreach ($layout->getCustomFieldElements() as $placement) {
                 if ($placement->uid === ($step['placementUid'] ?? null) && $placement->getField()->uid === ($step['fieldUid'] ?? null)) {
                     $nested = $placement->getField();
                     break;
                 }
             }
+
             if (!$nested instanceof VizyField) {
                 return null;
             }
+
             if ($index === $depth - 1 && (
                 $parent->uid !== ($context['parentFieldUid'] ?? null)
                 || $step['placementUid'] !== ($context['hostedPlacementUid'] ?? null)

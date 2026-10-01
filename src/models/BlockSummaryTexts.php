@@ -31,9 +31,11 @@ final class BlockSummaryTexts
             return '';
         }
         $normalized = trim(preg_replace('/\s+/u', ' ', $value) ?? '');
+
         if ($normalized === '') {
             return '';
         }
+
         if (mb_strlen($normalized) <= $limit) {
             return $normalized;
         }

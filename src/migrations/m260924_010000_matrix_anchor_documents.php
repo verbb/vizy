@@ -17,6 +17,7 @@ class m260924_010000_matrix_anchor_documents extends Migration
         }
 
         $schema = $this->db->getTableSchema(Table::MATRIX_ANCHORS, true);
+
         if (!isset($schema->columns['documentKey'])) {
             $this->addColumn(
                 Table::MATRIX_ANCHORS,
@@ -34,12 +35,14 @@ class m260924_010000_matrix_anchor_documents extends Migration
         // parentOwnerId foreign key. Create its replacement first so the
         // foreign key remains backed while the old unique key is removed.
         $hasNewIndex = false;
+
         foreach ($indexes as $columns) {
             if (array_values($columns) === $newColumns) {
                 $hasNewIndex = true;
                 break;
             }
         }
+
         if (!$hasNewIndex) {
             $this->createIndex(null, Table::MATRIX_ANCHORS, $newColumns, true);
             $schema = $this->db->getTableSchema(Table::MATRIX_ANCHORS, true);

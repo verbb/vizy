@@ -57,17 +57,20 @@ final class MigrationsController extends Controller
     ): int {
         $owner = Craft::$app->getElements()->getElementById($elementId, $elementType, $siteId);
         $field = $owner ? FieldPlacements::field($owner, $fieldUid, $this->ownerPlacementUid) : null;
+
         if (!$owner || !$field instanceof VizyField) {
             $this->stderr(Craft::t('vizy', 'Exact owner/site or Vizy field placement was not found. For repeated fields, pass --ownerPlacementUid.') . PHP_EOL, Console::FG_RED);
             return ExitCode::DATAERR;
         }
 
         $path = Craft::getAlias($mappingFile);
+
         if (!is_file($path) || !is_readable($path)) {
             $this->stderr(Craft::t('vizy', 'Mapping file is not readable: {path}', ['path' => $path]) . PHP_EOL, Console::FG_RED);
             return ExitCode::NOINPUT;
         }
         $mapping = Json::decode((string)file_get_contents($path));
+
         if (!is_array($mapping)) {
             $this->stderr(Craft::t('vizy', 'Mapping file must contain a JSON object.') . PHP_EOL, Console::FG_RED);
             return ExitCode::DATAERR;
@@ -106,6 +109,7 @@ final class MigrationsController extends Controller
     {
         $rows = Vizy::$plugin->getOwnerContentMigrator()->status($runUid);
         $this->stdout(Craft::t('vizy', 'Owner migration checkpoints: {count}', ['count' => count($rows)]) . PHP_EOL, Console::FG_CYAN);
+
         foreach ($rows as &$row) {
             $row['nextStep'] = PromotionOperatorMessages::nextStepForOwner($row, true);
         }
@@ -156,11 +160,13 @@ final class MigrationsController extends Controller
                 'stage' => (string)($run['stage'] ?? ''),
                 'label' => (string)($run['stageLabel'] ?? ''),
             ]) . PHP_EOL, Console::FG_YELLOW);
+
             if ($this->dryRun) {
                 $this->_printOperatorLine((string)$run['nextStep'], Console::FG_YELLOW);
                 $this->stdout(Json::encode($run, JSON_PRETTY_PRINT) . PHP_EOL);
                 return ExitCode::OK;
             }
+
             if (!$this->_confirmWrite()) {
                 return ExitCode::USAGE;
             }
@@ -192,12 +198,14 @@ final class MigrationsController extends Controller
             ? Craft::t('vizy', 'Ready to upgrade one Vizy field. Existing content will remain available and will be saved in the Vizy 4 format when its owner is next saved.')
             : Craft::t('vizy', 'Ready to upgrade {count} Vizy fields. Existing content will remain available and will be saved in the Vizy 4 format when each owner is next saved.', ['count' => $fieldCount]);
         $this->stdout($readyMessage . PHP_EOL, Console::FG_YELLOW);
+
         if ($this->dryRun) {
             $plan['nextStep'] = Craft::t('vizy', 'Dry run complete. Re-run without --dry-run to apply the Vizy 3 upgrade.');
             $this->_printOperatorLine($plan['nextStep'], Console::FG_GREEN);
             $this->stdout(Json::encode($plan, JSON_PRETTY_PRINT) . PHP_EOL);
             return ExitCode::OK;
         }
+
         if (!$this->_confirmWrite()) {
             return ExitCode::USAGE;
         }
@@ -269,6 +277,7 @@ final class MigrationsController extends Controller
     {
         $rows = Vizy::$plugin->getPromotionOrchestrator()->status($runUid);
         $this->stdout(Craft::t('vizy', 'Vizy 3 upgrade runs: {count}', ['count' => count($rows)]) . PHP_EOL, Console::FG_CYAN);
+
         foreach ($rows as $row) {
             $this->stdout(sprintf(
                 "  %s  %s / %s (%s)%s\n",
@@ -278,6 +287,7 @@ final class MigrationsController extends Controller
                 $row['stageLabel'] ?? '',
                 !empty($row['lastError']) ? ' — ' . $row['lastError'] : '',
             ), ($row['status'] ?? '') === 'complete' ? Console::FG_GREEN : Console::FG_YELLOW);
+
             if (!empty($row['nextStep'])) {
                 $this->stdout('    → ' . $row['nextStep'] . PHP_EOL);
             }
@@ -346,6 +356,7 @@ final class MigrationsController extends Controller
             'stage' => (string)($result['stage'] ?? ''),
             'label' => (string)($result['stageLabel'] ?? PromotionOperatorMessages::stageLabel((string)($result['stage'] ?? ''))),
         ]) . PHP_EOL);
+
         if (!empty($result['lastError'])) {
             $this->stderr(Craft::t('vizy', 'Last error: {error}', ['error' => $result['lastError']]) . PHP_EOL, Console::FG_RED);
         }
@@ -359,10 +370,12 @@ final class MigrationsController extends Controller
     private function _readJsonObject(string $file): array
     {
         $path = Craft::getAlias($file);
+
         if (!is_file($path) || !is_readable($path)) {
             throw new \RuntimeException(Craft::t('vizy', 'JSON file is not readable: {path}', ['path' => $path]));
         }
         $value = Json::decode((string)file_get_contents($path));
+
         if (!is_array($value)) {
             throw new \RuntimeException(Craft::t('vizy', 'JSON file must contain an object: {path}', ['path' => $path]));
         }

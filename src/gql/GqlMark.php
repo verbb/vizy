@@ -51,6 +51,7 @@ final class GqlMark
     public function isUnknown(): bool
     {
         $type = $this->type();
+
         if ($type === '') {
             return true;
         }
@@ -66,6 +67,7 @@ final class GqlMark
 
         $attrs = $this->attrs();
         $targetUid = $attrs['targetUid'] ?? null;
+
         if (!is_string($targetUid) || $targetUid === '') {
             return null;
         }
@@ -97,10 +99,12 @@ final class GqlMark
         // Element-backed links: only emit URL when schema may see the element.
         if (in_array($kind, ['entry', 'asset', 'category'], true)) {
             $element = $this->linkElement($siteId);
+
             if ($element === null) {
                 return null;
             }
             $url = $element->getUrl();
+
             if (!is_string($url) || $url === '') {
                 return null;
             }

@@ -38,6 +38,7 @@ class VizyNodeInterface extends BaseInterfaceType
             'fields' => self::class . '::getFieldDefinitions',
             'resolveType' => static function($value) {
                 $node = $value instanceof GqlNode ? $value : null;
+
                 if ($node === null) {
                     throw new InvalidArgumentException('VizyNodeInterface requires a GqlNode source.');
                 }

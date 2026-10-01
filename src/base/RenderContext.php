@@ -64,6 +64,7 @@ final class RenderContext
     {
         $siteId ??= (int)Craft::$app->getSites()->getCurrentSite()->id;
         $key = $type . ':' . $siteId . ':' . $uid;
+
         if (!array_key_exists($key, $this->_elements)) {
             $this->_elements[$key] = Craft::$app->getElements()->getElementByUid($uid, $type, $siteId);
         }

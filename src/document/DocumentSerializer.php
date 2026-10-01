@@ -32,6 +32,7 @@ final class DocumentSerializer
 
         $canonical = $document->toArray();
         unset($canonical['attrs']['_storageToken']);
+
         if ($persistMatrix) {
             Vizy::$plugin->getMatrixPersistence()->syncCanonicalTree($document, $canonical);
             // Re-bind so nested Hosted sync mutations are visible to projection.
@@ -65,14 +66,18 @@ final class DocumentSerializer
             }
 
             $path = "{$basePath}.{$index}";
+
             if (($node['type'] ?? null) === 'vizyBlock') {
                 $block = $document->blockFromNode($node, $path);
                 $layout = $block->blockType()?->getFieldLayout();
+
                 if ($layout) {
                     $blockElement = null;
+
                     foreach ($layout->getCustomFieldElements() as $placement) {
                         $placementUid = $placement->uid;
                         $field = $placement->getField();
+
                         if (!Vizy::$plugin->getFieldLifecycle()->canSerialize($field)) {
                             continue;
                         }
@@ -84,12 +89,14 @@ final class DocumentSerializer
                         }
                         $blockElement ??= $document->blockElement($block);
                         $hasRawValue = $block->hasRawFieldValue($placementUid);
+
                         if (!$hasRawValue && !$placement->showInForm($blockElement) && !$field instanceof Matrix) {
                             continue;
                         }
 
                         if ($field instanceof VizyField) {
                             $nested = $blockElement->getFieldValue($field->handle);
+
                             if (!$nested instanceof VizyDocument) {
                                 if (!$hasRawValue) {
                                     continue;
@@ -108,6 +115,7 @@ final class DocumentSerializer
                             $blockElement->getFieldValue($field->handle),
                             $blockElement,
                         );
+
                         if (!$hasRawValue) {
                             $node['attrs']['fieldSlots'][$placementUid] = $serialized;
                             continue;
@@ -127,6 +135,7 @@ final class DocumentSerializer
 
             $requiredParagraph = $index === 0 && in_array($parentType, ['listItem', 'blockquote', 'column', 'tableCell', 'tableHeader'], true);
             $shaped = $this->_shapeSerializedNode($document, $node, $requiredParagraph);
+
             if ($shaped !== null) {
                 $out[] = $shaped;
             }
@@ -142,8 +151,10 @@ final class DocumentSerializer
         // Structural containers need a child even when their leading paragraph is empty.
         if ($type === 'paragraph' && !$requiredParagraph && ($document->field()?->trimEmptyParagraphs ?? false)) {
             $firstType = $node['content'][0]['type'] ?? null;
+
             if (!$firstType) {
                 $text = StringHelper::trim((string)($node['content'][0]['text'] ?? ''));
+
                 if ($text === '') {
                     return null;
                 }
@@ -152,11 +163,14 @@ final class DocumentSerializer
 
         if (in_array($type, ['listItem', 'tableCell', 'tableHeader'], true)) {
             $content = array_values(array_filter($node['content'] ?? []));
+
             if ($content === []) {
                 $content = [['type' => 'paragraph']];
             }
+
             if ($type === 'listItem') {
                 $firstType = $content[0]['type'] ?? null;
+
                 if ($firstType !== 'paragraph') {
                     array_unshift($content, ['type' => 'paragraph']);
                 }

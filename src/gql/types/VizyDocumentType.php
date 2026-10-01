@@ -31,6 +31,7 @@ final class VizyDocumentType extends ObjectType
     {
         // Field-scoped schemas get a dedicated type so Block unions match allowances.
         $typeName = self::getName();
+
         if ($context instanceof VizyField && is_string($context->handle) && $context->handle !== '') {
             $typeName = $context->handle . '_VizyDocument';
         }

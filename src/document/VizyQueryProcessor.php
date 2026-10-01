@@ -17,6 +17,7 @@ final class VizyQueryProcessor extends QueryProcessor
     {
         $matches = [];
         $hasOperand = false;
+
         foreach ($operands as $operand) {
             if (is_array($operand)) {
                 $hasOperand = true;
