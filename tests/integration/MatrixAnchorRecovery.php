@@ -2,14 +2,17 @@
 
 // Run against a populated local Craft fixture; all database changes are rolled back.
 // php MatrixAnchorRecovery.php /path/to/craft SOURCE_ANCHOR_ID
+// php MatrixAnchorRecovery.php /path/to/craft --owner-resolution-only
 require $argv[1] . '/bootstrap.php';
 $app = require CRAFT_VENDOR_PATH . '/craftcms/cms/bootstrap/console.php';
 
+use craft\base\ElementInterface;
 use craft\elements\Entry;
 use craft\fields\Matrix;
 use verbb\vizy\elements\MatrixAnchor;
 use verbb\vizy\fields\VizyField;
 use verbb\vizy\Vizy;
+use yii\base\InvalidConfigException;
 
 function check(bool $condition, string $message): void
 {
@@ -47,6 +50,25 @@ function contentFingerprint(mixed $value): mixed
 }
 
 echo 'Craft ' . Craft::$app->getVersion() . ', Vizy ' . Vizy::$plugin->getVersion() . ", PHP " . PHP_VERSION . "\n";
+$recovery = Vizy::$plugin->getMatrixRecovery();
+$unresolvedEntry = new class extends Entry {
+    public int $ownerResolutionAttempts = 0;
+
+    public function getPrimaryOwner(): ?ElementInterface
+    {
+        $this->ownerResolutionAttempts++;
+
+        throw new InvalidConfigException('Invalid owner ID: 999999');
+    }
+};
+$unresolvedEntry->primaryOwnerId = 999999;
+$recovery->captureNestedChange($unresolvedEntry);
+check($unresolvedEntry->ownerResolutionAttempts === 2, 'unresolved third-party owner revisions do not break nested saves');
+
+if (($argv[2] ?? null) === '--owner-resolution-only') {
+    exit(0);
+}
+
 $transaction = Craft::$app->getDb()->beginTransaction();
 try {
     $source = MatrixAnchor::find()->id((int)$argv[2])->status(null)->one();
@@ -153,7 +175,6 @@ try {
     $publishedAnchor = $anchors->getAnchor($published, $vizy, $source->blockInstanceId);
     check(rows($publishedAnchor, $matrix)[0]->title === 'Isolated draft edit', 'publication promotes the draft Matrix content');
 
-    $recovery = Vizy::$plugin->getMatrixRecovery();
     $snapshotId = $recovery->captureAnchor($target, 'regression-restore');
     check((bool)$snapshotId, 'durable recovery snapshot is stored');
     check($recovery->captureAnchor($target, 'repeat-capture') === $snapshotId, 'identical content is deduplicated in the archive');

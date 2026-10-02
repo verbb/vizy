@@ -1,5 +1,10 @@
 # Changelog
 
+## Unreleased
+
+### Fixed
+- Fix saves failing when another nested-element provider has not yet persisted an owner revision during Matrix recovery traversal. ([#378](https://github.com/verbb/vizy/issues/378))
+
 ## 3.2.12 - 2026-10-02
 
 ### Changed
