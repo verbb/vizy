@@ -1,0 +1,13 @@
+{% extends 'feed-me/_includes/fields/default' %}
+
+{% import '_includes/forms' as forms %}
+
+{% block extraSettings %}
+    {{ forms.lightswitchField({
+        label: 'Require lossless HTML'|t('vizy'),
+        instructions: 'Reject the mapped value when its HTML contains structure, formatting, attributes, links, or images that the destination Vizy field cannot represent.'|t('vizy'),
+        name: 'options[strictHtml]',
+        on: hash_get(feed.fieldMapping, optionsPath ~ '.strictHtml') ?? false,
+        small: true,
+    }) }}
+{% endblock %}

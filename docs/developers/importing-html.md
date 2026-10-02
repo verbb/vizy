@@ -122,4 +122,4 @@ $options = new HtmlImportOptions(
 
 Exceeding a bound throws an exception before a document is returned. Keep these limits finite for feeds and other externally supplied content.
 
-Bulk Feed Me mapping and the recoverable Redactor or CKEditor field-migration workflow are separate integrations built on this importer. The base API does not save elements, change Project Config, or migrate existing content.
+Feed Me uses this same importer for mapped HTML and exposes strict conversion in its field mapping. [Importing with Feed Me](docs:user-guides/importing-with-feed-me) covers source formats, diagnostics, images, and testing a feed. The recoverable Redactor or CKEditor field-migration workflow remains a separate integration. The base API does not save elements, change Project Config, or migrate existing content.

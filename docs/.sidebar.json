@@ -54,6 +54,7 @@
         "title": "User Guides",
         "collapsable": false,
         "children": [
+            "user-guides/importing-with-feed-me",
             {
                 "title": "Developer Guides",
                 "path": "guides/developers/index",

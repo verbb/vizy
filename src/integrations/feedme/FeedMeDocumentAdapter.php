@@ -27,7 +27,7 @@ final class FeedMeDocumentAdapter
                     $value = $decoded;
                 }
             } catch (Throwable) {
-                // Non-JSON strings continue through TipTap's prose parser.
+                // Non-JSON strings continue through the shared HTML importer.
             }
         }
 
@@ -56,6 +56,33 @@ final class FeedMeDocumentAdapter
             if ($content !== null) {
                 return $this->validateEnvelope($content);
             }
+        }
+
+        return '';
+    }
+
+    public function html(mixed $value): string
+    {
+        if (is_string($value)) {
+            try {
+                $decoded = Json::decode($value);
+
+                if (is_scalar($decoded) || $decoded === null) {
+                    return (string)$decoded;
+                }
+            } catch (Throwable) {
+                // The mapped value is ordinary HTML or plain text.
+            }
+
+            return $value;
+        }
+
+        if (is_scalar($value)) {
+            return (string)$value;
+        }
+
+        if (is_array($value) && is_scalar($value['content'] ?? null)) {
+            return (string)$value['content'];
         }
 
         return '';

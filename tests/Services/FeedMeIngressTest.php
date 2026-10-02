@@ -33,3 +33,13 @@ it('rejects legacy Feed Me Blocks without current canonical identities', functio
     expect(fn() => (new FeedMeDocumentAdapter())->canonicalize($legacy))
         ->toThrow(LegacyDocumentConversionException::class, 'current canonical content');
 });
+
+it('normalizes Feed Me HTML, plain scalars, and quoted plain text', function() {
+    $adapter = new FeedMeDocumentAdapter();
+
+    expect($adapter->html('<p>HTML</p>'))->toBe('<p>HTML</p>')
+        ->and($adapter->html(42))->toBe('42')
+        ->and($adapter->html('"Quoted text"'))->toBe('Quoted text')
+        ->and($adapter->html(['content' => '<p>Nested value</p>']))->toBe('<p>Nested value</p>')
+        ->and($adapter->html(['unexpected' => 'shape']))->toBe('');
+});
