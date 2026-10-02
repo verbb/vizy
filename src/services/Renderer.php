@@ -27,6 +27,12 @@ use Twig\Markup;
  */
 final class Renderer extends Component
 {
+    // Properties
+    // =========================================================================
+
+    private array $_templateAvailability = [];
+
+
     // Public Methods
     // =========================================================================
 
@@ -87,7 +93,7 @@ final class Renderer extends Component
 
             // Text is omit at the definition level; the renderer owns encoding + marks.
             if ($type === 'text') {
-                $html .= $this->_renderText($node, $ctx);
+                $html .= $this->_renderText($node, $ctx, $config);
                 continue;
             }
 
@@ -131,10 +137,29 @@ final class Renderer extends Component
             $ctx,
         );
 
-        return TypeHtml::renderNode($class, $children, $attrs, $ctx);
+        $attrs = $class::resolveAttrs($attrs, $ctx);
+        $template = $this->_renderTemplate('node', $node['type'], $config);
+
+        if ($template !== null) {
+            $html = Craft::$app->getView()->renderTemplate($template, [
+                'node' => $node,
+                'type' => $node['type'],
+                'attrs' => $attrs,
+                'content' => Template::raw($children),
+                'context' => $ctx,
+                'document' => $ctx->document,
+                'field' => $ctx->field,
+                'owner' => $ctx->owner,
+                'siteId' => $ctx->siteId,
+            ], View::TEMPLATE_MODE_SITE);
+
+            return $class::modifyRenderedHtml($html, $ctx);
+        }
+
+        return TypeHtml::renderResolvedNode($class, $children, $attrs, $ctx);
     }
 
-    private function _renderText(array $node, RenderContext $ctx): string
+    private function _renderText(array $node, RenderContext $ctx, array $config): string
     {
         $text = Html::encode((string)($node['text'] ?? ''));
         $extensions = Vizy::$plugin->getExtensions();
@@ -157,7 +182,7 @@ final class Renderer extends Component
 
             $text = match ($render['strategy']) {
                 'omit' => $text,
-                'type' => $this->_renderTypeMark($text, $mark, $render, $ctx),
+                'type' => $this->_renderTypeMark($text, $mark, $render, $ctx, $config),
                 default => $text,
             };
         }
@@ -165,7 +190,7 @@ final class Renderer extends Component
         return $text;
     }
 
-    private function _renderTypeMark(string $html, array $mark, array $render, RenderContext $ctx): string
+    private function _renderTypeMark(string $html, array $mark, array $render, RenderContext $ctx, array $config): string
     {
         $class = $render['class'] ?? null;
 
@@ -175,7 +200,24 @@ final class Renderer extends Component
 
         $attrs = is_array($mark['attrs'] ?? null) ? $mark['attrs'] : [];
 
-        return TypeHtml::renderMark($class, $html, $attrs, $ctx);
+        $attrs = $class::resolveAttrs($attrs, $ctx);
+        $template = $this->_renderTemplate('mark', $mark['type'], $config);
+
+        if ($template !== null) {
+            return Craft::$app->getView()->renderTemplate($template, [
+                'mark' => $mark,
+                'type' => $mark['type'],
+                'attrs' => $attrs,
+                'content' => Template::raw($html),
+                'context' => $ctx,
+                'document' => $ctx->document,
+                'field' => $ctx->field,
+                'owner' => $ctx->owner,
+                'siteId' => $ctx->siteId,
+            ], View::TEMPLATE_MODE_SITE);
+        }
+
+        return TypeHtml::renderResolvedMark($class, $html, $attrs, $ctx);
     }
 
     private function _renderBlock(VizyBlock $block, array $config): string
@@ -196,5 +238,33 @@ final class Renderer extends Component
         ]);
 
         return Craft::$app->getView()->renderTemplate($template, $variables, View::TEMPLATE_MODE_SITE);
+    }
+
+    private function _renderTemplate(string $kind, string $type, array $config): ?string
+    {
+        $configKey = $kind . 'Templates';
+        $configuredTemplates = $config[$configKey] ?? [];
+        $configured = is_array($configuredTemplates) ? ($configuredTemplates[$type] ?? null) : null;
+
+        if (is_string($configured) && trim($configured) !== '') {
+            return trim($configured);
+        }
+
+        $basePath = Vizy::$plugin->getSettings()->getRenderTemplatesPath();
+
+        if ($basePath === '') {
+            return null;
+        }
+
+        $template = $basePath . '/' . $kind . 's/' . $type;
+
+        if (!array_key_exists($template, $this->_templateAvailability)) {
+            $this->_templateAvailability[$template] = Craft::$app->getView()->doesTemplateExist(
+                $template,
+                View::TEMPLATE_MODE_SITE,
+            );
+        }
+
+        return $this->_templateAvailability[$template] ? $template : null;
     }
 }

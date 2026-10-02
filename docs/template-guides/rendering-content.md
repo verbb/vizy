@@ -25,6 +25,7 @@ Your site’s styles control the appearance of that HTML. See [Styling Layouts](
 Start with `render()` unless the page needs a more specialised result:
 
 - Assign a [Block Type Template](docs:template-guides/block-type-templates) when a structured Vizy Block needs its own markup.
+- Add [Node and Mark Templates](docs:template-guides/node-and-mark-templates) when a site needs Twig markup for built-in or custom rich-text types.
 - Use [Querying Nodes](docs:template-guides/querying-nodes) when you need selected root content separately, such as a list of callouts or headings.
 - Use [Events](docs:developers/events#customising-rendered-html) when a module or plugin needs to change the HTML generated for a built-in node or mark.
 - Use [GraphQL](docs:developers/graphql) when another application will render the document.

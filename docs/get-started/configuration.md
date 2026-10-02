@@ -32,6 +32,14 @@ Provide a file system path for a collection of SVG icons. These are available fo
 Folder of Block Type preview images (`png`, `jpg`, `jpeg`, `webp`, `gif`). Block Types store a relative path under this folder in Project Config (portable across environments — not Craft assets). Accepts environment variables or aliases.
 :::
 
+::: reference
+### `renderTemplatesPath`
+
+**Type:** `string` · **Default:** `''`
+
+Optional path relative to the Craft `templates/` directory. When set, Vizy looks for node templates at `<path>/nodes/<type>.twig` and mark templates at `<path>/marks/<type>.twig`. Missing templates fall back to Vizy’s PHP renderer. See [Node and Mark Templates](docs:template-guides/node-and-mark-templates).
+:::
+
 
 ## Control Panel
 You can also manage configuration settings through the Control Panel by visiting Settings → Vizy.

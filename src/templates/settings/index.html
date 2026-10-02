@@ -31,4 +31,15 @@
         errors: settings.getErrors('blockPreviewImagesPath'),
         warning: macros.configWarning('blockPreviewImagesPath', 'vizy'),
     }) }}
+
+    {{ forms.autosuggestField({
+        label: 'Render Templates Path' | t('vizy'),
+        instructions: 'Optional site-template folder containing nodes and marks subfolders for frontend rendering.' | t('vizy'),
+        name: 'renderTemplatesPath',
+        value: settings.renderTemplatesPath,
+        suggestEnvVars: true,
+        placeholder: '_vizy',
+        errors: settings.getErrors('renderTemplatesPath'),
+        warning: macros.configWarning('renderTemplatesPath', 'vizy'),
+    }) }}
 {% endblock %}

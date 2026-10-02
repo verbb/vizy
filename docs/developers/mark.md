@@ -66,6 +66,7 @@ Enablement.
 Walkthrough: [Creating a custom mark](docs:guides/developers/creating-a-custom-mark-from-scratch).
 Sample: `examples/vizy-abbr-module/`.
 Override tags and rendered HTML: [Events](docs:developers/events#customising-rendered-html).
+Own a mark type’s complete site markup in Twig: [Node and Mark Templates](docs:template-guides/node-and-mark-templates).
 
 ## Built-In Types
 

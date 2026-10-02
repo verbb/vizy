@@ -29,6 +29,7 @@
         "children": [
             "template-guides/rendering-content",
             "template-guides/block-type-templates",
+            "template-guides/node-and-mark-templates",
             "template-guides/querying-nodes",
             "template-guides/styling-layouts"
         ]

@@ -62,6 +62,20 @@ Useful block properties include:
 
 Custom field values use the same Twig APIs as fields on entries. For example, use `block.image.one()` for an Assets field and `block.relatedEntries.all()` for an Entries field.
 
+## Share Templates Across Block Types
+
+Use `block.hasField()` before reading an optional field when several Block Types share one template or include. This avoids an unknown-field exception for types whose field layout does not contain that handle:
+
+```twig
+{% set columnSpan = block.hasField('columnSpan') ? block.columnSpan.value : 'full' %}
+
+<section class="span-{{ columnSpan }}">
+    {# Shared block output #}
+</section>
+```
+
+`hasField()` checks the current Block Type’s field layout. It does not create a missing value or query another Block Type. Use `fieldValue('columnSpan')` when a dynamic handle cannot be expressed with normal Twig property syntax.
+
 ## Access the Element Containing the Vizy Field
 
 Use `block.owner` when a Block Type template needs the element containing the Vizy field. Do not query an Entry again from the request URI:

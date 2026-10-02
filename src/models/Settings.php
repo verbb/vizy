@@ -11,6 +11,12 @@ class Settings extends Model
     // =========================================================================
 
     public string $iconsPath = '@webroot/icons/';
+
+    /**
+     * Optional site-template folder containing `nodes/` and `marks/` partials.
+     */
+    public string $renderTemplatesPath = '';
+
     /**
      * Folder of Block Type preview images (png/jpg/webp/gif). Relative paths are
      * stored on Block Types for Project Config portability — not Craft assets.
@@ -37,6 +43,13 @@ class Settings extends Model
         }
 
         return $this->blockPreviewImagesPath;
+    }
+
+    public function getRenderTemplatesPath(): string
+    {
+        $path = trim((string)App::parseEnv($this->renderTemplatesPath));
+
+        return trim($path, '/');
     }
 
     public function defineRules(): array

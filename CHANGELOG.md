@@ -5,6 +5,7 @@
 ### Added
 - Added a schema-aware HTML importer API with complete loss diagnostics, strict conversion, caller-owned Asset resolution, and extension rules for custom nodes and marks. ([#142](https://github.com/verbb/vizy/issues/142))
 - Added explicit Feed Me mappings that turn matched HTML elements into custom Vizy Blocks, populate UID-addressed field placements through their Feed Me adapters, and support matching or creating Assets from image attributes. ([#251](https://github.com/verbb/vizy/issues/251))
+- Added convention-based and per-render Twig template partials for built-in and custom node and mark types. ([#29](https://github.com/verbb/vizy/issues/29), [#212](https://github.com/verbb/vizy/issues/212), [#291](https://github.com/verbb/vizy/issues/291))
 - Added recoverable CKEditor and Redactor field conversion commands with placement and site analysis, generated content migrations, strict loss checks, source checkpoints, and post-write verification. See [Migrating CKEditor and Redactor Fields](https://verbb.io/craft-plugins/vizy/docs/v4/user-guides/migrating-rich-text-fields). ([#288](https://github.com/verbb/vizy/issues/288))
 
 ### Changed

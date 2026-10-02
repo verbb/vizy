@@ -11,6 +11,7 @@ use verbb\vizy\document\VizyDocument;
 use verbb\vizy\events\ModifyRenderedNodeEvent;
 use verbb\vizy\fields\VizyField;
 use verbb\vizy\nodes\MediaEmbed;
+use verbb\vizy\nodes\Paragraph;
 use verbb\vizy\Vizy;
 use yii\base\Event;
 
@@ -80,6 +81,88 @@ it('renders prose marks and layout column wrappers from Extensions strategies', 
         // Craft Html::cssStyleFromArray normalizes `--vizy-cols:12` → `--vizy-cols: 12;`
         ->and($html)->toContain('--vizy-cols:')
         ->and($html)->toContain('--vizy-col:');
+});
+
+it('resolves convention and per-render Twig templates for nodes and marks', function() {
+    Vizy::$plugin->getExtensions()->reset();
+
+    $view = Craft::$app->getView();
+    $settings = Vizy::$plugin->getSettings();
+    $previousMode = $view->getTemplateMode();
+    $previousPath = $view->getTemplatesPath();
+    $previousRenderTemplatesPath = $settings->renderTemplatesPath;
+    $templatesPath = sys_get_temp_dir() . '/vizy-type-render-' . StringHelper::randomString(6);
+
+    mkdir($templatesPath . '/_vizy/types/nodes', 0777, true);
+    mkdir($templatesPath . '/_vizy/types/marks', 0777, true);
+    mkdir($templatesPath . '/_vizy/overrides', 0777, true);
+    file_put_contents(
+        $templatesPath . '/_vizy/types/nodes/paragraph.twig',
+        '<article class="node-{{ type }}" data-field="{{ field.handle }}">{{ content }}</article>',
+    );
+    file_put_contents(
+        $templatesPath . '/_vizy/types/marks/bold.twig',
+        '<span class="mark-{{ type }}" data-owner="{{ owner.title }}">{{ content }}</span>',
+    );
+    file_put_contents(
+        $templatesPath . '/_vizy/overrides/paragraph.twig',
+        '<div class="override-node">{{ content }}</div>',
+    );
+    file_put_contents(
+        $templatesPath . '/_vizy/overrides/bold.twig',
+        '<b class="override-mark">{{ content }}</b>',
+    );
+
+    $view->setTemplateMode(\craft\web\View::TEMPLATE_MODE_SITE);
+    $view->setTemplatesPath($templatesPath);
+    $settings->renderTemplatesPath = '_vizy/types/';
+
+    $listener = function(ModifyRenderedNodeEvent $event): void {
+        $event->renderedNode = '<main class="render-event">' . $event->renderedNode . '</main>';
+    };
+    Event::on(Paragraph::class, Paragraph::EVENT_MODIFY_RENDERED_NODE, $listener);
+
+    try {
+        $document = (new DocumentParser())->parse([
+            'type' => 'doc',
+            'attrs' => ['schemaVersion' => VizyDocument::CURRENT_SCHEMA_VERSION],
+            'content' => [[
+                'type' => 'paragraph',
+                'content' => [[
+                    'type' => 'text',
+                    'text' => '<Hello>',
+                    'marks' => [['type' => 'bold']],
+                ]],
+            ]],
+        ], new Entry(['title' => 'Template owner']), new VizyField(['name' => 'Body', 'handle' => 'articleBody']));
+
+        $conventionHtml = (string)$document->render();
+        $overrideHtml = (string)$document->render([
+            'nodeTemplates' => ['paragraph' => '_vizy/overrides/paragraph'],
+            'markTemplates' => ['bold' => '_vizy/overrides/bold'],
+        ]);
+
+        expect($settings->getRenderTemplatesPath())->toBe('_vizy/types')
+            ->and($conventionHtml)->toContain('<main class="render-event"><article class="node-paragraph" data-field="articleBody">')
+            ->and($conventionHtml)->toContain('<span class="mark-bold" data-owner="Template owner">&lt;Hello&gt;</span>')
+            ->and($overrideHtml)->toContain('<main class="render-event"><div class="override-node">')
+            ->and($overrideHtml)->toContain('<b class="override-mark">&lt;Hello&gt;</b>');
+    } finally {
+        Event::off(Paragraph::class, Paragraph::EVENT_MODIFY_RENDERED_NODE, $listener);
+        $settings->renderTemplatesPath = $previousRenderTemplatesPath;
+        $view->setTemplatesPath($previousPath);
+        $view->setTemplateMode($previousMode);
+        @unlink($templatesPath . '/_vizy/types/nodes/paragraph.twig');
+        @unlink($templatesPath . '/_vizy/types/marks/bold.twig');
+        @unlink($templatesPath . '/_vizy/overrides/paragraph.twig');
+        @unlink($templatesPath . '/_vizy/overrides/bold.twig');
+        @rmdir($templatesPath . '/_vizy/types/nodes');
+        @rmdir($templatesPath . '/_vizy/types/marks');
+        @rmdir($templatesPath . '/_vizy/types');
+        @rmdir($templatesPath . '/_vizy/overrides');
+        @rmdir($templatesPath . '/_vizy');
+        @rmdir($templatesPath);
+    }
 });
 
 it('renders iframe and unknown mediaEmbed via type classes', function() {

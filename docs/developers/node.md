@@ -81,6 +81,7 @@ Enablement.
 
 Register and author: [Extending Vizy](docs:developers/extending-vizy).
 Override tags and rendered HTML: [Events](docs:developers/events#customising-rendered-html).
+Own a node type’s complete site markup in Twig: [Node and Mark Templates](docs:template-guides/node-and-mark-templates).
 
 ## Reading Content in Twig
 

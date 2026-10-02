@@ -64,6 +64,12 @@ final class TypeHtml
     public static function renderMark(string $class, string $innerHtml, array $attrs, RenderContext $ctx): string
     {
         $attrs = $class::resolveAttrs($attrs, $ctx);
+
+        return self::renderResolvedMark($class, $innerHtml, $attrs, $ctx);
+    }
+
+    public static function renderResolvedMark(string $class, string $innerHtml, array $attrs, RenderContext $ctx): string
+    {
         // Marks emit flat HTML attrs; strip onclick/srcdoc before beginTag.
         $attrs = SafeHtml::filterEmitAttrs($attrs);
         $tag = $class::tagForAttrs($attrs);
@@ -88,6 +94,11 @@ final class TypeHtml
     {
         $attrs = $class::resolveAttrs($attrs, $ctx);
 
+        return self::renderResolvedNode($class, $children, $attrs, $ctx);
+    }
+
+    public static function renderResolvedNode(string $class, string $children, array $attrs, RenderContext $ctx): string
+    {
         // Custom emitters (MediaEmbed, Image, …) may need structured attrs
         // (e.g. data.html). Filter only the default tag path so nested payloads
         // are not dropped as non-scalars.
