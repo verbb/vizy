@@ -1,5 +1,10 @@
 # Changelog
 
+## Unreleased
+
+### Added
+- Added a schema-aware HTML importer API with complete loss diagnostics, strict conversion, caller-owned Asset resolution, and extension rules for custom nodes and marks. ([#142](https://github.com/verbb/vizy/issues/142))
+
 ## 4.0.0-beta.2 - 2026-10-02
 
 ### Added

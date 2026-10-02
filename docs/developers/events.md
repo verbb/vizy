@@ -29,6 +29,10 @@ Event::on(EditorManifests::class, EditorManifests::EVENT_MODIFY_EDITOR_CONFIG, f
 
 This event is field-scoped. It does not receive an element owner, site, or current user; use separate named Editor Configs when those contexts need different schemas.
 
+## The `registerRules` HTML Import Event
+
+Use `HtmlImporter::EVENT_REGISTER_RULES` to map source HTML tags to custom Vizy nodes or marks. Rules are evaluated against the destination field’s effective Editor Config; a rule cannot import an extension that the field does not enable. See [Importing HTML](docs:developers/importing-html#register-custom-import-rules) for the registration example and conversion contract.
+
 ## The `registerExtensions` Event
 Use this event to tell Vizy about a custom mark, node, or behaviour extension. Register each PHP class in the matching list: `$event->marks`, `$event->nodes`, or `$event->extensions`. The example below assumes you have created the `Abbr` class from the [Abbreviation mark guide](docs:guides/developers/creating-a-custom-mark-from-scratch). Put the imports at the top of your module file and the event listener in its `init()` method.
 

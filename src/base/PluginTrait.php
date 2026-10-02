@@ -25,6 +25,7 @@ use verbb\vizy\services\Extensions;
 use verbb\vizy\services\FieldLayoutForms;
 use verbb\vizy\services\FieldLifecycle;
 use verbb\vizy\services\FieldMerges;
+use verbb\vizy\services\HtmlImporter;
 use verbb\vizy\services\Icons;
 use verbb\vizy\services\InitialFieldLayouts;
 use verbb\vizy\services\MatrixPersistence;
@@ -70,6 +71,7 @@ trait PluginTrait
                 'fieldLifecycle' => FieldLifecycle::class,
                 'fieldLayoutForms' => FieldLayoutForms::class,
                 'fieldMerges' => FieldMerges::class,
+                'htmlImporter' => HtmlImporter::class,
                 'icons' => Icons::class,
                 'initialFieldLayouts' => InitialFieldLayouts::class,
                 'legacySchemaMaps' => LegacySchemaMaps::class,
@@ -213,6 +215,11 @@ trait PluginTrait
     public function getFieldMerges(): FieldMerges
     {
         return $this->get('fieldMerges');
+    }
+
+    public function getHtmlImporter(): HtmlImporter
+    {
+        return $this->get('htmlImporter');
     }
 
     public function getIcons(): Icons
