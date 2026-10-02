@@ -65,6 +65,36 @@ it('raw API captures repeated placements and transforms nested raw data after co
     expect($out['value']['content'][1])->toBe(['type' => 'paragraph']);
 });
 
+it('raw API captures and inspects ordinary top-level field placements', function() {
+    $suffix = StringHelper::randomString(8);
+    $field = new PlainText(['name' => 'Top-level source', 'handle' => 'topLevel' . $suffix]);
+    expect(Craft::$app->fields->saveField($field))->toBeTrue();
+    $owner = VizyFixtureFactory::entry('Top-level raw API');
+    $layout = $owner->getFieldLayout();
+    $tab = $layout->getTabs()[0];
+    $placement = new CustomField($field, ['uid' => StringHelper::UUID()]);
+    $tab->setElements([...$tab->getElements(), $placement]);
+    expect(Craft::$app->fields->saveLayout($layout))->toBeTrue();
+    Craft::$app->db->createCommand()->update('{{%elements_sites}}', [
+        'content' => new yii\db\JsonExpression([$placement->uid => '<p>Source HTML</p>']),
+    ], ['elementId' => $owner->id, 'siteId' => $owner->siteId])->execute();
+
+    $map = Vizy::$plugin->getContent()->captureFieldLocations($field->uid);
+    $contexts = [];
+    $result = Vizy::$plugin->getContent()->modifyFieldValues($map, function(mixed $value, array $context) use (&$contexts): array {
+        $contexts[] = $context;
+        expect($value)->toBe('<p>Source HTML</p>');
+        return Change::unchanged();
+    }, ['dryRun' => true, 'elementIds' => [$owner->id]]);
+
+    expect($map['roots'][$placement->uid]['direct'])->toBeTrue()
+        ->and($result['matched'])->toBe(1)
+        ->and($result['wouldModify'])->toBe(0)
+        ->and($contexts[0]['fieldUid'])->toBe($field->uid)
+        ->and($contexts[0]['placementUid'])->toBe($placement->uid)
+        ->and($contexts[0]['layoutUid'])->toBe($layout->uid);
+});
+
 it('raw API preserves explicit empty replacements and removal', function($replacement) {
     $f = rawApiFixture();
     $out = Vizy::$plugin->getContent()->transformValue($f['value'], $f['root']->uid, $f['map'], fn() => Change::replace($replacement));

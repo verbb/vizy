@@ -87,8 +87,10 @@ final class RawContent
             foreach ($layout->getCustomFieldElements() as $placement) {
                 $uid = $placement->getFieldUid();
 
-                if (isset($schemas[$uid])) {
-                    $roots[$placement->uid] = ['fieldUid' => $uid, 'layoutUid' => $layout->uid];
+                if ($uid === $fieldUid) {
+                    $roots[$placement->uid] = ['fieldUid' => $uid, 'layoutUid' => $layout->uid, 'direct' => true];
+                } elseif (isset($schemas[$uid])) {
+                    $roots[$placement->uid] = ['fieldUid' => $uid, 'layoutUid' => $layout->uid, 'direct' => false];
                 }
             }
         }
@@ -176,8 +178,22 @@ final class RawContent
                         'elementType' => $row['type'], 'enabled' => (bool)$row['enabled'], 'trashed' => $row['dateDeleted'] !== null,
                         'draftId' => $row['draftId'], 'revisionId' => $row['revisionId'], 'rootFieldUid' => $root['fieldUid'],
                         'rootPlacementUid' => $placementUid, 'rootLayoutUid' => $root['layoutUid'], 'path' => [$placementUid], 'hasDurableOwner' => false];
-                    $change = $this->transformValue($content[$placementUid], $root['fieldUid'], $map, $transform, $context);
-                    $content[$placementUid] = $change['value'];
+
+                    if ($root['direct'] ?? false) {
+                        $context += ['fieldUid' => $map['fieldUid'], 'placementUid' => $placementUid, 'layoutUid' => $root['layoutUid']];
+                        $stats = ['matched' => 1, 'changed' => 0];
+                        $rootChange = $this->_normaliseChange($content[$placementUid], $transform($content[$placementUid], $context), $stats);
+
+                        if ($rootChange['action'] === 'remove') {
+                            unset($content[$placementUid]);
+                        } else {
+                            $content[$placementUid] = $rootChange['value'];
+                        }
+                        $change = ['value' => $content[$placementUid] ?? null] + $stats;
+                    } else {
+                        $change = $this->transformValue($content[$placementUid], $root['fieldUid'], $map, $transform, $context);
+                        $content[$placementUid] = $change['value'];
+                    }
                     $result['matched'] += $change['matched'];
                     $result['wouldModify'] += $change['changed'];
                 }
@@ -272,21 +288,29 @@ final class RawContent
                 return ['action' => 'replace', 'value' => $nested];
             }
             $stats['matched']++;
-            $change = $transform($nested, $childContext);
-
-            if (!is_array($change) || !in_array($change['action'] ?? null, ['unchanged', 'replace', 'remove'], true)
-                || ($change['action'] === 'replace' && !array_key_exists('value', $change))) {
-                throw new InvalidArgumentException('Return Change::unchanged(), Change::replace($value), or Change::remove().');
-            }
-
-            if ($change['action'] === 'unchanged') {
-                return ['action' => 'replace', 'value' => $nested];
-            }
-
-            if ($change['action'] === 'remove' || !RawJson::same($change['value'], $nested)) {
-                $stats['changed']++;
-            }
-            return $change;
+            return $this->_normaliseChange($nested, $transform($nested, $childContext), $stats);
         });
+    }
+
+    private function _normaliseChange(mixed $value, mixed $change, array &$stats): array
+    {
+        if (!is_array($change) || !in_array($change['action'] ?? null, ['unchanged', 'replace', 'remove'], true)
+            || ($change['action'] === 'replace' && !array_key_exists('value', $change))) {
+            throw new InvalidArgumentException('Return Change::unchanged(), Change::replace($value), or Change::remove().');
+        }
+
+        if ($change['action'] === 'unchanged') {
+            return ['action' => 'replace', 'value' => $value];
+        }
+
+        if ($change['action'] === 'remove') {
+            $stats['changed']++;
+            return $change;
+        }
+
+        if (!RawJson::same($change['value'], $value)) {
+            $stats['changed']++;
+        }
+        return $change;
     }
 }

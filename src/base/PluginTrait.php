@@ -33,6 +33,7 @@ use verbb\vizy\services\MultisiteDocuments;
 use verbb\vizy\services\Nodes;
 use verbb\vizy\services\RefTags;
 use verbb\vizy\services\Renderer;
+use verbb\vizy\services\RichTextConversions;
 use verbb\vizy\web\assets\field\VizyAsset;
 
 use nystudio107\pluginvite\services\VitePluginService;
@@ -82,6 +83,7 @@ trait PluginTrait
                 'nodes' => Nodes::class,
                 'refTags' => RefTags::class,
                 'renderer' => Renderer::class,
+                'richTextConversions' => RichTextConversions::class,
                 'vite' => [
                     'class' => VitePluginService::class,
                     'assetClass' => VizyAsset::class,
@@ -270,6 +272,11 @@ trait PluginTrait
     public function getRenderer(): Renderer
     {
         return $this->get('renderer');
+    }
+
+    public function getRichTextConversions(): RichTextConversions
+    {
+        return $this->get('richTextConversions');
     }
 
     public function getVite(): VitePluginService

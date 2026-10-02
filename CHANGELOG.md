@@ -4,6 +4,7 @@
 
 ### Added
 - Added a schema-aware HTML importer API with complete loss diagnostics, strict conversion, caller-owned Asset resolution, and extension rules for custom nodes and marks. ([#142](https://github.com/verbb/vizy/issues/142))
+- Added recoverable CKEditor and Redactor field conversion commands with placement and site analysis, generated content migrations, strict loss checks, source checkpoints, and post-write verification. See [Migrating CKEditor and Redactor Fields](https://verbb.io/craft-plugins/vizy/docs/v4/user-guides/migrating-rich-text-fields). ([#288](https://github.com/verbb/vizy/issues/288))
 
 ### Changed
 - Feed Me HTML mappings now use Vizy’s field and Editor Config-aware importer, record conversion-loss diagnostics, and can require lossless conversion before accepting a mapped value. See [Importing with Feed Me](https://verbb.io/craft-plugins/vizy/docs/v4/user-guides/importing-with-feed-me). ([#289](https://github.com/verbb/vizy/issues/289))

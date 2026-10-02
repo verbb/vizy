@@ -54,6 +54,7 @@
         "title": "User Guides",
         "collapsable": false,
         "children": [
+            "user-guides/migrating-rich-text-fields",
             "user-guides/importing-with-feed-me",
             {
                 "title": "Developer Guides",
