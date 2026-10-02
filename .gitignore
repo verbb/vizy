@@ -5,6 +5,7 @@
 
 # COMPOSER
 /vendor
+/composer.lock
 .phpunit.cache
 
 # BUILD FILES

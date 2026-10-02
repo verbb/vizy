@@ -31,7 +31,7 @@
         "craftcms/cms": "^5.0.0",
         "nystudio107/craft-plugin-vite": "^5.0.0",
         "ueberdosis/tiptap-php": "^1.0",
-        "verbb/base": "^3.0.18",
+        "verbb/base": "^3.0.19",
         "yii2mod/yii2-array-query": "^1.4"
     },
     "require-dev": {
