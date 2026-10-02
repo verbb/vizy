@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 4.0.0-beta.2 - 2026-10-02
 
 ### Added
 - Added Craft-native Entry and current-user conditions for field-local Block Type availability, plus Entry-aware field and tab conditions inside Vizy Blocks. ([#178](https://github.com/verbb/vizy/issues/178))
