@@ -19,8 +19,9 @@ final class HtmlImportRule
         string $content = self::CONTENT_INLINE,
         mixed $attributes = null,
         int $priority = 0,
+        mixed $matcher = null,
     ): self {
-        return new self($tags, self::KIND_NODE, $type, $placement, $content, $attributes, $priority);
+        return new self($tags, self::KIND_NODE, $type, $placement, $content, $attributes, $priority, $matcher);
     }
 
     public static function mark(
@@ -28,8 +29,9 @@ final class HtmlImportRule
         string $type,
         mixed $attributes = null,
         int $priority = 0,
+        mixed $matcher = null,
     ): self {
-        return new self($tags, self::KIND_MARK, $type, self::PLACEMENT_INLINE, self::CONTENT_INLINE, $attributes, $priority);
+        return new self($tags, self::KIND_MARK, $type, self::PLACEMENT_INLINE, self::CONTENT_INLINE, $attributes, $priority, $matcher);
     }
 
 
@@ -56,6 +58,7 @@ final class HtmlImportRule
     public readonly int $priority;
 
     private mixed $attributes;
+    private mixed $matcher;
 
 
     // Public Methods
@@ -69,6 +72,7 @@ final class HtmlImportRule
         string $content = self::CONTENT_INLINE,
         mixed $attributes = null,
         int $priority = 0,
+        mixed $matcher = null,
     ) {
         $tags = array_values(array_unique(array_map(static fn(mixed $tag): string => strtolower(trim((string)$tag)), $tags)));
 
@@ -100,18 +104,24 @@ final class HtmlImportRule
             throw new InvalidArgumentException('HTML import rule attributes must be an array or callable.');
         }
 
+        if ($matcher !== null && !is_callable($matcher)) {
+            throw new InvalidArgumentException('HTML import rule matcher must be callable.');
+        }
+
         $this->tags = $tags;
         $this->kind = $kind;
         $this->type = $type;
         $this->placement = $placement;
         $this->content = $content;
         $this->attributes = $attributes;
+        $this->matcher = $matcher;
         $this->priority = $priority;
     }
 
     public function matches(DOMElement $element): bool
     {
-        return in_array(strtolower($element->tagName), $this->tags, true);
+        return in_array(strtolower($element->tagName), $this->tags, true)
+            && ($this->matcher === null || (bool)($this->matcher)($element));
     }
 
     public function resolveAttributes(DOMElement $element): array

@@ -36,19 +36,24 @@ final class HtmlImporter extends Component
         $options ??= new HtmlImportOptions();
         $event = new RegisterHtmlImportRulesEvent(['field' => $field]);
         $this->trigger(self::EVENT_REGISTER_RULES, $event);
+        $rules = [...$options->rules, ...$event->rules];
+
+        if (!array_is_list($options->rules)) {
+            throw new RuntimeException('HtmlImportOptions::rules must be a list.');
+        }
 
         if (!array_is_list($event->rules)) {
             throw new RuntimeException('RegisterHtmlImportRulesEvent::rules must be a list.');
         }
 
-        foreach ($event->rules as $index => $rule) {
+        foreach ($rules as $index => $rule) {
             if (!$rule instanceof HtmlImportRule) {
                 throw new RuntimeException("HTML import rule {$index} must be an HtmlImportRule.");
             }
         }
 
         $manifest = Vizy::$plugin->getEditorManifests()->build($field);
-        $result = (new HtmlImportConverter($field, $manifest, $options, $event->rules))->convert($html);
+        $result = (new HtmlImportConverter($field, $manifest, $options, $rules))->convert($html);
 
         if ($options->strict && !$result->isLossless()) {
             throw new HtmlImportException('Strict HTML import refused a lossy conversion.', $result);

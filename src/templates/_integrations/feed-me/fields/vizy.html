@@ -3,6 +3,8 @@
 {% import '_includes/forms' as forms %}
 
 {% block extraSettings %}
+    {% set blockTypes = field.blockTypes|filter(blockType => blockType.uid in field.insertableBlockTypeUids) %}
+
     {{ forms.lightswitchField({
         label: 'Require lossless HTML'|t('vizy'),
         instructions: 'Reject the mapped value when its HTML contains structure, formatting, attributes, links, or images that the destination Vizy field cannot represent.'|t('vizy'),
@@ -10,4 +12,121 @@
         on: hash_get(feed.fieldMapping, optionsPath ~ '.strictHtml') ?? false,
         small: true,
     }) }}
+
+    {% if blockTypes|length %}
+        <hr>
+        <h3>{{ 'HTML to Vizy Block mappings'|t('vizy') }}</h3>
+        <p class="light">{{ 'Match an HTML element and populate a Vizy Block through explicit Block Type and field-placement identities.'|t('vizy') }}</p>
+
+        {% for blockType in blockTypes %}
+            {% set mappingPath = optionsPath ~ '.blockMappings.' ~ blockType.uid %}
+            {% set mappingName = 'options[blockMappings][' ~ blockType.uid ~ ']' %}
+
+            <div class="field">
+                <div class="heading">
+                    <h4>{{ blockType.name|t('site') }}</h4>
+                    <div class="instructions"><code>{{ blockType.uid }}</code></div>
+                </div>
+
+                {{ forms.lightswitchField({
+                    label: 'Create this Block from matching HTML'|t('vizy'),
+                    name: mappingName ~ '[enabled]',
+                    on: hash_get(feed.fieldMapping, mappingPath ~ '.enabled') ?? false,
+                    small: true,
+                }) }}
+
+                {{ forms.textField({
+                    label: 'HTML tag'|t('vizy'),
+                    instructions: 'For example, `img` or `figure`.'|t('vizy'),
+                    name: mappingName ~ '[tag]',
+                    value: hash_get(feed.fieldMapping, mappingPath ~ '.tag'),
+                    placeholder: 'img',
+                }) }}
+
+                {{ forms.textField({
+                    label: 'Match attribute'|t('vizy'),
+                    instructions: 'Optional. Require this attribute to be present, such as `class` or `data-type`.'|t('vizy'),
+                    name: mappingName ~ '[attribute]',
+                    value: hash_get(feed.fieldMapping, mappingPath ~ '.attribute'),
+                }) }}
+
+                {{ forms.textField({
+                    label: 'Match value'|t('vizy'),
+                    instructions: 'Optional. When set, the match attribute must equal this value exactly.'|t('vizy'),
+                    name: mappingName ~ '[value]',
+                    value: hash_get(feed.fieldMapping, mappingPath ~ '.value'),
+                }) }}
+
+                {% for placement in blockType.fieldLayout.customFieldElements %}
+                    {% set blockField = placement.field %}
+                    {% set fieldPath = mappingPath ~ '.fields.' ~ placement.uid %}
+                    {% set fieldName = mappingName ~ '[fields][' ~ placement.uid ~ ']' %}
+
+                    <div class="field">
+                        <div class="heading">
+                            <label>{{ blockField.name|t('site') }}</label>
+                            <div class="instructions"><code>{{ placement.uid }}</code></div>
+                        </div>
+
+                        {{ forms.selectField({
+                            label: 'Value source'|t('vizy'),
+                            name: fieldName ~ '[source]',
+                            value: hash_get(feed.fieldMapping, fieldPath ~ '.source'),
+                            options: [
+                                { value: '', label: 'Do not populate'|t('vizy') },
+                                { value: 'attribute', label: 'HTML attribute'|t('vizy') },
+                                { value: 'text', label: 'Text content'|t('vizy') },
+                                { value: 'html', label: 'Inner HTML'|t('vizy') },
+                                { value: 'literal', label: 'Fixed value'|t('vizy') },
+                            ],
+                        }) }}
+
+                        {{ forms.textField({
+                            label: 'Source attribute'|t('vizy'),
+                            instructions: 'Required when the value source is HTML attribute. For an image URL, use `src`.'|t('vizy'),
+                            name: fieldName ~ '[attribute]',
+                            value: hash_get(feed.fieldMapping, fieldPath ~ '.attribute'),
+                        }) }}
+
+                        {{ forms.textField({
+                            label: 'Fixed value'|t('vizy'),
+                            instructions: 'Used only when the value source is Fixed value.'|t('vizy'),
+                            name: fieldName ~ '[value]',
+                            value: hash_get(feed.fieldMapping, fieldPath ~ '.value'),
+                        }) }}
+
+                        {% if blockField is instance of('craft\\fields\\Assets') %}
+                            {{ forms.selectField({
+                                label: 'Asset value'|t('vizy'),
+                                name: fieldName ~ '[options][match]',
+                                value: hash_get(feed.fieldMapping, fieldPath ~ '.options.match') ?: 'filename',
+                                options: [
+                                    { value: 'filename', label: 'Filename'|t('vizy') },
+                                    { value: 'id', label: 'ID'|t('vizy') },
+                                ],
+                            }) }}
+
+                            {{ forms.lightswitchField({
+                                label: 'Create Asset from URL'|t('vizy'),
+                                name: fieldName ~ '[options][upload]',
+                                on: hash_get(feed.fieldMapping, fieldPath ~ '.options.upload') ?? false,
+                                small: true,
+                            }) }}
+
+                            {{ forms.selectField({
+                                label: 'When an Asset already exists'|t('vizy'),
+                                name: fieldName ~ '[options][conflict]',
+                                value: hash_get(feed.fieldMapping, fieldPath ~ '.options.conflict') ?: 'index',
+                                options: [
+                                    { value: 'index', label: 'Use existing Asset'|t('vizy') },
+                                    { value: 'replace', label: 'Replace existing Asset'|t('vizy') },
+                                    { value: 'create', label: 'Keep both'|t('vizy') },
+                                ],
+                            }) }}
+                        {% endif %}
+                    </div>
+                {% endfor %}
+            </div>
+        {% endfor %}
+    {% endif %}
 {% endblock %}

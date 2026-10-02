@@ -23,7 +23,7 @@ $document = $result->document();
 
 The document is canonical and validated against the destination field before it is returned. The importer currently handles paragraphs, headings, blockquotes, preformatted text, ordered and unordered lists, horizontal rules, tables, hard breaks, links, images, and the core inline marks enabled by the field.
 
-Conversion does not create Vizy Blocks or infer mappings for their custom fields. A Blocks-only destination returns an empty document with a diagnostic instead of inventing a Block representation.
+Default conversion does not create Vizy Blocks or infer mappings for their custom fields. A Blocks-only destination returns an empty document with a diagnostic unless the caller supplies an explicit rule that creates canonical `vizyBlock` nodes. Feed Me’s HTML-to-Block mapping builds those request-local rules from destination UIDs.
 
 ## Inspect Conversion Loss
 
@@ -108,6 +108,8 @@ Event::on(HtmlImporter::class, HtmlImporter::EVENT_REGISTER_RULES, function(Regi
 
 Use `HtmlImportRule::node()` for custom nodes. Choose block or inline placement and whether the rule converts block children, inline children, or no children. Rules only describe HTML-to-document conversion; they do not register editor extensions or rendering behaviour.
 
+Pass a `matcher` callback when a tag alone is not specific enough. The callback receives the source `DOMElement` and returns whether that rule applies. A caller can also pass a list of request-local rules through `HtmlImportOptions(rules: [...])` instead of registering a global event listener. Validate any stored rule configuration before conversion and reject overlapping selectors when more than one rule could assign different semantics to the same element.
+
 ## Bound Untrusted Input
 
 The default conversion limits are 1 MB of HTML, 10,000 parsed nodes, and 64 levels of nesting. Override them per call when a trusted import needs different bounds:
@@ -122,4 +124,4 @@ $options = new HtmlImportOptions(
 
 Exceeding a bound throws an exception before a document is returned. Keep these limits finite for feeds and other externally supplied content.
 
-Feed Me uses this same importer for mapped HTML and exposes strict conversion in its field mapping. [Importing with Feed Me](docs:user-guides/importing-with-feed-me) covers source formats, diagnostics, images, and testing a feed. The recoverable Redactor or CKEditor field-migration workflow remains a separate integration. The base API does not save elements, change Project Config, or migrate existing content.
+Feed Me uses this same importer for mapped HTML and exposes strict conversion and explicit Vizy Block mappings in its field mapping. [Importing with Feed Me](docs:user-guides/importing-with-feed-me) covers source formats, diagnostics, images, Blocks, and testing a feed. The recoverable Redactor or CKEditor field-migration workflow remains a separate integration. The base API does not save elements, change Project Config, or migrate existing content.

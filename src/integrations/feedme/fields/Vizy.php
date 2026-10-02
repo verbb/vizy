@@ -6,6 +6,7 @@ use verbb\vizy\fields\VizyField;
 use verbb\vizy\importers\HtmlImportException;
 use verbb\vizy\importers\HtmlImportOptions;
 use verbb\vizy\importers\HtmlImportResult;
+use verbb\vizy\integrations\feedme\FeedMeBlockMapper;
 use verbb\vizy\integrations\feedme\FeedMeDocumentAdapter;
 
 use Cake\Utility\Hash;
@@ -42,8 +43,10 @@ class Vizy extends Field implements FieldInterface
             return $canonical;
         }
 
+        $blockMapper = new FeedMeBlockMapper($this->field, $this->element, $this->feed);
         $options = new HtmlImportOptions(
             strict: (bool)Hash::get($this->fieldInfo, 'options.strictHtml', false),
+            rules: $blockMapper->rules(Hash::get($this->fieldInfo, 'options.blockMappings', [])),
         );
 
         try {

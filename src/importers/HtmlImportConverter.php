@@ -56,16 +56,22 @@ final class HtmlImportConverter
 
         $root = $this->_parseFragment($html);
         $this->_assertTreeBounds($root);
-        $content = [];
+        $content = $this->_convertBlockChildren($root, 0);
 
-        if ($this->field->rootContentType === VizyField::ROOT_CONTENT_BLOCKS && $this->_hasImportableContent($root)) {
-            $this->_diagnose(
-                'rootContentDisallowsProse',
-                'The destination field accepts root Vizy Blocks rather than imported prose.',
-                $root,
-            );
-        } else {
-            $content = $this->_convertBlockChildren($root, 0);
+        if ($this->field->rootContentType === VizyField::ROOT_CONTENT_BLOCKS) {
+            $prose = array_filter($content, static fn(array $node): bool => ($node['type'] ?? null) !== 'vizyBlock');
+
+            if ($prose !== []) {
+                $this->_diagnose(
+                    'rootContentDisallowsProse',
+                    'The destination field accepts root Vizy Blocks; imported prose was removed.',
+                    $root,
+                );
+                $content = array_values(array_filter(
+                    $content,
+                    static fn(array $node): bool => ($node['type'] ?? null) === 'vizyBlock',
+                ));
+            }
         }
 
         $document = (new DocumentParser())->parse([
@@ -145,7 +151,7 @@ final class HtmlImportConverter
         $tag = strtolower($element->tagName);
 
         return match ($tag) {
-            'p' => [$this->_paragraph($element, $depth)],
+            'p' => $this->_paragraph($element, $depth),
             'h1', 'h2', 'h3', 'h4', 'h5', 'h6' => [$this->_heading($element, (int)substr($tag, 1), $depth)],
             'blockquote' => $this->_blockquote($element, $depth),
             'pre' => $this->_codeBlock($element),
@@ -162,10 +168,33 @@ final class HtmlImportConverter
     private function _paragraph(DOMElement $element, int $depth): array
     {
         $this->_diagnoseDiscardedAttributes($element);
-        return [
-            'type' => 'paragraph',
-            'content' => $this->_trimInline($this->_convertInlineChildren($element, [], $depth)),
-        ];
+        $blocks = [];
+        $inline = [];
+
+        $flushInline = function(bool $keepEmpty = false) use (&$blocks, &$inline): void {
+            $inline = $this->_trimInline($inline);
+
+            if ($inline !== [] || ($keepEmpty && $blocks === [])) {
+                $blocks[] = ['type' => 'paragraph', 'content' => $inline];
+            }
+            $inline = [];
+        };
+
+        foreach ($element->childNodes as $child) {
+            $rule = $child instanceof DOMElement
+                ? $this->_matchingRule($child, HtmlImportRule::PLACEMENT_BLOCK)
+                : null;
+
+            if ($rule) {
+                $flushInline();
+                $blocks = [...$blocks, ...$this->_convertRuleNode($child, $rule, [], $depth + 1)];
+            } else {
+                $inline = [...$inline, ...$this->_convertInlineNode($child, [], $depth + 1)];
+            }
+        }
+        $flushInline(true);
+
+        return $blocks;
     }
 
     private function _heading(DOMElement $element, int $level, int $depth): array
@@ -808,17 +837,6 @@ final class HtmlImportConverter
             }
         };
         $walk($root, 1);
-    }
-
-    private function _hasImportableContent(DOMNode $root): bool
-    {
-        foreach ($root->childNodes as $child) {
-            if ($child instanceof DOMElement || ($child instanceof DOMText && trim($child->nodeValue ?? '') !== '')) {
-                return true;
-            }
-        }
-
-        return false;
     }
 
     private function _guardDepth(int $depth): void

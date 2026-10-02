@@ -8,7 +8,7 @@ You need Feed Me installed and a feed that creates or updates Craft elements con
 
 Use HTML when the source contains ordinary rich text. Vizy converts the markup into its canonical document structure rather than storing the HTML directly. Plain text follows the same path and becomes paragraph content.
 
-Use canonical JSON when the source already produces a complete Vizy document or needs Vizy Blocks. A complete document has a `doc` root and the current schema version:
+Use canonical JSON when the source already produces a complete Vizy document. You can also create Vizy Blocks from HTML with an explicit mapping, as described below. A complete document has a `doc` root and the current schema version:
 
 ```json
 {
@@ -32,7 +32,7 @@ Use canonical JSON when the source already produces a complete Vizy document or 
 
 Feed Me also accepts a JSON list containing the document’s root nodes. Vizy wraps the list in the current document envelope before validating it.
 
-Canonical JSON is installation-specific when it contains Block Type, field-placement, Entry, or Asset UIDs. Use identities from the destination project and do not copy structured documents between unrelated Craft installations without an explicit mapping step.
+Canonical JSON is installation-specific when it contains Block Type, field-placement, Entry, or Asset UIDs. Use identities from the destination project and do not copy structured documents between unrelated Craft installations without an explicit mapping step. Feed Me’s HTML-to-Block controls store the destination identities for you.
 
 ## Map the Vizy Field
 
@@ -59,7 +59,25 @@ Unsupported elements, attributes, link targets, and formatting produce diagnosti
 
 Custom Vizy extensions can participate in Feed Me imports through the shared importer. The extension’s module must register a corresponding HTML import rule and enable its node or mark in the destination Editor Config. See [Register Custom Import Rules](docs:developers/importing-html#register-custom-import-rules) for the event and attribute-mapping example.
 
-HTML conversion does not infer Vizy Blocks or populate the Craft fields inside them. Use canonical JSON with the destination project’s Block Type and placement identities when a feed intentionally supplies Blocks.
+HTML conversion never infers a Vizy Block from its display name or handle. Configure an explicit HTML-to-Block mapping when a source element should become a Block, or use canonical JSON with the destination project’s Block Type and placement identities.
+
+## Map HTML Elements to Vizy Blocks
+
+Each Block Type enabled for the destination Vizy field appears under **HTML to Vizy Block mappings** in Feed Me. Turn on **Create this Block from matching HTML**, then enter the source HTML tag. For example, use `img` to turn source images into an Image Block.
+
+You can narrow the match with an attribute and an optional exact value. A match attribute of `class` with a match value of `feature` accepts `<img class="feature">` but not a different class value. Leave the value empty to accept any element containing that attribute.
+
+For every custom field placement in the Block Type, choose one value source:
+
+- **HTML attribute** reads an attribute from the matched element. Use `src` for an image URL or `alt` for alternative text.
+- **Text content** reads the element’s plain text.
+- **Inner HTML** reads the markup inside the element.
+- **Fixed value** supplies the same configured value for every matched element.
+- **Do not populate** leaves that placement absent from the imported Block.
+
+Vizy passes each extracted value through that field type’s Feed Me adapter. For an Assets field, choose whether the value is a filename or Asset ID. Turn on **Create Asset from URL** when the mapped HTML attribute contains a remote URL, then choose how Feed Me should handle an existing Asset.
+
+The saved mapping is keyed by the Block Type UID and each field-placement UID, not mutable handles. Vizy rejects stale, unknown, disabled, or unavailable identities instead of choosing a similarly named Block Type. It also rejects selectors for the same tag when one source element could match more than one Block Type. Each matching source element becomes a new Block with its own identity, including an image placed directly between text in a paragraph.
 
 ## Review Diagnostics
 
@@ -75,9 +93,9 @@ Turn on **Require lossless HTML** after the source converts without diagnostics.
 
 ## Handle Images
 
-Vizy image nodes reference Craft Assets by UID. Feed Me’s Vizy HTML mapping does not download an `<img>` source or infer which Asset it represents. An unresolved image produces an `unresolvedImage` diagnostic and retains its alternative text when available.
+Vizy’s built-in image nodes reference Craft Assets by UID. Without an HTML-to-Block mapping, Feed Me does not download an `<img>` source or infer which Asset it represents. An unresolved image produces an `unresolvedImage` diagnostic and retains its alternative text when available.
 
-For an external image feed, import or match the Asset separately before building the Vizy value. You can then supply canonical JSON containing that Asset’s UID. A module that owns the Asset workflow can instead use the [programmatic HTML importer](docs:developers/importing-html#resolve-images) with an Asset resolver.
+To represent source images with a custom Block Type, map `img` to that Block and map its `src` attribute to the Block’s Assets field. Feed Me can match an existing Asset or create one from an absolute URL. To create built-in Vizy image nodes instead, import or match the Asset separately and supply canonical JSON containing its UID. A module that owns the Asset workflow can also use the [programmatic HTML importer](docs:developers/importing-html#resolve-images) with an Asset resolver.
 
 Do not rely on `data-asset-uid` in source HTML. The importer treats source attributes as untrusted and only the programmatic resolver can establish an Asset identity during HTML conversion.
 
