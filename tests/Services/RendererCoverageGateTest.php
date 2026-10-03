@@ -101,6 +101,14 @@ it('resolves convention and per-render Twig templates for nodes and marks', func
         '<article class="node-{{ type }}" data-field="{{ field.handle }}">{{ content }}</article>',
     );
     file_put_contents(
+        $templatesPath . '/_vizy/types/nodes/heading.twig',
+        <<<'TWIG'
+{% set headingTags = {1: 'h1', 2: 'h2', 3: 'h3', 4: 'h4', 5: 'h5', 6: 'h6'} %}
+{% set tag = headingTags[attrs.level ?? 2] ?? 'h2' %}
+<{{ tag }} class="section-heading">{{ content }}</{{ tag }}>
+TWIG,
+    );
+    file_put_contents(
         $templatesPath . '/_vizy/types/marks/bold.twig',
         '<span class="mark-{{ type }}" data-owner="{{ owner.title }}">{{ content }}</span>',
     );
@@ -126,14 +134,21 @@ it('resolves convention and per-render Twig templates for nodes and marks', func
         $document = (new DocumentParser())->parse([
             'type' => 'doc',
             'attrs' => ['schemaVersion' => VizyDocument::CURRENT_SCHEMA_VERSION],
-            'content' => [[
-                'type' => 'paragraph',
-                'content' => [[
-                    'type' => 'text',
-                    'text' => '<Hello>',
-                    'marks' => [['type' => 'bold']],
-                ]],
-            ]],
+            'content' => [
+                [
+                    'type' => 'heading',
+                    'attrs' => ['level' => 3],
+                    'content' => [['type' => 'text', 'text' => 'Templated heading']],
+                ],
+                [
+                    'type' => 'paragraph',
+                    'content' => [[
+                        'type' => 'text',
+                        'text' => '<Hello>',
+                        'marks' => [['type' => 'bold']],
+                    ]],
+                ],
+            ],
         ], new Entry(['title' => 'Template owner']), new VizyField(['name' => 'Body', 'handle' => 'articleBody']));
 
         $conventionHtml = (string)$document->render();
@@ -143,6 +158,7 @@ it('resolves convention and per-render Twig templates for nodes and marks', func
         ]);
 
         expect($settings->getRenderTemplatesPath())->toBe('_vizy/types')
+            ->and($conventionHtml)->toContain('<h3 class="section-heading">Templated heading</h3>')
             ->and($conventionHtml)->toContain('<main class="render-event"><article class="node-paragraph" data-field="articleBody">')
             ->and($conventionHtml)->toContain('<span class="mark-bold" data-owner="Template owner">&lt;Hello&gt;</span>')
             ->and($overrideHtml)->toContain('<main class="render-event"><div class="override-node">')
@@ -153,6 +169,7 @@ it('resolves convention and per-render Twig templates for nodes and marks', func
         $view->setTemplatesPath($previousPath);
         $view->setTemplateMode($previousMode);
         @unlink($templatesPath . '/_vizy/types/nodes/paragraph.twig');
+        @unlink($templatesPath . '/_vizy/types/nodes/heading.twig');
         @unlink($templatesPath . '/_vizy/types/marks/bold.twig');
         @unlink($templatesPath . '/_vizy/overrides/paragraph.twig');
         @unlink($templatesPath . '/_vizy/overrides/bold.twig');

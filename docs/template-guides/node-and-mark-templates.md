@@ -55,6 +55,26 @@ For `templates/_vizy/nodes/paragraph.twig`:
 
 The node class’s `modifyRenderedNode` event still runs after the template, allowing cross-cutting module logic to wrap or replace the completed HTML.
 
+### Add a Class to Headings
+
+To add project-owned markup to every rendered heading, create `templates/_vizy/nodes/heading.twig`:
+
+```twig
+{% set headingTags = {
+    1: 'h1',
+    2: 'h2',
+    3: 'h3',
+    4: 'h4',
+    5: 'h5',
+    6: 'h6',
+} %}
+{% set tag = headingTags[attrs.level ?? 2] ?? 'h2' %}
+
+<{{ tag }} class="section-heading">{{ content }}</{{ tag }}>
+```
+
+Vizy stores schema-validated JSON rather than arbitrary HTML, so source markup and undeclared attributes are not a persistence extension point. Use a node template for project-owned frontend markup, a [rendering event](docs:developers/events#customising-rendered-html) for a focused server-side change, or a registered custom node when authors need to choose an attribute that must be stored in the document.
+
 ## Render a Mark
 
 For `templates/_vizy/marks/customMark.twig`:
