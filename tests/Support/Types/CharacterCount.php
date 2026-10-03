@@ -8,17 +8,17 @@ class CharacterCount extends Extension
 {
     public static function id(): string
     {
-        return 'characterCount';
+        return 'partnerCounter';
     }
 
     public static function moduleId(): string
     {
-        return 'acme/extension/characterCount';
+        return 'acme/extension/partnerCounter';
     }
 
     public static function label(): string
     {
-        return 'Character count';
+        return 'Partner counter';
     }
 
     public static function surfaces(): array

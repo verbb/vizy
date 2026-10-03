@@ -7,6 +7,7 @@ use verbb\vizy\Vizy;
 use verbb\vizy\events\RegisterHtmlImportRulesEvent;
 use verbb\vizy\fields\VizyField;
 use verbb\vizy\importers\HtmlImportException;
+use verbb\vizy\importers\HtmlImportConverter;
 use verbb\vizy\importers\HtmlImportOptions;
 use verbb\vizy\importers\HtmlImportRule;
 use verbb\vizy\services\HtmlImporter;
@@ -46,6 +47,97 @@ it('converts supported HTML into a canonical document for the destination field'
         ])
         ->and($content[3]['attrs'])->toBe(['start' => 3])
         ->and($content[4]['content'][0]['content'][0]['type'])->toBe('tableHeader');
+});
+
+it('round-trips the safe TextStyle family and reports unsupported inline CSS', function() {
+    $field = VizyFixtureFactory::vizyField();
+    $manifest = Vizy::$plugin->getEditorManifests()->build($field);
+    $manifest['enabledMarks'][] = 'textStyle';
+    $convert = static fn(string $html) => (new HtmlImportConverter(
+        $field,
+        $manifest,
+        new HtmlImportOptions(),
+        [],
+    ))->convert($html);
+
+    $result = $convert(
+            '<p><span style="color: #112233; background-color: #ddeeff; font-family: Georgia, serif; font-size: 18px; line-height: 1.5">Styled</span></p>',
+    );
+    $mark = $result->document()->content()->nodes()[0]['content'][0]['marks'][0];
+
+    expect($result->isLossless())->toBeTrue()
+        ->and($mark)->toBe([
+            'type' => 'textStyle',
+            'attrs' => [
+                'color' => '#112233',
+                'backgroundColor' => '#ddeeff',
+                'fontFamily' => 'Georgia, serif',
+                'fontSize' => '18px',
+                'lineHeight' => '1.5',
+            ],
+        ])
+        ->and((string)$result->document()->render())->toContain(
+            '<span style="color: #112233; background-color: #ddeeff; font-family: Georgia, serif; font-size: 18px; line-height: 1.5;">Styled</span>',
+        );
+
+    $unsafe = $convert(
+        '<p><span style="color: red; background-image: url(javascript:alert(1))">Unsafe style</span></p>',
+    );
+    expect($unsafe->diagnostics()[0]->code)->toBe('unsupportedInlineStyle')
+        ->and($unsafe->document()->content()->nodes()[0]['content'][0])->not->toHaveKey('marks');
+});
+
+it('round-trips ruby text, task lists, details, and highlighted code semantics', function() {
+    $field = VizyFixtureFactory::vizyField();
+    $manifest = Vizy::$plugin->getEditorManifests()->build($field);
+    $manifest['enabledNodes'] = array_values(array_unique([
+        ...$manifest['enabledNodes'],
+        'taskList',
+        'details',
+        'emoji',
+    ]));
+    $manifest['internalNodes'] = array_values(array_unique([
+        ...$manifest['internalNodes'],
+        'taskItem',
+        'detailsSummary',
+        'detailsContent',
+    ]));
+    $manifest['enabledMarks'][] = 'rubyText';
+    $result = (new HtmlImportConverter(
+        $field,
+        $manifest,
+        new HtmlImportOptions(),
+        [],
+    ))->convert(<<<'HTML'
+        <p><ruby><rb>東京</rb><rt>とうきょう</rt></ruby> <span data-type="emoji" data-name="rocket" data-emoji="🚀">🚀</span></p>
+        <ul data-type="taskList"><li data-type="taskItem" data-checked="true"><label><input type="checkbox" checked disabled></label><div><p>Ship it</p></div></li></ul>
+        <details><summary>More</summary><div data-type="detailsContent"><p>Hidden answer</p></div></details>
+        <pre><code class="language-javascript">const answer = 42</code></pre>
+        HTML);
+    $nodes = $result->document()->content()->nodes();
+    $html = (string)$result->document()->render();
+
+    expect($result->diagnostics())->toBe([])
+        ->and($nodes[0]['content'][0]['marks'][0])->toBe([
+            'type' => 'rubyText',
+            'attrs' => ['rt' => 'とうきょう'],
+        ])
+        ->and($nodes[0]['content'][2])->toMatchArray([
+            'type' => 'emoji',
+            'attrs' => ['name' => 'rocket', 'emoji' => '🚀'],
+        ])
+        ->and($nodes[1]['type'])->toBe('taskList')
+        ->and($nodes[1]['content'][0]['attrs'])->toBe(['checked' => true])
+        ->and($nodes[2]['type'])->toBe('details')
+        ->and(array_column($nodes[2]['content'], 'type'))->toBe(['detailsSummary', 'detailsContent'])
+        ->and($nodes[3]['attrs'])->toBe(['language' => 'javascript'])
+        ->and($html)->toContain(
+            '<ruby><rb>東京</rb><rt>とうきょう</rt></ruby>',
+            '<span data-type="emoji" data-name="rocket">🚀</span>',
+            'data-type="taskList"',
+            '<details>',
+            'class="language-javascript"',
+        );
 });
 
 it('reports every lossy boundary and refuses the same conversion in strict mode', function() {
@@ -161,9 +253,9 @@ it('reports and preserves a table caption outside the canonical table', function
         ->and(Vizy::$plugin->getContentText()->project($result->document(), 1000))->toContain('Quarterly totals', '42');
 });
 
-it('reports attributes discarded from preformatted code', function() {
+it('preserves a code language while reporting unrelated classes', function() {
     $result = Vizy::$plugin->getHtmlImporter()->convert(
-        '<pre><code class="language-php">echo true;</code></pre>',
+        '<pre><code class="language-php legacy-code">echo true;</code></pre>',
         VizyFixtureFactory::vizyField(),
     );
     $node = $result->document()->content()->nodes()[0];
@@ -171,5 +263,6 @@ it('reports attributes discarded from preformatted code', function() {
     expect($result->diagnostics()[0]->code)->toBe('removedAttribute')
         ->and($result->diagnostics()[0]->details['attribute'])->toBe('class')
         ->and($node['type'])->toBe('codeBlock')
+        ->and($node['attrs'])->toBe(['language' => 'php'])
         ->and($node['content'][0]['text'])->toBe('echo true;');
 });

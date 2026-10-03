@@ -1364,6 +1364,139 @@ test('selection, keyboard Escape, and opaque malformed rejection stay harness-sa
     expect(outcome.notice).toContain('could not paste');
 });
 
+test('TextStyle toolbar menus apply each official value through the compiled editor', async ({ page }) => {
+    const textStyleManifest = {
+        ...editorManifest,
+        enabledMarks: [...editorManifest.enabledMarks, 'textStyle'],
+        modules: [...editorManifest.modules, 'vizy/core/mark/textStyle'],
+        toolbar: {
+            controls: [
+                { id: 'fontFamily', kind: 'mark', label: 'Font family', icon: null, action: { command: 'textStyleControl', control: 'fontFamily' } },
+                { id: 'fontSize', kind: 'mark', label: 'Font size', icon: null, action: { command: 'textStyleControl', control: 'fontSize' } },
+                { id: 'textColor', kind: 'mark', label: 'Text colour', icon: null, action: { command: 'textStyleControl', control: 'textColor' } },
+                { id: 'lineHeight', kind: 'mark', label: 'Line height', icon: null, action: { command: 'textStyleControl', control: 'lineHeight' } },
+            ],
+        },
+    };
+    await mount(page, {
+        type: 'doc',
+        attrs: { schemaVersion: 2 },
+        content: [{ type: 'paragraph', content: [{ type: 'text', text: 'Style every attribute' }] }],
+    }, { manifest: textStyleManifest });
+
+    await page.locator('.ProseMirror p').click();
+    await page.keyboard.press('ControlOrMeta+A');
+
+    const toolbar = page.locator('vizy-toolbar');
+    for (const label of ['Font family', 'Font size', 'Text colour', 'Line height']) {
+        await expect(toolbar.getByRole('button', { name: label, exact: true })).toBeVisible();
+    }
+
+    await toolbar.getByRole('button', { name: 'Font family', exact: true }).click();
+    await page.locator('pk-dropdown-item[value="Georgia, serif"]').click();
+    await toolbar.getByRole('button', { name: 'Font size', exact: true }).click();
+    await page.locator('pk-dropdown-item[value="18px"]').click();
+    await toolbar.getByRole('button', { name: 'Text colour', exact: true }).click();
+    const blueText = page.locator('pk-dropdown-item[radio-group="color"][value="#2563eb"]');
+    const blueHighlight = page.locator('pk-dropdown-item[radio-group="backgroundColor"][value="#dbeafe"]');
+    await blueText.click();
+    await expect(blueHighlight).not.toBeVisible();
+    await toolbar.getByRole('button', { name: 'Text colour', exact: true }).click();
+    await expect(blueHighlight).toBeVisible();
+    await blueHighlight.click();
+    await toolbar.getByRole('button', { name: 'Line height', exact: true }).click();
+    await page.locator('pk-dropdown-item[value="1.5"]').click();
+
+    const attrs = await page.evaluate(() => (
+        document.querySelector('vizy-editor') as any
+    ).editor.getAttributes('textStyle'));
+    expect(attrs).toMatchObject({
+        fontFamily: 'Georgia, serif',
+        fontSize: '18px',
+        color: '#2563eb',
+        backgroundColor: '#dbeafe',
+        lineHeight: '1.5',
+    });
+});
+
+test('Emoji opens a searchable toolbar dropdown and inserts without a modal', async ({ page }) => {
+    const emojiManifest = {
+        ...editorManifest,
+        enabledNodes: [...editorManifest.enabledNodes, 'emoji'],
+        modules: [...editorManifest.modules, 'vizy/core/node/emoji'],
+        toolbar: {
+            controls: [{
+                id: 'emoji',
+                kind: 'node',
+                label: 'Emoji',
+                icon: null,
+                action: { command: 'insertEmoji' },
+            }],
+        },
+    };
+    await mount(page, {
+        type: 'doc',
+        attrs: { schemaVersion: 2 },
+        content: [{ type: 'paragraph', content: [{ type: 'text', text: 'Launch ' }] }],
+    }, { manifest: emojiManifest });
+
+    await page.locator('.ProseMirror p').click();
+    await page.keyboard.press('End');
+    await page.locator('vizy-toolbar').getByRole('button', { name: 'Emoji', exact: true }).click();
+
+    await expect(page.locator('vizy-emoji-dialog')).toHaveCount(0);
+    const picker = page.getByRole('dialog', { name: 'Emoji', exact: true });
+    await expect(picker).toBeVisible();
+    const searchField = picker.locator('pk-input');
+    const search = picker.getByRole('textbox', { name: 'Search emoji', exact: true });
+    await expect(searchField.locator('[part="header"]')).toHaveCSS('position', 'absolute');
+    await expect(searchField.locator('[part="header"]')).toHaveCSS('width', '1px');
+    await expect(search).toHaveAttribute('type', 'text');
+    await expect(search).toBeFocused();
+    await search.fill('rocket');
+    await expect(searchField.locator('[part="clear-button"]')).toHaveCount(1);
+    await picker.getByRole('option', { name: 'rocket', exact: true }).click();
+
+    const emoji = await page.evaluate(() => (
+        document.querySelector('vizy-editor') as any
+    ).editor.getJSON().content?.[0]?.content?.at(-1));
+    expect(emoji).toMatchObject({ type: 'emoji', attrs: { name: 'rocket', emoji: '🚀' } });
+    await expect(picker).not.toBeVisible();
+});
+
+test('Character Count preserves existing content above its authoring limit', async ({ page }) => {
+    const characterCountManifest = {
+        ...editorManifest,
+        enabledExtensions: ['characterCount'],
+        modules: [...editorManifest.modules, 'vizy/core/extension/characterCount'],
+        extensionOptions: { characterCount: { limit: 5 } },
+    };
+    await mount(page, {
+        type: 'doc',
+        attrs: { schemaVersion: 2 },
+        content: [{ type: 'paragraph', content: [{ type: 'text', text: 'Existing content' }] }],
+    }, { manifest: characterCountManifest });
+
+    await expect(page.locator('.ProseMirror')).toHaveText('Existing content');
+    await expect(page.locator('.vizy-character-count')).toHaveClass(/is-over-limit/);
+
+    const outcome = await page.evaluate(() => {
+        const element = document.querySelector('vizy-editor') as any;
+        const editor = element.editor;
+        const cleanAfterHydration = element.isDirty === false;
+        const characters = editor.storage.characterCount.characters();
+        const words = editor.storage.characterCount.words();
+        editor.view.dispatch(editor.state.tr.insertText('!', 1));
+        return { characters, cleanAfterHydration, textAfterIncrease: editor.getText(), words };
+    });
+    expect(outcome).toEqual({
+        characters: 16,
+        cleanAfterHydration: true,
+        textAfterIncrease: 'Existing content',
+        words: 2,
+    });
+});
+
 test('Block limits remove dead actions and explain a policy-rejected private paste', async ({ page }) => {
     const limitedManifest = {
         ...editorManifest,

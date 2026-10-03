@@ -1,13 +1,13 @@
 {
     "uid": "<request-local-uuid>",
-    "revision": "1:b4ae1f4601b0dbbf518ce57f31b70553b3b879501619e3471645b1a77055ffae",
-    "hash": "b4ae1f4601b0dbbf518ce57f31b70553b3b879501619e3471645b1a77055ffae",
+    "revision": "1:d2767e787c7d332f5d0ddfe8578cb1482db320f7c10dce5a983307cb87f1d1af",
+    "hash": "d2767e787c7d332f5d0ddfe8578cb1482db320f7c10dce5a983307cb87f1d1af",
     "manifestVersion": 1,
-    "registryRevision": "2b27076d016672d373b6a95308d8472199a5aca2c5f1401e13d38bcec9c8d35e",
+    "registryRevision": "86f6d0e98177bd1aa30ef76ecd5c2fbff51d3896fa33f92492c271e4e1872702",
     "editorConfig": {
         "id": "test-contract",
-        "revision": "1:7a552aad8cce1da3ed6f1186cd5e337c6fd07257014757a0b4807307b597e8f7",
-        "hash": "7a552aad8cce1da3ed6f1186cd5e337c6fd07257014757a0b4807307b597e8f7"
+        "revision": "1:a7042b79eabee507f5d3f33b066ab24b77f2811b6abb55b83bc1376a8810a823",
+        "hash": "a7042b79eabee507f5d3f33b066ab24b77f2811b6abb55b83bc1376a8810a823"
     },
     "schemaRevision": "fab7df54e521e4c773e3cc5cfa5c195c79ae10a2ccb0d047dfa8b43f239192db",
     "enabledNodes": [
@@ -24,6 +24,7 @@
         "bold",
         "italic"
     ],
+    "enabledExtensions": [],
     "internalNodes": [
         "doc",
         "listItem",
@@ -42,6 +43,14 @@
         "vizy/core/node/text",
         "vizy/core/node/vizyBlock"
     ],
+    "extensionOptions": {
+        "characterCount": {
+            "limit": null
+        },
+        "placeholder": {
+            "text": "Write something \u2026"
+        }
+    },
     "headingLevels": [
         2,
         3

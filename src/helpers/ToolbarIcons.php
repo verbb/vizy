@@ -91,6 +91,7 @@ final class ToolbarIcons
         'highlight' => 'highlighter',
         'italic' => 'italic',
         'link' => 'link',
+        'rubyText' => 'language-solid',
         'strike' => 'strikethrough',
         'subscript' => 'subscript',
         'superscript' => 'superscript',
@@ -104,6 +105,9 @@ final class ToolbarIcons
         'horizontalRule' => 'horizontal-rule',
         'image' => 'image',
         'orderedList' => 'list-ol',
+        'taskList' => 'list-check-solid',
+        'details' => 'rectangle-list-solid',
+        'emoji' => 'face-smile-solid',
         'paragraph' => 'text',
         'table' => 'table',
 
@@ -140,7 +144,11 @@ final class ToolbarIcons
         // the Headings dropdown's trigger.
         'heading' => 'heading-solid',
         'layout' => 'table-columns-solid',
-        'textStyle' => 'font-solid',
+        'fontFamily' => 'font-solid',
+        'fontSize' => 'text-height-solid',
+        'textColor' => 'palette-solid',
+        'lineHeight' => 'arrows-up-down-solid',
+        'findAndReplace' => 'magnifying-glass-solid',
 
         // Table operations. No icon set has a distinct glyph for twelve variations on a grid,
         // and Vizy 3 drew these as labelled menu items rather than as buttons — which is how

@@ -27,13 +27,16 @@ it('builds a deterministic registry with dependency closure and reserved transpo
 
     $first = $extensions->getRevision();
     $second = $extensions->getRevision();
-    $enabled = $extensions->resolveEnabled(['bulletList', 'table'], ['bold']);
+    $enabled = $extensions->resolveEnabled(['bulletList', 'taskList', 'details', 'emoji', 'table'], ['bold', 'rubyText'], ['findAndReplace']);
 
     expect($first)->toBe($second)
         ->and($extensions->getNodes())->toHaveKey('paragraph')
         ->and($extensions->getMarks())->toHaveKey('bold')
-        ->and($enabled['nodes'])->toContain('listItem', 'tableRow', 'tableCell', 'tableHeader')
-        ->and($enabled['internalNodes'])->toContain('doc', 'text', 'vizyBlock')
+        ->and($enabled['nodes'])->toContain('taskList')
+        ->and($enabled['nodes'])->toContain('emoji')
+        ->and($enabled['marks'])->toContain('rubyText')
+        ->and($enabled['extensions'])->toContain('findAndReplace')
+        ->and($enabled['internalNodes'])->toContain('doc', 'text', 'vizyBlock', 'listItem', 'taskItem', 'detailsSummary', 'detailsContent', 'tableRow', 'tableCell', 'tableHeader')
         ->and($extensions->getDefinition('node', 'unsupportedNode'))->toBeNull();
 });
 
@@ -68,12 +71,77 @@ it('offers only genuine editorial choices in the allowed-content picker', functi
         ->not->toContain('column')
         // Headings own their own section.
         ->not->toContain('heading')
-        ->and($nodeValues)->toContain('blockquote', 'codeBlock', 'image', 'iframe', 'mediaEmbed', 'table')
+        ->and($nodeValues)->toContain('blockquote', 'codeBlock', 'details', 'emoji', 'image', 'iframe', 'mediaEmbed', 'table', 'taskList')
         // Labels are author-facing, not raw TipTap names.
         ->and($nodeLabels)->toContain('Bulleted list', 'Code block', 'Quote')
-        ->and(array_column($catalog['marks'], 'value'))->toContain('bold', 'italic', 'link')
-        ->and(array_column($catalog['marks'], 'label'))->toContain('Strikethrough', 'Inline code')
+        ->and(array_column($catalog['marks'], 'value'))->toContain('bold', 'italic', 'link', 'rubyText')
+        ->and(array_column($catalog['marks'], 'label'))->toContain('Strikethrough', 'Inline code', 'Ruby text')
+        ->and(array_column($catalog['extensions'], 'value'))->toBe(['characterCount', 'findAndReplace', 'placeholder', 'typography'])
         ->and($catalog['headingAvailable'])->toBeTrue();
+});
+
+it('registers native behaviour extensions and carries their options into the manifest', function() {
+    $extensions = Vizy::$plugin->getExtensions();
+    $extensions->reset();
+    $resolved = $extensions->resolveEnabled([], [], ['characterCount', 'findAndReplace', 'placeholder', 'typography']);
+
+    expect($resolved['extensions'])->toBe(['characterCount', 'findAndReplace', 'placeholder', 'typography'])
+        ->and($resolved['modules'])->toContain(
+            'vizy/core/extension/characterCount',
+            'vizy/core/extension/findAndReplace',
+            'vizy/core/extension/placeholder',
+            'vizy/core/extension/typography',
+        );
+
+    $configs = Vizy::$plugin->getEditorConfigs();
+    $id = 'behaviour' . strtolower(StringHelper::randomString(8));
+    $configs->saveConfig($id, [
+        'label' => 'Behaviour extensions',
+        'capabilities' => [
+            'nodes' => ['paragraph'],
+            'marks' => [],
+            'extensions' => ['characterCount', 'findAndReplace', 'placeholder', 'typography'],
+        ],
+        'extensionOptions' => [
+            'characterCount' => ['limit' => 500],
+            'placeholder' => ['text' => 'Write an introduction …'],
+        ],
+    ]);
+
+    try {
+        $field = new VizyField([
+            'uid' => StringHelper::UUID(),
+            'name' => 'Behaviour extensions',
+            'handle' => 'behaviour' . StringHelper::randomString(5),
+            'editorConfig' => $id,
+        ]);
+        $manifest = Vizy::$plugin->getEditorManifests()->build($field);
+
+        expect($manifest['enabledExtensions'])->toBe(['characterCount', 'findAndReplace', 'placeholder', 'typography'])
+            ->and($manifest['extensionOptions'])->toBe([
+                'characterCount' => ['limit' => 500],
+                'placeholder' => ['text' => 'Write an introduction …'],
+            ]);
+    } finally {
+        $configs->removeConfig($id);
+    }
+});
+
+it('validates native behaviour extension options', function() {
+    $configs = Vizy::$plugin->getEditorConfigs();
+    $config = [
+        'label' => 'Behaviour validation',
+        'capabilities' => ['nodes' => [], 'marks' => [], 'extensions' => ['characterCount']],
+    ];
+
+    expect(fn() => $configs->saveConfig('countlimit' . strtolower(StringHelper::randomString(5)), [
+        ...$config,
+        'extensionOptions' => ['characterCount' => ['limit' => 0]],
+    ]))->toThrow(RuntimeException::class, 'characterCount limit')
+        ->and(fn() => $configs->saveConfig('placeholder' . strtolower(StringHelper::randomString(5)), [
+            ...$config,
+            'extensionOptions' => ['placeholder' => ['text' => '']],
+        ]))->toThrow(RuntimeException::class, 'placeholder text');
 });
 
 it('rejects duplicate, conflicting, and reserved extension definitions', function(string $class, string $message) {
@@ -134,37 +202,37 @@ it('catalogues partner icons, surfaces, nodes, and behaviour extensions', functi
             ->and($abbr['surfaces'])->toBe(['bubble', 'toolbar'])
             ->and($abbr['controlId'])->toBe('abbr');
 
-        $enabled = $service->resolveEnabled(['emoji'], ['abbr'], ['characterCount']);
-        expect($enabled['nodes'])->toContain('emoji')
+        $enabled = $service->resolveEnabled(['partnerEmoji'], ['abbr'], ['partnerCounter']);
+        expect($enabled['nodes'])->toContain('partnerEmoji')
             ->and($enabled['marks'])->toContain('abbr')
-            ->and($enabled['extensions'])->toContain('characterCount')
-            ->and($enabled['modules'])->toContain('acme/node/emoji', 'acme/mark/abbr', 'acme/extension/characterCount');
+            ->and($enabled['extensions'])->toContain('partnerCounter')
+            ->and($enabled['modules'])->toContain('acme/node/partner-emoji', 'acme/mark/abbr', 'acme/extension/partnerCounter');
 
         $toolbar = collect(EditorConfigPresentation::toolbarCatalog())->keyBy('id');
         expect($toolbar->has('abbr'))->toBeTrue()
             ->and($toolbar['abbr']['icon'])->toStartWith('<svg')
-            ->and($toolbar->has('emoji'))->toBeTrue()
-            ->and($toolbar['emoji']['group'])->toBe('Media')
-            ->and($toolbar->has('characterCount'))->toBeTrue()
-            ->and($toolbar['characterCount']['kind'])->toBe('extension');
+            ->and($toolbar->has('partnerEmoji'))->toBeTrue()
+            ->and($toolbar['partnerEmoji']['group'])->toBe('Media')
+            ->and($toolbar->has('partnerCounter'))->toBeTrue()
+            ->and($toolbar['partnerCounter']['kind'])->toBe('extension');
 
         $bubbleIds = array_column(EditorConfigPresentation::bubbleCatalog(), 'id');
         expect($bubbleIds)->toContain('abbr')
-            ->and($bubbleIds)->not->toContain('emoji');
+            ->and($bubbleIds)->not->toContain('partnerEmoji');
 
         $control = EditorConfigPresentation::controlFor(
-            'characterCount',
+            'partnerCounter',
             ['abbr'],
-            ['emoji'],
+            ['partnerEmoji'],
             [],
             [],
-            ['characterCount'],
+            ['partnerCounter'],
         );
         expect($control)->not->toBeNull()
             ->and($control['action']['command'])->toBe('registeredControl');
 
         expect(EditorConfigPresentation::capabilityCatalog()['extensions'])
-            ->toContain(['label' => 'Character count', 'value' => 'characterCount']);
+            ->toContain(['label' => 'Partner counter', 'value' => 'partnerCounter']);
     } finally {
         Event::off(Extensions::class, Extensions::EVENT_REGISTER_EXTENSIONS, $handler);
         $service->reset();
@@ -1136,19 +1204,93 @@ it('offers a line break, which no capability can be found under', function() {
         ->toMatchArray(['id' => 'hardBreak', 'action' => ['command' => 'insertNode', 'nodeName' => 'hardBreak']]);
 });
 
-it('keeps Text style a capability without offering a button for it', function() {
-    // It carries a colour or a font rather than toggling, so there is no state for a button
-    // to switch and Vizy 3 offered none. It reached both palettes because they are built from
-    // what a config may legally enable — so ticking Text style drew an inert button.
-    expect(collect(EditorConfigPresentation::toolbarCatalog())->firstWhere('id', 'textStyle'))->toBeNull();
-    expect(collect(EditorConfigPresentation::bubbleCatalog())->firstWhere('id', 'textStyle'))->toBeNull();
-    // Refused as a control even where a stored toolbar names it, and even with the capability
-    // enabled — which is the case that used to produce the button.
-    expect(EditorConfigPresentation::controlFor('textStyle', ['textStyle'], []))->toBeNull();
+it('offers standalone toolbar controls for the value-based official TextStyle family', function() {
+    $toolbar = collect(EditorConfigPresentation::toolbarCatalog())->keyBy('id');
+    $bubbleIds = array_column(EditorConfigPresentation::bubbleCatalog(), 'id');
 
-    // Still a capability: it is what other features hang their attributes on.
+    foreach (['fontFamily', 'fontSize', 'textColor', 'lineHeight'] as $id) {
+        expect($toolbar->get($id))->toMatchArray([
+            'kind' => 'mark',
+            'capabilityName' => 'textStyle',
+            'iconCustomizable' => false,
+        ])
+            ->and(EditorConfigPresentation::controlFor($id, ['textStyle'], []))->toMatchArray([
+                'id' => $id,
+                'action' => ['command' => 'textStyleControl', 'control' => $id],
+            ])
+            ->and(EditorConfigPresentation::controlFor($id, [], []))->toBeNull();
+    }
+
+    expect($toolbar)->not->toHaveKey('textStyle')
+        ->and($bubbleIds)->not->toContain('textStyle', 'fontFamily', 'fontSize', 'textColor', 'lineHeight')
+        ->and($toolbar->get('fontFamily')['valuePreview'])->toBe('Default font')
+        ->and($toolbar->get('fontSize')['valuePreview'])->toBe('Default')
+        ->and($toolbar->get('textColor'))->toMatchArray(['valuePreview' => 'A', 'valuePreviewKind' => 'color'])
+        ->and($toolbar->get('lineHeight')['valuePreview'])->toBe('Default')
+        ->and(EditorConfigPresentation::RETIRED_TOOLBAR_IDS)->toContain('textStyle')
+        ->and(EditorConfigPresentation::controlFor('textStyle', ['textStyle'], []))->toBeNull();
+
     $marks = collect(EditorConfigPresentation::capabilityCatalog()['marks'] ?? [])->pluck('value');
     expect($marks)->toContain('textStyle');
+});
+
+it('drops the retired composite TextStyle button while preserving its value controls', function() {
+    $service = Vizy::$plugin->getEditorConfigs();
+    $id = 'retiredtextstyle' . strtolower(StringHelper::randomString(8));
+
+    $service->saveConfig($id, [
+        'label' => 'Retired TextStyle control',
+        'capabilities' => ['nodes' => [], 'marks' => ['textStyle']],
+        'headings' => ['levels' => []],
+        'toolbar' => ['bold', 'textStyle', 'fontFamily', 'fontSize', 'textColor', 'lineHeight'],
+        'bubble' => ['enabled' => false, 'items' => []],
+    ]);
+
+    try {
+        expect($service->getConfig($id)['toolbar'])->toBe([
+            'bold',
+            'fontFamily',
+            'fontSize',
+            'textColor',
+            'lineHeight',
+        ]);
+    } finally {
+        $service->removeConfig($id);
+    }
+});
+
+it('drops icon overrides for TextStyle value controls whose live faces never use icons', function() {
+    $service = Vizy::$plugin->getEditorConfigs();
+    $id = 'textstyleicons' . strtolower(StringHelper::randomString(8));
+
+    $service->saveConfig($id, [
+        'label' => 'TextStyle value control icons',
+        'capabilities' => ['nodes' => [], 'marks' => ['textStyle']],
+        'headings' => ['levels' => []],
+        'toolbar' => ['fontFamily', 'fontSize', 'textColor', 'lineHeight'],
+        'bubble' => ['enabled' => false, 'items' => []],
+        'icons' => [
+            'fontFamily' => 'font-solid',
+            'fontSize' => 'text-height-solid',
+            'textColor' => 'palette-solid',
+            'lineHeight' => 'arrows-up-down-solid',
+        ],
+    ]);
+
+    try {
+        expect($service->getConfig($id)['icons'])->toBe([]);
+    } finally {
+        $service->removeConfig($id);
+    }
+});
+
+it('offers dedicated controls for Ruby text, Emoji, and Find and Replace', function() {
+    expect(EditorConfigPresentation::controlFor('rubyText', ['rubyText'], []))
+        ->toMatchArray(['action' => ['command' => 'editRubyText']])
+        ->and(EditorConfigPresentation::controlFor('emoji', [], ['emoji']))
+        ->toMatchArray(['action' => ['command' => 'insertEmoji']])
+        ->and(EditorConfigPresentation::controlFor('findAndReplace', [], [], [], [], ['findAndReplace']))
+        ->toMatchArray(['action' => ['command' => 'editFindAndReplace']]);
 });
 
 it('offers the actions that stand for no capability at all', function() {
@@ -1325,8 +1467,8 @@ it('sequences the palette by what goes together, not by how it was assembled', f
     // The sequence the editors agree on, less the three steps that are dropdowns here: marks first
     // and in the order CKEditor, TinyMCE and Craft's CKEditor builder all use them, then Link,
     // then the lists, then what can be inserted.
-    expect(array_slice($ids, 0, 9))
-        ->toBe(['bold', 'italic', 'underline', 'strike', 'subscript', 'superscript', 'code', 'highlight', 'link'])
+    expect(array_slice($ids, 0, 14))
+        ->toBe(['bold', 'italic', 'underline', 'strike', 'subscript', 'superscript', 'code', 'highlight', 'fontFamily', 'fontSize', 'textColor', 'lineHeight', 'rubyText', 'link'])
         ->and($at('bulletList'))->toBeGreaterThan($at('link'))
         ->and($at('image'))->toBeGreaterThan($at('orderedList'));
 

@@ -206,6 +206,31 @@ vizy-editor:not(:has(.vizy-editor-shell)) {
     line-height: 1.6;
 }
 
+.vizy-editor-surface .ProseMirror p.is-editor-empty:first-child::before {
+    float: left;
+    height: 0;
+    color: var(--vizy-text-muted, #7b8793);
+    content: attr(data-placeholder);
+    pointer-events: none;
+}
+
+.vizy-editor-body:has(.vizy-character-count) .vizy-editor-surface {
+    border-radius: 0;
+}
+
+.vizy-character-count {
+    padding: 0.45rem 1rem;
+    border-top: 1px solid var(--vizy-border-subtle, #cdd8e4);
+    color: var(--vizy-text-muted, #596673);
+    font-size: 12px;
+    line-height: 1.4;
+    text-align: right;
+}
+
+.vizy-character-count.is-over-limit {
+    color: var(--error-color, #d81f23);
+}
+
 /* The editor body already shows focus via border + Plugin Kit input shadow.
    Suppress an inner ring on the contenteditable so authors do not see a second rectangle. */
 .vizy-editor-surface .ProseMirror:focus,
@@ -622,7 +647,7 @@ vizy-layout-preset-chooser {
     /* Zero out every block's own margins, then own the vertical rhythm in exactly
        one place. `:where()` keeps the reset at zero specificity so the rhythm rule
        below — and any element-specific override — still wins on source order. */
-    :where(p, h1, h2, h3, h4, h5, h6, ul, ol, blockquote, pre, table, figure) {
+    :where(p, h1, h2, h3, h4, h5, h6, ul, ol, blockquote, pre, table, figure, details, [data-type='details']) {
         margin: 0;
     }
 
@@ -664,6 +689,27 @@ vizy-layout-preset-chooser {
     ul ul { list-style: circle; }
     ul ul ul { list-style: square; }
 
+    ul[data-type='taskList'] {
+        padding-inline-start: 0;
+        list-style: none;
+    }
+
+    li[data-type='taskItem'] {
+        display: flex;
+        align-items: flex-start;
+        gap: 0.5em;
+    }
+
+    li[data-type='taskItem'] > label {
+        flex: 0 0 auto;
+        padding-top: 0.15em;
+    }
+
+    li[data-type='taskItem'] > div {
+        flex: 1 1 auto;
+        min-width: 0;
+    }
+
     li {
         margin: 0.25em 0;
     }
@@ -686,6 +732,40 @@ vizy-layout-preset-chooser {
 
     blockquote > * + * {
         margin-top: 0.5em;
+    }
+
+    [data-type='details'] {
+        display: grid;
+        grid-template-columns: auto minmax(0, 1fr);
+        gap: 0.5em;
+        padding: 0.75em;
+        border: 1px solid var(--vizy-border);
+        border-radius: var(--vizy-radius);
+    }
+
+    [data-type='details'] > button {
+        width: 1.5em;
+        height: 1.5em;
+        padding: 0;
+        border: 0;
+        background: transparent;
+        cursor: pointer;
+    }
+
+    [data-type='details'] > button::before {
+        content: '▸';
+    }
+
+    [data-type='details'].is-open > button::before {
+        content: '▾';
+    }
+
+    [data-type='details'] > [data-type='detailsSummary'] {
+        font-weight: 600;
+    }
+
+    [data-type='details'] > [data-type='detailsContent'] {
+        grid-column: 2;
     }
 
     code {
@@ -714,6 +794,23 @@ vizy-layout-preset-chooser {
         padding: 0;
         font-size: inherit;
         color: inherit;
+    }
+
+    .hljs-keyword,
+    .hljs-selector-tag,
+    .hljs-literal { color: #7c3aed; }
+    .hljs-string,
+    .hljs-attr { color: #087f5b; }
+    .hljs-number,
+    .hljs-built_in { color: #b45309; }
+    .hljs-comment { color: var(--vizy-text-muted, #7b8793); font-style: italic; }
+
+    .find-and-replace-result {
+        background-color: rgb(255 225 0 / 40%);
+    }
+
+    .find-and-replace-result-current {
+        background-color: rgb(255 165 0 / 55%);
     }
 
     hr {

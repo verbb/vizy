@@ -91,8 +91,14 @@ export interface EditorManifest {
     schemaRevision: string;
     enabledNodes: string[];
     enabledMarks: string[];
+    /** Behaviour-only TipTap extensions enabled by the Editor Config. */
+    enabledExtensions?: string[];
     internalNodes: string[];
     modules: string[];
+    extensionOptions?: {
+        characterCount?: { limit?: number | null };
+        placeholder?: { text?: string };
+    };
     /**
      * The heading levels this config allows, and part of the schema rather than of the toolbar:
      * TipTap builds Heading's parse rules from this list, so a level left out is one a pasted
@@ -180,6 +186,17 @@ export type ToolbarActionManifest =
     | { command: 'setHeading'; level: number }
     /** Not a plain mark toggle: it collects a URL first. */
     | { command: 'setLink' }
+    /** Opens the annotation input for selected ruby text. */
+    | { command: 'editRubyText' }
+    /** One of the standalone value menus backed by the shared TextStyle mark. */
+    | {
+        command: 'textStyleControl';
+        control: 'fontFamily' | 'fontSize' | 'textColor' | 'lineHeight';
+    }
+    /** Opens the official Emoji dataset through Vizy's picker. */
+    | { command: 'insertEmoji' }
+    /** Opens Vizy's UI for the behaviour-only Find and Replace extension. */
+    | { command: 'editFindAndReplace' }
     /**
      * Actions on the selection, with no capability behind them. Alignment writes an
      * attribute onto the current block; history is a schema mechanic rather than

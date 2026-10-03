@@ -420,6 +420,84 @@ it('acknowledges the first provisional draft created from a canonical editor con
         ->and($result['vizy']['results'][0]['canonicalDocument']['content'][0]['content'][0]['text'])->toBe('Autosaved current text');
 });
 
+it('preserves consecutive empty paragraphs in autosave acknowledgements', function() {
+    $admin = AssetSpikeFixture::ensureAdminUser();
+    $owner = VizyFixtureFactory::entry('Blank paragraph autosave acknowledgement');
+    $field = VizyFixtureFactory::vizyField();
+    $context = Vizy::$plugin->getEditorContexts()->issue($owner, $field);
+    $editorId = 'vizy-blank-paragraph-autosave';
+    $document = [
+        'type' => 'doc',
+        'attrs' => ['schemaVersion' => VizyDocument::CURRENT_SCHEMA_VERSION],
+        'content' => [
+            ['type' => 'paragraph', 'content' => [['type' => 'text', 'text' => 'Before']]],
+            ['type' => 'paragraph'],
+            ['type' => 'paragraph'],
+            ['type' => 'paragraph', 'content' => [['type' => 'text', 'text' => 'After']]],
+        ],
+    ];
+    $result = WebControllerHarness::withWebRequest([
+        'vizyTransport' => WebControllerHarness::transportMetadata($editorId, $field->uid, $context['token'], 2, 6, 'autosave'),
+    ], 'elements/save-draft', function() use ($owner, $admin, $field, $document) {
+        $draft = Craft::$app->getDrafts()->createDraft($owner, $admin->id, 'Blank paragraph autosave');
+        $draft->setFieldValue($field->handle, $document);
+        expect(Craft::$app->getElements()->saveElement($draft, false))->toBeTrue();
+        $response = new WebResponse();
+        $response->data = ['draftId' => $draft->draftId, 'elementId' => $draft->id];
+        Vizy::$plugin->getEditorAcknowledgements()->augmentResponse(new Event(['sender' => $response]));
+        return $response->data;
+    });
+
+    expect($result['vizy']['results'])->toHaveCount(1)
+        ->and($result['vizy']['results'][0]['editorId'])->toBe($editorId)
+        ->and($result['vizy']['results'][0]['canonicalDocument'])->toBe($document);
+});
+
+
+it('keeps empty task and details containers editable after autosave acknowledgements', function() {
+    $admin = AssetSpikeFixture::ensureAdminUser();
+    $owner = VizyFixtureFactory::entry('Official structural node autosave acknowledgement');
+    $field = VizyFixtureFactory::vizyField();
+    $context = Vizy::$plugin->getEditorContexts()->issue($owner, $field);
+    $editorId = 'vizy-official-structural-autosave';
+    $document = [
+        'type' => 'doc',
+        'attrs' => ['schemaVersion' => VizyDocument::CURRENT_SCHEMA_VERSION],
+        'content' => [
+            [
+                'type' => 'taskList',
+                'content' => [[
+                    'type' => 'taskItem',
+                    'attrs' => ['checked' => false],
+                    'content' => [['type' => 'paragraph']],
+                ]],
+            ],
+            [
+                'type' => 'details',
+                'content' => [
+                    ['type' => 'detailsSummary'],
+                    ['type' => 'detailsContent', 'content' => [['type' => 'paragraph']]],
+                ],
+            ],
+        ],
+    ];
+    $result = WebControllerHarness::withWebRequest([
+        'vizyTransport' => WebControllerHarness::transportMetadata($editorId, $field->uid, $context['token'], 3, 7, 'autosave'),
+    ], 'elements/save-draft', function() use ($owner, $admin, $field, $document) {
+        $draft = Craft::$app->getDrafts()->createDraft($owner, $admin->id, 'Official structural node autosave');
+        $draft->setFieldValue($field->handle, $document);
+        expect(Craft::$app->getElements()->saveElement($draft, false))->toBeTrue();
+        $response = new WebResponse();
+        $response->data = ['draftId' => $draft->draftId, 'elementId' => $draft->id];
+        Vizy::$plugin->getEditorAcknowledgements()->augmentResponse(new Event(['sender' => $response]));
+        return $response->data;
+    });
+
+    expect($result['vizy']['results'])->toHaveCount(1)
+        ->and($result['vizy']['results'][0]['editorId'])->toBe($editorId)
+        ->and($result['vizy']['results'][0]['canonicalDocument'])->toBe($document);
+});
+
 
 it('reopens a failed upload with a retry token for the current saved document only', function() {
     $context = acknowledgementAssetDocument('Reopen');

@@ -1,8 +1,11 @@
 import { LitElement, css, html, nothing, type PropertyValues } from 'lit';
-import { customElement, property } from 'lit/decorators.js';
+import { customElement, property, state } from 'lit/decorators.js';
 import type { Editor } from '@tiptap/core';
+import type { EmojiItem } from '@tiptap/extension-emoji';
 import '@verbb/plugin-kit-web/components/dropdown-menu';
 import '@verbb/plugin-kit-web/components/icon';
+import '@verbb/plugin-kit-web/components/input/pk-input.js';
+import '@verbb/plugin-kit-web/components/popover/pk-popover.js';
 import {
     preserveEditorSelection,
     resolveEditorBody,
@@ -23,8 +26,29 @@ import {
 } from '../semantic/link-ui';
 import type { VizyImageAuthoringConfig } from '../semantic/image-ui';
 import type { LayoutPreset } from '../layout/presets';
+import {
+    getTextStyleOptionLabel,
+    getTextStyleValue,
+    setTextStyleValue,
+    TEXT_STYLE_OPTIONS,
+    type TextStyleAttribute,
+} from '../semantic/text-style';
+import { searchEmojiOptions } from '../semantic/emoji-picker';
 import '../semantic/link-dialog';
 import '../semantic/image-dialog';
+
+type TextStyleOption = { label: string; value: string | null };
+type DropdownPaletteItem = HTMLElement & { focusControl: () => void };
+type DropdownPaletteMenu = HTMLElement & { getItems: () => DropdownPaletteItem[] };
+type EmojiPopover = HTMLElement & {
+    closePopover: (source?: string) => Promise<void>;
+};
+type EmojiSearchInput = HTMLElement & {
+    value: string;
+    focus: (options?: FocusOptions) => void;
+};
+
+const t = (message: string): string => window.Craft?.t?.('vizy', message) ?? message;
 
 /** Toolbar actions that are not Editor Config roster tokens. */
 export type ToolbarUiActionDetail = {
@@ -97,6 +121,9 @@ export class VizyToolbarElement extends LitElement {
     /** Resolved layout column presets from Editor Config (toolbar Layout chooser). */
     @property({ attribute: false })
     accessor layoutPresets: readonly LayoutPreset[] = [];
+
+    @state()
+    accessor emojiQuery = '';
 
     #detachTooltip: (() => void) | null = null;
     /** Unsubscribe selection listener that refreshes contextual Table menu items. */
@@ -196,6 +223,179 @@ export class VizyToolbarElement extends LitElement {
                 height: 1em;
                 display: block;
                 pointer-events: none;
+            }
+            .text-style-control {
+                max-width: 9rem;
+            }
+            .text-style-control__value {
+                overflow: hidden;
+                max-width: 7rem;
+                font-size: var(--pk-font-size-xs, 0.75rem);
+                line-height: 1;
+                text-overflow: ellipsis;
+                white-space: nowrap;
+            }
+            .text-style-control--color .text-style-control__value {
+                min-width: 1rem;
+                border-bottom: 2px solid var(--text-style-trigger-color, currentColor);
+                color: var(--text-style-trigger-color, currentColor);
+                font-weight: 700;
+                text-align: center;
+            }
+            pk-dropdown-menu.text-style-palette::part(panel) {
+                display: grid;
+                grid-template-columns: repeat(5, 2rem);
+                gap: 0.625rem 0.75rem;
+                width: max-content;
+                min-width: 0;
+                padding: 1rem;
+            }
+            .text-style-palette__label {
+                grid-column: 1 / -1;
+                color: var(--pk-color-gray-900, #1f2933);
+            }
+            .text-style-palette__label::part(label) {
+                padding: 0 0 0.125rem;
+                font-size: var(--pk-font-size-base, 1rem);
+                font-weight: 600;
+            }
+            .text-style-palette__label--highlight {
+                margin-top: 0.375rem;
+            }
+            .text-style-palette__option {
+                width: 2rem;
+                height: 2rem;
+                --pk-dropdown-item-gap: 0;
+                --pk-dropdown-item-icon-size: 1.625rem;
+            }
+            .text-style-palette__option::part(item) {
+                justify-content: center;
+                width: 2rem;
+                height: 2rem;
+                min-height: 0;
+                padding: 0;
+                border-radius: 50%;
+                background: transparent;
+            }
+            .text-style-palette__option:hover::part(item),
+            .text-style-palette__option:focus-within::part(item),
+            .text-style-palette__option[data-highlighted]::part(item),
+            .text-style-palette__option[checked]::part(item) {
+                background: transparent;
+            }
+            .text-style-palette__option::part(prefix) {
+                width: 1.625rem;
+                height: 1.625rem;
+            }
+            .text-style-palette__option::part(label) {
+                position: absolute;
+            }
+            .text-style-palette__option::part(check) {
+                display: none;
+            }
+            .text-style-palette__swatch {
+                display: inline-flex;
+                align-items: center;
+                justify-content: center;
+                width: 1.625rem;
+                height: 1.625rem;
+                box-sizing: border-box;
+                border: 1px solid rgb(15 23 42 / 16%);
+                border-radius: 50%;
+            }
+            .text-style-palette__option:hover .text-style-palette__swatch,
+            .text-style-palette__option:focus-within .text-style-palette__swatch,
+            .text-style-palette__option[data-highlighted] .text-style-palette__swatch,
+            .text-style-palette__option[checked] .text-style-palette__swatch {
+                box-shadow: 0 0 0 0.25rem var(--pk-color-slate-100, #edf2f7);
+            }
+            .text-style-palette__swatch--text {
+                border-color: var(--text-style-swatch, rgb(15 23 42 / 35%));
+                color: var(--text-style-swatch, #1f2937);
+                font-size: var(--pk-font-size-base, 1rem);
+                font-weight: 500;
+                line-height: 1;
+            }
+            .text-style-palette__swatch--highlight {
+                background: var(--text-style-swatch, #fff);
+            }
+            .text-style-palette__accessible-label {
+                position: absolute;
+                width: 1px;
+                height: 1px;
+                padding: 0;
+                margin: -1px;
+                overflow: hidden;
+                clip: rect(0, 0, 0, 0);
+                white-space: nowrap;
+                border: 0;
+            }
+            pk-popover.emoji-picker-popover {
+                display: inline-flex;
+                align-self: center;
+                --pk-popover-flush-min-width: 22rem;
+                --pk-popover-flush-max-width: min(22rem, calc(100vw - 1rem));
+            }
+            .emoji-picker {
+                display: grid;
+                gap: 0.75rem;
+                width: min(22rem, calc(100vw - 1rem));
+                box-sizing: border-box;
+                padding: 0.875rem;
+            }
+            .emoji-picker__search {
+                width: 100%;
+            }
+            .emoji-picker__search::part(header) {
+                position: absolute;
+                width: 1px;
+                height: 1px;
+                padding: 0;
+                margin: -1px;
+                overflow: hidden;
+                clip: rect(0, 0, 0, 0);
+                white-space: nowrap;
+                border: 0;
+            }
+            .emoji-picker__grid {
+                display: grid;
+                grid-template-columns: repeat(8, minmax(2rem, 1fr));
+                gap: 0.25rem;
+                max-height: 18rem;
+                overflow: auto;
+                overscroll-behavior: contain;
+                padding: 0.125rem;
+            }
+            .emoji-picker__option {
+                display: inline-grid;
+                place-items: center;
+                min-width: 0;
+                min-height: 2.25rem;
+                padding: 0;
+                border: 1px solid transparent;
+                border-radius: var(--pk-radius-sm, 0.25rem);
+                background: transparent;
+                cursor: pointer;
+                font: inherit;
+                font-size: 1.45rem;
+                line-height: 1;
+            }
+            .emoji-picker__option:hover,
+            .emoji-picker__option:focus-visible {
+                border-color: var(--pk-color-slate-200, #d8dee9);
+                background: var(--pk-color-slate-100, #edf2f7);
+                outline: none;
+            }
+            .emoji-picker__empty {
+                margin: 0;
+                padding: 0.75rem 0.25rem;
+                color: var(--pk-color-gray-500, #6b7280);
+                text-align: center;
+            }
+            @media (max-width: 32rem) {
+                .emoji-picker__grid {
+                    grid-template-columns: repeat(6, minmax(2rem, 1fr));
+                }
             }
         `,
     ];
@@ -300,6 +500,12 @@ export class VizyToolbarElement extends LitElement {
         if (control.action?.command === 'setLink') {
             return this.#renderLinkMenu(control);
         }
+        if (control.action?.command === 'textStyleControl') {
+            return this.#renderTextStyleControl(control);
+        }
+        if (control.action?.command === 'insertEmoji') {
+            return this.#renderEmojiPicker(control);
+        }
         // Add Block: chevron only when several types need a picker. One type inserts
         // immediately (same as Block ⋯ / gutter) — a menu affordance would lie.
         const isAddBlock = control.action?.command === 'openAddBlock';
@@ -393,6 +599,274 @@ export class VizyToolbarElement extends LitElement {
             </pk-dropdown-menu>
         `;
     }
+
+    /** Plugin Kit / TipTap-style standalone TextStyle value menu. */
+    #renderTextStyleControl(control: ToolbarControlManifest) {
+        if (control.action?.command !== 'textStyleControl') return nothing;
+        const controlName = control.action.control;
+        const textColor = controlName === 'textColor';
+        let triggerLabel = 'A';
+        let menuContent: unknown = nothing;
+
+        if (controlName === 'fontFamily') {
+            triggerLabel = getTextStyleOptionLabel(
+                TEXT_STYLE_OPTIONS.fontFamilies,
+                getTextStyleValue(this.editor, 'fontFamily'),
+            );
+            menuContent = html`${this.#renderTextStyleOptions('fontFamily', TEXT_STYLE_OPTIONS.fontFamilies)}`;
+        } else if (controlName === 'fontSize') {
+            triggerLabel = getTextStyleOptionLabel(
+                TEXT_STYLE_OPTIONS.fontSizes,
+                getTextStyleValue(this.editor, 'fontSize'),
+            );
+            menuContent = html`${this.#renderTextStyleOptions('fontSize', TEXT_STYLE_OPTIONS.fontSizes)}`;
+        } else if (controlName === 'lineHeight') {
+            triggerLabel = getTextStyleOptionLabel(
+                TEXT_STYLE_OPTIONS.lineHeights,
+                getTextStyleValue(this.editor, 'lineHeight'),
+            );
+            menuContent = html`${this.#renderTextStyleOptions('lineHeight', TEXT_STYLE_OPTIONS.lineHeights)}`;
+        } else {
+            menuContent = html`
+                <pk-dropdown-label class="text-style-palette__label">${t('Text colour')}</pk-dropdown-label>
+                ${this.#renderTextStylePaletteOptions('color', TEXT_STYLE_OPTIONS.textColors)}
+                <pk-dropdown-label class="text-style-palette__label text-style-palette__label--highlight">
+                    ${t('Highlight colour')}
+                </pk-dropdown-label>
+                ${this.#renderTextStylePaletteOptions('backgroundColor', TEXT_STYLE_OPTIONS.backgroundColors)}
+            `;
+        }
+
+        const triggerColor = textColor ? getTextStyleValue(this.editor, 'color') : null;
+
+        return html`
+            <pk-dropdown-menu
+                size="sm"
+                placement="bottom-start"
+                class=${textColor ? 'text-style-palette' : ''}
+                @keydown=${textColor ? this.#onTextStylePaletteKeyDown : nothing}
+                @pk-open-change=${this.#onMenuOpenChange}
+            >
+                <button
+                    type="button"
+                    slot="trigger"
+                    class=${controlClass(
+                        control,
+                        `has-menu text-style-control${textColor ? ' text-style-control--color' : ''}`,
+                    )}
+                    aria-label=${control.label}
+                    aria-pressed=${String(this.#isActive(control))}
+                    aria-haspopup="menu"
+                    style=${triggerColor ? `--text-style-trigger-color:${triggerColor}` : nothing}
+                    @mousedown=${this.#onToolbarMouseDown}
+                >
+                    <span class="text-style-control__value">${t(triggerLabel)}</span>
+                    ${menuChevronIcon()}
+                </button>
+                ${menuContent}
+            </pk-dropdown-menu>
+        `;
+    }
+
+    #renderTextStyleOptions(attribute: TextStyleAttribute, options: readonly TextStyleOption[]) {
+        const currentValue = getTextStyleValue(this.editor, attribute);
+
+        return options.map(option => html`
+            <pk-dropdown-item
+                type="radio"
+                radio-group=${attribute}
+                value=${option.value ?? ''}
+                ?checked=${option.value === currentValue}
+                @click=${() => this.#applyTextStyleValue(attribute, option.value)}
+            >${t(option.label)}</pk-dropdown-item>
+        `);
+    }
+
+    #renderTextStylePaletteOptions(
+        attribute: 'color' | 'backgroundColor',
+        options: readonly TextStyleOption[],
+    ) {
+        const currentValue = getTextStyleValue(this.editor, attribute);
+        const isTextColor = attribute === 'color';
+
+        return options.map(option => {
+            const accessibleLabel = option.value
+                ? `${t(option.label)} ${isTextColor ? t('text') : t('highlight')}`
+                : isTextColor ? t('Default text colour') : t('No highlight');
+
+            return html`
+                <pk-dropdown-item
+                    class="text-style-palette__option"
+                    type="radio"
+                    radio-group=${attribute}
+                    value=${option.value ?? ''}
+                    ?checked=${option.value === currentValue}
+                    aria-label=${accessibleLabel}
+                    @click=${() => this.#applyTextStyleValue(attribute, option.value)}
+                >
+                    <span
+                        slot="start"
+                        class="text-style-palette__swatch ${isTextColor
+                            ? 'text-style-palette__swatch--text'
+                            : 'text-style-palette__swatch--highlight'}"
+                        style=${option.value ? `--text-style-swatch:${option.value}` : nothing}
+                        data-empty=${option.value === null ? '' : nothing}
+                        aria-hidden="true"
+                    >${isTextColor ? 'A' : nothing}</span>
+                    <span class="text-style-palette__accessible-label">${accessibleLabel}</span>
+                </pk-dropdown-item>
+            `;
+        });
+    }
+
+    /** Compact searchable picker anchored to the Emoji toolbar control. */
+    #renderEmojiPicker(control: ToolbarControlManifest) {
+        const items = searchEmojiOptions(this.emojiQuery);
+
+        return html`
+            <pk-popover
+                class="emoji-picker-popover"
+                placement="bottom-start"
+                flush
+                @pk-open-change=${this.#onEmojiOpenChange}
+            >
+                <button
+                    type="button"
+                    slot="trigger"
+                    class=${controlClass(control, 'has-menu')}
+                    aria-label=${control.label}
+                    @mousedown=${this.#onToolbarMouseDown}
+                >${controlIcon(control)}${menuChevronIcon()}</button>
+                <div class="emoji-picker" role="dialog" aria-label=${t('Emoji')}>
+                    <pk-input
+                        class="emoji-picker__search"
+                        type="text"
+                        size="sm"
+                        label=${t('Search emoji')}
+                        placeholder=${t('Search emoji')}
+                        with-clear
+                        .value=${this.emojiQuery}
+                        @input=${this.#onEmojiSearch}
+                        @keydown=${this.#onEmojiSearchKeyDown}
+                    ></pk-input>
+                    ${items.length ? html`
+                        <div class="emoji-picker__grid" role="listbox" aria-label=${t('Emoji results')}>
+                            ${items.map((item) => html`
+                                <button
+                                    class="emoji-picker__option"
+                                    type="button"
+                                    role="option"
+                                    title=${item.shortcodes[0] ? `:${item.shortcodes[0]}:` : item.name}
+                                    aria-label=${item.name.replaceAll('_', ' ')}
+                                    @keydown=${this.#onEmojiOptionKeyDown}
+                                    @click=${(event: Event) => this.#chooseEmoji(item, event)}
+                                >${item.emoji}</button>
+                            `)}
+                        </div>
+                    ` : html`<p class="emoji-picker__empty">${t('No emoji found.')}</p>`}
+                </div>
+            </pk-popover>
+        `;
+    }
+
+    #onEmojiOpenChange = (event: CustomEvent<{ open?: boolean }>): void => {
+        this.#onMenuOpenChange(event);
+        if (event.detail?.open) {
+            this.emojiQuery = '';
+            void this.#focusEmojiSearch();
+        }
+    };
+
+    async #focusEmojiSearch(): Promise<void> {
+        await this.updateComplete;
+        await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
+        this.shadowRoot?.querySelector<EmojiSearchInput>('.emoji-picker__search')?.focus();
+    }
+
+    #onEmojiSearch = (event: Event): void => {
+        this.emojiQuery = (event.currentTarget as EmojiSearchInput).value;
+    };
+
+    #onEmojiSearchKeyDown = (event: KeyboardEvent): void => {
+        if (event.key !== 'ArrowDown' && event.key !== 'Enter') return;
+        const first = this.shadowRoot?.querySelector<HTMLButtonElement>('.emoji-picker__option');
+        if (!first) return;
+        event.preventDefault();
+        if (event.key === 'Enter') {
+            first.click();
+        } else {
+            first.focus();
+        }
+    };
+
+    #onEmojiOptionKeyDown = (event: KeyboardEvent): void => {
+        const deltas: Partial<Record<KeyboardEvent['key'], number>> = {
+            ArrowLeft: -1,
+            ArrowRight: 1,
+            ArrowUp: -8,
+            ArrowDown: 8,
+        };
+        const delta = deltas[event.key];
+        if (!delta) return;
+        const current = event.currentTarget;
+        if (!(current instanceof HTMLButtonElement)) return;
+        const items = [...(current.closest('.emoji-picker__grid')?.querySelectorAll<HTMLButtonElement>('.emoji-picker__option') ?? [])];
+        const index = items.indexOf(current);
+        if (index === -1) return;
+        event.preventDefault();
+        items[Math.max(0, Math.min(index + delta, items.length - 1))]?.focus();
+    };
+
+    #chooseEmoji(item: EmojiItem, event: Event): void {
+        if (!this.editor) return;
+        const focus = this.#openMenus.size > 0
+            ? this.#menuSessionHadEditorFocus
+            : this.#gestureHadEditorFocus;
+        const chain = focus ? this.editor.chain().focus() : this.editor.chain();
+        chain.setEmoji(item.name).run();
+        this.emojiQuery = '';
+        const popover = event.currentTarget instanceof HTMLElement
+            ? event.currentTarget.closest('pk-popover') as EmojiPopover | null
+            : null;
+        void popover?.closePopover('submit');
+        this.requestUpdate();
+    }
+
+    #applyTextStyleValue(attribute: TextStyleAttribute, value: string | null): void {
+        if (!this.editor) return;
+        const focus = this.#openMenus.size > 0
+            ? this.#menuSessionHadEditorFocus
+            : this.#gestureHadEditorFocus;
+        setTextStyleValue(this.editor, attribute, value, { focus });
+        this.requestUpdate();
+    }
+
+    #onTextStylePaletteKeyDown = (event: KeyboardEvent): void => {
+        const deltas: Partial<Record<KeyboardEvent['key'], number>> = {
+            ArrowLeft: -1,
+            ArrowRight: 1,
+            ArrowUp: -5,
+            ArrowDown: 5,
+        };
+        const delta = deltas[event.key];
+        if (!delta) return;
+
+        const menu = event.currentTarget as DropdownPaletteMenu;
+        const item = event.composedPath().find((node): node is DropdownPaletteItem => (
+            node instanceof HTMLElement
+            && node.localName === 'pk-dropdown-item'
+            && node.classList.contains('text-style-palette__option')
+        ));
+        const items = menu.getItems().filter(candidate => (
+            candidate.classList.contains('text-style-palette__option')
+        ));
+        const index = item ? items.indexOf(item) : -1;
+        if (index === -1) return;
+
+        event.preventDefault();
+        event.stopPropagation();
+        items[Math.max(0, Math.min(index + delta, items.length - 1))]?.focusControl();
+    };
 
     #renderGroup(control: ToolbarControlManifest, items: ToolbarControlManifest[]) {
         // Mutually exclusive families (Formatting / Alignment) use radio items so
@@ -596,8 +1070,8 @@ export class VizyToolbarElement extends LitElement {
 
     #onKeyDown = (event: KeyboardEvent): void => {
         if (event.key !== 'Escape') return;
-        // PK menus handle their own Escape; restore runs via pk-open-change.
-        const open = this.shadowRoot?.querySelector('pk-dropdown-menu[open], pk-dropdown-menu[aria-expanded="true"]');
+        // PK overlays handle their own Escape; restore runs via pk-open-change.
+        const open = this.shadowRoot?.querySelector('pk-dropdown-menu[open], pk-dropdown-menu[aria-expanded="true"], pk-popover[open]');
         if (!open || !this.#menuSessionHadEditorFocus) return;
         // Belt: if open-change is slow, still schedule a safe restore.
         restoreEditorFocus(this.editor);

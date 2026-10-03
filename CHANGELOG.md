@@ -3,6 +3,10 @@
 ## Unreleased
 
 ### Added
+- Added native Emoji and Find and Replace controls backed by TipTap’s official extensions. Emoji uses a compact searchable toolbar dropdown for quick inline insertion. ([#204](https://github.com/verbb/vizy/discussions/204))
+- Added native Ruby text, task lists, collapsible details, and syntax highlighting for code blocks. ([#204](https://github.com/verbb/vizy/discussions/204))
+- Added native Font family, Font size, Text colour, and Line height controls backed by TipTap's official TextStyle extensions. The Text colour menu includes both text and highlight palettes, and Editor Config previews use the same current-value selector faces as the live toolbar. ([#201](https://github.com/verbb/vizy/discussions/201))
+- Added native Character Count, Placeholder, and Typography behaviour extensions, plus automatic list-boundary keyboard handling. ([#204](https://github.com/verbb/vizy/discussions/204))
 - Added schema-safe boolean Link attributes that modules can register into the existing Link dialog, with optional safe `rel`, `class`, or `data-*` output mappings. ([#257](https://github.com/verbb/vizy/issues/257))
 - Added a schema-aware HTML importer API with complete loss diagnostics, strict conversion, caller-owned Asset resolution, and extension rules for custom nodes and marks. ([#142](https://github.com/verbb/vizy/issues/142))
 - Added explicit Feed Me mappings that turn matched HTML elements into custom Vizy Blocks, populate UID-addressed field placements through their Feed Me adapters, and support matching or creating Assets from image attributes. ([#251](https://github.com/verbb/vizy/issues/251))
@@ -11,6 +15,11 @@
 
 ### Changed
 - Feed Me HTML mappings now use Vizy’s field and Editor Config-aware importer, record conversion-loss diagnostics, and can require lossless conversion before accepting a mapped value. See [Importing with Feed Me](https://verbb.io/craft-plugins/vizy/docs/v4/user-guides/importing-with-feed-me). ([#289](https://github.com/verbb/vizy/issues/289))
+
+### Fixed
+- Fixed empty Task List items and Details content becoming preserved, unsupported content after Craft autosaves.
+- Fixed consecutive empty paragraphs being removed from the editor after Craft autosaves.
+- Fixed existing content appearing empty when it exceeded an Editor Config’s Character Count limit.
 
 ## 4.0.0-beta.2 - 2026-10-02
 

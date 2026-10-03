@@ -1,6 +1,6 @@
 # Creating a Custom Node from Scratch
 
-This guide creates an inline **Emoji** node. An author will be able to place an emoji chip at the cursor from Vizy's toolbar, save the entry, reopen it, and render the saved character inside `<span data-emoji="…">` on the frontend.
+This guide creates an inline **Badge** node. An author will be able to place a labelled chip at the cursor from Vizy's toolbar, save the entry, reopen it, and render the saved label inside `<span data-badge="…">` on the frontend.
 
 A node is a piece of editor content with its own structure and attributes. That differs from a mark, which formats text already in the document. The example is deliberately small, but it uses the complete production path: a bootstrapped Craft module, PHP node registration and rendering, a Control Panel AssetBundle, a TipTap node, a custom toolbar action, and an Editor Config.
 
@@ -12,11 +12,11 @@ The example uses several identifiers with different responsibilities:
 
 | Identifier | Example | Purpose |
 | --- | --- | --- |
-| PHP namespace | `modules\vizyemoji` | Composer finds the module's PHP classes. |
-| Craft module ID | `vizy-emoji` | Craft bootstraps the module. |
-| Vizy node type | `emoji` | Saved Vizy JSON and Editor Configs identify the node. |
-| Vizy module ID | `acme/node/emoji` | Vizy connects the PHP definition to the JavaScript TipTap factory. |
-| Toolbar control ID | `emoji` | The Editor Config and custom control identify the button. |
+| PHP namespace | `modules\vizybadge` | Composer finds the module's PHP classes. |
+| Craft module ID | `vizy-badge` | Craft bootstraps the module. |
+| Vizy node type | `badge` | Saved Vizy JSON and Editor Configs identify the node. |
+| Vizy module ID | `acme/node/badge` | Vizy connects the PHP definition to the JavaScript TipTap factory. |
+| Toolbar control ID | `badge` | The Editor Config and custom control identify the button. |
 
 You can use different names in your own project. Keep every reference to a particular identifier consistent across PHP, JavaScript, and the Editor Config.
 
@@ -26,14 +26,14 @@ Create this structure in the Craft project:
 
 ```text
 modules/
-└── vizyemoji/
+└── vizybadge/
     └── src/
-        ├── Emoji.php
+        ├── Badge.php
         ├── Module.php
         ├── assets/
-        │   └── EmojiAsset.php
+        │   └── BadgeAsset.php
         └── web/
-            └── emoji.js
+            └── badge.js
 ```
 
 The PHP classes live under `src/`, while the AssetBundle publishes the script from `src/web/`.
@@ -46,7 +46,7 @@ Add the module namespace to the Craft project's existing `autoload.psr-4` object
 {
     "autoload": {
         "psr-4": {
-            "modules\\vizyemoji\\": "modules/vizyemoji/src/"
+            "modules\\vizybadge\\": "modules/vizybadge/src/"
         }
     }
 }
@@ -67,27 +67,27 @@ Add the module to `config/app.php`. This complete example applies when the file 
 ```php
 <?php
 
-use modules\vizyemoji\Module;
+use modules\vizybadge\Module;
 
 return [
     'modules' => [
-        'vizy-emoji' => Module::class,
+        'vizy-badge' => Module::class,
     ],
-    'bootstrap' => ['vizy-emoji'],
+    'bootstrap' => ['vizy-badge'],
 ];
 ```
 
 Merge those entries into the returned array when the project already defines components or other modules.
 
-Create `modules/vizyemoji/src/Module.php`:
+Create `modules/vizybadge/src/Module.php`:
 
 ```php
 <?php
 
-namespace modules\vizyemoji;
+namespace modules\vizybadge;
 
 use Craft;
-use modules\vizyemoji\assets\EmojiAsset;
+use modules\vizybadge\assets\BadgeAsset;
 use verbb\vizy\events\RegisterExtensionsEvent;
 use verbb\vizy\services\Extensions;
 use yii\base\Event;
@@ -105,20 +105,20 @@ class Module extends BaseModule
             Extensions::class,
             Extensions::EVENT_REGISTER_EXTENSIONS,
             static function(RegisterExtensionsEvent $event): void {
-                $event->nodes[] = Emoji::class;
+                $event->nodes[] = Badge::class;
             }
         );
 
         if (Craft::$app->getRequest()->getIsCpRequest()) {
-            Craft::$app->getView()->registerAssetBundle(EmojiAsset::class);
+            Craft::$app->getView()->registerAssetBundle(BadgeAsset::class);
         }
     }
 }
 ```
 
-Importing `Craft` prevents PHP from looking for `modules\vizyemoji\Craft`. Restricting AssetBundle registration to Control Panel requests keeps console bootstrap focused on PHP registration.
+Importing `Craft` prevents PHP from looking for `modules\vizybadge\Craft`. Restricting AssetBundle registration to Control Panel requests keeps console bootstrap focused on PHP registration.
 
-Yii's console help asks every bootstrapped module for its controller path. `setControllerPath()` supplies a physical path instead of allowing Yii to derive an undefined `@modules/vizyemoji/controllers` alias. The `src/controllers/` folder does not need to exist unless you later add controllers. The AssetBundle will also calculate the script location from its own file, so no custom Yii alias is required.
+Yii's console help asks every bootstrapped module for its controller path. `setControllerPath()` supplies a physical path instead of allowing Yii to derive an undefined `@modules/vizybadge/controllers` alias. The `src/controllers/` folder does not need to exist unless you later add controllers. The AssetBundle will also calculate the script location from its own file, so no custom Yii alias is required.
 
 Confirm the module boots before continuing:
 
@@ -130,12 +130,12 @@ Resolve any Composer class-loading or `config/app.php` error before adding the n
 
 ## Declare and Render the Node in PHP
 
-Create `modules/vizyemoji/src/Emoji.php`:
+Create `modules/vizybadge/src/Badge.php`:
 
 ```php
 <?php
 
-namespace modules\vizyemoji;
+namespace modules\vizybadge;
 
 use craft\helpers\Html;
 use verbb\vizy\base\EditorGroup;
@@ -143,18 +143,18 @@ use verbb\vizy\base\EditorSurface;
 use verbb\vizy\base\Node;
 use verbb\vizy\base\RenderContext;
 
-class Emoji extends Node
+class Badge extends Node
 {
-    public static ?string $type = 'emoji';
+    public static ?string $type = 'badge';
 
     public static function moduleId(): string
     {
-        return 'acme/node/emoji';
+        return 'acme/node/badge';
     }
 
     public static function label(): string
     {
-        return 'Emoji';
+        return 'Badge';
     }
 
     public static function icon(): ?string
@@ -174,31 +174,31 @@ class Emoji extends Node
 
     public static function renderOccurrenceHtml(string $children, array $resolvedAttrs, RenderContext $context): ?string
     {
-        $emoji = (string)($resolvedAttrs['emoji'] ?? '😀');
+        $label = (string)($resolvedAttrs['label'] ?? 'New');
 
-        return Html::tag('span', Html::encode($emoji), [
-            'data-emoji' => $emoji,
+        return Html::tag('span', Html::encode($label), [
+            'data-badge' => $label,
         ]);
     }
 }
 ```
 
-The node's `emoji` attribute will be saved in canonical Vizy JSON. `renderOccurrenceHtml()` owns frontend output, so it encodes both the visible character and the `data-emoji` attribute through Craft's HTML helper. This server-side renderer is separate from TipTap's Control Panel rendering and must exist even when the node looks correct in the editor.
+The node's `label` attribute will be saved in canonical Vizy JSON. `renderOccurrenceHtml()` owns frontend output, so it encodes both the visible label and the `data-badge` attribute through Craft's HTML helper. This server-side renderer is separate from TipTap's Control Panel rendering and must exist even when the node looks correct in the editor.
 
 ## Load the Control Panel JavaScript
 
-Create `modules/vizyemoji/src/assets/EmojiAsset.php`:
+Create `modules/vizybadge/src/assets/BadgeAsset.php`:
 
 ```php
 <?php
 
-namespace modules\vizyemoji\assets;
+namespace modules\vizybadge\assets;
 
 use craft\web\AssetBundle;
 use craft\web\assets\cp\CpAsset;
 use verbb\vizy\web\assets\field\VizyAsset;
 
-class EmojiAsset extends AssetBundle
+class BadgeAsset extends AssetBundle
 {
     public function init(): void
     {
@@ -207,64 +207,64 @@ class EmojiAsset extends AssetBundle
             CpAsset::class,
             VizyAsset::class,
         ];
-        $this->js = ['emoji.js'];
+        $this->js = ['badge.js'];
 
         parent::init();
     }
 }
 ```
 
-Because `EmojiAsset.php` is in `src/assets/`, `dirname(__DIR__) . '/web'` resolves to `src/web/`. The Vizy asset dependency establishes the correct script order without a custom alias.
+Because `BadgeAsset.php` is in `src/assets/`, `dirname(__DIR__) . '/web'` resolves to `src/web/`. The Vizy asset dependency establishes the correct script order without a custom alias.
 
 ## Register the TipTap Node and Toolbar Action
 
-Create `modules/vizyemoji/src/web/emoji.js`:
+Create `modules/vizybadge/src/web/badge.js`:
 
 ```js
 (function () {
     function register() {
         const { Node, mergeAttributes } = Craft.Vizy.tiptap.core;
 
-        const Emoji = Node.create({
-            name: 'emoji',
+        const Badge = Node.create({
+            name: 'badge',
             group: 'inline',
             inline: true,
             atom: true,
             addAttributes() {
                 return {
-                    emoji: { default: '😀' },
+                    label: { default: 'New' },
                 };
             },
             parseHTML() {
                 return [{
-                    tag: 'span[data-emoji]',
+                    tag: 'span[data-badge]',
                     getAttrs: (element) => ({
-                        emoji: element.getAttribute('data-emoji') || '😀',
+                        label: element.getAttribute('data-badge') || 'New',
                     }),
                 }];
             },
             renderHTML({ HTMLAttributes }) {
-                const { emoji = '😀', ...attributes } = HTMLAttributes;
+                const { label = 'New', ...attributes } = HTMLAttributes;
 
                 return [
                     'span',
-                    mergeAttributes(attributes, { 'data-emoji': emoji }),
-                    emoji,
+                    mergeAttributes(attributes, { 'data-badge': label }),
+                    label,
                 ];
             },
             addCommands() {
                 return {
-                    insertEmoji: (emoji = '😀') => ({ commands }) => commands.insertContent({
+                    insertBadge: (label = 'New') => ({ commands }) => commands.insertContent({
                         type: this.name,
-                        attrs: { emoji },
+                        attrs: { label },
                     }),
                 };
             },
         });
 
-        Craft.Vizy.registerModule('acme/node/emoji', () => Emoji);
-        Craft.Vizy.registerControl('emoji', {
-            run: (editor) => editor.chain().focus().insertEmoji('😀').run(),
+        Craft.Vizy.registerModule('acme/node/badge', () => Badge);
+        Craft.Vizy.registerControl('badge', {
+            run: (editor) => editor.chain().focus().insertBadge('New').run(),
             isActive: () => false,
         });
     }
@@ -277,13 +277,13 @@ Create `modules/vizyemoji/src/web/emoji.js`:
 })();
 ```
 
-The PHP `$type`, TipTap `name`, and registered control ID all use `emoji`. The PHP `moduleId()` and JavaScript `registerModule()` call both use `acme/node/emoji`.
+The PHP `$type`, TipTap `name`, and registered control ID all use `badge`. The PHP `moduleId()` and JavaScript `registerModule()` call both use `acme/node/badge`.
 
-`atom: true` tells TipTap to treat the emoji as one selectable editor object. `registerControl()` overrides the ordinary node insertion action so the toolbar calls `insertEmoji()` with the chosen character. A real emoji picker could replace that fixed value later while retaining the same node schema.
+`atom: true` tells TipTap to treat the badge as one selectable editor object. `registerControl()` overrides the ordinary node insertion action so the toolbar calls `insertBadge()` with the chosen label. A project-specific picker could replace that fixed value later while retaining the same node schema.
 
 Use the TipTap packages exposed at `Craft.Vizy.tiptap`; installing another `@tiptap/core` copy in the module can create incompatible editor objects.
 
-## Enable Emoji in an Editor Config
+## Enable Badge in an Editor Config
 
 Clear Craft's caches after changing the module or its assets:
 
@@ -291,13 +291,13 @@ Clear Craft's caches after changing the module or its assets:
 php craft clear-caches/all
 ```
 
-Open **Settings → Vizy → Editor Configs** and edit the config assigned to your field. Expand **Content schema**, enable **Emoji** under **Blocks and objects**, add **Emoji** to the toolbar, and save the config.
+Open **Settings → Vizy → Editor Configs** and edit the config assigned to your field. Expand **Content schema**, enable **Badge** under **Blocks and objects**, add **Badge** to the toolbar, and save the config.
 
 This inline node belongs on the toolbar. Vizy's **Add Block** button, gutter `+`, and `/` menu insert structured Vizy Block Types rather than arbitrary TipTap nodes. [Choosing Insertion Controls](docs:guides/developers/choosing-insertion-controls) explains that distinction in more detail.
 
 ## Test the Finished Node
 
-Open an entry containing the configured Vizy field and place the caret inside a paragraph. Choose **Emoji** from the toolbar. A `😀` chip should appear at the caret. Save the entry, reopen it, and confirm the emoji remains in the same position.
+Open an entry containing the configured Vizy field and place the caret inside a paragraph. Choose **Badge** from the toolbar. A `New` chip should appear at the caret. Save the entry, reopen it, and confirm the badge remains in the same position.
 
 Render the Vizy field in the entry's frontend Twig template, replacing `myVizyField` with the field's handle:
 
@@ -305,10 +305,10 @@ Render the Vizy field in the entry's frontend Twig template, replacing `myVizyFi
 {{ entry.myVizyField.render() }}
 ```
 
-Inspect the HTML. The emoji should render as:
+Inspect the HTML. The badge should render as:
 
 ```html
-<span data-emoji="😀">😀</span>
+<span data-badge="New">New</span>
 ```
 
 Run `php craft help` again after testing the Control Panel. A successful result confirms that the module remains safe when Craft boots as a console application.
@@ -321,22 +321,22 @@ Import the global class with `use Craft;` in `Module.php`, or prefix the class w
 
 ### Craft Reports `Invalid path alias`
 
-If the alias ends in `/controllers`, confirm `Module::init()` calls `$this->setControllerPath(__DIR__ . '/controllers');`. For an AssetBundle alias, use `$this->sourcePath = dirname(__DIR__) . '/web';` in `EmojiAsset.php`. Confirm `emoji.js` is in `src/web/`.
+If the alias ends in `/controllers`, confirm `Module::init()` calls `$this->setControllerPath(__DIR__ . '/controllers');`. For an AssetBundle alias, use `$this->sourcePath = dirname(__DIR__) . '/web';` in `BadgeAsset.php`. Confirm `badge.js` is in `src/web/`.
 
-### Emoji Is Missing from Editor Configs
+### Badge Is Missing from Editor Configs
 
-Confirm that `config/app.php` bootstraps `vizy-emoji`, Composer maps `modules\vizyemoji` to `modules/vizyemoji/src/`, and the module appends `Emoji::class` to `$event->nodes`. Rebuild the autoloader and clear Craft's caches.
+Confirm that `config/app.php` bootstraps `vizy-badge`, Composer maps `modules\vizybadge` to `modules/vizybadge/src/`, and the module appends `Badge::class` to `$event->nodes`. Rebuild the autoloader and clear Craft's caches.
 
-### The Editor Reports `untrustedEditorModule:acme/node/emoji`
+### The Editor Reports `untrustedEditorModule:acme/node/badge`
 
-Vizy received the PHP node definition but not its JavaScript factory. Check the AssetBundle registration, its `VizyAsset` dependency, the `emoji.js` path, and the matching `acme/node/emoji` strings.
+Vizy received the PHP node definition but not its JavaScript factory. Check the AssetBundle registration, its `VizyAsset` dependency, the `badge.js` path, and the matching `acme/node/badge` strings.
 
 ### The Button Appears but Does Nothing
 
-Open the browser console and check for an error from `registerControl()` or `insertEmoji()`. Confirm that the TipTap extension defines `insertEmoji`, that the control ID is `emoji`, and that the node capability is enabled in the active Editor Config.
+Open the browser console and check for an error from `registerControl()` or `insertBadge()`. Confirm that the TipTap extension defines `insertBadge`, that the control ID is `badge`, and that the node capability is enabled in the active Editor Config.
 
-### The Emoji Disappears After Saving or Renders Empty
+### The Badge Disappears After Saving or Renders Empty
 
-Confirm the JavaScript node uses the `emoji` attribute and that `Emoji::renderOccurrenceHtml()` reads the same key. Reopen the entry to distinguish a persistence problem from a frontend template problem, and confirm the template calls the field's `render()` method.
+Confirm the JavaScript node uses the `label` attribute and that `Badge::renderOccurrenceHtml()` reads the same key. Reopen the entry to distinguish a persistence problem from a frontend template problem, and confirm the template calls the field's `render()` method.
 
 For custom formatting around existing text, follow [Creating a Custom Mark from Scratch](docs:guides/developers/creating-a-custom-mark-from-scratch). The broader [Extending Vizy](docs:developers/extending-vizy) page documents behaviour-only extensions, module replacement, and custom toolbar controls.

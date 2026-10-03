@@ -14,6 +14,7 @@ use Craft;
 use craft\base\Component;
 use craft\helpers\Html;
 use craft\helpers\Json;
+use craft\helpers\StringHelper;
 use craft\helpers\Template;
 use craft\web\View;
 
@@ -74,8 +75,14 @@ final class Renderer extends Component
     // Private Methods
     // =========================================================================
 
-    private function _renderNodes(array $nodes, VizyDocument $document, array $config, string $pathPrefix, RenderContext $ctx): string
-    {
+    private function _renderNodes(
+        array $nodes,
+        VizyDocument $document,
+        array $config,
+        string $pathPrefix,
+        RenderContext $ctx,
+        ?string $parentType = null,
+    ): string {
         $extensions = Vizy::$plugin->getExtensions();
         $html = '';
 
@@ -88,6 +95,10 @@ final class Renderer extends Component
             $type = $node['type'] ?? null;
 
             if (!is_string($type) || $type === '') {
+                continue;
+            }
+
+            if ($this->_shouldTrimEmptyParagraph($node, $index, $parentType, $document)) {
                 continue;
             }
 
@@ -135,6 +146,7 @@ final class Renderer extends Component
             $config,
             "{$path}.content",
             $ctx,
+            $node['type'],
         );
 
         $attrs = $class::resolveAttrs($attrs, $ctx);
@@ -157,6 +169,30 @@ final class Renderer extends Component
         }
 
         return TypeHtml::renderResolvedNode($class, $children, $attrs, $ctx);
+    }
+
+    private function _shouldTrimEmptyParagraph(
+        array $node,
+        int $index,
+        ?string $parentType,
+        VizyDocument $document,
+    ): bool {
+        if (($node['type'] ?? null) !== 'paragraph' || !($document->field()?->trimEmptyParagraphs ?? false)) {
+            return false;
+        }
+
+        // TipTap requires a leading paragraph in these structural containers.
+        if ($index === 0 && in_array($parentType, ['listItem', 'blockquote', 'column', 'tableCell', 'tableHeader'], true)) {
+            return false;
+        }
+
+        foreach ($node['content'] ?? [] as $child) {
+            if (($child['type'] ?? null) !== 'text' || StringHelper::trim((string)($child['text'] ?? '')) !== '') {
+                return false;
+            }
+        }
+
+        return true;
     }
 
     private function _renderText(array $node, RenderContext $ctx, array $config): string

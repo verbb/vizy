@@ -141,6 +141,22 @@ it('provides cached bounded native card previews without rendering Blocks or ima
     expect($field->getPreviewHtml($blockOnly, $entry))->toBe('');
 });
 
+it('includes native emoji in plain-text projections', function() {
+    $document = [
+        'type' => 'doc',
+        'content' => [[
+            'type' => 'paragraph',
+            'content' => [
+                ['type' => 'text', 'text' => 'Status'],
+                ['type' => 'emoji', 'attrs' => ['name' => 'sparkles', 'emoji' => '✨']],
+                ['type' => 'emoji', 'attrs' => ['name' => 'rocket']],
+            ],
+        ]],
+    ];
+
+    expect(Vizy::$plugin->getContentText()->project($document, 100))->toBe('Status ✨ :rocket:');
+});
+
 it('indexes Image alt and Link mark values in search keywords', function() {
     $field = VizyFixtureFactory::vizyField();
     $entry = new Entry([

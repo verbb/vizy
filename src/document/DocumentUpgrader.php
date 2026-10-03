@@ -87,7 +87,7 @@ final class DocumentUpgrader
                 unset($node['text']);
             }
 
-            if (($node['type'] ?? null) === 'listItem') {
+            if (in_array($node['type'] ?? null, ['listItem', 'taskItem'], true)) {
                 $content = $node['content'] ?? [];
 
                 if (!is_array($content) || $content === []) {
@@ -101,6 +101,17 @@ final class DocumentUpgrader
                             'content' => $content,
                         ]];
                     }
+                }
+            }
+
+            // DetailsContent uses TipTap's `block+` grammar. Older Vizy 4 beta
+            // saves could trim its sole empty paragraph, leaving a canonical
+            // node that TipTap could preserve only as unsupported content.
+            if (($node['type'] ?? null) === 'detailsContent') {
+                $content = $node['content'] ?? [];
+
+                if (!is_array($content) || $content === []) {
+                    $node['content'] = [['type' => 'paragraph']];
                 }
             }
 

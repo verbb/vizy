@@ -595,6 +595,32 @@ pk-checkbox-select {
 }
 
 /*
+ * TextStyle controls are value selectors, not icon buttons. With no editor selection to
+ * inspect, both builder lists show the same neutral values the live toolbar shows at rest.
+ * These rules mirror `VizyToolbarElement`'s identically named control styles.
+ */
+.vizy-control.text-style-control {
+    max-width: 9rem;
+}
+
+.vizy-control .text-style-control__value {
+    overflow: hidden;
+    max-width: 7rem;
+    font-size: var(--pk-font-size-xs, 0.75rem);
+    line-height: 1;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.vizy-control.text-style-control--color .text-style-control__value {
+    min-width: 1rem;
+    border-bottom: 2px solid currentColor;
+    color: currentColor;
+    font-weight: 700;
+    text-align: center;
+}
+
+/*
  * The two reasons a button in this panel will not render in the editor.
  *
  * `is-unavailable`: its capability is not allowed by this config, which a toolbar is now
@@ -952,4 +978,15 @@ pk-checkbox-select {
 
 pk-checkbox-select + .vizy-editor-config-subhead {
     margin-top: 20px;
+}
+
+.vizy-editor-config-extension-options {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 16px;
+    margin-top: 16px;
+    padding: 16px;
+    border: 1px solid rgba(96, 125, 159, 0.2);
+    border-radius: var(--pk-input-border-radius, 3px);
+    background: var(--pk-input-bg, #fbfcfe);
 }

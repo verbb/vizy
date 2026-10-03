@@ -2,6 +2,9 @@ import { Mark, type Node as ProseMirrorNode } from '@tiptap/pm/model';
 import { Plugin, type Transaction } from '@tiptap/pm/state';
 import { isHistoryTransaction } from '@tiptap/pm/history';
 
+/** Trusted server/initial content may establish a baseline that exceeds authoring policy. */
+export const ACCEPTED_CANONICAL_TRANSACTION_META = 'vizyAcceptedCanonical';
+
 /** Structural undo moves Blocks; surviving Craft widgets retain their live values. */
 export function preserveFieldValuesOnHistory(): Plugin {
     return new Plugin({

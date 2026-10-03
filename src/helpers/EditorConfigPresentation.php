@@ -168,11 +168,35 @@ final class EditorConfigPresentation
         }
 
         foreach (Vizy::$plugin->getExtensions()->getMarks() as $name => $definition) {
-            if (empty($definition['authorSelectable']) || empty($definition['installed']) || self::_isCarrierMark($name)) {
+            if (empty($definition['authorSelectable']) || empty($definition['installed'])) {
                 continue;
             }
 
             if (!self::_definitionOffersSurface($definition, 'toolbar')) {
+                continue;
+            }
+
+            // TipTap's TextStyle family is one mark in the schema but four
+            // independently placeable value menus in the toolbar. Mirroring
+            // Plugin Kit here keeps the capability model honest without
+            // collapsing all typography choices into a modal.
+            if ($name === 'textStyle') {
+                foreach (self::TEXT_STYLE_CONTROLS as $id => $control) {
+                    $items[] = [
+                        'id' => $id,
+                        'label' => $control['label'],
+                        'kind' => 'mark',
+                        'group' => (string)($definition['group'] ?? 'Marks'),
+                        'icon' => ToolbarIcons::svgFor($id),
+                        'capabilityKind' => 'mark',
+                        'capabilityName' => 'textStyle',
+                        // The builder draws the neutral value shown by the live selector on both
+                        // sides of the drag operation, so placing it never changes its face.
+                        'valuePreview' => $control['valuePreview'],
+                        'valuePreviewKind' => $control['valuePreviewKind'] ?? 'text',
+                        'iconCustomizable' => false,
+                    ];
+                }
                 continue;
             }
             $controlId = (string)$definition['controlId'];
@@ -301,10 +325,6 @@ final class EditorConfigPresentation
             ...array_values($registry->getExtensions()),
         ] as $definition) {
             if (empty($definition['authorSelectable']) || empty($definition['installed'])) {
-                continue;
-            }
-
-            if (($definition['kind'] ?? null) === 'mark' && self::_isCarrierMark((string)$definition['name'])) {
                 continue;
             }
 
@@ -560,15 +580,24 @@ final class EditorConfigPresentation
             ];
         }
 
-        // Text style carries a value — a colour, a font — rather than toggling, so there is
-        // nothing for a button to switch on and Vizy 3 never offered one. It stays a
-        // capability, because it is what other features hang their attributes on, but it is
-        // not a control: a button for it looked live and did nothing.
-        if ($id === 'textStyle') {
-            return null;
+        // Registry controls (core + third-party) resolve by controlId (often equal to TipTap name).
+        if (isset(self::TEXT_STYLE_CONTROLS[$id])) {
+            if (!in_array('textStyle', $enabledMarks, true)) {
+                return null;
+            }
+
+            return [
+                'id' => $id,
+                'kind' => 'mark',
+                'label' => self::TEXT_STYLE_CONTROLS[$id]['label'],
+                'icon' => ToolbarIcons::svgFor($id),
+                'action' => [
+                    'command' => 'textStyleControl',
+                    'control' => self::TEXT_STYLE_CONTROLS[$id]['control'],
+                ],
+            ];
         }
 
-        // Registry controls (core + third-party) resolve by controlId (often equal to TipTap name).
         $definition = Vizy::$plugin->getExtensions()->getControl($id);
 
         if ($definition !== null) {
@@ -675,20 +704,6 @@ final class EditorConfigPresentation
     }
 
     /**
-     * Whether a mark exists to hold a value rather than to be switched on.
-     *
-     * `textStyle` is the only one: it is what colour and font attributes hang off, so it has
-     * no state of its own to toggle and Vizy 3 offered no button for it. It was reaching the
-     * palette because that is built from what a config may legally enable, and it may legally
-     * be enabled — so ticking Text style produced a button that looked live and did nothing.
-     * A capability, then, but not a control.
-     */
-    private static function _isCarrierMark(string $name): bool
-    {
-        return $name === 'textStyle';
-    }
-
-    /**
      * A registered dropdown's glyph, or null when it has none.
      *
      * Registered icons are glyph names rather than control IDs, so a plugin can name any
@@ -717,7 +732,7 @@ final class EditorConfigPresentation
         $icon = self::iconForDefinition($definition, $controlId !== '' ? $controlId : $name);
 
         if ($kind === 'mark') {
-            if (!in_array($name, $enabledMarks, true) || self::_isCarrierMark($name)) {
+            if (!in_array($name, $enabledMarks, true)) {
                 return null;
             }
 
@@ -726,10 +741,12 @@ final class EditorConfigPresentation
                 'kind' => 'mark',
                 'label' => $label,
                 'icon' => $icon,
-                // Link collects a URL rather than toggling straight on.
-                'action' => $name === 'link'
-                    ? ['command' => 'setLink']
-                    : ['command' => 'toggleMark', 'markName' => $name],
+                // These marks collect values rather than toggling straight on.
+                'action' => match ($name) {
+                    'link' => ['command' => 'setLink'],
+                    'rubyText' => ['command' => 'editRubyText'],
+                    default => ['command' => 'toggleMark', 'markName' => $name],
+                },
             ];
         }
 
@@ -738,8 +755,18 @@ final class EditorConfigPresentation
                 return null;
             }
 
-            // Behaviour-only modules must supply Craft.Vizy.registerControl; PHP has no
-            // TipTap command of its own to fall back on.
+            if ($name === 'findAndReplace') {
+                return [
+                    'id' => $controlId,
+                    'kind' => 'extension',
+                    'label' => $label,
+                    'icon' => $icon,
+                    'action' => ['command' => 'editFindAndReplace'],
+                ];
+            }
+
+            // Third-party behaviour-only modules must supply Craft.Vizy.registerControl;
+            // PHP has no TipTap command of its own to fall back on.
             return [
                 'id' => $controlId,
                 'kind' => 'extension',
@@ -763,6 +790,16 @@ final class EditorConfigPresentation
                 'label' => $label,
                 'icon' => $icon,
                 'action' => ['command' => 'wrapInLayout'],
+            ];
+        }
+
+        if ($name === 'emoji') {
+            return [
+                'id' => $controlId,
+                'kind' => 'node',
+                'label' => $label,
+                'icon' => $icon,
+                'action' => ['command' => 'insertEmoji'],
             ];
         }
 
@@ -900,7 +937,17 @@ final class EditorConfigPresentation
      * node named in neither place still renders; it simply does nothing, which is why
      * the client drops unactionable controls rather than trusting this list.
      */
-    private const TOGGLEABLE_NODES = ['heading', 'bulletList', 'orderedList', 'blockquote', 'codeBlock'];
+    private const TOGGLEABLE_NODES = ['heading', 'bulletList', 'orderedList', 'taskList', 'blockquote', 'codeBlock', 'details'];
+
+    /**
+     * One TextStyle schema capability, presented as the official value controls.
+     */
+    private const TEXT_STYLE_CONTROLS = [
+        'fontFamily' => ['label' => 'Font family', 'control' => 'fontFamily', 'valuePreview' => 'Default font'],
+        'fontSize' => ['label' => 'Font size', 'control' => 'fontSize', 'valuePreview' => 'Default'],
+        'textColor' => ['label' => 'Text colour', 'control' => 'textColor', 'valuePreview' => 'A', 'valuePreviewKind' => 'color'],
+        'lineHeight' => ['label' => 'Line height', 'control' => 'lineHeight', 'valuePreview' => 'Default'],
+    ];
 
     /**
      * Presentation tokens that were once valid and are now retired.
@@ -917,8 +964,12 @@ final class EditorConfigPresentation
      * stand-in for several. One concrete button per level says the same thing with one idea
      * instead of three. `dropdown` was the empty menu an author placed and named, which
      * registered dropdowns replace.
+     *
+     * `textStyle` briefly represented the whole official TextStyle family as one generic
+     * button. The family now has four value controls, so keeping the old token would render a
+     * fifth control that the Editor Config palette intentionally cannot offer.
      */
-    public const RETIRED_TOOLBAR_IDS = ['more', 'heading', 'dropdown', 'html'];
+    public const RETIRED_TOOLBAR_IDS = ['more', 'heading', 'dropdown', 'html', 'textStyle'];
 
     /**
      * Controls a dropdown owns, which a toolbar may therefore not name directly.
@@ -1144,12 +1195,12 @@ final class EditorConfigPresentation
      */
     private const PALETTE_ORDER = [
         [self::DROPDOWN_PREFIX . 'formatting'],
-        ['bold', 'italic', 'underline', 'strike', 'subscript', 'superscript', 'code', 'highlight'],
+        ['bold', 'italic', 'underline', 'strike', 'subscript', 'superscript', 'code', 'highlight', 'fontFamily', 'fontSize', 'textColor', 'lineHeight', 'rubyText'],
         ['link'],
         [self::DROPDOWN_PREFIX . 'alignment'],
-        ['bulletList', 'orderedList'],
-        ['image', 'iframe', 'mediaEmbed', 'layout', 'addBlock', self::DROPDOWN_PREFIX . 'table', 'horizontalRule', 'hardBreak'],
-        ['undo', 'redo', 'clearFormatting'],
+        ['bulletList', 'orderedList', 'taskList'],
+        ['codeBlock', 'details', 'emoji', 'image', 'iframe', 'mediaEmbed', 'layout', 'addBlock', self::DROPDOWN_PREFIX . 'table', 'horizontalRule', 'hardBreak'],
+        ['findAndReplace', 'undo', 'redo', 'clearFormatting'],
         ['separator'],
     ];
 

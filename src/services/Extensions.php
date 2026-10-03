@@ -8,6 +8,7 @@ use verbb\vizy\base\MarkInterface;
 use verbb\vizy\base\NodeInterface;
 use verbb\vizy\events\RegisterExtensionsEvent;
 use verbb\vizy\events\RegisterToolbarDropdownsEvent;
+use verbb\vizy\extensions as allExtensions;
 use verbb\vizy\marks;
 use verbb\vizy\nodes as allnodes;
 
@@ -41,6 +42,9 @@ final class Extensions extends Component
         'vizy/core/node/paragraph', 'vizy/core/node/heading', 'vizy/core/node/blockquote',
         'vizy/core/node/codeBlock', 'vizy/core/node/horizontalRule', 'vizy/core/node/hardBreak',
         'vizy/core/node/bulletList', 'vizy/core/node/orderedList', 'vizy/core/node/listItem',
+        'vizy/core/node/taskList', 'vizy/core/node/taskItem',
+        'vizy/core/node/details', 'vizy/core/node/detailsSummary', 'vizy/core/node/detailsContent',
+        'vizy/core/node/emoji',
         'vizy/core/node/image', 'vizy/core/node/iframe', 'vizy/core/node/mediaEmbed',
         'vizy/core/node/table', 'vizy/core/node/tableRow',
         'vizy/core/node/tableCell', 'vizy/core/node/tableHeader',
@@ -48,7 +52,9 @@ final class Extensions extends Component
         'vizy/core/mark/bold', 'vizy/core/mark/code', 'vizy/core/mark/highlight',
         'vizy/core/mark/italic', 'vizy/core/mark/link', 'vizy/core/mark/strike',
         'vizy/core/mark/subscript', 'vizy/core/mark/superscript',
-        'vizy/core/mark/textStyle', 'vizy/core/mark/underline',
+        'vizy/core/mark/rubyText', 'vizy/core/mark/textStyle', 'vizy/core/mark/underline',
+        'vizy/core/extension/characterCount', 'vizy/core/extension/placeholder',
+        'vizy/core/extension/typography', 'vizy/core/extension/findAndReplace',
     ];
 
     private const NODE_STRATEGIES = ['omit', 'block', 'type'];
@@ -384,6 +390,7 @@ final class Extensions extends Component
             marks\Strike::class,
             marks\Subscript::class,
             marks\Superscript::class,
+            marks\RubyText::class,
             marks\TextStyle::class,
             marks\Underline::class,
         ];
@@ -404,6 +411,12 @@ final class Extensions extends Component
             allnodes\BulletList::class,
             allnodes\OrderedList::class,
             allnodes\ListItem::class,
+            allnodes\TaskList::class,
+            allnodes\TaskItem::class,
+            allnodes\Details::class,
+            allnodes\DetailsSummary::class,
+            allnodes\DetailsContent::class,
+            allnodes\Emoji::class,
             allnodes\Image::class,
             allnodes\Iframe::class,
             allnodes\MediaEmbed::class,
@@ -418,7 +431,12 @@ final class Extensions extends Component
 
     private function _coreExtensions(): array
     {
-        return [];
+        return [
+            allExtensions\CharacterCount::class,
+            allExtensions\Placeholder::class,
+            allExtensions\Typography::class,
+            allExtensions\FindAndReplace::class,
+        ];
     }
 
     private function _compileClass(string $kind, mixed $class, int $index): array

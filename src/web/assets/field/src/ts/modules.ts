@@ -1,32 +1,47 @@
 import { Node, type AnyExtension } from '@tiptap/core';
+import { Placeholder } from '@tiptap/extensions/placeholder';
 import Blockquote from '@tiptap/extension-blockquote';
 import Bold from '@tiptap/extension-bold';
 import Code from '@tiptap/extension-code';
-import CodeBlock from '@tiptap/extension-code-block';
+import CodeBlockLowlight from '@tiptap/extension-code-block-lowlight';
+import Details, { DetailsContent, DetailsSummary } from '@tiptap/extension-details';
 import HardBreak from '@tiptap/extension-hard-break';
 import Heading from '@tiptap/extension-heading';
 import HorizontalRule from '@tiptap/extension-horizontal-rule';
 import Italic from '@tiptap/extension-italic';
-import { BulletList, ListItem, OrderedList } from '@tiptap/extension-list';
+import { BulletList, ListItem, OrderedList, TaskItem, TaskList } from '@tiptap/extension-list';
 import Paragraph from '@tiptap/extension-paragraph';
 import Strike from '@tiptap/extension-strike';
 import Text from '@tiptap/extension-text';
 import Underline from '@tiptap/extension-underline';
+import Typography from '@tiptap/extension-typography';
+import FindAndReplace from '@tiptap/extension-find-and-replace';
 import Highlight from '@tiptap/extension-highlight';
 import Subscript from '@tiptap/extension-subscript';
 import Superscript from '@tiptap/extension-superscript';
+import RubyText from '@tiptap/extension-ruby-text';
 import TableRow from '@tiptap/extension-table-row';
 import { createSemanticImage } from './semantic/image';
 import { createSemanticLink } from './semantic/link';
 import { createSemanticTable, createSemanticTableCell, createSemanticTableHeader } from './semantic/table';
 import { createVizyIframe } from './semantic/iframe';
 import { createVizyMediaEmbed } from './semantic/media-embed';
-import { TextStyle } from '@tiptap/extension-text-style';
+import { createVizyEmoji } from './semantic/emoji';
+import { createVizyCharacterCount } from './semantic/character-count';
+import {
+    BackgroundColor,
+    Color,
+    FontFamily,
+    FontSize,
+    LineHeight,
+    TextStyle,
+} from '@tiptap/extension-text-style';
 import type { NodeViewServices } from './extensions';
 import { createVizyBlock } from './extensions';
 import { createVizyLayout, createVizyColumn } from './layout/nodes';
 import type { EditorManifest } from './types';
 import { applyModuleReplacers, getExternalModuleFactory } from './external-registry';
+import { common, createLowlight } from 'lowlight';
 
 export interface TrustedModuleContext {
     manifest: EditorManifest;
@@ -74,6 +89,7 @@ const CanonicalDocument = Node.create({
 
 /** Every level, which is what TipTap's Heading ships with. */
 const ALL_HEADING_LEVELS: Array<1 | 2 | 3 | 4 | 5 | 6> = [1, 2, 3, 4, 5, 6];
+const codeLowlight = createLowlight(common);
 
 /**
  * The levels to build Heading's schema from.
@@ -111,12 +127,18 @@ export const TRUSTED_MODULES: Readonly<Record<string, TrustedModuleFactory>> = O
             levels: headingLevels(context?.manifest),
         }),
         'vizy/core/node/blockquote': () => Blockquote,
-        'vizy/core/node/codeBlock': () => CodeBlock,
+        'vizy/core/node/codeBlock': () => CodeBlockLowlight.configure({ lowlight: codeLowlight }),
         'vizy/core/node/horizontalRule': () => HorizontalRule,
         'vizy/core/node/hardBreak': () => HardBreak,
         'vizy/core/node/bulletList': () => BulletList,
         'vizy/core/node/orderedList': () => OrderedList,
         'vizy/core/node/listItem': () => ListItem,
+        'vizy/core/node/taskList': () => TaskList,
+        'vizy/core/node/taskItem': () => TaskItem.configure({ nested: true }),
+        'vizy/core/node/details': () => Details.configure({ persist: false }),
+        'vizy/core/node/detailsSummary': () => DetailsSummary,
+        'vizy/core/node/detailsContent': () => DetailsContent,
+        'vizy/core/node/emoji': () => createVizyEmoji(),
         'vizy/core/node/image': () => createSemanticImage(),
         'vizy/core/node/iframe': () => createVizyIframe(),
         'vizy/core/node/mediaEmbed': () => createVizyMediaEmbed(),
@@ -132,8 +154,31 @@ export const TRUSTED_MODULES: Readonly<Record<string, TrustedModuleFactory>> = O
         'vizy/core/mark/strike': () => Strike,
         'vizy/core/mark/subscript': () => Subscript,
         'vizy/core/mark/superscript': () => Superscript,
-        'vizy/core/mark/textStyle': () => TextStyle,
+        'vizy/core/mark/rubyText': () => RubyText,
+        // One persisted mark owns the official value extensions. Keeping them behind the
+        // Text style capability prevents five implementation details from cluttering the
+        // schema picker while still loading each official TipTap command natively.
+        'vizy/core/mark/textStyle': () => [
+            TextStyle,
+            Color,
+            BackgroundColor,
+            FontFamily,
+            FontSize,
+            LineHeight,
+        ],
         'vizy/core/mark/underline': () => Underline,
+        'vizy/core/extension/characterCount': (context) => createVizyCharacterCount({
+            limit: context?.manifest.extensionOptions?.characterCount?.limit ?? null,
+            autoTrim: false,
+        }),
+        'vizy/core/extension/placeholder': (context) => Placeholder.configure({
+            placeholder: context?.manifest.extensionOptions?.placeholder?.text ?? 'Write something …',
+        }),
+        'vizy/core/extension/typography': () => Typography,
+        'vizy/core/extension/findAndReplace': () => FindAndReplace.configure({
+            injectCSS: false,
+            searchDebounceMs: 0,
+        }),
     },
 );
 

@@ -55,6 +55,14 @@ Output-only attrs (e.g. Link refs, `rel` for `_blank`).
 :::
 
 ::: reference
+### `renderOccurrenceHtml()`
+
+**Returns:** `string|null`
+
+Optional full HTML override for marks that need more than a single wrapper tag; null uses the default tag path.
+:::
+
+::: reference
 ### `alwaysEnabled()`
 
 **Returns:** `bool` / `isInternal()` / `dependencies()` / `implies()`
@@ -82,7 +90,8 @@ Core classes live under `verbb\vizy\marks\`.
 | `subscript` | `<sub>` | — |
 | `superscript` | `<sup>` | — |
 | `highlight` | `<mark>` | — |
-| `textStyle` | *(no default tag)* | TipTap text-style carrier; pair with a rendering event or custom output if you need CSS variables |
+| `textStyle` | `<span style="…">` | Safe text/background colours, font family, font size, and line height from Vizy’s fixed authoring choices |
+| `rubyText` | `<ruby><rb>…</rb><rt>…</rt></ruby>` | `rt` stores the annotation text |
 | `link` | `<a>` | **Semantic storage** (not a bare `href`): `type` (`url` / `email` / `tel` / `sms` / `entry` / `asset` / `category`), `value` or `targetUid`, optional `siteMode` / `siteUid` / `suffix` / `newWindow`. Render resolves `href` via `Link::resolveHref` + HTMLPurifier URI schemes (`http`/`https`/`mailto`/`tel`/`sms`). Rejected URIs omit the `<a>` (inner text kept). `_blank` adds `rel="noopener noreferrer"`. GraphQL also exposes `url` / `element` convenience fields |
 
 Authoring-only keys (`type`, `value`, `targetUid`, …) are stripped before HTML

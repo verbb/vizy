@@ -109,6 +109,71 @@ empty if there is no toolbar button; return surfaces (and usually
 $event->extensions[] = \acme\vizy\CharacterCount::class;
 ```
 
+### Adding an Official TipTap Extension
+
+Official TipTap packages use the same registration path as a custom extension. Vizy bundles its native extensions itself, but a module can compile another official extension into its own control-panel AssetBundle and register that factory under a project-owned module ID.
+
+Suppose a module needs TipTap's Focus extension. Install the official package at the same TipTap version used by Vizy, then add a thin PHP class so the extension appears in Editor Configs:
+
+```php
+<?php
+namespace acme\vizy;
+
+use verbb\vizy\base\Extension;
+
+class Focus extends Extension
+{
+    public static function id(): string
+    {
+        return 'focus';
+    }
+
+    public static function moduleId(): string
+    {
+        return 'acme/extension/focus';
+    }
+
+    public static function label(): string
+    {
+        return 'Focus';
+    }
+}
+```
+
+Register the class from the module's `init()` method:
+
+```php
+use acme\vizy\Focus;
+use verbb\vizy\events\RegisterExtensionsEvent;
+use verbb\vizy\services\Extensions;
+use yii\base\Event;
+
+Event::on(Extensions::class, Extensions::EVENT_REGISTER_EXTENSIONS, function(RegisterExtensionsEvent $event) {
+    $event->extensions[] = Focus::class;
+});
+```
+
+In the AssetBundle's JavaScript entry, import the official factory and register the same module ID. The package's TipTap version must match Vizy's installed version so it shares compatible editor contracts.
+
+```js
+import Focus from '@tiptap/extension-focus';
+
+function register() {
+    Craft.Vizy.registerModule('acme/extension/focus', () => Focus.configure({
+        className: 'has-focus',
+        mode: 'deepest',
+    }));
+}
+
+if (window.Craft?.Vizy?.registerModule) {
+    register();
+} else {
+    document.addEventListener('vizy:register', register);
+}
+```
+
+After loading the AssetBundle, enable **Focus** under **Behaviour extensions** on the relevant Editor Config and open an entry using that config. Focused nodes receive the configured class in the editor; the extension does not change saved Vizy content or frontend HTML.
+
 ### Replacing or Customising Controls
 
 If you only need to reconfigure a core TipTap extension the field already

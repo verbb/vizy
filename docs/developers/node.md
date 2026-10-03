@@ -111,11 +111,17 @@ templates, not `tag()`.
 | `paragraph` | `<p>` | `textAlign` → `class` (`text-left`, …); default align omitted |
 | `heading` | `<h1>`…`<h6>` | Storage `level` (1–6); `textAlign` → `class`; `level` never emitted as an HTML attr |
 | `blockquote` | `<blockquote>` | — |
-| `codeBlock` | `<pre><code>` | — |
+| `codeBlock` | `<pre><code>` | Optional `language` is rendered as a `language-*` class; the editor highlights supported languages and auto-detects when it is absent |
 | `bulletList` / `orderedList` | `<ul>` / `<ol>` | — |
 | `listItem` | `<li>` | — |
+| `taskList` | `<ul data-type="taskList">` | Pulls in the internal `taskItem` type |
+| `taskItem` | `<li data-type="taskItem">` | Internal; boolean `checked` state renders a disabled checkbox |
+| `details` | `<details>` | Pulls in the internal `detailsSummary` and `detailsContent` types; open state is not persisted |
+| `detailsSummary` | `<summary>` | Internal |
+| `detailsContent` | `<div data-type="detailsContent">` | Internal |
 | `hardBreak` | `<br>` | — |
 | `horizontalRule` | `<hr>` | — |
+| `emoji` | `<span data-type="emoji" data-name="…">` | Stores the official emoji name and resolved Unicode character for editor and PHP rendering |
 | `text` | *(text node)* | Marks wrap text; text is HTML-encoded on render |
 
 ### Layout

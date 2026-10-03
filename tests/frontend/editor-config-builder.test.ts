@@ -90,6 +90,10 @@ function initialData(overrides: Record<string, unknown> = {}): Initial {
             { id: 'paragraph', label: 'Paragraph', kind: 'node', group: 'blocks', icon: BOLD_SVG, preview: 'paragraph', memberOnly: true },
             { id: 'mediaEmbed', label: 'Media embed', kind: 'node', group: 'media', icon: BOLD_SVG, capabilityKind: 'node', capabilityName: 'mediaEmbed', preview: 'mediaEmbed' },
             { id: 'iframe', label: 'Iframe', kind: 'node', group: 'media', icon: BOLD_SVG, capabilityKind: 'node', capabilityName: 'iframe', preview: 'iframe' },
+            { id: 'fontFamily', label: 'Font family', kind: 'mark', group: 'formatting', icon: BOLD_SVG, capabilityKind: 'mark', capabilityName: 'textStyle', valuePreview: 'Default font', valuePreviewKind: 'text', iconCustomizable: false },
+            { id: 'fontSize', label: 'Font size', kind: 'mark', group: 'formatting', icon: BOLD_SVG, capabilityKind: 'mark', capabilityName: 'textStyle', valuePreview: 'Default', valuePreviewKind: 'text', iconCustomizable: false },
+            { id: 'textColor', label: 'Text colour', kind: 'mark', group: 'formatting', icon: BOLD_SVG, capabilityKind: 'mark', capabilityName: 'textStyle', valuePreview: 'A', valuePreviewKind: 'color', iconCustomizable: false },
+            { id: 'lineHeight', label: 'Line height', kind: 'mark', group: 'formatting', icon: BOLD_SVG, capabilityKind: 'mark', capabilityName: 'textStyle', valuePreview: 'Default', valuePreviewKind: 'text', iconCustomizable: false },
         ],
         dropdownCatalog: [FORMATTING_DROPDOWN],
         bubbleCatalog: [
@@ -134,6 +138,72 @@ const iconState = (element: HTMLElement): Record<string, string> => {
     const input = element.querySelector<HTMLInputElement>('input[name="iconsJson"]');
     return JSON.parse(input?.value ?? '{}');
 };
+
+const extensionOptionsState = (element: HTMLElement): Record<string, unknown> => {
+    const input = element.querySelector<HTMLInputElement>('input[name="extensionOptionsJson"]');
+    return JSON.parse(input?.value ?? '{}');
+};
+
+describe('behaviour extensions', () => {
+    it('reveals and serializes native extension options without exposing optionless extensions', () => {
+        const element = mount({
+            config: {
+                capabilities: { nodes: [], marks: ['bold'], extensions: ['typography'] },
+                headings: { levels: [] },
+                toolbar: ['bold'],
+                bubble: { enabled: true, items: ['bold'] },
+                extensionOptions: {
+                    characterCount: { limit: null },
+                    placeholder: { text: 'Start writing …' },
+                },
+            },
+            capabilityCatalog: {
+                nodes: [],
+                marks: [{ label: 'Bold', value: 'bold' }],
+                extensions: [
+                    { label: 'Character count', value: 'characterCount' },
+                    { label: 'Placeholder', value: 'placeholder' },
+                    { label: 'Typography', value: 'typography' },
+                ],
+                headingAvailable: false,
+            },
+        });
+        const select = element.querySelector<HTMLElement>('[data-capability-group="extensions"]');
+
+        expect(element.querySelector('[data-character-count-limit]')).toBeNull();
+        expect(element.querySelector('[data-placeholder-text]')).toBeNull();
+        expect(element.textContent).not.toContain('Typography options');
+
+        select?.dispatchEvent(new CustomEvent('pk-change', {
+            detail: { value: ['characterCount', 'placeholder', 'typography'] },
+            bubbles: true,
+        }));
+
+        const limit = element.querySelector<HTMLInputElement>('[data-character-count-limit]');
+        const placeholder = element.querySelector<HTMLInputElement>('[data-placeholder-text]');
+        expect(limit).not.toBeNull();
+        expect(placeholder?.value).toBe('Start writing …');
+
+        if (limit) {
+            limit.value = '750';
+            limit.dispatchEvent(new Event('input', { bubbles: true }));
+        }
+        if (placeholder) {
+            placeholder.value = 'Describe the page …';
+            placeholder.dispatchEvent(new Event('input', { bubbles: true }));
+        }
+
+        expect(hidden(element, 'capabilityExtensions[]')).toEqual([
+            'characterCount',
+            'placeholder',
+            'typography',
+        ]);
+        expect(extensionOptionsState(element)).toEqual({
+            characterCount: { limit: 750 },
+            placeholder: { text: 'Describe the page …' },
+        });
+    });
+});
 
 describe('icon overrides', () => {
     const CUSTOM_SVG = '<svg id="custom-bold" viewBox="0 0 16 16"><path d="M0 0h1v1z"/></svg>';
@@ -284,6 +354,53 @@ describe('the palette', () => {
         expect(drawn('dropdown:formatting')).toContain('has-menu');
         expect(drawn('addBlock')).toContain('has-menu');
         expect(drawn('bulletList')).not.toContain('has-menu');
+    });
+
+    it('previews TextStyle controls as the neutral value selectors used by the live toolbar', () => {
+        const element = mount({
+            config: {
+                capabilities: { nodes: [], marks: ['textStyle'] },
+                headings: { levels: [] },
+                toolbar: ['fontFamily', 'fontSize', 'textColor', 'lineHeight'],
+                bubble: { enabled: false, items: [] },
+            },
+        });
+        const active = items(element, 'toolbar-active');
+
+        expect(active.map((item) => item.querySelector('.text-style-control__value')?.textContent)).toEqual([
+            'Default font',
+            'Default',
+            'A',
+            'Default',
+        ]);
+        expect(active.every((item) => item.classList.contains('has-menu'))).toBe(true);
+        expect(active.every((item) => item.querySelectorAll('svg').length === 1)).toBe(true);
+        expect(active.find((item) => item.dataset.toolbarItem === 'textColor')
+            ?.classList.contains('text-style-control--color')).toBe(true);
+
+        // A value selector ignores icon overrides at runtime, so the icon editor must not offer
+        // a setting that can never affect its face.
+        for (const id of ['fontFamily', 'fontSize', 'textColor', 'lineHeight']) {
+            expect(element.querySelector(`[data-icon-control="${id}"]`)).toBeNull();
+        }
+
+        const tray = mount({
+            config: {
+                capabilities: { nodes: [], marks: ['textStyle'] },
+                headings: { levels: [] },
+                toolbar: [],
+                bubble: { enabled: false, items: [] },
+            },
+        });
+
+        // Dragging a selector must not change its face: the available tray previews the same
+        // neutral value and chevron as the placed toolbar control.
+        for (const id of ['fontFamily', 'fontSize', 'textColor', 'lineHeight']) {
+            const item = items(tray, 'toolbar-available').find((candidate) => candidate.dataset.toolbarItem === id);
+            expect(item?.classList.contains('has-menu')).toBe(true);
+            expect(item?.querySelectorAll('svg')).toHaveLength(1);
+            expect(item?.querySelector('.text-style-control__value')).not.toBeNull();
+        }
     });
 
     it('places a dropdown as an ID, and stores nothing about what it holds', () => {

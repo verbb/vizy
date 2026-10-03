@@ -183,8 +183,10 @@ final class EditorManifests extends Component
             'schemaRevision' => $schemaRevision,
             'enabledNodes' => $enabled['nodes'],
             'enabledMarks' => $enabled['marks'],
+            'enabledExtensions' => $enabled['extensions'],
             'internalNodes' => $enabled['internalNodes'],
             'modules' => $enabled['modules'],
+            'extensionOptions' => $config['extensionOptions'] ?? [],
             'headingLevels' => $this->_headingLevels($config, $enabled['nodes']),
             'field' => $fieldPolicy,
             'blockTypes' => $blockTypes,
@@ -526,6 +528,12 @@ final class EditorManifests extends Component
 
         foreach ($enabledNodes as $nodeName) {
             if (!is_string($nodeName) || isset($internal[$nodeName]) || !isset($enabled[$nodeName])) {
+                continue;
+            }
+
+            // Emoji needs a picker value, so it is exposed through its dedicated
+            // toolbar control instead of the generic zero-input insertion flow.
+            if ($nodeName === 'emoji') {
                 continue;
             }
 

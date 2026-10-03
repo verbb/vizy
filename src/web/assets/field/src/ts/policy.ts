@@ -2,6 +2,7 @@ import { Extension } from '@tiptap/core';
 import type { Node as ProseMirrorNode } from '@tiptap/pm/model';
 import { Plugin } from '@tiptap/pm/state';
 import { sameBlockTypeMaxDepth, sameTypeDepthForBlockAt } from './blocks/nesting-depth';
+import { ACCEPTED_CANONICAL_TRANSACTION_META } from './reconcile-document';
 import type { EditorManifest } from './types';
 
 function directBlocks(node: ProseMirrorNode): ProseMirrorNode[] {
@@ -79,7 +80,7 @@ export const ContentPolicy = Extension.create<{ manifest: EditorManifest }>({
         return [new Plugin({
             filterTransaction(transaction, state) {
                 if (!transaction.docChanged) return true;
-                if (transaction.getMeta('vizyAcceptedCanonical') === true) return true;
+                if (transaction.getMeta(ACCEPTED_CANONICAL_TRANSACTION_META) === true) return true;
                 const before = violationKeys(state.doc, manifest);
                 const after = violationKeys(transaction.doc, manifest);
                 return [...after].every(([key, count]) => count <= (before.get(key) ?? 0));

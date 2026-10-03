@@ -70,6 +70,12 @@ final class TypeHtml
 
     public static function renderResolvedMark(string $class, string $innerHtml, array $attrs, RenderContext $ctx): string
     {
+        $custom = $class::renderOccurrenceHtml($innerHtml, $attrs, $ctx);
+
+        if ($custom !== null) {
+            return $custom;
+        }
+
         // Marks emit flat HTML attrs; strip onclick/srcdoc before beginTag.
         $attrs = SafeHtml::filterEmitAttrs($attrs);
         $tag = $class::tagForAttrs($attrs);

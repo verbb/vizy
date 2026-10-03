@@ -119,7 +119,7 @@ it('lists installed partner nodes in the insertion manifest when enabled', funct
         expect($configs->saveConfig($id, [
             'label' => 'Emoji insertion',
             'capabilities' => [
-                'nodes' => ['paragraph', 'emoji'],
+                'nodes' => ['paragraph', 'partnerEmoji'],
                 'marks' => [],
             ],
             'toolbar' => ['paragraph'],
@@ -136,11 +136,11 @@ it('lists installed partner nodes in the insertion manifest when enabled', funct
 
         Vizy::$plugin->getEditorManifests()->invalidate();
         $items = Vizy::$plugin->getEditorManifests()->build($field)['insertionItems'];
-        $emoji = collect($items)->firstWhere('id', 'node:vizy:emoji');
+        $emoji = collect($items)->firstWhere('id', 'node:vizy:partnerEmoji');
         expect($emoji)->not->toBeNull()
             ->and($emoji)->toMatchArray([
                 'kind' => 'node',
-                'nodeName' => 'emoji',
+                'nodeName' => 'partnerEmoji',
                 'label' => 'Emoji',
                 'group' => 'Extensions',
             ]);
@@ -154,4 +154,19 @@ it('lists installed partner nodes in the insertion manifest when enabled', funct
         );
         Vizy::$plugin->getExtensions()->reset();
     }
+});
+
+it('keeps native emoji out of zero-input insertion surfaces', function() {
+    $field = new VizyField([
+        'uid' => StringHelper::UUID(),
+        'name' => 'Native emoji',
+        'handle' => 'nativeEmoji' . StringHelper::randomString(5),
+        'editorConfig' => 'standard',
+        'rootContentType' => VizyField::ROOT_CONTENT_RICH,
+        'blockTypePickerGroups' => [],
+    ]);
+
+    $items = Vizy::$plugin->getEditorManifests()->build($field)['insertionItems'];
+
+    expect(collect($items)->pluck('id')->all())->not->toContain('node:vizy:emoji');
 });

@@ -9,7 +9,7 @@ import {
     restoreCanonicalFromEditor,
 } from './transport/opaque';
 import { createEditorExtensions } from './editor-schema';
-import { reconcileDocument } from './reconcile-document';
+import { ACCEPTED_CANONICAL_TRANSACTION_META, reconcileDocument } from './reconcile-document';
 import { createInsertionRegistry } from './insertion/registry';
 import { registerLayoutInsertion } from './layout/insertion';
 import { resolveLayoutPresets } from './layout/presets';
@@ -131,6 +131,7 @@ export class VizyEditorElement extends HTMLElement {
     #unsupportedNotice: HTMLDivElement | null = null;
     #clipboardNotice: HTMLDivElement | null = null;
     #captureNotice: HTMLDivElement | null = null;
+    #characterCount: HTMLDivElement | null = null;
     #retryingUploads = false;
     #showUploadSuccess = false;
     #generation = 0;
@@ -349,6 +350,7 @@ export class VizyEditorElement extends HTMLElement {
         this.#unsupportedNotice = null;
         this.#clipboardNotice = null;
         this.#captureNotice = null;
+        this.#characterCount = null;
         this.#retryingUploads = false;
         this.#toolbarInsertionWarm = false;
         for (const dispose of this.#disposals.splice(0)) dispose();
@@ -611,6 +613,13 @@ export class VizyEditorElement extends HTMLElement {
                 : 7,
         ));
         this.#mount.append(this.#toolbar, surface);
+        if (manifest.enabledExtensions?.includes('characterCount')) {
+            this.#characterCount = document.createElement('div');
+            this.#characterCount.className = 'vizy-character-count';
+            this.#characterCount.setAttribute('role', 'status');
+            this.#characterCount.setAttribute('aria-live', 'polite');
+            this.#mount.append(this.#characterCount);
+        }
         // Selection bubble portals via pk-popup on first sync — do not park it
         // under the editor body (that forced absolute coords + clipping).
         const shell = document.createElement('div');
@@ -764,6 +773,7 @@ export class VizyEditorElement extends HTMLElement {
             },
             onTransaction: ({ transaction }) => {
                 if (!transaction.docChanged) return;
+                this.#syncCharacterCount();
                 if (!this.#reconciling) this.#revision += 1;
                 if (this.#writesEnabled) {
                     this.#contentTouched = true;
@@ -937,6 +947,7 @@ export class VizyEditorElement extends HTMLElement {
         // Preview URLs are session-only — hydrate before NodeViews paint.
         hydrateImagePreviews(this.#bootstrap.imagePreviews);
         this.#setAcceptedCanonical(this.#adaptForEditor(this.#bootstrap.document, manifest));
+        this.#syncCharacterCount();
         this.#syncToolbarBlockAvailability();
         this.#syncUnsupportedNotice();
         this.#adoptInitialFieldLayouts();
@@ -959,6 +970,26 @@ export class VizyEditorElement extends HTMLElement {
         this.#applyFieldLayoutMountPolicy();
         this.#refreshSummaries();
         this.#insertionOverlay?.sync();
+    }
+
+    #syncCharacterCount(): void {
+        if (!this.#characterCount || !this.#editor || !this.#bootstrap) return;
+
+        const storage = this.#editor.storage.characterCount as {
+            characters?: () => number;
+            words?: () => number;
+        } | undefined;
+        const characters = storage?.characters?.() ?? 0;
+        const words = storage?.words?.() ?? 0;
+        const limit = this.#bootstrap.manifest.extensionOptions?.characterCount?.limit ?? null;
+        const characterLabel = limit === null
+            ? (window.Craft?.t?.('vizy', 'Characters: {count}', { count: characters }) ?? `Characters: ${characters}`)
+            : (window.Craft?.t?.('vizy', 'Characters: {count} / {limit}', { count: characters, limit })
+                ?? `Characters: ${characters} / ${limit}`);
+        const wordLabel = window.Craft?.t?.('vizy', 'Words: {count}', { count: words }) ?? `Words: ${words}`;
+
+        this.#characterCount.textContent = `${characterLabel} · ${wordLabel}`;
+        this.#characterCount.classList.toggle('is-over-limit', limit !== null && characters > limit);
     }
 
     /**
@@ -1352,7 +1383,7 @@ export class VizyEditorElement extends HTMLElement {
         if (!this.#editor) return;
         const parsed = this.#editor.schema.nodeFromJSON(adapted);
         const transaction = reconcileDocument(this.#editor.state.tr, parsed)
-            .setMeta('vizyAcceptedCanonical', true)
+            .setMeta(ACCEPTED_CANONICAL_TRANSACTION_META, true)
             .setMeta('addToHistory', false);
         if (transaction.docChanged) this.#editor.view.dispatch(transaction);
     }

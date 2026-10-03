@@ -93,6 +93,17 @@ final class ContentText extends Component
                 }
             }
 
+            if (($node['type'] ?? null) === 'emoji') {
+                $emoji = trim((string)($node['attrs']['emoji'] ?? ''));
+                $name = trim((string)($node['attrs']['name'] ?? ''));
+                $text = $emoji !== '' ? $emoji : ($name !== '' ? ":{$name}:" : '');
+
+                if ($text !== '') {
+                    $parts[] = $text;
+                    $length += mb_strlen($text) + 1;
+                }
+            }
+
             if ($length > $limit) {
                 return;
             }

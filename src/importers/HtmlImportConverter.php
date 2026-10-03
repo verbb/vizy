@@ -5,6 +5,7 @@ use verbb\vizy\document\DocumentParser;
 use verbb\vizy\document\VizyDocument;
 use verbb\vizy\fields\VizyField;
 use verbb\vizy\helpers\SafeHtml;
+use verbb\vizy\marks\TextStyle;
 
 use craft\helpers\StringHelper;
 
@@ -155,8 +156,9 @@ final class HtmlImportConverter
             'h1', 'h2', 'h3', 'h4', 'h5', 'h6' => [$this->_heading($element, (int)substr($tag, 1), $depth)],
             'blockquote' => $this->_blockquote($element, $depth),
             'pre' => $this->_codeBlock($element),
-            'ul' => $this->_list($element, 'bulletList', $depth),
+            'ul' => $this->_list($element, strtolower($element->getAttribute('data-type')) === 'tasklist' ? 'taskList' : 'bulletList', $depth),
             'ol' => $this->_list($element, 'orderedList', $depth),
+            'details' => $this->_details($element, $depth),
             'table' => $this->_table($element, $depth),
             'hr' => $this->_leafBlock($element, 'horizontalRule'),
             'img' => $this->_image($element),
@@ -227,12 +229,29 @@ final class HtmlImportConverter
     private function _codeBlock(DOMElement $element): array
     {
         $this->_diagnoseDiscardedAttributes($element);
+        $language = null;
 
         foreach ($element->getElementsByTagName('*') as $descendant) {
             if (strtolower($descendant->tagName) !== 'code') {
                 $this->_diagnose('unsupportedElement', "Unsupported element <{$descendant->tagName}> inside preformatted text was removed while its text was kept.", $descendant, ['tag' => strtolower($descendant->tagName)]);
             }
-            $this->_diagnoseDiscardedAttributes($descendant);
+            $allowedAttributes = [];
+
+            if (strtolower($descendant->tagName) === 'code' && $descendant->hasAttribute('class')) {
+                $classNames = array_values(array_filter(preg_split('/\s+/', trim($descendant->getAttribute('class'))) ?: []));
+
+                foreach ($classNames as $className) {
+                    if (preg_match('/^language-([a-z0-9][a-z0-9_+-]{0,31})$/i', $className, $matches) === 1) {
+                        $language = strtolower($matches[1]);
+                        break;
+                    }
+                }
+
+                if (count($classNames) === 1 && $language !== null) {
+                    $allowedAttributes[] = 'class';
+                }
+            }
+            $this->_diagnoseDiscardedAttributes($descendant, $allowedAttributes);
         }
         $text = $element->textContent;
 
@@ -241,15 +260,25 @@ final class HtmlImportConverter
             return [['type' => 'paragraph', 'content' => $text === '' ? [] : [['type' => 'text', 'text' => $text]]]];
         }
 
-        return [[
+        $node = [
             'type' => 'codeBlock',
             'content' => $text === '' ? [] : [['type' => 'text', 'text' => $text]],
-        ]];
+        ];
+
+        if ($language !== null) {
+            $node['attrs'] = ['language' => $language];
+        }
+
+        return [$node];
     }
 
     private function _list(DOMElement $element, string $type, int $depth): array
     {
-        $allowedAttributes = $type === 'orderedList' ? ['start'] : [];
+        $allowedAttributes = match ($type) {
+            'orderedList' => ['start'],
+            'taskList' => ['data-type'],
+            default => [],
+        };
         $this->_diagnoseDiscardedAttributes($element, $allowedAttributes);
         $items = [];
 
@@ -261,7 +290,7 @@ final class HtmlImportConverter
                 $this->_diagnose('invalidListChild', 'List content outside a list item was ignored.', $child);
                 continue;
             }
-            $items[] = $this->_listItem($child, $depth + 1);
+            $items[] = $this->_listItem($child, $depth + 1, $type === 'taskList');
         }
 
         if (!$this->_allowsNode($type)) {
@@ -283,16 +312,106 @@ final class HtmlImportConverter
         return [$node];
     }
 
-    private function _listItem(DOMElement $element, int $depth): array
+    private function _listItem(DOMElement $element, int $depth, bool $task = false): array
     {
-        $this->_diagnoseDiscardedAttributes($element);
-        $content = $this->_convertBlockChildren($element, $depth);
+        $this->_diagnoseDiscardedAttributes($element, $task ? ['data-type', 'data-checked'] : []);
+        $contentRoot = $element;
+
+        if ($task) {
+            foreach ($element->childNodes as $child) {
+                if ($child instanceof DOMElement && strtolower($child->tagName) === 'div') {
+                    $contentRoot = $child;
+                    break;
+                }
+            }
+        }
+        $content = $this->_convertBlockChildren($contentRoot, $depth);
 
         if ($content === []) {
             $content[] = ['type' => 'paragraph', 'content' => []];
         }
 
-        return ['type' => 'listItem', 'content' => $content];
+        if (!$task) {
+            return ['type' => 'listItem', 'content' => $content];
+        }
+        $checked = strtolower($element->getAttribute('data-checked')) === 'true';
+
+        if (!$checked) {
+            $checkbox = $element->getElementsByTagName('input')->item(0);
+            $checked = $checkbox instanceof DOMElement && $checkbox->hasAttribute('checked');
+        }
+
+        return ['type' => 'taskItem', 'attrs' => ['checked' => $checked], 'content' => $content];
+    }
+
+    private function _details(DOMElement $element, int $depth): array
+    {
+        $this->_diagnoseDiscardedAttributes($element);
+        $summary = null;
+        $contentRoot = null;
+
+        foreach ($element->childNodes as $child) {
+            if (!$child instanceof DOMElement) {
+                continue;
+            }
+            $tag = strtolower($child->tagName);
+
+            if ($tag === 'summary' && $summary === null) {
+                $summary = $child;
+            } elseif ($tag === 'div' && strtolower($child->getAttribute('data-type')) === 'detailscontent') {
+                $contentRoot = $child;
+            }
+        }
+        $summaryContent = $summary ? $this->_trimInline($this->_convertInlineChildren($summary, [], $depth + 1)) : [];
+        $content = [];
+
+        if ($contentRoot) {
+            $this->_diagnoseDiscardedAttributes($contentRoot, ['data-type']);
+            $content = $this->_convertBlockChildren($contentRoot, $depth + 1);
+        } else {
+            $inline = [];
+
+            foreach ($element->childNodes as $child) {
+                if ($child === $summary || ($child instanceof DOMText && trim($child->nodeValue ?? '') === '')) {
+                    continue;
+                }
+
+                if ($child instanceof DOMElement && $this->_isBlockElement($child)) {
+                    if ($inline !== []) {
+                        $content[] = ['type' => 'paragraph', 'content' => $this->_trimInline($inline)];
+                        $inline = [];
+                    }
+                    $content = [...$content, ...$this->_convertBlockElement($child, $depth + 1)];
+                } else {
+                    $inline = [...$inline, ...$this->_convertInlineNode($child, [], $depth + 1)];
+                }
+            }
+
+            if ($inline !== []) {
+                $content[] = ['type' => 'paragraph', 'content' => $this->_trimInline($inline)];
+            }
+        }
+
+        if ($summary === null) {
+            $this->_diagnose('invalidDetails', 'Details content without a summary was flattened.', $element);
+        }
+
+        if ($summary === null || !$this->_allowsNode('details')) {
+            if ($summary !== null && !$this->_allowsNode('details')) {
+                $this->_diagnose('disallowedNode', 'Details are not enabled for the destination field; their content was kept without disclosure behaviour.', $element, ['type' => 'details']);
+            }
+            $fallback = $summaryContent === [] ? [] : [['type' => 'paragraph', 'content' => $summaryContent]];
+
+            return [...$fallback, ...$content];
+        }
+
+        return [[
+            'type' => 'details',
+            'content' => [
+                ['type' => 'detailsSummary', 'content' => $summaryContent],
+                ['type' => 'detailsContent', 'content' => $content !== [] ? $content : [['type' => 'paragraph', 'content' => []]]],
+            ],
+        ]];
     }
 
     private function _table(DOMElement $element, int $depth): array
@@ -536,6 +655,14 @@ final class HtmlImportConverter
             return $this->_link($node, $marks, $depth);
         }
 
+        if ($tag === 'ruby') {
+            return $this->_rubyText($node, $marks, $depth);
+        }
+
+        if ($tag === 'span' && strtolower($node->getAttribute('data-type')) === 'emoji') {
+            return $this->_emoji($node, $marks);
+        }
+
         if ($tag === 'br') {
             $this->_diagnoseDiscardedAttributes($node);
             return [['type' => 'hardBreak']];
@@ -548,7 +675,26 @@ final class HtmlImportConverter
         }
 
         if ($tag === 'span') {
-            $this->_diagnoseDiscardedAttributes($node);
+            if ($node->hasAttribute('style')) {
+                $this->_diagnoseDiscardedAttributes($node, ['style']);
+                $style = $node->getAttribute('style');
+                $attrs = TextStyle::attrsFromStyle($style);
+                $hasUnsupportedStyle = TextStyle::hasUnsupportedStyle($style);
+
+                if ($hasUnsupportedStyle) {
+                    $this->_diagnose('unsupportedInlineStyle', 'Unsupported inline style values were removed.', $node, ['tag' => 'span']);
+                }
+
+                if ($attrs !== []) {
+                    return $this->_withMark($node, 'textStyle', $attrs, $marks, $depth);
+                }
+
+                if (!$hasUnsupportedStyle) {
+                    $this->_diagnose('unsupportedInlineStyle', 'The inline style did not contain a supported Vizy text style and was removed.', $node, ['tag' => 'span']);
+                }
+            } else {
+                $this->_diagnoseDiscardedAttributes($node);
+            }
             return $this->_convertInlineChildren($node, $marks, $depth);
         }
 
@@ -560,6 +706,32 @@ final class HtmlImportConverter
         $this->_diagnose('unsupportedElement', "Unsupported inline element <{$tag}> was removed while its text was kept.", $node, ['tag' => $tag]);
         $this->_diagnoseDiscardedAttributes($node);
         return $this->_convertInlineChildren($node, $marks, $depth);
+    }
+
+    private function _emoji(DOMElement $element, array $marks): array
+    {
+        $this->_diagnoseDiscardedAttributes($element, ['data-type', 'data-name', 'data-emoji']);
+        $name = strtolower(trim($element->getAttribute('data-name')));
+        $emoji = trim($element->getAttribute('data-emoji')) ?: trim($element->textContent);
+
+        if (!$this->_allowsNode('emoji')) {
+            $this->_diagnose('disallowedNode', 'Emoji are not enabled for the destination field; the visible character was kept as text.', $element, ['type' => 'emoji']);
+            return $emoji === '' ? [] : [['type' => 'text', 'text' => $emoji, ...($marks === [] ? [] : ['marks' => $marks])]];
+        }
+
+        if ($name === '' || preg_match('/^[a-z0-9_+-]{1,80}$/', $name) !== 1) {
+            $this->_diagnose('invalidAttribute', 'The emoji name was missing or invalid; the visible character was kept as text.', $element, ['tag' => 'span', 'attribute' => 'data-name']);
+            return $emoji === '' ? [] : [['type' => 'text', 'text' => $emoji, ...($marks === [] ? [] : ['marks' => $marks])]];
+        }
+
+        return [array_filter([
+            'type' => 'emoji',
+            'attrs' => array_filter([
+                'name' => $name,
+                'emoji' => $emoji !== '' ? mb_substr($emoji, 0, 16) : null,
+            ], static fn(mixed $value): bool => $value !== null),
+            'marks' => $marks,
+        ], static fn(mixed $value): bool => $value !== [])];
     }
 
     private function _link(DOMElement $element, array $marks, int $depth): array
@@ -625,6 +797,45 @@ final class HtmlImportConverter
         }
 
         return $this->_withMark($element, 'link', $attrs, $marks, $depth);
+    }
+
+    private function _rubyText(DOMElement $element, array $marks, int $depth): array
+    {
+        $this->_diagnoseDiscardedAttributes($element);
+        $annotationNode = $element->getElementsByTagName('rt')->item(0);
+        $annotation = $annotationNode instanceof DOMElement ? trim($annotationNode->textContent) : '';
+
+        if ($annotation === '') {
+            $this->_diagnose('invalidRubyText', 'Ruby text without an annotation was kept as ordinary text.', $element);
+            return $this->_convertRubyBase($element, $marks, $depth);
+        }
+
+        if (!$this->_allowsMark('rubyText')) {
+            $this->_diagnose('disallowedMark', 'The rubyText mark is not enabled for the destination field; its text was kept without that annotation.', $element, ['type' => 'rubyText']);
+            return $this->_convertRubyBase($element, $marks, $depth);
+        }
+        $rubyMark = ['type' => 'rubyText', 'attrs' => ['rt' => mb_substr($annotation, 0, 200)]];
+
+        return $this->_convertRubyBase($element, [...$marks, $rubyMark], $depth);
+    }
+
+    private function _convertRubyBase(DOMElement $element, array $marks, int $depth): array
+    {
+        $base = $element->getElementsByTagName('rb')->item(0);
+
+        if ($base instanceof DOMElement) {
+            return $this->_convertInlineChildren($base, $marks, $depth);
+        }
+        $nodes = [];
+
+        foreach ($element->childNodes as $child) {
+            if ($child instanceof DOMElement && in_array(strtolower($child->tagName), ['rt', 'rp'], true)) {
+                continue;
+            }
+            $nodes = [...$nodes, ...$this->_convertInlineNode($child, $marks, $depth + 1)];
+        }
+
+        return $nodes;
     }
 
     private function _semanticLinkValue(string $href): array
@@ -719,7 +930,7 @@ final class HtmlImportConverter
         return in_array(strtolower($element->tagName), [
             'address', 'article', 'aside', 'blockquote', 'div', 'dl', 'fieldset', 'figcaption', 'figure',
             'footer', 'form', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'header', 'hr', 'img', 'main', 'nav',
-            'ol', 'p', 'pre', 'section', 'table', 'ul',
+            'details', 'ol', 'p', 'pre', 'section', 'table', 'ul',
         ], true);
     }
 

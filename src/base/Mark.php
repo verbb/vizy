@@ -81,6 +81,11 @@ class Mark extends Component implements MarkInterface
         return $attrs;
     }
 
+    public static function renderOccurrenceHtml(string $children, array $resolvedAttrs, RenderContext $ctx): ?string
+    {
+        return null;
+    }
+
     public static function dependencies(): array
     {
         return [];

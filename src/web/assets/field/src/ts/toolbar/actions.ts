@@ -3,6 +3,8 @@ import { activateLinkControl } from '../semantic/link-ui';
 import { activateImageControl, type VizyImageAuthoringConfig } from '../semantic/image-ui';
 import { activateUrlNodeControl } from '../semantic/embed-ui';
 import { activateLayoutControl } from '../layout/layout-ui';
+import { openRubyTextDialogForEditor } from '../semantic/ruby-text-dialog';
+import { openFindReplaceDialogForEditor } from '../semantic/find-replace-dialog';
 import type { LayoutPreset } from '../layout/presets';
 import type { TableOperation, ToolbarActionManifest, ToolbarControlManifest } from '../types';
 import { getRegisteredControl } from '../external-registry';
@@ -64,6 +66,16 @@ export function runToolbarAction(
         return true;
     }
 
+    if (action.command === 'editRubyText') {
+        void openRubyTextDialogForEditor(editor, { focus });
+        return true;
+    }
+
+    if (action.command === 'editFindAndReplace') {
+        void openFindReplaceDialogForEditor(editor);
+        return true;
+    }
+
     if (action.command === 'insertNode' && action.nodeName === 'image') {
         activateImageControl(editor, options?.imageAuthoring ?? {}, { focus });
         return true;
@@ -98,7 +110,7 @@ export function runToolbarAction(
             chain.toggleHeading({ level: action.level }).run();
             return true;
         case 'toggleNode':
-            return toggleNode(chain, action.nodeName);
+            return toggleNode(editor, chain, action.nodeName);
         case 'insertNode':
             return insertNode(editor, action.nodeName, focus);
         case 'setTextAlign':
@@ -152,7 +164,7 @@ function runTableOperation(chain: ReturnType<Editor['chain']>, operation: TableO
  * stays a table. A node absent from it has no toggle and is offered as an insertion
  * instead — see `TOGGLEABLE_NODES`, which the server reads the same way.
  */
-function toggleNode(chain: ReturnType<Editor['chain']>, nodeName: string): boolean {
+function toggleNode(editor: Editor, chain: ReturnType<Editor['chain']>, nodeName: string): boolean {
     switch (nodeName) {
         case 'heading':
             // A bare Heading button carries no level, so it falls back to the second
@@ -166,11 +178,21 @@ function toggleNode(chain: ReturnType<Editor['chain']>, nodeName: string): boole
         case 'orderedList':
             chain.toggleOrderedList().run();
             return true;
+        case 'taskList':
+            chain.toggleTaskList().run();
+            return true;
         case 'blockquote':
             chain.toggleBlockquote().run();
             return true;
         case 'codeBlock':
             chain.toggleCodeBlock().run();
+            return true;
+        case 'details':
+            if (editor.isActive('details')) {
+                chain.unsetDetails().run();
+            } else {
+                chain.setDetails().run();
+            }
             return true;
         default:
             return false;
@@ -238,6 +260,14 @@ export function isActionActive(
             return editor.isActive(action.markName);
         case 'setLink':
             return editor.isActive('link');
+        case 'editRubyText':
+            return editor.isActive('rubyText');
+        case 'textStyleControl': {
+            const attrs = editor.getAttributes('textStyle');
+            return action.control === 'textColor'
+                ? Boolean(attrs.color || attrs.backgroundColor)
+                : Boolean(attrs[action.control]);
+        }
         case 'insertNode':
             if (action.nodeName === 'image') return editor.isActive('image');
             if (action.nodeName === 'iframe') return editor.isActive('iframe');
@@ -262,7 +292,7 @@ export function isActionActive(
     }
 }
 
-const TOGGLEABLE_NODES = ['heading', 'bulletList', 'orderedList', 'blockquote', 'codeBlock'];
+const TOGGLEABLE_NODES = ['heading', 'bulletList', 'orderedList', 'taskList', 'blockquote', 'codeBlock', 'details'];
 
 const KNOWN_COMMANDS: ToolbarActionManifest['command'][] = [
     'toggleNode',
@@ -271,6 +301,10 @@ const KNOWN_COMMANDS: ToolbarActionManifest['command'][] = [
     'setParagraph',
     'setHeading',
     'setLink',
+    'editRubyText',
+    'textStyleControl',
+    'insertEmoji',
+    'editFindAndReplace',
     'setTextAlign',
     'clearFormatting',
     'undo',

@@ -14,8 +14,10 @@ import { createRootTypingSurfaceExtension } from './typing-surface';
 import { createPasteNormalizer } from './paste-normalizer';
 import { VizySelectionBoundaries } from './selection-boundaries';
 import { preserveFieldValuesOnHistory } from './reconcile-document';
-import { UndoRedo, Gapcursor } from '@tiptap/extensions';
+import { Gapcursor } from '@tiptap/extensions/gap-cursor';
+import { UndoRedo } from '@tiptap/extensions/undo-redo';
 import TextAlign from '@tiptap/extension-text-align';
+import { ListKeymap } from '@tiptap/extension-list/keymap';
 import {
     OpaqueClipboard,
     UnsupportedInlineNode,
@@ -69,7 +71,12 @@ export function createEditorExtensions(
         byName.set(extension.name, extension);
     }
 
-    const expected = new Set([...manifest.enabledNodes, ...manifest.enabledMarks, ...manifest.internalNodes]);
+    const expected = new Set([
+        ...manifest.enabledNodes,
+        ...manifest.enabledMarks,
+        ...(manifest.enabledExtensions ?? []),
+        ...manifest.internalNodes,
+    ]);
     for (const name of expected) {
         if (!byName.has(name)) throw new Error(`missingProductionExtension:${name}`);
     }
@@ -96,6 +103,10 @@ export function createEditorExtensions(
         // gap cursor, clicks there resolve to the nearest rich caret (e.g. the
         // end of a sibling “Content Rich” area) and the empty region feels dead.
         Gapcursor,
+        // TipTap's list boundary key handling changes editing mechanics without adding
+        // document types. Load it whenever a list item schema exists, rather than asking
+        // authors to understand and enable a second capability for ordinary list editing.
+        ...(byName.has('listItem') || byName.has('taskItem') ? [ListKeymap] : []),
         createRootTypingSurfaceExtension(manifest),
         createPasteNormalizer(manifest),
         VizySelectionBoundaries,

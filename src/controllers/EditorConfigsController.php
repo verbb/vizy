@@ -168,6 +168,7 @@ class EditorConfigsController extends Controller
                         'marks' => $config['capabilities']['marks'],
                         'extensions' => $config['capabilities']['extensions'] ?? [],
                     ],
+                    'extensionOptions' => $config['extensionOptions'] ?? [],
                     'headings' => $config['headings'],
                     'toolbar' => $config['toolbar'],
                     // Empty for a config whose dropdowns have never been trimmed. Only the
@@ -313,6 +314,7 @@ class EditorConfigsController extends Controller
                     'marks' => array_values(array_map('strval', $capabilities['marks'] ?? [])),
                     'extensions' => array_values(array_map('strval', $capabilities['extensions'] ?? [])),
                 ],
+                'extensionOptions' => is_array($decoded['extensionOptions'] ?? null) ? $decoded['extensionOptions'] : [],
                 'headings' => [
                     'levels' => array_map('intval', $decoded['headings']['levels'] ?? [2, 3, 4]),
                 ],
@@ -332,6 +334,7 @@ class EditorConfigsController extends Controller
         $dropdowns = Json::decodeIfJson((string)$this->request->getBodyParam('dropdownsJson', '{}'));
         $bubble = Json::decodeIfJson((string)$this->request->getBodyParam('bubbleJson', '{}'));
         $icons = Json::decodeIfJson((string)$this->request->getBodyParam('iconsJson', '{}'));
+        $extensionOptions = Json::decodeIfJson((string)$this->request->getBodyParam('extensionOptionsJson', '{}'));
 
         return [
             'capabilities' => [
@@ -339,6 +342,7 @@ class EditorConfigsController extends Controller
                 'marks' => array_values(array_filter(array_map('strval', $this->request->getBodyParam('capabilityMarks', [])))),
                 'extensions' => array_values(array_filter(array_map('strval', $this->request->getBodyParam('capabilityExtensions', [])))),
             ],
+            'extensionOptions' => is_array($extensionOptions) ? $extensionOptions : [],
             'headings' => [
                 'levels' => array_map('intval', $this->request->getBodyParam('headingLevels', [2, 3, 4])),
             ],

@@ -13,9 +13,11 @@ Paragraphs and line breaks are always available in rich-text content. Other text
 | Paragraph | Always enabled | `paragraph` | Toolbar or Formatting dropdown |
 | Heading | `heading` | `heading1`–`heading6` | Toolbar or Formatting dropdown; limited by configured heading levels |
 | Quote | `blockquote` | `blockquote` | Toolbar or Formatting dropdown |
-| Code block | `codeBlock` | `codeBlock` | Toolbar or Formatting dropdown |
+| Code block | `codeBlock` | `codeBlock` | Toolbar or Formatting dropdown; code is syntax-highlighted automatically |
 | Bulleted list | `bulletList` | `bulletList` | Toolbar |
 | Numbered list | `orderedList` | `orderedList` | Toolbar |
+| Task list | `taskList` | `taskList` | Toolbar; each item has a check box |
+| Details | `details` | `details` | Toolbar; inserts a summary with collapsible content |
 | Horizontal rule | `horizontalRule` | `horizontalRule` | Toolbar |
 | Line break | Always enabled | `hardBreak` | Toolbar |
 
@@ -23,7 +25,7 @@ The Formatting dropdown uses `dropdown:formatting`. Its standard roster contains
 
 ## Inline Formatting and Links
 
-Formatting marks apply to selected text and can appear in the toolbar or Bubble Menu.
+Inline capabilities apply formatting to selected text or insert an inline object at the caret. Formatting controls can appear in the toolbar or Bubble Menu; Emoji belongs on the toolbar.
 
 | Feature | Capability and Control ID | Result |
 | --- | --- | --- |
@@ -35,9 +37,13 @@ Formatting marks apply to selected text and can appear in the toolbar or Bubble 
 | Superscript | `superscript` | Superscript text |
 | Inline code | `code` | Inline code text |
 | Highlight | `highlight` | Highlighted text |
+| Ruby text | `rubyText` | Pronunciation or annotation text displayed above the selected text |
+| Emoji | `emoji` | A searchable emoji picker backed by TipTap's official dataset |
 | Link | `link` | A URL, email, telephone, SMS, Entry, Asset, or Category link |
 
-`textStyle` is a carrier capability for value-based text styling rather than a standalone button. Features that store a font, colour, size, or similar value can use it, but enabling `textStyle` by itself does not add a toolbar control.
+`textStyle` enables four independently placeable toolbar controls backed by TipTap's official TextStyle extensions: **Font family**, **Font size**, **Text colour**, and **Line height**. The Text colour menu includes both text and highlight palettes. Enable the capability first, then add whichever controls the editor needs to its toolbar.
+
+`rubyText` opens an annotation dialog for the selected text. Use it for readings and short pronunciation guides; the rendered output uses semantic `<ruby>`, `<rb>`, and `<rt>` elements.
 
 The field’s **Enabled Link Settings** determine whether the Link dialog offers Link Text, New Window, Site, Title, and Classes. These field settings apply independently of where the Link control appears.
 
@@ -90,4 +96,19 @@ The toolbar control is independent of `gutterInsert` and `slashInsert`. A config
 
 `undo`, `redo`, and `clearFormatting` are editor actions that do not require capabilities. `separator` adds a visual divider between toolbar controls and can be used more than once.
 
-Vizy does not currently ship a built-in behaviour-only extension. Plugins and modules can register additional nodes, marks, extensions, controls, and dropdowns. [Extending Vizy](docs:developers/extending-vizy) describes that registration contract.
+## Behaviour Extensions
+
+Behaviour extensions change how the editor works without adding a document type or toolbar button. Enable them under **Behaviour extensions** in the Editor Config's **Content Schema** section.
+
+| Feature | Capability ID | Behaviour |
+| --- | --- | --- |
+| Character Count | `characterCount` | Shows live character and word totals below the editor. An optional character limit prevents further input once the limit is reached. |
+| Placeholder | `placeholder` | Shows configurable prompt text while the editor is empty. |
+| Typography | `typography` | Converts common typed patterns such as straight quotes, three dots, and double hyphens into typographic characters. |
+| Find and Replace | `findAndReplace` | Adds a toolbar control for searching the current editor, navigating matches, and replacing one or all matches. |
+
+List Keymap is loaded automatically when an Editor Config permits lists. It provides the expected Backspace and Delete behaviour around list-item boundaries, so it is not a separate setting.
+
+Find and Replace works within the Vizy editor whose toolbar opened it. Its options include case-sensitive, whole-word, and regular-expression matching, and its temporary match highlights are cleared when the dialog closes.
+
+Plugins and modules can register more nodes, marks, extensions, controls, and dropdowns. [Extending Vizy](docs:developers/extending-vizy) describes that registration contract and shows how to add an official TipTap extension.

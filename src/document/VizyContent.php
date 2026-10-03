@@ -47,8 +47,8 @@ final class VizyContent
 
     public function isEmpty(): bool
     {
-        // Editors can submit several blank paragraphs before persistence trims
-        // them. Required validation and template reads must agree before saving.
+        // Editors can contain several blank paragraphs. Required validation and
+        // template reads must agree without mutating that authored structure.
         foreach ($this->nodes as $node) {
             if (($node['type'] ?? null) !== 'paragraph') {
                 return false;

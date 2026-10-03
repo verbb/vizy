@@ -20,6 +20,7 @@ interface MarkInterface
     public static function isSelfClosing(): bool;
     public static function normalizeAttrs(array $attrs, RenderContext $ctx): array;
     public static function resolveAttrs(array $attrs, RenderContext $ctx): array;
+    public static function renderOccurrenceHtml(string $children, array $resolvedAttrs, RenderContext $ctx): ?string;
     public static function dependencies(): array;
     public static function implies(): array;
     public static function alwaysEnabled(): bool;

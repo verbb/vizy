@@ -7,11 +7,11 @@ use verbb\vizy\base\Node;
 
 class Emoji extends Node
 {
-    public static ?string $type = 'emoji';
+    public static ?string $type = 'partnerEmoji';
 
     public static function moduleId(): string
     {
-        return 'acme/node/emoji';
+        return 'acme/node/partner-emoji';
     }
 
     public static function label(): string

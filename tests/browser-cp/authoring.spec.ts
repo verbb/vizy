@@ -91,6 +91,58 @@ test('Editor Configs expose one visual shared icon override per configured contr
     await expect(page.locator('[data-builder-list="toolbar-active"] [data-toolbar-item="bold"] svg')).toBeVisible();
 });
 
+test('Editor Configs expose native behaviour extensions and their owned options', async ({ page }) => {
+    await login(page);
+    await page.goto('/index.php?p=admin/vizy/settings/editor-configs/standard');
+
+    const schema = page.locator('[data-schema-details]');
+    await schema.locator('summary').click();
+    const extensions = schema.locator('[data-capability-group="extensions"]');
+    const nodes = schema.locator('[data-capability-group="nodes"]');
+    const marks = schema.locator('[data-capability-group="marks"]');
+    await expect(extensions).toHaveAttribute('options', /characterCount/);
+    await expect(extensions).toHaveAttribute('options', /findAndReplace/);
+    await expect(extensions).toHaveAttribute('options', /placeholder/);
+    await expect(extensions).toHaveAttribute('options', /typography/);
+    await expect(nodes).toHaveAttribute('options', /emoji/);
+    await expect(nodes).toHaveAttribute('options', /taskList/);
+    await expect(nodes).toHaveAttribute('options', /details/);
+    await expect(marks).toHaveAttribute('options', /rubyText/);
+    await expect(marks).toHaveAttribute('options', /textStyle/);
+
+    await marks.evaluate((select: HTMLElement & { value?: string[] }) => {
+        const value = Array.isArray(select.value) ? select.value : [];
+        select.dispatchEvent(new CustomEvent('pk-change', {
+            detail: { value: [...new Set([...value, 'textStyle'])] },
+            bubbles: true,
+            composed: true,
+        }));
+    });
+    for (const id of ['fontFamily', 'fontSize', 'textColor', 'lineHeight']) {
+        await expect(page.locator(`[data-toolbar-item="${id}"]`)).toBeVisible();
+    }
+    await expect(page.locator('[data-toolbar-item="textStyle"]')).toHaveCount(0);
+
+    await extensions.evaluate((select) => {
+        select.dispatchEvent(new CustomEvent('pk-change', {
+            detail: { value: ['characterCount', 'findAndReplace', 'placeholder', 'typography'] },
+            bubbles: true,
+            composed: true,
+        }));
+    });
+
+    const limit = schema.locator('[data-character-count-limit]');
+    const placeholder = schema.locator('[data-placeholder-text]');
+    await expect(limit).toBeVisible();
+    await expect(placeholder).toBeVisible();
+    await limit.fill('900');
+    await placeholder.fill('Describe this page …');
+    await expect(page.locator('input[name="extensionOptionsJson"]')).toHaveValue(JSON.stringify({
+        characterCount: { limit: 900 },
+        placeholder: { text: 'Describe this page …' },
+    }));
+});
+
 async function setJsonValue(textarea: Locator, value: unknown) {
     await textarea.evaluate((control, nextValue) => {
         const input = control as HTMLTextAreaElement & {

@@ -12,12 +12,13 @@ import {
 } from '../../src/web/assets/field/src/ts/transport/opaque';
 import { createInsertionRegistry } from '../../src/web/assets/field/src/ts/insertion/registry';
 import { nodeViewServices } from './support/node-view-services';
+import { ACCEPTED_CANONICAL_TRANSACTION_META } from '../../src/web/assets/field/src/ts/reconcile-document';
 import type { CanonicalNode, EditorManifest } from '../../src/web/assets/field/src/ts/types';
 
 const editors: Editor[] = [];
 afterEach(() => editors.splice(0).forEach((editor) => editor.destroy()));
 
-const manifest = (nodes: string[], marks: string[] = []): EditorManifest => ({
+const manifest = (nodes: string[], marks: string[] = [], extensions: string[] = []): EditorManifest => ({
     manifestVersion: 1,
     uid: 'request',
     revision: '1:test',
@@ -26,6 +27,7 @@ const manifest = (nodes: string[], marks: string[] = []): EditorManifest => ({
     schemaRevision: 'schema',
     enabledNodes: nodes,
     enabledMarks: marks,
+    enabledExtensions: extensions,
     internalNodes: ['doc', 'text', 'vizyBlock'],
     modules: [
         'vizy/core/node/doc',
@@ -33,6 +35,7 @@ const manifest = (nodes: string[], marks: string[] = []): EditorManifest => ({
         'vizy/core/node/vizyBlock',
         ...nodes.map((name) => `vizy/core/node/${name}`),
         ...marks.map((name) => `vizy/core/mark/${name}`),
+        ...extensions.map((name) => `vizy/core/extension/${name}`),
     ],
     field: {
         fieldUid: 'field',
@@ -71,6 +74,172 @@ describe('manifest-owned schema', () => {
         expect(editor.schema.nodes.paragraph).toBeUndefined();
         expect(editor.schema.nodes.hardBreak).toBeUndefined();
         expect(editor.schema.marks.bold).toBeUndefined();
+    });
+
+    it('loads native behaviour extensions with their configured options', () => {
+        const configured = manifest(
+            ['paragraph'],
+            [],
+            ['characterCount', 'placeholder', 'typography'],
+        );
+        configured.extensionOptions = {
+            characterCount: { limit: 500 },
+            placeholder: { text: 'Write an introduction …' },
+        };
+        const editor = new Editor({
+            extensions: createEditorExtensions(configured, () => {
+                throw new Error('unused');
+            }),
+            content: '<p>Hello world</p>',
+        });
+        editors.push(editor);
+
+        expect(editor.extensionManager.extensions.map((extension) => extension.name))
+            .toEqual(expect.arrayContaining(['characterCount', 'placeholder', 'typography']));
+        expect(editor.extensionManager.extensions.find((extension) => extension.name === 'characterCount')?.options.limit)
+            .toBe(500);
+        expect(editor.extensionManager.extensions.find((extension) => extension.name === 'placeholder')?.options.placeholder)
+            .toBe('Write an introduction …');
+        expect(editor.storage.characterCount.characters()).toBe(11);
+        expect(editor.storage.characterCount.words()).toBe(2);
+    });
+
+    it('hydrates existing content over the character limit without weakening later enforcement', () => {
+        const configured = manifest(['paragraph'], [], ['characterCount']);
+        configured.extensionOptions = { characterCount: { limit: 5 } };
+        const editor = new Editor({
+            extensions: createEditorExtensions(configured, () => {
+                throw new Error('unused');
+            }),
+            content: { type: 'doc', attrs: { schemaVersion: 2 }, content: [] },
+        });
+        editors.push(editor);
+
+        const accepted = editor.schema.nodeFromJSON({
+            type: 'doc',
+            attrs: { schemaVersion: 2 },
+            content: [{ type: 'paragraph', content: [{ type: 'text', text: 'Existing content' }] }],
+        });
+        editor.view.dispatch(editor.state.tr
+            .replaceWith(0, editor.state.doc.content.size, accepted.content)
+            .setMeta(ACCEPTED_CANONICAL_TRANSACTION_META, true));
+
+        expect(editor.getText()).toBe('Existing content');
+        editor.view.dispatch(editor.state.tr.insertText('!', 1));
+        expect(editor.getText()).toBe('Existing content');
+        editor.view.dispatch(editor.state.tr.delete(1, 2));
+        expect(editor.getText()).toBe('xisting content');
+    });
+
+    it('loads list key handling only when list items are in the schema', () => {
+        const prose = createEditorExtensions(manifest(['paragraph']), () => {
+            throw new Error('unused');
+        });
+        const list = createEditorExtensions(manifest(['paragraph', 'bulletList', 'listItem']), () => {
+            throw new Error('unused');
+        });
+        const tasks = createEditorExtensions(manifest(['paragraph', 'taskList', 'taskItem']), () => {
+            throw new Error('unused');
+        });
+
+        expect(prose.map((extension) => extension.name)).not.toContain('listKeymap');
+        expect(list.map((extension) => extension.name)).toContain('listKeymap');
+        expect(tasks.map((extension) => extension.name)).toContain('listKeymap');
+    });
+
+    it('loads and applies the complete official TextStyle family behind one mark capability', () => {
+        const configured = manifest(['paragraph'], ['textStyle']);
+        const editor = new Editor({
+            extensions: createEditorExtensions(configured, () => {
+                throw new Error('unused');
+            }),
+            content: '<p>Styled text</p>',
+        });
+        editors.push(editor);
+        editor.commands.setTextSelection({ from: 1, to: 12 });
+        editor.commands.setColor('#112233');
+        editor.commands.setBackgroundColor('#ddeeff');
+        editor.commands.setFontFamily('Georgia, serif');
+        editor.commands.setFontSize('18px');
+        editor.commands.setLineHeight('1.5');
+
+        expect(editor.extensionManager.extensions.map((extension) => extension.name))
+            .toEqual(expect.arrayContaining([
+                'textStyle',
+                'color',
+                'backgroundColor',
+                'fontFamily',
+                'fontSize',
+                'lineHeight',
+            ]));
+        expect(editor.getJSON().content?.[0]?.content?.[0]?.marks?.[0]).toEqual({
+            type: 'textStyle',
+            attrs: {
+                backgroundColor: '#ddeeff',
+                color: '#112233',
+                fontFamily: 'Georgia, serif',
+                fontSize: '18px',
+                lineHeight: '1.5',
+            },
+        });
+    });
+
+    it('loads the persisted official schema family and applies its native commands', () => {
+        const configured = manifest(
+            ['paragraph', 'codeBlock', 'taskList', 'taskItem', 'details', 'detailsSummary', 'detailsContent', 'emoji'],
+            ['rubyText'],
+            ['findAndReplace'],
+        );
+        const editor = new Editor({
+            extensions: createEditorExtensions(configured, () => {
+                throw new Error('unused');
+            }),
+            content: '<p>東京</p><pre><code class="language-javascript">const answer = 42</code></pre>',
+        });
+        editors.push(editor);
+
+        expect(editor.extensionManager.extensions.map((extension) => extension.name))
+            .toEqual(expect.arrayContaining([
+                'rubyText',
+                'taskList',
+                'taskItem',
+                'details',
+                'detailsSummary',
+                'detailsContent',
+                'codeBlock',
+                'emoji',
+                'findAndReplace',
+            ]));
+        expect(editor.getJSON().content?.[1]?.attrs?.language).toBe('javascript');
+
+        editor.commands.setTextSelection({ from: 1, to: 3 });
+        editor.commands.setRubyText({ rt: 'とうきょう' });
+        expect(editor.getJSON().content?.[0]?.content?.[0]?.marks?.[0]).toEqual({
+            type: 'rubyText',
+            attrs: { rt: 'とうきょう' },
+        });
+
+        editor.commands.setTextSelection(2);
+        editor.commands.toggleTaskList();
+        expect(editor.getJSON().content?.[0]?.type).toBe('taskList');
+
+        editor.commands.setContent('<p>Summary</p>');
+        editor.commands.setTextSelection(2);
+        editor.commands.setDetails();
+        expect(editor.getJSON().content?.[0]?.type).toBe('details');
+
+        editor.commands.setContent('<p>Launch </p>');
+        editor.commands.focus('end');
+        editor.commands.setEmoji('rocket');
+        const emoji = editor.getJSON().content?.[0]?.content?.[1];
+        expect(emoji).toMatchObject({ type: 'emoji', attrs: { name: 'rocket', emoji: '🚀' } });
+
+        editor.commands.setContent('<p>alpha beta alpha</p>');
+        editor.commands.setSearchTerm('alpha');
+        editor.commands.setReplaceTerm('omega');
+        expect(editor.storage.findAndReplace.results).toHaveLength(2);
+        editor.commands.replaceAll();
+        expect(editor.getText()).toBe('omega beta omega');
     });
 });
 

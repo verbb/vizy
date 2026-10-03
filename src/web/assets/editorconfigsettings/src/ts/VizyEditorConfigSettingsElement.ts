@@ -64,6 +64,11 @@ type CatalogItem = {
      * block types that have a look to preview; a mark or an action has nothing to show.
      */
     preview?: string;
+    /** Neutral current-value text used wherever this selector appears in the builder. */
+    valuePreview?: string;
+    valuePreviewKind?: 'text' | 'color';
+    /** False when the live control renders a value instead of an icon. */
+    iconCustomizable?: boolean;
     /**
      * A catalog button Vizy cannot run yet. Placeable and stored like any other, but it
      * resolves to no control, so the editor draws nothing for it. See
@@ -94,6 +99,10 @@ type EditorConfigState = {
         nodes: string[];
         marks: string[];
         extensions: string[];
+    };
+    extensionOptions: {
+        characterCount: { limit: number | null };
+        placeholder: { text: string };
     };
     headings: {
         levels: number[];
@@ -195,6 +204,10 @@ function escapeHtml(value: string): string {
 class VizyEditorConfigSettingsElement extends HTMLElement {
     #state: EditorConfigState = {
         capabilities: { nodes: [], marks: [], extensions: [] },
+        extensionOptions: {
+            characterCount: { limit: null },
+            placeholder: { text: 'Write something …' },
+        },
         headings: { levels: [...DEFAULT_HEADING_LEVELS] },
         toolbar: [],
         dropdowns: {},
@@ -360,6 +373,14 @@ class VizyEditorConfigSettingsElement extends HTMLElement {
                     marks: [...(parsed.config.capabilities?.marks ?? [])],
                     extensions: [...(parsed.config.capabilities?.extensions ?? [])],
                 },
+                extensionOptions: {
+                    characterCount: {
+                        limit: parsed.config.extensionOptions?.characterCount?.limit ?? null,
+                    },
+                    placeholder: {
+                        text: parsed.config.extensionOptions?.placeholder?.text ?? 'Write something …',
+                    },
+                },
                 // Older configs omit these — stay enabled.
                 gutterInsert: parsed.config.gutterInsert ?? true,
                 slashInsert: parsed.config.slashInsert ?? true,
@@ -430,6 +451,7 @@ class VizyEditorConfigSettingsElement extends HTMLElement {
     #serializeAdvanced(): string {
         return JSON.stringify({
             capabilities: this.#state.capabilities,
+            extensionOptions: this.#state.extensionOptions,
             headings: this.#state.headings,
             toolbar: this.#state.toolbar,
             dropdowns: this.#state.dropdowns,
@@ -452,6 +474,14 @@ class VizyEditorConfigSettingsElement extends HTMLElement {
                     nodes: [...(parsed.capabilities?.nodes ?? [])],
                     marks: [...(parsed.capabilities?.marks ?? [])],
                     extensions: [...(parsed.capabilities?.extensions ?? [])],
+                },
+                extensionOptions: {
+                    characterCount: {
+                        limit: parsed.extensionOptions?.characterCount?.limit ?? null,
+                    },
+                    placeholder: {
+                        text: parsed.extensionOptions?.placeholder?.text ?? 'Write something …',
+                    },
                 },
                 headings: {
                     levels: [...(parsed.headings?.levels ?? DEFAULT_HEADING_LEVELS)],
@@ -1022,6 +1052,7 @@ class VizyEditorConfigSettingsElement extends HTMLElement {
         this.#state.capabilities.nodes.forEach((value) => appendHidden('capabilityNodes[]', value));
         this.#state.capabilities.marks.forEach((value) => appendHidden('capabilityMarks[]', value));
         this.#state.capabilities.extensions.forEach((value) => appendHidden('capabilityExtensions[]', value));
+        appendHidden('extensionOptionsJson', JSON.stringify(this.#state.extensionOptions));
         this.#state.headings.levels.forEach((value) => appendHidden('headingLevels[]', String(value)));
         appendHidden('toolbarJson', JSON.stringify(this.#state.toolbar));
         appendHidden('dropdownsJson', JSON.stringify(this.#state.dropdowns));
@@ -1079,7 +1110,9 @@ class VizyEditorConfigSettingsElement extends HTMLElement {
         // thing being dragged is a plain button. Add Block opens a palette rather than a
         // roster menu, but the same appearance (+ glyph + chevron) says it opens something.
         const isDropdown = item.kind === 'group' || item.kind === 'dropdown';
-        const hasMenuAppearance = isDropdown || item.id === 'addBlock';
+        const valuePreview = item.valuePreview;
+        const isValueControl = valuePreview !== undefined;
+        const hasMenuAppearance = isDropdown || item.id === 'addBlock' || isValueControl;
         const icon = this.#controlIcon(item);
         const classes = [
             'vizy-control',
@@ -1090,6 +1123,8 @@ class VizyEditorConfigSettingsElement extends HTMLElement {
             // A chevron, so a dropdown / Add Block reads as an opener in the preview as
             // well as in the editor. Same class the field's own UI uses.
             hasMenuAppearance ? 'has-menu' : '',
+            isValueControl ? 'text-style-control' : '',
+            isValueControl && item.valuePreviewKind === 'color' ? 'text-style-control--color' : '',
             variant === 'available' ? 'is-available' : '',
             // The open dropdown, and only ever that — see `#select` for why a plain button no
             // longer draws anything when it is clicked.
@@ -1131,7 +1166,11 @@ class VizyEditorConfigSettingsElement extends HTMLElement {
                 data-toolbar-list="${list}"
                 data-toolbar-variant="${variant}"
                 ${this.#isRepeatable(item.id) ? 'data-toolbar-repeatable' : ''}
-            >${item.id === 'separator' ? '' : this.#glyphHtml(item)}${hasMenuAppearance ? `<span class="vizy-control-chevron" aria-hidden="true">${MENU_CHEVRON_SVG}</span>` : ''}</button>
+            >${item.id === 'separator'
+                ? ''
+                : isValueControl
+                    ? `<span class="text-style-control__value">${escapeHtml(t('vizy', valuePreview))}</span>`
+                    : this.#glyphHtml(item)}${hasMenuAppearance ? `<span class="vizy-control-chevron" aria-hidden="true">${MENU_CHEVRON_SVG}</span>` : ''}</button>
         `;
     }
 
@@ -1211,9 +1250,54 @@ class VizyEditorConfigSettingsElement extends HTMLElement {
                     <div class="vizy-editor-config-subhead">${t('vizy', 'Behaviour extensions')}</div>
                     <p class="instructions">${t('vizy', 'TipTap modules that change editing behaviour without adding a document type. Enable them here so their JavaScript loads with this config.')}</p>
                     ${this.#checkboxSelectHtml('extensions', this.#capabilityCatalog.extensions, this.#state.capabilities.extensions)}
+                    ${this.#extensionOptionsHtml()}
                 ` : ''}
             </details>
         `;
+    }
+
+    #extensionOptionsHtml(): string {
+        const enabled = this.#state.capabilities.extensions;
+        const fields: string[] = [];
+
+        if (enabled.includes('characterCount')) {
+            fields.push(`
+                <pk-field
+                    label="${escapeHtml(t('vizy', 'Character limit'))}"
+                    instructions="${escapeHtml(t('vizy', 'Leave blank to show the character and word counts without setting a limit.'))}"
+                >
+                    <input
+                        type="number"
+                        class="text fullwidth"
+                        min="1"
+                        max="2000000"
+                        value="${this.#state.extensionOptions.characterCount.limit ?? ''}"
+                        data-character-count-limit
+                    >
+                </pk-field>
+            `);
+        }
+
+        if (enabled.includes('placeholder')) {
+            fields.push(`
+                <pk-field
+                    label="${escapeHtml(t('vizy', 'Placeholder text'))}"
+                    instructions="${escapeHtml(t('vizy', 'Shown in an empty editor to prompt content authors.'))}"
+                >
+                    <input
+                        type="text"
+                        class="text fullwidth"
+                        maxlength="250"
+                        value="${escapeHtml(this.#state.extensionOptions.placeholder.text)}"
+                        data-placeholder-text
+                    >
+                </pk-field>
+            `);
+        }
+
+        return fields.length > 0
+            ? `<div class="vizy-editor-config-extension-options">${fields.join('')}</div>`
+            : '';
     }
 
     /**
@@ -1320,7 +1404,7 @@ class VizyEditorConfigSettingsElement extends HTMLElement {
     #iconControlItems(): CatalogItem[] {
         const catalog = new Map<string, CatalogItem>();
         for (const item of [...this.#toolbarCatalog, ...this.#dropdownCatalog, ...this.#bubbleCatalog]) {
-            if (item.kind === 'presentation' || catalog.has(item.id)) continue;
+            if (item.kind === 'presentation' || item.iconCustomizable === false || catalog.has(item.id)) continue;
             catalog.set(item.id, item);
         }
 
@@ -2045,6 +2129,23 @@ class VizyEditorConfigSettingsElement extends HTMLElement {
                 }
             });
         });
+
+        const characterLimit = host.querySelector<HTMLInputElement>('[data-character-count-limit]');
+        if (characterLimit) {
+            characterLimit.addEventListener('input', () => {
+                const value = characterLimit.valueAsNumber;
+                this.#state.extensionOptions.characterCount.limit = Number.isFinite(value) ? value : null;
+                this.#syncInputs();
+            });
+        }
+
+        const placeholderText = host.querySelector<HTMLInputElement>('[data-placeholder-text]');
+        if (placeholderText) {
+            placeholderText.addEventListener('input', () => {
+                this.#state.extensionOptions.placeholder.text = placeholderText.value;
+                this.#syncInputs();
+            });
+        }
 
         // `pk-change` rather than `change`: the lightswitch is form-associated, so it
         // carries a hidden checkbox whose own events are its business, not ours.

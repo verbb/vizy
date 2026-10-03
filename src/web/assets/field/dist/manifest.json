@@ -1,18 +1,18 @@
 {
   "../../../node_modules/@verbb/plugin-kit-web/dist/components/code-editor.js": {
-    "file": "assets/code-editor-C6c09Pim.js",
+    "file": "assets/code-editor-DCMsVWSN.js",
     "name": "code-editor",
     "src": "../../../node_modules/@verbb/plugin-kit-web/dist/components/code-editor.js",
     "isDynamicEntry": true,
     "imports": [
       "_decorate-R0X811qp-DTGsgM1e.js",
-      "_required-validator-CEg8dvjS-y5IDZAyr.js",
+      "_required-validator-CEg8dvjS-BedQRcpX.js",
       "_w3c-keyname-BOAvb0qz.js",
       "_field-labels-CmuAW8Cl-Dn227Qfy.js"
     ]
   },
   "../../../node_modules/@verbb/plugin-kit-web/dist/components/dialog/pk-dialog.js": {
-    "file": "assets/pk-dialog-CkG87TP9.js",
+    "file": "assets/pk-dialog-CKpePmLb.js",
     "name": "pk-dialog",
     "src": "../../../node_modules/@verbb/plugin-kit-web/dist/components/dialog/pk-dialog.js",
     "isDynamicEntry": true,
@@ -20,17 +20,17 @@
       "_decorate-R0X811qp-DTGsgM1e.js",
       "_block-type-icon-DsNXIxot.js",
       "_dismissible-stack-XQUMfKO3-Dki4_55y.js",
-      "_required-validator-CEg8dvjS-y5IDZAyr.js"
+      "_required-validator-CEg8dvjS-BedQRcpX.js"
     ]
   },
-  "_VizyImageBrowserElement-B9wrU1Vg.js": {
-    "file": "assets/VizyImageBrowserElement-B9wrU1Vg.js",
+  "_VizyImageBrowserElement-CAbVaT90.js": {
+    "file": "assets/VizyImageBrowserElement-CAbVaT90.js",
     "name": "VizyImageBrowserElement",
     "imports": [
       "_decorate-R0X811qp-DTGsgM1e.js",
       "_pk-spinner-DweuYJ_Z-BdFJpkCK.js",
       "_dismissible-stack-XQUMfKO3-Dki4_55y.js",
-      "_required-validator-CEg8dvjS-y5IDZAyr.js"
+      "_required-validator-CEg8dvjS-BedQRcpX.js"
     ]
   },
   "_block-type-icon-DsNXIxot.js": {
@@ -68,26 +68,26 @@
       "_pk-spinner-DweuYJ_Z-BdFJpkCK.js"
     ]
   },
-  "_lightswitch-BI9qf0Fk.js": {
-    "file": "assets/lightswitch-BI9qf0Fk.js",
+  "_lightswitch-Cxs96lgD.js": {
+    "file": "assets/lightswitch-Cxs96lgD.js",
     "name": "lightswitch",
     "imports": [
       "_decorate-R0X811qp-DTGsgM1e.js",
       "_has-slot-8BvCt_qo-CQuFne2U.js",
-      "_required-validator-CEg8dvjS-y5IDZAyr.js",
+      "_required-validator-CEg8dvjS-BedQRcpX.js",
       "_field-labels-CmuAW8Cl-Dn227Qfy.js"
     ]
   },
-  "_menu-chevron-BMGo7hL2.js": {
-    "file": "assets/menu-chevron-BMGo7hL2.js",
+  "_menu-chevron-BZ-OUT3e.js": {
+    "file": "assets/menu-chevron-BZ-OUT3e.js",
     "name": "menu-chevron",
     "imports": [
-      "_rolldown-runtime-DK3Fl9T5.js",
+      "_rolldown-runtime-hePW80VL.js",
       "_decorate-R0X811qp-DTGsgM1e.js",
       "_pk-spinner-DweuYJ_Z-BdFJpkCK.js",
       "_dismissible-stack-XQUMfKO3-Dki4_55y.js",
       "_has-slot-8BvCt_qo-CQuFne2U.js",
-      "_required-validator-CEg8dvjS-y5IDZAyr.js",
+      "_required-validator-CEg8dvjS-BedQRcpX.js",
       "_field-labels-CmuAW8Cl-Dn227Qfy.js"
     ]
   },
@@ -110,21 +110,21 @@
     "file": "assets/preload-helper-HclGiUj8.js",
     "name": "preload-helper"
   },
-  "_required-validator-CEg8dvjS-y5IDZAyr.js": {
-    "file": "assets/required-validator-CEg8dvjS-y5IDZAyr.js",
+  "_required-validator-CEg8dvjS-BedQRcpX.js": {
+    "file": "assets/required-validator-CEg8dvjS-BedQRcpX.js",
     "name": "required-validator-CEg8dvjS",
     "imports": [
-      "_rolldown-runtime-DK3Fl9T5.js",
+      "_rolldown-runtime-hePW80VL.js",
       "_decorate-R0X811qp-DTGsgM1e.js",
       "_dismissible-stack-XQUMfKO3-Dki4_55y.js"
     ]
   },
-  "_rolldown-runtime-DK3Fl9T5.js": {
-    "file": "assets/rolldown-runtime-DK3Fl9T5.js",
+  "_rolldown-runtime-hePW80VL.js": {
+    "file": "assets/rolldown-runtime-hePW80VL.js",
     "name": "rolldown-runtime"
   },
-  "_select-BX62DXHU.js": {
-    "file": "assets/select-BX62DXHU.js",
+  "_select-D3OKudnv.js": {
+    "file": "assets/select-D3OKudnv.js",
     "name": "select",
     "imports": [
       "_decorate-R0X811qp-DTGsgM1e.js",
@@ -132,7 +132,7 @@
       "_pk-spinner-DweuYJ_Z-BdFJpkCK.js",
       "_dismissible-stack-XQUMfKO3-Dki4_55y.js",
       "_has-slot-8BvCt_qo-CQuFne2U.js",
-      "_required-validator-CEg8dvjS-y5IDZAyr.js"
+      "_required-validator-CEg8dvjS-BedQRcpX.js"
     ]
   },
   "_tokens-ekR-Z1gs.css": {
@@ -144,7 +144,7 @@
     "name": "w3c-keyname"
   },
   "editorconfigsettings/src/ts/editor-config-settings.ts": {
-    "file": "assets/editor-config-settings-BGRNnRJu.js",
+    "file": "assets/editor-config-settings-DujXrqnS.js",
     "name": "editor-config-settings",
     "src": "editorconfigsettings/src/ts/editor-config-settings.ts",
     "isEntry": true,
@@ -153,48 +153,49 @@
       "_dismissible-stack-XQUMfKO3-Dki4_55y.js",
       "_has-slot-8BvCt_qo-CQuFne2U.js",
       "_preload-helper-HclGiUj8.js",
-      "_lightswitch-BI9qf0Fk.js",
-      "_menu-chevron-BMGo7hL2.js",
-      "_VizyImageBrowserElement-B9wrU1Vg.js"
+      "_lightswitch-Cxs96lgD.js",
+      "_menu-chevron-BZ-OUT3e.js",
+      "_VizyImageBrowserElement-CAbVaT90.js"
     ],
     "dynamicImports": [
       "../../../node_modules/@verbb/plugin-kit-web/dist/components/code-editor.js"
     ],
     "css": [
-      "assets/editor-config-settings-BPhN22L8.css",
+      "assets/editor-config-settings-Dk9jjSmd.css",
       "assets/tokens-ekR-Z1gs.css"
     ]
   },
   "field/src/ts/editor-runtime.ts": {
-    "file": "assets/editor-runtime-Ca-uQW6B.js",
+    "file": "assets/editor-runtime-eTjdurhI.js",
     "name": "editor-runtime",
     "src": "field/src/ts/editor-runtime.ts",
     "isDynamicEntry": true,
     "imports": [
+      "_rolldown-runtime-hePW80VL.js",
       "_decorate-R0X811qp-DTGsgM1e.js",
       "_block-type-icon-DsNXIxot.js",
       "_pk-spinner-DweuYJ_Z-BdFJpkCK.js",
       "_dismissible-stack-XQUMfKO3-Dki4_55y.js",
       "_has-slot-8BvCt_qo-CQuFne2U.js",
-      "_required-validator-CEg8dvjS-y5IDZAyr.js",
+      "_required-validator-CEg8dvjS-BedQRcpX.js",
       "_popup-B3ICU9nV.js",
-      "_select-BX62DXHU.js",
+      "_select-D3OKudnv.js",
       "_preload-helper-HclGiUj8.js",
       "field/src/ts/vizy.ts",
       "_field-labels-CmuAW8Cl-Dn227Qfy.js",
-      "_menu-chevron-BMGo7hL2.js"
+      "_menu-chevron-BZ-OUT3e.js"
     ],
     "dynamicImports": [
       "../../../node_modules/@verbb/plugin-kit-web/dist/components/dialog/pk-dialog.js"
     ]
   },
   "field/src/ts/vizy.ts": {
-    "file": "assets/vizy-LFI155ZM.js",
+    "file": "assets/vizy-G4e57s6j.js",
     "name": "vizy",
     "src": "field/src/ts/vizy.ts",
     "isEntry": true,
     "imports": [
-      "_rolldown-runtime-DK3Fl9T5.js",
+      "_rolldown-runtime-hePW80VL.js",
       "_block-type-icon-DsNXIxot.js",
       "_pk-spinner-DweuYJ_Z-BdFJpkCK.js",
       "_dismissible-stack-XQUMfKO3-Dki4_55y.js",
@@ -207,11 +208,11 @@
       "field/src/ts/editor-runtime.ts"
     ],
     "css": [
-      "assets/vizy-tR_Ujfvh.css"
+      "assets/vizy-C4aka1mE.css"
     ]
   },
   "fieldsettings/src/ts/field-settings.ts": {
-    "file": "assets/field-settings-2O_2JcgR.js",
+    "file": "assets/field-settings-BDRIkEi0.js",
     "name": "field-settings",
     "src": "fieldsettings/src/ts/field-settings.ts",
     "isEntry": true,
@@ -221,9 +222,9 @@
       "_pk-spinner-DweuYJ_Z-BdFJpkCK.js",
       "_dismissible-stack-XQUMfKO3-Dki4_55y.js",
       "_has-slot-8BvCt_qo-CQuFne2U.js",
-      "_required-validator-CEg8dvjS-y5IDZAyr.js",
-      "_select-BX62DXHU.js",
-      "_lightswitch-BI9qf0Fk.js"
+      "_required-validator-CEg8dvjS-BedQRcpX.js",
+      "_select-D3OKudnv.js",
+      "_lightswitch-Cxs96lgD.js"
     ],
     "css": [
       "assets/field-settings-CUgq8x-q.css",
@@ -231,16 +232,16 @@
     ]
   },
   "iconpicker/src/ts/icon-picker.ts": {
-    "file": "assets/icon-picker-WJ03SeTW.js",
+    "file": "assets/icon-picker-DCeM5vWg.js",
     "name": "icon-picker",
     "src": "iconpicker/src/ts/icon-picker.ts",
     "isEntry": true,
     "imports": [
       "_decorate-R0X811qp-DTGsgM1e.js",
       "_dismissible-stack-XQUMfKO3-Dki4_55y.js",
-      "_required-validator-CEg8dvjS-y5IDZAyr.js",
+      "_required-validator-CEg8dvjS-BedQRcpX.js",
       "_popup-B3ICU9nV.js",
-      "_VizyImageBrowserElement-B9wrU1Vg.js"
+      "_VizyImageBrowserElement-CAbVaT90.js"
     ],
     "css": [
       "assets/tokens-ekR-Z1gs.css"

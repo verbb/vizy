@@ -6,7 +6,6 @@ use verbb\vizy\fields\VizyField;
 
 use craft\fields\Matrix;
 use craft\helpers\Json;
-use craft\helpers\StringHelper;
 
 /**
  * Projects canonical arrays, optionally synchronizing Matrix for persistence.
@@ -56,7 +55,7 @@ final class DocumentSerializer
      * Preserve the raw map and overlay only placements whose current field
      * interpreter has an evidence-backed pure serialization contract.
      */
-    private function _serializeNodes(VizyDocument $document, array $nodes, string $basePath, ?string $parentType = null): array
+    private function _serializeNodes(VizyDocument $document, array $nodes, string $basePath): array
     {
         $out = [];
 
@@ -130,45 +129,27 @@ final class DocumentSerializer
             }
 
             if (is_array($node['content'] ?? null)) {
-                $node['content'] = $this->_serializeNodes($document, $node['content'], "{$path}.content", $node['type'] ?? null);
+                $node['content'] = $this->_serializeNodes($document, $node['content'], "{$path}.content");
             }
 
-            $requiredParagraph = $index === 0 && in_array($parentType, ['listItem', 'blockquote', 'column', 'tableCell', 'tableHeader'], true);
-            $shaped = $this->_shapeSerializedNode($document, $node, $requiredParagraph);
-
-            if ($shaped !== null) {
-                $out[] = $shaped;
-            }
+            $out[] = $this->_shapeSerializedNode($node);
         }
 
         return $out;
     }
 
-    private function _shapeSerializedNode(VizyDocument $document, array $node, bool $requiredParagraph = false): ?array
+    private function _shapeSerializedNode(array $node): array
     {
         $type = $node['type'] ?? null;
 
-        // Structural containers need a child even when their leading paragraph is empty.
-        if ($type === 'paragraph' && !$requiredParagraph && ($document->field()?->trimEmptyParagraphs ?? false)) {
-            $firstType = $node['content'][0]['type'] ?? null;
-
-            if (!$firstType) {
-                $text = StringHelper::trim((string)($node['content'][0]['text'] ?? ''));
-
-                if ($text === '') {
-                    return null;
-                }
-            }
-        }
-
-        if (in_array($type, ['listItem', 'tableCell', 'tableHeader'], true)) {
+        if (in_array($type, ['listItem', 'taskItem', 'tableCell', 'tableHeader'], true)) {
             $content = array_values(array_filter($node['content'] ?? []));
 
             if ($content === []) {
                 $content = [['type' => 'paragraph']];
             }
 
-            if ($type === 'listItem') {
+            if (in_array($type, ['listItem', 'taskItem'], true)) {
                 $firstType = $content[0]['type'] ?? null;
 
                 if ($firstType !== 'paragraph') {
@@ -176,6 +157,10 @@ final class DocumentSerializer
                 }
             }
             $node['content'] = $content;
+        }
+
+        if ($type === 'detailsContent' && array_values(array_filter($node['content'] ?? [])) === []) {
+            $node['content'] = [['type' => 'paragraph']];
         }
 
         if ($type === 'mediaEmbed') {

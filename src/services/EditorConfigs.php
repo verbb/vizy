@@ -257,6 +257,7 @@ final class EditorConfigs extends Component
                 'marks' => array_values($config['capabilities']['marks'] ?? []),
                 'extensions' => array_values($config['capabilities']['extensions'] ?? []),
             ],
+            'extensionOptions' => $config['extensionOptions'] ?? $this->_defaultExtensionOptions(),
             'headings' => [
                 'levels' => array_values($config['headings']['levels'] ?? [2, 3, 4]),
             ],
@@ -444,7 +445,7 @@ final class EditorConfigs extends Component
         if (!preg_match('/^[a-z][a-z0-9_-]*$/', $id)) {
             throw new RuntimeException("Invalid Vizy Editor Config ID: {$id}.");
         }
-        $unknownKeys = array_diff(array_keys($config), ['label', 'capabilities', 'headings', 'toolbar', 'dropdowns', 'bubble', 'icons', 'gutterInsert', 'slashInsert', 'dateModified']);
+        $unknownKeys = array_diff(array_keys($config), ['label', 'capabilities', 'extensionOptions', 'headings', 'toolbar', 'dropdowns', 'bubble', 'icons', 'gutterInsert', 'slashInsert', 'dateModified']);
 
         if ($unknownKeys !== []) {
             throw new RuntimeException("Unknown Vizy Editor Config keys for {$id}: " . implode(', ', $unknownKeys) . '.');
@@ -533,6 +534,7 @@ final class EditorConfigs extends Component
         $dropdowns = $this->_normalizeDropdowns($id, $config['dropdowns'] ?? null, $toolbar);
         $bubble = $this->_normalizeBubble($id, $config['bubble'] ?? null);
         $icons = $this->_normalizeIcons($id, $config['icons'] ?? null);
+        $extensionOptions = $this->_normalizeExtensionOptions($id, $config['extensionOptions'] ?? null);
 
         // Two different lists, and conflating them was a round-trip bug: `capabilities` is
         // the author's selection — exactly what the edit screen's checkboxes stand for and
@@ -548,6 +550,7 @@ final class EditorConfigs extends Component
                 'marks' => $activeMarks,
                 'extensions' => $activeExtensions,
             ],
+            'extensionOptions' => $extensionOptions,
             'schema' => [
                 'nodes' => $resolved['nodes'],
                 'marks' => $resolved['marks'],
@@ -591,6 +594,7 @@ final class EditorConfigs extends Component
         }
 
         $known = [];
+        $nonCustomizable = [];
 
         foreach ([
             EditorConfigPresentation::toolbarCatalog(),
@@ -601,7 +605,11 @@ final class EditorConfigs extends Component
                 $controlId = (string)($item['id'] ?? '');
 
                 if ($controlId !== '' && !EditorConfigPresentation::isPresentationItem($controlId)) {
-                    $known[$controlId] = true;
+                    if (($item['iconCustomizable'] ?? true) === false) {
+                        $nonCustomizable[$controlId] = true;
+                    } else {
+                        $known[$controlId] = true;
+                    }
                 }
             }
         }
@@ -619,6 +627,13 @@ final class EditorConfigs extends Component
             if (str_starts_with($controlId, EditorConfigPresentation::DROPDOWN_PREFIX)) {
                 $name = substr($controlId, strlen(EditorConfigPresentation::DROPDOWN_PREFIX));
                 $controlId = EditorConfigPresentation::DROPDOWN_PREFIX . EditorConfigPresentation::dropdownAlias($name);
+            }
+
+            // Value selectors render their current value in place of a glyph. An icon override
+            // could never affect the live control, so clean early beta configs that stored one
+            // rather than keeping invisible state the visual editor cannot manage.
+            if (isset($nonCustomizable[$controlId])) {
+                continue;
             }
 
             if (!isset($known[$controlId])) {
@@ -642,6 +657,64 @@ final class EditorConfigs extends Component
 
         ksort($normalized);
         return $normalized;
+    }
+
+    private function _normalizeExtensionOptions(string $id, mixed $options): array
+    {
+        if ($options === null || $options === []) {
+            return $this->_defaultExtensionOptions();
+        }
+
+        if (!is_array($options) || array_is_list($options)) {
+            throw new RuntimeException("Vizy Editor Config {$id} extensionOptions must be an object keyed by extension ID.");
+        }
+
+        if ($keys = array_diff(array_keys($options), ['characterCount', 'placeholder'])) {
+            throw new RuntimeException("Unknown Vizy Editor Config extension option keys for {$id}: " . implode(', ', $keys) . '.');
+        }
+
+        $normalized = $this->_defaultExtensionOptions();
+        $characterCount = $options['characterCount'] ?? [];
+
+        if (!is_array($characterCount) || ($characterCount !== [] && array_is_list($characterCount))) {
+            throw new RuntimeException("Vizy Editor Config {$id} characterCount options must be an object.");
+        }
+
+        if ($keys = array_diff(array_keys($characterCount), ['limit'])) {
+            throw new RuntimeException("Unknown Vizy Editor Config characterCount option keys for {$id}: " . implode(', ', $keys) . '.');
+        }
+        $limit = $characterCount['limit'] ?? null;
+
+        if ($limit !== null && (!is_int($limit) || $limit < 1 || $limit > 2000000)) {
+            throw new RuntimeException("Vizy Editor Config {$id} characterCount limit must be null or an integer from 1 to 2,000,000.");
+        }
+        $normalized['characterCount']['limit'] = $limit;
+
+        $placeholder = $options['placeholder'] ?? [];
+
+        if (!is_array($placeholder) || ($placeholder !== [] && array_is_list($placeholder))) {
+            throw new RuntimeException("Vizy Editor Config {$id} placeholder options must be an object.");
+        }
+
+        if ($keys = array_diff(array_keys($placeholder), ['text'])) {
+            throw new RuntimeException("Unknown Vizy Editor Config placeholder option keys for {$id}: " . implode(', ', $keys) . '.');
+        }
+        $text = trim((string)($placeholder['text'] ?? $normalized['placeholder']['text']));
+
+        if ($text === '' || mb_strlen($text) > 250) {
+            throw new RuntimeException("Vizy Editor Config {$id} placeholder text must contain 1–250 characters.");
+        }
+        $normalized['placeholder']['text'] = $text;
+
+        return $normalized;
+    }
+
+    private function _defaultExtensionOptions(): array
+    {
+        return [
+            'characterCount' => ['limit' => null],
+            'placeholder' => ['text' => 'Write something …'],
+        ];
     }
 
     private function _normalizeIds(mixed $values, string $label): array
