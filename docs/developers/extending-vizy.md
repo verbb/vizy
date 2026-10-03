@@ -135,6 +135,45 @@ Craft.Vizy.registerControl('abbr', {
 });
 ```
 
+### Adding Link Dialog Attributes
+
+Register a boolean Link attribute when a module needs an extra choice in Vizy’s existing Link dialog. This keeps the built-in URL, element picker, Site, Title, Classes and keyboard behaviour instead of replacing the dialog component.
+
+The following adds a **No follow** checkbox, stores `nofollow: true` in the Link mark, and emits the `nofollow` token in the rendered `rel` attribute:
+
+```php
+use Craft;
+use verbb\vizy\events\RegisterLinkAttributesEvent;
+use verbb\vizy\marks\Link;
+use yii\base\Event;
+
+Event::on(Link::class, Link::EVENT_REGISTER_ATTRIBUTES, function(RegisterLinkAttributesEvent $event) {
+    $event->attributes[] = [
+        'name' => 'nofollow',
+        'label' => Craft::t('site', 'No follow'),
+        'type' => 'boolean',
+        'default' => false,
+        'htmlAttribute' => 'rel',
+        'htmlValue' => 'nofollow',
+    ];
+});
+```
+
+Attribute names must be unique alphanumeric identifiers that start with a letter and cannot replace Vizy’s core Link attributes. The initial contract supports boolean checkboxes. Output mappings are optional and deliberately limited to `rel`, `class`, and `data-*`; omit `htmlAttribute` and `htmlValue` when a mark template or GraphQL consumer owns the behaviour instead. Vizy validates registered values as booleans and never treats the registered name itself as an arbitrary HTML attribute.
+
+For example, a `cloaked` option can map to a stable frontend hook without exposing a replacement URL or component API:
+
+```php
+$event->attributes[] = [
+    'name' => 'cloaked',
+    'label' => Craft::t('site', 'Cloaked'),
+    'htmlAttribute' => 'data-cloaked',
+    'htmlValue' => '1',
+];
+```
+
+The raw registered value remains available in the mark’s `attrs` data for GraphQL and mark templates. URL rewriting remains application logic; Vizy does not allow registered options to replace `href` or inject event-handler attributes.
+
 The toolbar's **Add Block** control, the gutter `+`, and `/` insertion list Vizy Block Types. Use a toolbar control for custom rich-text nodes and actions. [Choosing Insertion Controls](docs:guides/developers/choosing-insertion-controls) explains which route fits your feature.
 
 ## Common Mistakes

@@ -230,22 +230,38 @@ test('applies each editor’s Enabled Link Settings and preserves hidden attribu
         ...editorManifest,
         enabledMarks: [...editorManifest.enabledMarks, 'link'],
         modules: [...editorManifest.modules, 'vizy/core/mark/link'],
-        field: { ...editorManifest.field, linkSettings: [] },
+        field: {
+            ...editorManifest.field,
+            linkSettings: [],
+            linkAttributes: [{
+                name: 'nofollow',
+                label: 'No follow',
+                type: 'boolean',
+                default: false,
+                htmlAttribute: 'rel',
+                htmlValue: 'nofollow',
+            }],
+        },
     };
     await mount(page, { type: 'doc', attrs: { schemaVersion: 2 }, content: [{ type: 'paragraph', content: [{ type: 'text', text: 'Original text' }] }] }, { manifest: linkManifest });
     await page.evaluate(async () => {
         const editor = (document.querySelector('vizy-toolbar') as any).editor;
         editor.commands.selectAll();
-        editor.commands.setSemanticLink({ type: 'url', value: 'https://example.com', title: 'Original title', class: 'original-class', newWindow: true });
+        editor.commands.setSemanticLink({ type: 'url', value: 'https://example.com', title: 'Original title', class: 'original-class', newWindow: true, nofollow: false });
         const dialog = document.createElement('vizy-link-dialog') as any;
         document.body.append(dialog);
         await dialog.openForEditor(editor, { url: 'https://example.com', text: 'Original text', openInNewTab: true, semantic: editor.getAttributes('link'), from: 1, to: 14 });
     });
     const dialog = page.locator('vizy-link-dialog');
     await expect(dialog.locator('.link-dialog__text-input')).toHaveCount(0);
-    await expect(dialog.locator('pk-checkbox')).toHaveCount(0);
+    await expect(dialog.locator('.link-dialog__new-window')).toHaveCount(0);
+    const nofollow = dialog.locator('[data-link-attribute="nofollow"]');
+    await expect(nofollow).toHaveCount(1);
+    expect(await nofollow.evaluate((element: any) => element.checked)).toBe(false);
     await expect(dialog.locator('.link-dialog__title-input')).toHaveCount(0);
     await expect(dialog.locator('.link-dialog__classes-input')).toHaveCount(0);
+    await nofollow.locator('[part="control"]').click();
+    expect(await nofollow.evaluate((element: any) => element.checked)).toBe(true);
     await dialog.locator('.link-dialog__url-input input').fill('https://example.com/changed');
     await dialog.locator('.link-dialog__submit').click();
     const hidden = await page.evaluate(() => {
@@ -253,7 +269,7 @@ test('applies each editor’s Enabled Link Settings and preserves hidden attribu
         return { text: editor.getText(), attrs: editor.getAttributes('link') };
     });
     expect(hidden.text).toBe('Original text');
-    expect(hidden.attrs).toMatchObject({ value: 'https://example.com/changed', title: 'Original title', class: 'original-class', newWindow: true });
+    expect(hidden.attrs).toMatchObject({ value: 'https://example.com/changed', title: 'Original title', class: 'original-class', newWindow: true, nofollow: true });
     await expect(dialog.getByRole('dialog')).not.toBeVisible();
     await page.evaluate(async ({ manifest }) => {
         const nested = document.createElement('vizy-editor');
@@ -273,7 +289,7 @@ test('applies each editor’s Enabled Link Settings and preserves hidden attribu
         await (document.querySelector('vizy-link-dialog') as any).openForEditor(editor, { url: 'https://example.com/nested', text: 'Nested text', openInNewTab: false, from: 1, to: 12 });
     });
     await expect(dialog.locator('.link-dialog__text-input')).toHaveCount(1);
-    await expect(dialog.locator('pk-checkbox')).toHaveCount(1);
+    await expect(dialog.locator('pk-checkbox')).toHaveCount(2);
     await dialog.locator('.link-dialog__title-input input').fill('Nested title');
     await dialog.locator('.link-dialog__classes-input input').fill('button primary');
     await expect(dialog.locator('.link-dialog__site')).toHaveCount(0);

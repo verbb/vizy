@@ -4,6 +4,7 @@ namespace verbb\vizy\marks;
 use verbb\vizy\Vizy;
 use verbb\vizy\base\Mark;
 use verbb\vizy\base\RenderContext;
+use verbb\vizy\events\RegisterLinkAttributesEvent;
 use verbb\vizy\helpers\SafeHtml;
 
 use Craft;
@@ -11,7 +12,10 @@ use craft\base\ElementInterface;
 use craft\elements\Asset;
 use craft\elements\Category;
 use craft\elements\Entry;
-use craft\helpers\ArrayHelper;
+
+use yii\base\Event;
+
+use RuntimeException;
 
 class Link extends Mark
 {
@@ -34,6 +38,85 @@ class Link extends Mark
     }
 
     /**
+     * Registered boolean attributes are added to the Link schema and dialog.
+     */
+    public static function registeredAttributes(): array
+    {
+        $event = new RegisterLinkAttributesEvent();
+        Event::trigger(static::class, self::EVENT_REGISTER_ATTRIBUTES, $event);
+        $registered = [];
+
+        foreach ($event->attributes as $index => $attribute) {
+            if (!is_array($attribute)) {
+                throw new RuntimeException("Link attribute at index {$index} must be an array.");
+            }
+            $name = $attribute['name'] ?? null;
+
+            if (!is_string($name) || !preg_match('/^[A-Za-z][A-Za-z0-9]*$/', $name)) {
+                throw new RuntimeException("Link attribute at index {$index} has an invalid name.");
+            }
+
+            if (in_array($name, self::CORE_ATTRIBUTES, true)) {
+                throw new RuntimeException("Link attribute {$name} collides with a core attribute.");
+            }
+
+            if (isset($registered[$name])) {
+                throw new RuntimeException("Duplicate Link attribute {$name}.");
+            }
+            $label = $attribute['label'] ?? null;
+
+            if (!is_string($label) || trim($label) === '') {
+                throw new RuntimeException("Link attribute {$name} must have a label.");
+            }
+            $label = trim($label);
+            $type = $attribute['type'] ?? 'boolean';
+
+            if ($type !== 'boolean') {
+                throw new RuntimeException("Link attribute {$name} must use the boolean type.");
+            }
+            $default = $attribute['default'] ?? false;
+
+            if (!is_bool($default)) {
+                throw new RuntimeException("Link attribute {$name} default must be boolean.");
+            }
+            $htmlAttribute = $attribute['htmlAttribute'] ?? null;
+            $htmlValue = $attribute['htmlValue'] ?? null;
+
+            if ($htmlAttribute !== null) {
+                if (!is_string($htmlAttribute) || !self::_isSupportedOutputAttribute($htmlAttribute)) {
+                    throw new RuntimeException("Link attribute {$name} has an unsafe HTML attribute mapping.");
+                }
+
+                if (!is_string($htmlValue) || trim($htmlValue) === '' || preg_match('/[\x00-\x1F\x7F]/', $htmlValue)) {
+                    throw new RuntimeException("Link attribute {$name} requires a safe non-empty HTML value.");
+                }
+                $htmlValue = trim($htmlValue);
+
+                if (in_array($htmlAttribute, ['class', 'rel'], true)) {
+                    foreach (preg_split('/\s+/', $htmlValue) ?: [] as $token) {
+                        if (!preg_match('/^[A-Za-z0-9_.:-]+$/', $token)) {
+                            throw new RuntimeException("Link attribute {$name} has an invalid {$htmlAttribute} token.");
+                        }
+                    }
+                }
+            } elseif ($htmlValue !== null) {
+                throw new RuntimeException("Link attribute {$name} cannot define htmlValue without htmlAttribute.");
+            }
+
+            $registered[$name] = [
+                'name' => $name,
+                'label' => $label,
+                'type' => 'boolean',
+                'default' => $default,
+                'htmlAttribute' => $htmlAttribute,
+                'htmlValue' => $htmlValue,
+            ];
+        }
+
+        return array_values($registered);
+    }
+
+    /**
      * Omit the anchor when href was rejected / unresolved — keep inner text only.
      */
     public static function tagForAttrs(array $attrs): string|array|null
@@ -52,30 +135,63 @@ class Link extends Mark
         $newWindow = (bool)($attrs['newWindow'] ?? false);
         $href = self::resolveHref($attrs, $ctx->siteId, $ctx);
 
-        // Authoring-only / semantic keys must never become HTML attributes.
-        foreach ([
-            'type', 'value', 'targetUid', 'siteMode', 'siteUid', 'suffix',
-            'newWindow', 'url', 'linkClass',
-        ] as $key) {
-            ArrayHelper::remove($attrs, $key);
+        // Build from an explicit output allowlist. Semantic storage, identity,
+        // and registered options must never leak into HTML by key coincidence.
+        $htmlAttrs = [];
+
+        foreach (['title', 'class', 'id', 'download'] as $key) {
+            $value = $attrs[$key] ?? null;
+
+            if (is_string($value) || is_bool($value)) {
+                $htmlAttrs[$key] = $value;
+            }
+        }
+
+        if (is_string($attrs['ariaLabel'] ?? null) && $attrs['ariaLabel'] !== '') {
+            $htmlAttrs['aria-label'] = $attrs['ariaLabel'];
+        }
+        $rel = self::_tokens($attrs['rel'] ?? []);
+
+        foreach (self::registeredAttributes() as $attribute) {
+            if (($attrs[$attribute['name']] ?? $attribute['default']) !== true) {
+                continue;
+            }
+            $htmlAttribute = $attribute['htmlAttribute'];
+
+            if (!is_string($htmlAttribute) || !is_string($attribute['htmlValue'])) {
+                continue;
+            }
+
+            if ($htmlAttribute === 'rel') {
+                $rel = [...$rel, ...self::_tokens($attribute['htmlValue'])];
+            } elseif ($htmlAttribute === 'class') {
+                $classes = self::_tokens($htmlAttrs['class'] ?? '');
+                $htmlAttrs['class'] = implode(' ', array_values(array_unique([
+                    ...$classes,
+                    ...self::_tokens($attribute['htmlValue']),
+                ])));
+            } else {
+                $htmlAttrs[$htmlAttribute] = $attribute['htmlValue'];
+            }
         }
 
         if ($href === null) {
-            ArrayHelper::remove($attrs, 'href');
-            ArrayHelper::remove($attrs, 'target');
-            ArrayHelper::remove($attrs, 'rel');
-
-            return $attrs;
+            return $htmlAttrs;
         }
 
-        $attrs['href'] = $href;
+        $htmlAttrs['href'] = $href;
 
         if ($newWindow || ($attrs['target'] ?? null) === '_blank') {
-            $attrs['target'] = '_blank';
-            $attrs['rel'] = 'noopener noreferrer';
+            $htmlAttrs['target'] = '_blank';
+            $rel = array_values(array_filter($rel, static fn(string $token): bool => strtolower($token) !== 'opener'));
+            $rel = [...$rel, 'noopener', 'noreferrer'];
         }
 
-        return $attrs;
+        if ($rel !== []) {
+            $htmlAttrs['rel'] = implode(' ', array_values(array_unique($rel)));
+        }
+
+        return $htmlAttrs;
     }
 
     /**
@@ -158,6 +274,34 @@ class Link extends Mark
 
         return SafeHtml::sanitizeUri($candidate, SafeHtml::LINK_SCHEMES);
     }
+
+    private static function _isSupportedOutputAttribute(string $name): bool
+    {
+        return in_array($name, ['class', 'rel'], true)
+            || preg_match('/^data-[a-z][a-z0-9_.:-]*$/i', $name) === 1;
+    }
+
+    private static function _tokens(mixed $value): array
+    {
+        $values = is_array($value) ? $value : preg_split('/\s+/', (string)$value);
+
+        return array_values(array_filter(array_map(
+            static fn(mixed $token): string => is_string($token) ? trim($token) : '',
+            $values ?: [],
+        ), static fn(string $token): bool => $token !== ''));
+    }
+
+
+    // Constants
+    // =========================================================================
+
+    public const EVENT_REGISTER_ATTRIBUTES = 'registerAttributes';
+
+    private const CORE_ATTRIBUTES = [
+        'type', 'targetUid', 'siteMode', 'siteUid', 'value', 'suffix', 'newWindow',
+        'title', 'ariaLabel', 'rel', 'class', 'id', 'download', 'linkUid',
+        'href', 'target', 'url', 'linkClass',
+    ];
 
 
     // Properties

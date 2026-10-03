@@ -8,6 +8,7 @@ export type AltMode = 'asset' | 'custom' | 'decorative' | 'missing';
 export type ImageSize = 'default' | 'small' | 'medium' | 'large' | 'full';
 
 export interface SemanticLinkAttrs {
+    [key: string]: unknown;
     type: SemanticLinkType;
     targetUid: string | null;
     siteMode: SiteMode;
@@ -64,7 +65,11 @@ export function defaultLinkAttrs(overrides: Partial<SemanticLinkAttrs> = {}): Se
 
 /** Keep complete semantic metadata when adapting editor attributes. */
 export function normalizeSemanticLinkAttrs(raw: Record<string, unknown>): SemanticLinkAttrs {
+    const registered = Object.fromEntries(Object.entries(raw)
+        .filter(([name, value]) => !CORE_LINK_ATTRIBUTES.has(name) && typeof value === 'boolean'));
+
     return defaultLinkAttrs({
+        ...registered,
         type: (raw.type as SemanticLinkAttrs['type']) ?? 'url',
         targetUid: typeof raw.targetUid === 'string' ? raw.targetUid : null,
         siteMode: raw.siteMode === 'fixed' ? 'fixed' : 'current',
@@ -81,6 +86,12 @@ export function normalizeSemanticLinkAttrs(raw: Record<string, unknown>): Semant
         linkUid: typeof raw.linkUid === 'string' ? raw.linkUid : null,
     });
 }
+
+const CORE_LINK_ATTRIBUTES = new Set([
+    'type', 'targetUid', 'siteMode', 'siteUid', 'value', 'suffix', 'newWindow',
+    'title', 'ariaLabel', 'rel', 'class', 'id', 'download', 'linkUid',
+    'href', 'target', 'url', 'linkClass',
+]);
 
 export function urlLinkAttrs(value: string, newWindow = false): SemanticLinkAttrs {
     return defaultLinkAttrs({ type: 'url', value, newWindow });

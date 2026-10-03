@@ -3,6 +3,7 @@
 ## Unreleased
 
 ### Added
+- Added schema-safe boolean Link attributes that modules can register into the existing Link dialog, with optional safe `rel`, `class`, or `data-*` output mappings. ([#257](https://github.com/verbb/vizy/issues/257))
 - Added a schema-aware HTML importer API with complete loss diagnostics, strict conversion, caller-owned Asset resolution, and extension rules for custom nodes and marks. ([#142](https://github.com/verbb/vizy/issues/142))
 - Added explicit Feed Me mappings that turn matched HTML elements into custom Vizy Blocks, populate UID-addressed field placements through their Feed Me adapters, and support matching or creating Assets from image attributes. ([#251](https://github.com/verbb/vizy/issues/251))
 - Added convention-based and per-render Twig template partials for built-in and custom node and mark types, including schema-safe frontend markup customisation without relying on editor HTML. ([#29](https://github.com/verbb/vizy/issues/29), [#212](https://github.com/verbb/vizy/issues/212), [#291](https://github.com/verbb/vizy/issues/291), [#298](https://github.com/verbb/vizy/issues/298))

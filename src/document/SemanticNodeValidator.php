@@ -1,6 +1,8 @@
 <?php
 namespace verbb\vizy\document;
 
+use verbb\vizy\marks\Link;
+
 /**
  * Validates semantic attrs for link/image/table nodes during canonical parse.
  */
@@ -69,6 +71,14 @@ final class SemanticNodeValidator
 
         if (isset($attrs['newWindow']) && !is_bool($attrs['newWindow'])) {
             throw new InvalidDocumentException("Link newWindow at {$path} must be boolean.");
+        }
+
+        foreach (Link::registeredAttributes() as $attribute) {
+            $name = $attribute['name'];
+
+            if (array_key_exists($name, $attrs) && !is_bool($attrs[$name])) {
+                throw new InvalidDocumentException("Link attribute {$name} at {$path} must be boolean.");
+            }
         }
     }
 

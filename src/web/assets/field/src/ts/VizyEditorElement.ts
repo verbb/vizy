@@ -783,7 +783,7 @@ export class VizyEditorElement extends HTMLElement {
             },
         });
         this.#editor = editor;
-        setEditorLinkSettings(editor, manifest.field.linkSettings);
+        setEditorLinkSettings(editor, manifest.field.linkSettings, manifest.field.linkAttributes);
         if (this.#toolbar) this.#toolbar.editor = editor;
         if (this.#bubble) this.#bubble.editor = editor;
         if (this.#linkBubble) this.#linkBubble.editor = editor;

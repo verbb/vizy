@@ -7,6 +7,7 @@ use verbb\vizy\events\ModifyEditorConfigEvent;
 use verbb\vizy\fields\VizyField;
 use verbb\vizy\helpers\EditorConfigPresentation;
 use verbb\vizy\helpers\ToolbarIcons;
+use verbb\vizy\marks\Link;
 use verbb\vizy\models\BlockType;
 use verbb\vizy\services\BlockSummaryProjection;
 
@@ -152,6 +153,7 @@ final class EditorManifests extends Component
             'pasteAsPlainText' => $field->pasteAsPlainText,
             'initialRows' => $field->initialRows,
             'linkSettings' => $field->linkSettings,
+            'linkAttributes' => Link::registeredAttributes(),
             // Opt-in: Delete is already explicit in the Block menu; prompt is not default.
             'confirmBlockDeletion' => (bool)$field->confirmBlockDeletion,
             // Project default for consecutive same-type nesting.

@@ -55,6 +55,15 @@ export interface LayoutPresetManifest {
     accessibleLabel?: string;
 }
 
+export interface LinkAttributeManifest {
+    name: string;
+    label: string;
+    type: 'boolean';
+    default: boolean;
+    htmlAttribute: string | null;
+    htmlValue: string | null;
+}
+
 export interface InsertionItemManifest {
     id: string;
     kind: 'block' | 'node' | 'transform';
@@ -130,6 +139,8 @@ export interface EditorManifest {
         pasteAsPlainText?: boolean;
         initialRows?: number;
         linkSettings?: string[];
+        /** Registered schema attributes rendered as controls in the Link dialog. */
+        linkAttributes?: LinkAttributeManifest[];
         /**
          * When true, Block ⋯ → Delete prompts before removing. Optional for
          * older manifests — missing means false (no prompt).

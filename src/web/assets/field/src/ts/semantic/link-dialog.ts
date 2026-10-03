@@ -16,6 +16,7 @@ import {
 import type { Editor } from '@tiptap/core';
 import type { SemanticLinkAttrs } from './attrs';
 import { isUuid } from './attrs';
+import type { LinkAttributeManifest } from '../types';
 
 type PkDialogEl = HTMLElement & {
     open: boolean;
@@ -33,10 +34,16 @@ type PkButtonEl = HTMLElement & { disabled: boolean };
 let sharedDialog: VizyLinkDialogElement | null = null;
 const defaultSettings = ['text', 'newWindow', 'site', 'title', 'classes'];
 const editorSettings = new WeakMap<Editor, readonly string[]>();
+const editorAttributes = new WeakMap<Editor, readonly LinkAttributeManifest[]>();
 
 /** Every link entry point shares the owning editor's policy. */
-export function setEditorLinkSettings(editor: Editor, settings?: readonly string[]): void {
+export function setEditorLinkSettings(
+    editor: Editor,
+    settings?: readonly string[],
+    attributes?: readonly LinkAttributeManifest[],
+): void {
     editorSettings.set(editor, settings ?? defaultSettings);
+    editorAttributes.set(editor, attributes ?? []);
 }
 
 /**
@@ -53,6 +60,7 @@ export class VizyLinkDialogElement extends LitElement {
     #seed: LinkDialogSeed = { url: '', text: '', openInNewTab: false };
     #focus = true;
     #settings: readonly string[] = defaultSettings;
+    #attributes: readonly LinkAttributeManifest[] = [];
     #urlChanged = false;
     #siteValue = '';
     #urlInputId = `vizy-link-url-${Math.random().toString(36).slice(2, 9)}`;
@@ -63,7 +71,7 @@ export class VizyLinkDialogElement extends LitElement {
     @query('.link-dialog__text-input') accessor textInput: PkInputEl | null = null;
     @query('.link-dialog__title-input') accessor titleInput: PkInputEl | null = null;
     @query('.link-dialog__classes-input') accessor classesInput: PkInputEl | null = null;
-    @query('pk-checkbox') accessor newTabCheckbox: PkCheckboxEl | null = null;
+    @query('.link-dialog__new-window') accessor newTabCheckbox: PkCheckboxEl | null = null;
     @query('.link-dialog__submit') accessor submitButton: PkButtonEl | null = null;
 
     static styles = css`
@@ -87,6 +95,7 @@ export class VizyLinkDialogElement extends LitElement {
         this.#seed = { ...seed };
         this.#focus = options?.focus ?? true;
         this.#settings = editorSettings.get(editor) ?? defaultSettings;
+        this.#attributes = editorAttributes.get(editor) ?? [];
         this.#urlChanged = false;
         const refSiteId = this.#reference(seed.url)?.[3];
         this.#siteValue = seed.semantic?.siteMode === 'fixed'
@@ -135,7 +144,13 @@ export class VizyLinkDialogElement extends LitElement {
                             type="text"
                         ></pk-input>
                     </pk-field>` : null}
-                    ${this.#settings.includes('newWindow') ? html`<pk-checkbox>Open link in new tab</pk-checkbox>` : null}
+                    ${this.#settings.includes('newWindow') ? html`<pk-checkbox class="link-dialog__new-window">Open link in new tab</pk-checkbox>` : null}
+                    ${this.#attributes.map((attribute) => html`
+                        <pk-checkbox
+                            data-link-attribute=${attribute.name}
+                            .checked=${Boolean(this.#seed.semantic?.[attribute.name] ?? attribute.default)}
+                        >${attribute.label}</pk-checkbox>
+                    `)}
                     ${this.#settings.includes('title') ? html`
                         <pk-field label="Title" .for=${`${this.#textInputId}-title`}>
                             <pk-input id=${`${this.#textInputId}-title`} class="link-dialog__title-input"></pk-input>
@@ -231,6 +246,13 @@ export class VizyLinkDialogElement extends LitElement {
         if (this.#urlChanged && this.#seed.semantic) {
             const { title, class: classes, ariaLabel, rel, id, download, linkUid } = this.#seed.semantic;
             Object.assign(attrs, { title, class: classes, ariaLabel, rel, id, download, linkUid });
+        }
+        for (const attribute of this.#attributes) {
+            const checkbox = this.shadowRoot?.querySelector<PkCheckboxEl>(
+                `[data-link-attribute="${attribute.name}"]`,
+            );
+            attrs[attribute.name] = checkbox?.checked
+                ?? Boolean(this.#seed.semantic?.[attribute.name] ?? attribute.default);
         }
         if (this.titleInput) attrs.title = this.titleInput.value.trim() || null;
         if (this.classesInput) attrs.class = this.classesInput.value.trim() || null;

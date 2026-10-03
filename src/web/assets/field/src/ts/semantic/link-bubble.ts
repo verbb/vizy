@@ -3,8 +3,8 @@ import { customElement, property } from 'lit/decorators.js';
 import { getMarkRange, type Editor } from '@tiptap/core';
 import '@verbb/plugin-kit-web/components/popup';
 import {
-    defaultLinkAttrs,
     linkDisplayHref,
+    normalizeSemanticLinkAttrs,
     type SemanticLinkAttrs,
 } from './attrs';
 import { getSemanticLinkEditState, unsetSemanticLinkFromEditor } from './link-apply';
@@ -298,23 +298,7 @@ export function activeLinkAttrs(editor: Editor): SemanticLinkAttrs | null {
     if (!linkType) return null;
     const range = getMarkRange(editor.state.selection.$from, linkType);
     if (!range) return null;
-    const raw = editor.getAttributes('link') as Record<string, unknown>;
-    return defaultLinkAttrs({
-        type: (raw.type as SemanticLinkAttrs['type']) ?? 'url',
-        targetUid: typeof raw.targetUid === 'string' ? raw.targetUid : null,
-        siteMode: raw.siteMode === 'fixed' ? 'fixed' : 'current',
-        siteUid: typeof raw.siteUid === 'string' ? raw.siteUid : null,
-        value: typeof raw.value === 'string' ? raw.value : null,
-        suffix: typeof raw.suffix === 'string' ? raw.suffix : null,
-        newWindow: raw.newWindow === true,
-        title: typeof raw.title === 'string' ? raw.title : null,
-        ariaLabel: typeof raw.ariaLabel === 'string' ? raw.ariaLabel : null,
-        rel: Array.isArray(raw.rel) ? raw.rel.filter((item): item is string => typeof item === 'string') : [],
-        class: typeof raw.class === 'string' ? raw.class : null,
-        id: typeof raw.id === 'string' ? raw.id : null,
-        download: raw.download === true || typeof raw.download === 'string' ? raw.download : null,
-        linkUid: typeof raw.linkUid === 'string' ? raw.linkUid : null,
-    });
+    return normalizeSemanticLinkAttrs(editor.getAttributes('link') as Record<string, unknown>);
 }
 
 declare global {

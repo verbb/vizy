@@ -7,6 +7,7 @@ import {
     type SemanticLinkType,
 } from './attrs';
 import { attrsFromUrlDialog } from './link-apply';
+import type { LinkAttributeManifest } from '../types';
 
 declare module '@tiptap/core' {
     interface Commands<ReturnType> {
@@ -36,11 +37,20 @@ function parseRel(value: unknown): string[] {
     return [];
 }
 
-function normalizeLinkAttrs(raw: Record<string, unknown>): SemanticLinkAttrs {
+function normalizeLinkAttrs(
+    raw: Record<string, unknown>,
+    registeredAttributes: readonly LinkAttributeManifest[],
+): SemanticLinkAttrs {
     const type = LINK_TYPES.has(raw.type as SemanticLinkType)
         ? raw.type as SemanticLinkType
         : 'url';
+    const registered = Object.fromEntries(registeredAttributes.map((attribute) => [
+        attribute.name,
+        typeof raw[attribute.name] === 'boolean' ? raw[attribute.name] : attribute.default,
+    ]));
+
     return defaultLinkAttrs({
+        ...registered,
         type,
         targetUid: nullableString(raw.targetUid),
         siteMode: raw.siteMode === 'fixed' ? 'fixed' : 'current',
@@ -59,7 +69,7 @@ function normalizeLinkAttrs(raw: Record<string, unknown>): SemanticLinkAttrs {
 }
 
 /** TipTap link mark storing semantic attrs — never raw href. */
-export function createSemanticLink() {
+export function createSemanticLink(registeredAttributes: readonly LinkAttributeManifest[] = []) {
     return Mark.create({
         name: 'link',
         priority: 1000,
@@ -82,6 +92,10 @@ export function createSemanticLink() {
                 id: { default: null },
                 download: { default: null },
                 linkUid: { default: null, rendered: false },
+                ...Object.fromEntries(registeredAttributes.map((attribute) => [
+                    attribute.name,
+                    { default: attribute.default, rendered: false },
+                ])),
             };
         },
 
@@ -94,13 +108,16 @@ export function createSemanticLink() {
                         return false;
                     }
                     // External HTML enters the same semantic lanes as the Link dialog.
-                    return normalizeLinkAttrs({ ...attrsFromUrlDialog(href, false) });
+                    return normalizeLinkAttrs({
+                        ...attrsFromUrlDialog(href, false),
+                        ...readRegisteredAttributes(element as HTMLElement, registeredAttributes),
+                    }, registeredAttributes);
                 },
             }];
         },
 
         renderHTML({ mark }) {
-            const attrs = normalizeLinkAttrs(mark.attrs as Record<string, unknown>);
+            const attrs = normalizeLinkAttrs(mark.attrs as Record<string, unknown>, registeredAttributes);
             // Restored attrs bypass commands; keep unsafe stored links inert on emission.
             const candidate = linkDisplayHref(attrs);
             const href = isAllowedUri(candidate) ? candidate : '#';
@@ -108,17 +125,19 @@ export function createSemanticLink() {
                 href,
                 'data-vizy-link-type': attrs.type,
             };
-            if (attrs.newWindow) {
-                domAttrs.target = '_blank';
-                domAttrs.rel = 'noopener noreferrer';
-            }
             if (attrs.title) domAttrs.title = attrs.title;
             if (attrs.ariaLabel) domAttrs['aria-label'] = attrs.ariaLabel;
             if (attrs.class) domAttrs.class = attrs.class;
             if (attrs.id) domAttrs.id = attrs.id;
             if (attrs.rel.length) {
-                const rel = attrs.rel.filter((value) => !attrs.newWindow || value.toLowerCase() !== 'opener');
-                if (attrs.newWindow) rel.push('noopener', 'noreferrer');
+                domAttrs.rel = [...new Set(attrs.rel)].join(' ');
+            }
+            applyRegisteredOutput(domAttrs, attrs, registeredAttributes);
+            if (attrs.newWindow) {
+                domAttrs.target = '_blank';
+                const rel = (domAttrs.rel ?? '').split(/\s+/)
+                    .filter((value) => value && value.toLowerCase() !== 'opener');
+                rel.push('noopener', 'noreferrer');
                 domAttrs.rel = [...new Set(rel)].join(' ');
             }
             return ['a', mergeAttributes(domAttrs), 0];
@@ -127,7 +146,10 @@ export function createSemanticLink() {
         addCommands() {
             return {
                 setSemanticLink: (attributes) => ({ chain }) => chain()
-                    .setMark(this.name, normalizeLinkAttrs(attributes as unknown as Record<string, unknown>))
+                    .setMark(this.name, normalizeLinkAttrs(
+                        attributes as unknown as Record<string, unknown>,
+                        registeredAttributes,
+                    ))
                     .setMeta('preventAutolink', true)
                     .run(),
                 toggleSemanticLink: (attributes) => ({ editor, chain }) => {
@@ -136,7 +158,10 @@ export function createSemanticLink() {
                     }
                     if (!attributes) return false;
                     return chain()
-                        .setMark(this.name, normalizeLinkAttrs(attributes as unknown as Record<string, unknown>))
+                        .setMark(this.name, normalizeLinkAttrs(
+                            attributes as unknown as Record<string, unknown>,
+                            registeredAttributes,
+                        ))
                         .setMeta('preventAutolink', true)
                         .run();
                 },
@@ -144,4 +169,38 @@ export function createSemanticLink() {
             };
         },
     });
+}
+
+function readRegisteredAttributes(
+    element: HTMLElement,
+    registeredAttributes: readonly LinkAttributeManifest[],
+): Record<string, boolean> {
+    return Object.fromEntries(registeredAttributes.map((attribute) => {
+        const htmlAttribute = attribute.htmlAttribute;
+        const htmlValue = attribute.htmlValue;
+        if (!htmlAttribute || !htmlValue) return [attribute.name, attribute.default];
+        const value = element.getAttribute(htmlAttribute) ?? '';
+        const expected = htmlValue.split(/\s+/).filter(Boolean);
+        const enabled = htmlAttribute === 'class' || htmlAttribute === 'rel'
+            ? expected.every((token) => value.split(/\s+/).includes(token))
+            : value === htmlValue;
+        return [attribute.name, enabled];
+    }));
+}
+
+function applyRegisteredOutput(
+    domAttrs: Record<string, string>,
+    attrs: SemanticLinkAttrs,
+    registeredAttributes: readonly LinkAttributeManifest[],
+): void {
+    for (const attribute of registeredAttributes) {
+        if (attrs[attribute.name] !== true || !attribute.htmlAttribute || !attribute.htmlValue) continue;
+        if (attribute.htmlAttribute === 'class' || attribute.htmlAttribute === 'rel') {
+            const tokens = (domAttrs[attribute.htmlAttribute] ?? '').split(/\s+/).filter(Boolean);
+            const registeredTokens = attribute.htmlValue.split(/\s+/).filter(Boolean);
+            domAttrs[attribute.htmlAttribute] = [...new Set([...tokens, ...registeredTokens])].join(' ');
+        } else {
+            domAttrs[attribute.htmlAttribute] = attribute.htmlValue;
+        }
+    }
 }
