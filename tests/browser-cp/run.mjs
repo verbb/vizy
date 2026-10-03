@@ -15,7 +15,7 @@ let provisionExit;
 const provisionDone = new Promise((resolve) => provision.on('exit', (code) => { provisionExit = code ?? 1; resolve(provisionExit); }));
 let result = 1;
 try {
-    const deadline = Date.now() + 300_000;
+    const deadline = Date.now() + 900_000;
     for (;;) {
         if (provisionExit !== undefined) throw new Error(`Browser provisioning exited ${provisionExit}`);
         let metadata;
