@@ -34,6 +34,7 @@ use verbb\vizy\services\Nodes;
 use verbb\vizy\services\RefTags;
 use verbb\vizy\services\Renderer;
 use verbb\vizy\services\RichTextConversions;
+use verbb\vizy\services\SemanticReferences;
 use verbb\vizy\web\assets\field\VizyAsset;
 
 use nystudio107\pluginvite\services\VitePluginService;
@@ -84,6 +85,7 @@ trait PluginTrait
                 'refTags' => RefTags::class,
                 'renderer' => Renderer::class,
                 'richTextConversions' => RichTextConversions::class,
+                'semanticReferences' => SemanticReferences::class,
                 'vite' => [
                     'class' => VitePluginService::class,
                     'assetClass' => VizyAsset::class,
@@ -277,6 +279,11 @@ trait PluginTrait
     public function getRichTextConversions(): RichTextConversions
     {
         return $this->get('richTextConversions');
+    }
+
+    public function getSemanticReferences(): SemanticReferences
+    {
+        return $this->get('semanticReferences');
     }
 
     public function getVite(): VitePluginService

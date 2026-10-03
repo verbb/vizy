@@ -440,6 +440,10 @@ class VizyField extends Field implements PreviewableFieldInterface
             // Only this hook runs while persisting the owner's content row.
             $value = $value->recontextualize($element, $this);
             Vizy::$plugin->getContentVersions()->check($element, $this, $value->toArray()['attrs']['_storageToken'] ?? null);
+            Vizy::$plugin->getSemanticReferences()->assertAuthorized(
+                $value,
+                Vizy::$plugin->getContentBaselines()->document($element, $this),
+            );
             $serialized = Vizy::$plugin->getDocuments()->serializeForPersistence($value);
             // After-save acknowledgements and upload finalization must observe
             // the exact snapshot written to the content row, including anchor UIDs.
@@ -851,6 +855,10 @@ class VizyField extends Field implements PreviewableFieldInterface
         }
 
         $baseline = $trustedBaseline ?? Vizy::$plugin->getContentBaselines()->document($element, $this);
+
+        foreach (Vizy::$plugin->getSemanticReferences()->violations($value, $baseline) as $violation) {
+            $element->addError($this->handle, $violation);
+        }
 
         foreach (Vizy::$plugin->getEditorManifests()->validateCapabilities($value, $this, $baseline) as $violation) {
             $element->addError(

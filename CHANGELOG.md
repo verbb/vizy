@@ -33,6 +33,7 @@
 - Upgrade verification now compares nested content before committing each owner conversion.
 
 ### Fixed
+- Fixed a medium-severity authorization vulnerability.
 - Fixed nested Craft Entry fields inside Vizy Blocks and Matrix anchors rendering as static, read-only fields.
 - Simplified the Block Type and Editor Config settings copy.
 - Fixed direct Vizy 2/Craft 4 to Vizy 4/Craft 5 upgrades missing legacy field schema that Craft 4 did not retain in its internal Project Config store.
