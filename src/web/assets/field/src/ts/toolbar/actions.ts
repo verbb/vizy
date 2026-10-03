@@ -76,6 +76,11 @@ export function runToolbarAction(
         return true;
     }
 
+    if (action.command === 'insertFootnote') {
+        const chain = focus ? editor.chain().focus() : editor.chain();
+        return chain.insertFootnote().run();
+    }
+
     if (action.command === 'insertNode' && action.nodeName === 'image') {
         activateImageControl(editor, options?.imageAuthoring ?? {}, { focus });
         return true;
@@ -304,6 +309,7 @@ const KNOWN_COMMANDS: ToolbarActionManifest['command'][] = [
     'editRubyText',
     'textStyleControl',
     'insertEmoji',
+    'insertFootnote',
     'editFindAndReplace',
     'setTextAlign',
     'clearFormatting',

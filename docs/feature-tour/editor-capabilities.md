@@ -39,11 +39,14 @@ Inline capabilities apply formatting to selected text or insert an inline object
 | Highlight | `highlight` | Highlighted text |
 | Ruby text | `rubyText` | Pronunciation or annotation text displayed above the selected text |
 | Emoji | `emoji` | A searchable emoji picker backed by TipTap's official dataset |
+| Footnote | `footnoteReference` | A numbered reference paired with an editable definition |
 | Link | `link` | A URL, email, telephone, SMS, Entry, Asset, or Category link |
 
 `textStyle` enables four independently placeable toolbar controls backed by TipTap's official TextStyle extensions: **Font family**, **Font size**, **Text colour**, and **Line height**. The Text colour menu includes both text and highlight palettes. Enable the capability first, then add whichever controls the editor needs to its toolbar.
 
 `rubyText` opens an annotation dialog for the selected text. Use it for readings and short pronunciation guides; the rendered output uses semantic `<ruby>`, `<rb>`, and `<rt>` elements.
+
+`footnoteReference` inserts a numbered reference at the caret and moves the cursor into its definition. Vizy keeps the reference and definition paired while you edit, renumbers notes from their order in the document, and gives copied notes new identities. Press **Command-Enter** on macOS or **Ctrl-Enter** on Windows and Linux while editing a definition to return to its reference.
 
 The field’s **Enabled Link Settings** determine whether the Link dialog offers Link Text, New Window, Site, Title, and Classes. These field settings apply independently of where the Link control appears.
 

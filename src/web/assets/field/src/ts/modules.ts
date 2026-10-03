@@ -28,6 +28,7 @@ import { createVizyIframe } from './semantic/iframe';
 import { createVizyMediaEmbed } from './semantic/media-embed';
 import { createVizyEmoji } from './semantic/emoji';
 import { createVizyCharacterCount } from './semantic/character-count';
+import { FootnoteItem, FootnoteList, FootnoteReference } from './semantic/footnotes';
 import {
     BackgroundColor,
     Color,
@@ -138,6 +139,9 @@ export const TRUSTED_MODULES: Readonly<Record<string, TrustedModuleFactory>> = O
         'vizy/core/node/details': () => Details.configure({ persist: false }),
         'vizy/core/node/detailsSummary': () => DetailsSummary,
         'vizy/core/node/detailsContent': () => DetailsContent,
+        'vizy/core/node/footnoteReference': () => FootnoteReference,
+        'vizy/core/node/footnoteList': () => FootnoteList,
+        'vizy/core/node/footnoteItem': () => FootnoteItem,
         'vizy/core/node/emoji': () => createVizyEmoji(),
         'vizy/core/node/image': () => createSemanticImage(),
         'vizy/core/node/iframe': () => createVizyIframe(),

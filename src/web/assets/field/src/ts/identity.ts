@@ -11,6 +11,7 @@ const AUTHORED_UID_ATTRS = new Set([
     'tableUid',
     'rowUid',
     'cellUid',
+    'footnoteUid',
 ]);
 
 function isHostedEnvelope(value: unknown): value is CanonicalNode {

@@ -3,6 +3,7 @@
 ## Unreleased
 
 ### Added
+- Added native footnotes with paired references and editable definitions, automatic numbering, keyboard navigation, copy-safe identities, accessible frontend HTML, GraphQL fields, and migration from Verbb Footnotes markup. ([#303](https://github.com/verbb/vizy/issues/303))
 - Added native Emoji and Find and Replace controls backed by TipTap’s official extensions. Emoji uses a compact searchable toolbar dropdown for quick inline insertion. ([#204](https://github.com/verbb/vizy/discussions/204))
 - Added native Ruby text, task lists, collapsible details, and syntax highlighting for code blocks. ([#204](https://github.com/verbb/vizy/discussions/204))
 - Added native Font family, Font size, Text colour, and Line height controls backed by TipTap's official TextStyle extensions. The Text colour menu includes both text and highlight palettes, and Editor Config previews use the same current-value selector faces as the live toolbar. ([#201](https://github.com/verbb/vizy/discussions/201))

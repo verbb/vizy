@@ -195,6 +195,8 @@ export type ToolbarActionManifest =
     }
     /** Opens the official Emoji dataset through Vizy's picker. */
     | { command: 'insertEmoji' }
+    /** Inserts a stable reference/definition pair and moves focus into the note. */
+    | { command: 'insertFootnote' }
     /** Opens Vizy's UI for the behaviour-only Find and Replace extension. */
     | { command: 'editFindAndReplace' }
     /**

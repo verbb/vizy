@@ -87,7 +87,7 @@ final class DocumentUpgrader
                 unset($node['text']);
             }
 
-            if (in_array($node['type'] ?? null, ['listItem', 'taskItem'], true)) {
+            if (in_array($node['type'] ?? null, ['listItem', 'taskItem', 'footnoteItem'], true)) {
                 $content = $node['content'] ?? [];
 
                 if (!is_array($content) || $content === []) {

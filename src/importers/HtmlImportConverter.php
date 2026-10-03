@@ -29,6 +29,7 @@ final class HtmlImportConverter
     private array $allowedMarks;
     private array $headingLevels;
     private array $diagnostics = [];
+    private array $footnoteDefinitions = [];
 
 
     // Public Methods
@@ -58,6 +59,7 @@ final class HtmlImportConverter
         $root = $this->_parseFragment($html);
         $this->_assertTreeBounds($root);
         $content = $this->_convertBlockChildren($root, 0);
+        $content = $this->_attachFootnoteDefinitions($content);
 
         if ($this->field->rootContentType === VizyField::ROOT_CONTENT_BLOCKS) {
             $prose = array_filter($content, static fn(array $node): bool => ($node['type'] ?? null) !== 'vizyBlock');
@@ -162,7 +164,10 @@ final class HtmlImportConverter
             'table' => $this->_table($element, $depth),
             'hr' => $this->_leafBlock($element, 'horizontalRule'),
             'img' => $this->_image($element),
-            'div', 'section', 'article', 'main', 'header', 'footer', 'aside', 'nav', 'figure', 'figcaption' => $this->_container($element, $depth),
+            'section' => strtolower($element->getAttribute('data-type')) === 'footnotelist'
+                ? $this->_footnoteList($element, $depth)
+                : $this->_container($element, $depth),
+            'div', 'article', 'main', 'header', 'footer', 'aside', 'nav', 'figure', 'figcaption' => $this->_container($element, $depth),
             default => $this->_unsupportedContainer($element, $depth),
         };
     }
@@ -634,6 +639,12 @@ final class HtmlImportConverter
             return $this->_convertRuleNode($node, $rule, $marks, $depth);
         }
         $tag = strtolower($node->tagName);
+
+        $classNames = preg_split('/\s+/', trim($node->getAttribute('class'))) ?: [];
+
+        if ($tag === 'sup' && (in_array('footnote', $classNames, true) || strtolower($node->getAttribute('data-type')) === 'footnotereference')) {
+            return $this->_footnoteReference($node);
+        }
         $markType = match ($tag) {
             'strong', 'b' => 'bold',
             'em', 'i' => 'italic',
@@ -732,6 +743,128 @@ final class HtmlImportConverter
             ], static fn(mixed $value): bool => $value !== null),
             'marks' => $marks,
         ], static fn(mixed $value): bool => $value !== [])];
+    }
+
+    private function _footnoteReference(DOMElement $element): array
+    {
+        $this->_diagnoseDiscardedAttributes($element, [
+            'class', 'data-type', 'data-footnote-uid', 'data-footnote-text',
+        ]);
+
+        if (!$this->_allowsNode('footnoteReference')) {
+            $this->_diagnose('disallowedNode', 'Footnotes are not enabled for the destination field; the note text was kept inline.', $element, ['type' => 'footnoteReference']);
+            $text = trim($element->getAttribute('data-footnote-text')) ?: trim($element->textContent);
+            return $text === '' ? [] : [['type' => 'text', 'text' => $text]];
+        }
+
+        $uid = strtolower(trim($element->getAttribute('data-footnote-uid')));
+
+        if (preg_match('/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/', $uid) !== 1) {
+            $uid = StringHelper::UUID();
+        }
+        $classNames = preg_split('/\s+/', trim($element->getAttribute('class'))) ?: [];
+        $legacy = in_array('footnote', $classNames, true) && !$element->hasAttribute('data-type');
+        $fallbackText = trim($element->getAttribute('data-footnote-text'));
+
+        if ($legacy) {
+            $fallbackText = trim($element->textContent);
+        }
+
+        if ($fallbackText !== '') {
+            $this->footnoteDefinitions[$uid] = [
+                'type' => 'footnoteItem',
+                'attrs' => ['footnoteUid' => $uid],
+                'content' => [[
+                    'type' => 'paragraph',
+                    'content' => [['type' => 'text', 'text' => mb_substr($fallbackText, 0, 5000)]],
+                ]],
+            ];
+        }
+
+        return [['type' => 'footnoteReference', 'attrs' => array_filter([
+            'footnoteUid' => $uid,
+            'fallbackText' => $fallbackText !== '' ? mb_substr($fallbackText, 0, 5000) : null,
+        ], static fn(mixed $value): bool => $value !== null)]];
+    }
+
+    private function _footnoteList(DOMElement $element, int $depth): array
+    {
+        $this->_diagnoseDiscardedAttributes($element, ['class', 'data-type', 'role', 'aria-label']);
+
+        if (!$this->_allowsNode('footnoteList')) {
+            $this->_diagnose('disallowedNode', 'Footnote definitions are not enabled for the destination field.', $element, ['type' => 'footnoteList']);
+            return $this->_convertBlockChildren($element, $depth);
+        }
+        $items = [];
+
+        foreach ($element->getElementsByTagName('li') as $itemElement) {
+            if (strtolower($itemElement->getAttribute('data-type')) !== 'footnoteitem') {
+                continue;
+            }
+            $uid = strtolower(trim($itemElement->getAttribute('data-footnote-uid')));
+
+            if (preg_match('/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/', $uid) !== 1) {
+                $this->_diagnose('invalidAttribute', 'A footnote definition with an invalid identity was ignored.', $itemElement, ['attribute' => 'data-footnote-uid']);
+                continue;
+            }
+            $contentRoot = null;
+
+            foreach ($itemElement->childNodes as $child) {
+                if ($child instanceof DOMElement && $child->hasAttribute('data-footnote-content')) {
+                    $contentRoot = $child;
+                    break;
+                }
+            }
+            $content = $this->_convertBlockChildren($contentRoot ?? $itemElement, $depth + 1);
+            $content = $content !== [] ? $content : [['type' => 'paragraph', 'content' => []]];
+            $items[] = [
+                'type' => 'footnoteItem',
+                'attrs' => ['footnoteUid' => $uid],
+                'content' => $content,
+            ];
+        }
+
+        return $items === [] ? [] : [['type' => 'footnoteList', 'content' => $items]];
+    }
+
+    private function _attachFootnoteDefinitions(array $content): array
+    {
+        if ($this->footnoteDefinitions === []) {
+            return $content;
+        }
+        $listIndex = null;
+        $defined = [];
+
+        foreach ($content as $index => $node) {
+            if (($node['type'] ?? null) !== 'footnoteList') {
+                continue;
+            }
+            $listIndex = $index;
+
+            foreach ($node['content'] ?? [] as $item) {
+                $uid = $item['attrs']['footnoteUid'] ?? null;
+
+                if (is_string($uid)) {
+                    $defined[$uid] = true;
+                }
+            }
+        }
+        $missing = array_values(array_filter(
+            $this->footnoteDefinitions,
+            static fn(array $item): bool => !isset($defined[$item['attrs']['footnoteUid']]),
+        ));
+
+        if ($missing === []) {
+            return $content;
+        }
+
+        if ($listIndex !== null) {
+            $content[$listIndex]['content'] = [...($content[$listIndex]['content'] ?? []), ...$missing];
+            return $content;
+        }
+
+        $content[] = ['type' => 'footnoteList', 'content' => $missing];
+        return $content;
     }
 
     private function _link(DOMElement $element, array $marks, int $depth): array

@@ -58,6 +58,13 @@ Walk ordered root nodes with inline fragments. Defaults match Twig `query()` —
           ... on VizyImage {
             asset { id url }
           }
+          ... on VizyFootnoteReference {
+            footnoteUid
+            number
+            definition {
+              text
+            }
+          }
           ... on VizyLayout {
             stack
             columns {
@@ -144,6 +151,8 @@ Every prose, layout, block, and unknown node implements this interface. Select t
 | `isUnknown` | `Boolean!` | Whether the node type has no installed extension definition. |
 
 `html` uses the same rendering rules as document `renderedHtml`. Review [Data Access and Permissions](#data-access-and-permissions) before exposing raw content or rendered HTML.
+
+Footnote references and definitions expose `footnoteUid: ID!` and `number: Int`. A `VizyFootnoteReference` also exposes its paired `definition: VizyNodeInterface`, which resolves to the corresponding `VizyFootnoteItem`. The number is derived from reference order rather than stored content, so moving a reference updates both rendered HTML and GraphQL output.
 
 ## The `VizyMarkInterface` Interface
 

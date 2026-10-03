@@ -101,3 +101,33 @@ it('validates table column weight totals', function() {
     $bad['content'][0]['attrs']['columnWidths'] = [500, 400];
     expect(fn() => $parser->parse($bad))->toThrow(InvalidDocumentException::class);
 });
+
+it('requires one stable definition for every footnote reference', function() {
+    $parser = new DocumentParser();
+    $uid = '12345678-1234-4234-8234-123456789012';
+    $paired = [
+        'type' => 'doc',
+        'attrs' => ['schemaVersion' => 2],
+        'content' => [
+            [
+                'type' => 'paragraph',
+                'content' => [['type' => 'footnoteReference', 'attrs' => ['footnoteUid' => $uid]]],
+            ],
+            [
+                'type' => 'footnoteList',
+                'content' => [[
+                    'type' => 'footnoteItem',
+                    'attrs' => ['footnoteUid' => $uid],
+                    'content' => [['type' => 'paragraph']],
+                ]],
+            ],
+        ],
+    ];
+
+    expect(fn() => $parser->parse($paired))->not->toThrow(InvalidDocumentException::class);
+
+    $orphaned = $paired;
+    array_pop($orphaned['content']);
+    expect(fn() => $parser->parse($orphaned))
+        ->toThrow(InvalidDocumentException::class, 'requires exactly one reference and one definition');
+});

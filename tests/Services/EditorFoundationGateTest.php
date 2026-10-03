@@ -1284,11 +1284,13 @@ it('drops icon overrides for TextStyle value controls whose live faces never use
     }
 });
 
-it('offers dedicated controls for Ruby text, Emoji, and Find and Replace', function() {
+it('offers dedicated controls for Ruby text, Emoji, Footnotes, and Find and Replace', function() {
     expect(EditorConfigPresentation::controlFor('rubyText', ['rubyText'], []))
         ->toMatchArray(['action' => ['command' => 'editRubyText']])
         ->and(EditorConfigPresentation::controlFor('emoji', [], ['emoji']))
         ->toMatchArray(['action' => ['command' => 'insertEmoji']])
+        ->and(EditorConfigPresentation::controlFor('footnoteReference', [], ['footnoteReference']))
+        ->toMatchArray(['action' => ['command' => 'insertFootnote']])
         ->and(EditorConfigPresentation::controlFor('findAndReplace', [], [], [], [], ['findAndReplace']))
         ->toMatchArray(['action' => ['command' => 'editFindAndReplace']]);
 });

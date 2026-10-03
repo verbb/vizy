@@ -8,6 +8,7 @@ use verbb\vizy\fields\VizyField;
 use verbb\vizy\gql\GqlHelpers;
 use verbb\vizy\gql\GqlNode;
 use verbb\vizy\gql\types\VizyDocumentType;
+use verbb\vizy\gql\types\generators\VizyNodeGenerator;
 
 it('exposes structural VizyDocument GraphQL fields', function() {
     $document = (new DocumentParser())->parse([
@@ -135,6 +136,42 @@ it('exposes layout stack/span/proportion on structural nodes', function() {
         ->and($columns[0]->attrs()['span'])->toBe(4)
         ->and($columns[1]->attrs()['span'])->toBe(8)
         ->and(GqlHelpers::resolveNodeTypeName($columns[0]))->toBe('VizyColumn');
+});
+
+it('exposes stable footnote identity, numbering, and the paired definition', function() {
+    $uid = '12345678-1234-4234-8234-123456789012';
+    $document = (new DocumentParser())->parse([
+        'type' => 'doc',
+        'attrs' => ['schemaVersion' => VizyDocument::CURRENT_SCHEMA_VERSION],
+        'content' => [
+            [
+                'type' => 'paragraph',
+                'content' => [
+                    ['type' => 'text', 'text' => 'Claim'],
+                    ['type' => 'footnoteReference', 'attrs' => ['footnoteUid' => $uid, 'fallbackText' => 'Source']],
+                ],
+            ],
+            [
+                'type' => 'footnoteList',
+                'content' => [[
+                    'type' => 'footnoteItem',
+                    'attrs' => ['footnoteUid' => $uid],
+                    'content' => [['type' => 'paragraph', 'content' => [['type' => 'text', 'text' => 'Source']]]],
+                ]],
+            ],
+        ],
+    ]);
+    $reference = GqlHelpers::queryRootNodes($document, [])[0]->children()[1];
+    $definition = $reference->footnoteDefinition();
+    $type = VizyNodeGenerator::generateType('footnoteReference');
+
+    expect($reference->footnoteNumber())->toBe(1)
+        ->and($definition)->toBeInstanceOf(GqlNode::class)
+        ->and($definition?->type())->toBe('footnoteItem')
+        ->and($definition?->text())->toBe('Source')
+        ->and(($type->getField('footnoteUid')->resolveFn)($reference))->toBe($uid)
+        ->and(($type->getField('number')->resolveFn)($reference))->toBe(1)
+        ->and(($type->getField('definition')->resolveFn)($reference)?->text())->toBe('Source');
 });
 
 it('wires VizyField content GQL type to a field-scoped document type', function() {

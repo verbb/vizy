@@ -63,6 +63,8 @@ final class DocumentParser
         foreach ($content as $index => $node) {
             $this->_validateNode($node, "content.{$index}", 'doc');
         }
+
+        $this->_validateFootnotePairs($content);
     }
 
     private function _validateNode(mixed $node, string $path, string $parentType): void
@@ -117,6 +119,18 @@ final class DocumentParser
             $this->_validateColumn($node, $path, $parentType);
         } else {
             $this->semanticValidator->validateNodeType($node['type'], $node, $path);
+        }
+
+        if ($node['type'] === 'footnoteReference' && $parentType === 'doc') {
+            throw new InvalidDocumentException("Footnote reference at {$path} must be inline content.");
+        }
+
+        if ($node['type'] === 'footnoteList' && $parentType !== 'doc') {
+            throw new InvalidDocumentException("Footnote list at {$path} must be a root document node.");
+        }
+
+        if ($node['type'] === 'footnoteItem' && $parentType !== 'footnoteList') {
+            throw new InvalidDocumentException("Footnote item at {$path} must be a direct child of a footnote list.");
         }
 
         if (isset($node['content'])) {
@@ -235,5 +249,49 @@ final class DocumentParser
                 throw new InvalidDocumentException("Nested layout at {$path}.content.{$index} is not allowed.");
             }
         }
+    }
+
+    private function _validateFootnotePairs(array $content): void
+    {
+        $references = [];
+        $definitions = [];
+        $listCount = 0;
+        $walk = function(array $nodes) use (&$walk, &$references, &$definitions, &$listCount): void {
+            foreach ($nodes as $node) {
+                if (!is_array($node)) {
+                    continue;
+                }
+                $type = $node['type'] ?? null;
+                $uid = $node['attrs']['footnoteUid'] ?? null;
+
+                if ($type === 'footnoteReference' && is_string($uid)) {
+                    $references[$uid] = ($references[$uid] ?? 0) + 1;
+                } elseif ($type === 'footnoteItem' && is_string($uid)) {
+                    $definitions[$uid] = ($definitions[$uid] ?? 0) + 1;
+                } elseif ($type === 'footnoteList') {
+                    $listCount++;
+                }
+
+                if (is_array($node['content'] ?? null)) {
+                    $walk($node['content']);
+                }
+            }
+        };
+        $walk($content);
+
+        if ($listCount > 1) {
+            throw new InvalidDocumentException('Canonical Vizy documents may contain only one footnote list.');
+        }
+
+        foreach (array_unique([...array_keys($references), ...array_keys($definitions)]) as $uid) {
+            if (($references[$uid] ?? 0) !== 1 || ($definitions[$uid] ?? 0) !== 1) {
+                throw new InvalidDocumentException("Footnote {$uid} requires exactly one reference and one definition.");
+            }
+        }
+
+        if ($references !== [] && $listCount !== 1) {
+            throw new InvalidDocumentException('Footnote references require one root footnote list.');
+        }
+
     }
 }

@@ -151,6 +151,74 @@ final class GqlNode
         return Vizy::$plugin->getExtensions()->getDefinition('node', $type) === null;
     }
 
+    public function footnoteNumber(): ?int
+    {
+        $uid = $this->attrs()['footnoteUid'] ?? null;
+
+        if (!is_string($uid) || $uid === '') {
+            return null;
+        }
+        $number = 0;
+        $seen = [];
+        $found = null;
+        $walk = function(array $nodes, string $prefix) use (&$walk, &$number, &$seen, &$found, $uid): void {
+            foreach ($nodes as $index => $node) {
+                if ($found !== null || !is_array($node)) {
+                    continue;
+                }
+
+                if (($node['type'] ?? null) === 'footnoteReference') {
+                    $referenceUid = $node['attrs']['footnoteUid'] ?? null;
+
+                    if (is_string($referenceUid) && !isset($seen[$referenceUid])) {
+                        $seen[$referenceUid] = true;
+                        $number++;
+
+                        if ($referenceUid === $uid) {
+                            $found = $number;
+                            return;
+                        }
+                    }
+                }
+
+                if (is_array($node['content'] ?? null)) {
+                    $walk($node['content'], "{$prefix}.{$index}.content");
+                }
+            }
+        };
+        $walk($this->_document->toArray()['content'] ?? [], 'content');
+        return $found;
+    }
+
+    public function footnoteDefinition(): ?self
+    {
+        $uid = $this->attrs()['footnoteUid'] ?? null;
+
+        if (!is_string($uid) || $uid === '') {
+            return null;
+        }
+        $found = null;
+        $walk = function(array $nodes, string $prefix) use (&$walk, &$found, $uid): void {
+            foreach ($nodes as $index => $node) {
+                if ($found !== null || !is_array($node)) {
+                    continue;
+                }
+                $path = "{$prefix}.{$index}";
+
+                if (($node['type'] ?? null) === 'footnoteItem' && ($node['attrs']['footnoteUid'] ?? null) === $uid) {
+                    $found = self::fromRaw($this->_document, $node, $path);
+                    return;
+                }
+
+                if (is_array($node['content'] ?? null)) {
+                    $walk($node['content'], "{$path}.content");
+                }
+            }
+        };
+        $walk($this->_document->toArray()['content'] ?? [], 'content');
+        return $found;
+    }
+
 
     // Private Methods
     // =========================================================================

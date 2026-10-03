@@ -28,6 +28,8 @@ The plan has one of three statuses:
 
 Custom CKEditor or Redactor styles do not automatically become Vizy extensions. Adjust the source, choose an Editor Config with the required capability, or register a custom HTML import rule before proceeding. Run the analysis again after any change and keep its `planHash` with your migration notes.
 
+If the source field uses the Verbb Footnotes plugin, choose an Editor Config with the **Footnote** capability. Vizy recognises its `<sup class="footnote">` markup and converts each inline note into a stable reference with an editable definition. The analysis reports a loss when Footnote is not available in the selected Editor Config.
+
 ## Convert Locally
 
 For a `ready` plan, run:

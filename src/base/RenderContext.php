@@ -42,6 +42,7 @@ final class RenderContext
     // =========================================================================
 
     private array $_elements = [];
+    private ?array $_footnoteNumbers = null;
 
 
     // Public Methods
@@ -75,5 +76,35 @@ final class RenderContext
     public function fieldOrNull(): ?VizyField
     {
         return $this->field instanceof VizyField ? $this->field : null;
+    }
+
+    public function footnoteNumber(string $uid): ?int
+    {
+        if ($this->_footnoteNumbers === null) {
+            $this->_footnoteNumbers = [];
+            $next = 1;
+            $walk = function(array $nodes) use (&$walk, &$next): void {
+                foreach ($nodes as $node) {
+                    if (!is_array($node)) {
+                        continue;
+                    }
+
+                    if (($node['type'] ?? null) === 'footnoteReference') {
+                        $footnoteUid = $node['attrs']['footnoteUid'] ?? null;
+
+                        if (is_string($footnoteUid) && $footnoteUid !== '' && !isset($this->_footnoteNumbers[$footnoteUid])) {
+                            $this->_footnoteNumbers[$footnoteUid] = $next++;
+                        }
+                    }
+
+                    if (is_array($node['content'] ?? null)) {
+                        $walk($node['content']);
+                    }
+                }
+            };
+            $walk($this->document?->toArray()['content'] ?? []);
+        }
+
+        return $this->_footnoteNumbers[$uid] ?? null;
     }
 }

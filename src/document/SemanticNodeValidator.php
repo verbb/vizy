@@ -27,6 +27,8 @@ final class SemanticNodeValidator
             'iframe' => $this->_validateIframe($node, $path),
             'mediaEmbed' => $this->_validateMediaEmbed($node, $path),
             'table' => $this->_validateTable($node, $path),
+            'footnoteReference' => $this->_validateFootnoteReference($node, $path),
+            'footnoteItem' => $this->_validateFootnoteItem($node, $path),
             default => null,
         };
     }
@@ -187,5 +189,28 @@ final class SemanticNodeValidator
     private function _isUuid(string $value): bool
     {
         return (bool)preg_match('/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i', $value);
+    }
+
+    private function _validateFootnoteReference(array $node, string $path): void
+    {
+        $attrs = $node['attrs'] ?? [];
+        $uid = $attrs['footnoteUid'] ?? null;
+
+        if (!is_string($uid) || !$this->_isUuid($uid)) {
+            throw new InvalidDocumentException("Footnote reference at {$path} requires a UUID attrs.footnoteUid.");
+        }
+
+        if (isset($attrs['fallbackText']) && (!is_string($attrs['fallbackText']) || mb_strlen($attrs['fallbackText']) > 5000)) {
+            throw new InvalidDocumentException("Footnote reference at {$path} has an invalid fallbackText.");
+        }
+    }
+
+    private function _validateFootnoteItem(array $node, string $path): void
+    {
+        $uid = $node['attrs']['footnoteUid'] ?? null;
+
+        if (!is_string($uid) || !$this->_isUuid($uid)) {
+            throw new InvalidDocumentException("Footnote item at {$path} requires a UUID attrs.footnoteUid.");
+        }
     }
 }

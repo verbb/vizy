@@ -803,6 +803,16 @@ final class EditorConfigPresentation
             ];
         }
 
+        if ($name === 'footnoteReference') {
+            return [
+                'id' => $controlId,
+                'kind' => 'node',
+                'label' => $label,
+                'icon' => $icon,
+                'action' => ['command' => 'insertFootnote'],
+            ];
+        }
+
         // Table as a menu member is the insert command — label must not collide with the
         // dropdown trigger also named Table (Vizy 3: "Insert Table").
         if ($name === 'table') {
@@ -1199,7 +1209,7 @@ final class EditorConfigPresentation
         ['link'],
         [self::DROPDOWN_PREFIX . 'alignment'],
         ['bulletList', 'orderedList', 'taskList'],
-        ['codeBlock', 'details', 'emoji', 'image', 'iframe', 'mediaEmbed', 'layout', 'addBlock', self::DROPDOWN_PREFIX . 'table', 'horizontalRule', 'hardBreak'],
+        ['codeBlock', 'details', 'footnoteReference', 'emoji', 'image', 'iframe', 'mediaEmbed', 'layout', 'addBlock', self::DROPDOWN_PREFIX . 'table', 'horizontalRule', 'hardBreak'],
         ['findAndReplace', 'undo', 'redo', 'clearFormatting'],
         ['separator'],
     ];

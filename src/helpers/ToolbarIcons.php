@@ -108,6 +108,7 @@ final class ToolbarIcons
         'taskList' => 'list-check-solid',
         'details' => 'rectangle-list-solid',
         'emoji' => 'face-smile-solid',
+        'footnoteReference' => 'asterisk-solid',
         'paragraph' => 'text',
         'table' => 'table',
 

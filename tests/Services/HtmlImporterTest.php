@@ -140,6 +140,78 @@ it('round-trips ruby text, task lists, details, and highlighted code semantics',
         );
 });
 
+it('migrates legacy Footnotes plugin markers into paired canonical footnotes', function() {
+    $field = VizyFixtureFactory::vizyField();
+    $manifest = Vizy::$plugin->getEditorManifests()->build($field);
+    $manifest['enabledNodes'][] = 'footnoteReference';
+    $manifest['internalNodes'] = array_values(array_unique([
+        ...$manifest['internalNodes'],
+        'footnoteList',
+        'footnoteItem',
+    ]));
+    $result = (new HtmlImportConverter(
+        $field,
+        $manifest,
+        new HtmlImportOptions(),
+        [],
+    ))->convert('<p>Claim<sup class="footnote" tabindex="0">Supporting source</sup>.</p>');
+    $nodes = $result->document()->content()->nodes();
+    $reference = $nodes[0]['content'][1];
+    $item = $nodes[1]['content'][0];
+
+    expect($reference['type'])->toBe('footnoteReference')
+        ->and($reference['attrs']['fallbackText'])->toBe('Supporting source')
+        ->and($item['type'])->toBe('footnoteItem')
+        ->and($item['attrs']['footnoteUid'])->toBe($reference['attrs']['footnoteUid'])
+        ->and($item['content'][0]['content'][0]['text'])->toBe('Supporting source')
+        ->and((string)$result->document()->render())->toContain('role="doc-noteref"', 'role="doc-endnotes"');
+});
+
+it('round-trips rendered semantic footnotes without changing their identity', function() {
+    $field = VizyFixtureFactory::vizyField();
+    $manifest = Vizy::$plugin->getEditorManifests()->build($field);
+    $manifest['enabledNodes'][] = 'footnoteReference';
+    $manifest['internalNodes'] = array_values(array_unique([
+        ...$manifest['internalNodes'],
+        'footnoteList',
+        'footnoteItem',
+    ]));
+    $uid = '12345678-1234-4234-8234-123456789012';
+    $source = (new \verbb\vizy\document\DocumentParser())->parse([
+        'type' => 'doc',
+        'attrs' => ['schemaVersion' => \verbb\vizy\document\VizyDocument::CURRENT_SCHEMA_VERSION],
+        'content' => [
+            [
+                'type' => 'paragraph',
+                'content' => [
+                    ['type' => 'text', 'text' => 'Claim'],
+                    ['type' => 'footnoteReference', 'attrs' => ['footnoteUid' => $uid, 'fallbackText' => 'Supporting source']],
+                ],
+            ],
+            [
+                'type' => 'footnoteList',
+                'content' => [[
+                    'type' => 'footnoteItem',
+                    'attrs' => ['footnoteUid' => $uid],
+                    'content' => [['type' => 'paragraph', 'content' => [['type' => 'text', 'text' => 'Supporting source']]]],
+                ]],
+            ],
+        ],
+    ], null, $field);
+    $result = (new HtmlImportConverter(
+        $field,
+        $manifest,
+        new HtmlImportOptions(),
+        [],
+    ))->convert((string)$source->render());
+    $nodes = $result->document()->content()->nodes();
+
+    expect($result->diagnostics())->toBe([])
+        ->and($nodes[0]['content'][1]['attrs']['footnoteUid'])->toBe($uid)
+        ->and($nodes[1]['content'][0]['attrs']['footnoteUid'])->toBe($uid)
+        ->and($nodes[1]['content'][0]['content'][0]['content'][0]['text'])->toBe('Supporting source');
+});
+
 it('reports every lossy boundary and refuses the same conversion in strict mode', function() {
     $field = VizyFixtureFactory::vizyField();
     $html = '<h1 class="hero">Title</h1><p><u>Underlined</u> <a href="javascript:alert(1)">unsafe</a></p><widget data-value="x">Readable</widget>';

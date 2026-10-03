@@ -83,6 +83,41 @@ it('renders prose marks and layout column wrappers from Extensions strategies', 
         ->and($html)->toContain('--vizy-col:');
 });
 
+it('renders paired footnotes with accessible reference and backlink semantics', function() {
+    $uid = StringHelper::UUID();
+    $document = (new DocumentParser())->parse([
+        'type' => 'doc',
+        'attrs' => ['schemaVersion' => VizyDocument::CURRENT_SCHEMA_VERSION],
+        'content' => [
+            [
+                'type' => 'paragraph',
+                'content' => [
+                    ['type' => 'text', 'text' => 'Statement'],
+                    ['type' => 'footnoteReference', 'attrs' => ['footnoteUid' => $uid, 'fallbackText' => 'Source']],
+                ],
+            ],
+            [
+                'type' => 'footnoteList',
+                'content' => [[
+                    'type' => 'footnoteItem',
+                    'attrs' => ['footnoteUid' => $uid],
+                    'content' => [['type' => 'paragraph', 'content' => [['type' => 'text', 'text' => 'Source']]]],
+                ]],
+            ],
+        ],
+    ]);
+    $html = (string)$document->render();
+
+    expect($html)->toContain(
+        'role="doc-noteref"',
+        'role="doc-endnotes"',
+        'role="doc-endnote"',
+        'role="doc-backlink"',
+        'href="#fn-' . $uid . '"',
+        'href="#fnref-' . $uid . '"',
+    );
+});
+
 it('resolves convention and per-render Twig templates for nodes and marks', function() {
     Vizy::$plugin->getExtensions()->reset();
 

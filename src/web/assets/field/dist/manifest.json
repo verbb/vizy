@@ -166,7 +166,7 @@
     ]
   },
   "field/src/ts/editor-runtime.ts": {
-    "file": "assets/editor-runtime-eTjdurhI.js",
+    "file": "assets/editor-runtime-BZm28hCx.js",
     "name": "editor-runtime",
     "src": "field/src/ts/editor-runtime.ts",
     "isDynamicEntry": true,
@@ -190,7 +190,7 @@
     ]
   },
   "field/src/ts/vizy.ts": {
-    "file": "assets/vizy-G4e57s6j.js",
+    "file": "assets/vizy-DRH2gwzl.js",
     "name": "vizy",
     "src": "field/src/ts/vizy.ts",
     "isEntry": true,
@@ -208,7 +208,7 @@
       "field/src/ts/editor-runtime.ts"
     ],
     "css": [
-      "assets/vizy-C4aka1mE.css"
+      "assets/vizy-DyZObj3r.css"
     ]
   },
   "fieldsettings/src/ts/field-settings.ts": {

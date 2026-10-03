@@ -1,9 +1,9 @@
 {
     "uid": "<request-local-uuid>",
-    "revision": "1:d2767e787c7d332f5d0ddfe8578cb1482db320f7c10dce5a983307cb87f1d1af",
-    "hash": "d2767e787c7d332f5d0ddfe8578cb1482db320f7c10dce5a983307cb87f1d1af",
+    "revision": "1:a7b2afe3ae171f8884aa9a7f0726082f4167d9a1266d79898d6fdd30b1b25f9d",
+    "hash": "a7b2afe3ae171f8884aa9a7f0726082f4167d9a1266d79898d6fdd30b1b25f9d",
     "manifestVersion": 1,
-    "registryRevision": "86f6d0e98177bd1aa30ef76ecd5c2fbff51d3896fa33f92492c271e4e1872702",
+    "registryRevision": "ad0176aae430a2c6c959d7c992418ca3802d6720adc2bc0f10d8b161cc732d31",
     "editorConfig": {
         "id": "test-contract",
         "revision": "1:a7042b79eabee507f5d3f33b066ab24b77f2811b6abb55b83bc1376a8810a823",

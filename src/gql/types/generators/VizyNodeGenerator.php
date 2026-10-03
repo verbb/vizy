@@ -124,6 +124,29 @@ class VizyNodeGenerator implements GeneratorInterface
             ];
         }
 
+        if (in_array($tipTapType, ['footnoteReference', 'footnoteItem'], true)) {
+            $fields['footnoteUid'] = [
+                'name' => 'footnoteUid',
+                'type' => Type::nonNull(Type::id()),
+                'resolve' => static fn(GqlNode $node): string => (string)($node->attrs()['footnoteUid'] ?? ''),
+            ];
+            $fields['number'] = [
+                'name' => 'number',
+                'type' => Type::int(),
+                'description' => 'One-based number derived from first reference order.',
+                'resolve' => static fn(GqlNode $node): ?int => $node->footnoteNumber(),
+            ];
+        }
+
+        if ($tipTapType === 'footnoteReference') {
+            $fields['definition'] = [
+                'name' => 'definition',
+                'type' => VizyNodeInterface::getType(),
+                'description' => 'The paired footnote definition node.',
+                'resolve' => static fn(GqlNode $node): ?GqlNode => $node->footnoteDefinition(),
+            ];
+        }
+
         $prepared = Craft::$app->getGql()->prepareFieldDefinitions($fields, $typeName);
 
         return GqlEntityRegistry::createEntity($typeName, new VizyNodeType([

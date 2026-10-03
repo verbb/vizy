@@ -647,7 +647,7 @@ vizy-layout-preset-chooser {
     /* Zero out every block's own margins, then own the vertical rhythm in exactly
        one place. `:where()` keeps the reset at zero specificity so the rhythm rule
        below — and any element-specific override — still wins on source order. */
-    :where(p, h1, h2, h3, h4, h5, h6, ul, ol, blockquote, pre, table, figure, details, [data-type='details']) {
+    :where(p, h1, h2, h3, h4, h5, h6, ul, ol, blockquote, pre, table, figure, details, [data-type='details'], [data-type='footnoteList']) {
         margin: 0;
     }
 
@@ -766,6 +766,32 @@ vizy-layout-preset-chooser {
 
     [data-type='details'] > [data-type='detailsContent'] {
         grid-column: 2;
+    }
+
+    [data-type='footnoteReference'] {
+        margin-inline: 0.08em;
+        font-size: 0.75em;
+        vertical-align: super;
+    }
+
+    [data-type='footnoteReference'] > a {
+        color: var(--link-color, #0b69a3);
+        text-decoration: none;
+    }
+
+    [data-type='footnoteList'] {
+        padding-top: 0.75rem;
+        border-top: 1px solid var(--vizy-border);
+        color: var(--medium-text-color, #596673);
+        font-size: 0.925em;
+    }
+
+    [data-type='footnoteList'] > ol {
+        margin: 0;
+    }
+
+    [data-type='footnoteItem']:focus-within {
+        color: var(--text-color, #3f4d5a);
     }
 
     code {
