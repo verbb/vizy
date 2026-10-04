@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 3.2.13 - 2026-10-05
 
 ### Fixed
 - Avoid Verbb Base deprecation warnings by using its current control-panel asset bundle namespace. ([verbb-base#3](https://github.com/verbb/verbb-base/issues/3))
