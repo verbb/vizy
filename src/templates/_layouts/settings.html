@@ -5,7 +5,7 @@
 
 {% requireAdmin %}
 
-{% do view.registerAssetBundle('verbb\\base\\assetbundles\\CpAsset') -%}
+{% do view.registerAssetBundle('verbb\\base\\web\\assets\\cp\\CpAsset') -%}
 
 {% set crumbs = [
     { label: 'Settings' | t('app'), url: url('settings') },
