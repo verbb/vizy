@@ -15,9 +15,11 @@
 - Added recoverable CKEditor and Redactor field conversion commands with placement and site analysis, generated content migrations, strict loss checks, source checkpoints, and post-write verification. See [Migrating CKEditor and Redactor Fields](https://verbb.io/craft-plugins/vizy/docs/v4/user-guides/migrating-rich-text-fields). ([#288](https://github.com/verbb/vizy/issues/288))
 
 ### Changed
+- Require Verbb Base 3.0.19 or later for the current control-panel asset bundle namespace.
 - Feed Me HTML mappings now use Vizy’s field and Editor Config-aware importer, record conversion-loss diagnostics, and can require lossless conversion before accepting a mapped value. See [Importing with Feed Me](https://verbb.io/craft-plugins/vizy/docs/v4/user-guides/importing-with-feed-me). ([#289](https://github.com/verbb/vizy/issues/289))
 
 ### Fixed
+- Avoid Verbb Base deprecation warnings by using its current control-panel asset bundle namespace. ([verbb-base#3](https://github.com/verbb/verbb-base/issues/3))
 - Fixed empty Task List items and Details content becoming preserved, unsupported content after Craft autosaves.
 - Fixed consecutive empty paragraphs being removed from the editor after Craft autosaves.
 - Fixed existing content appearing empty when it exceeded an Editor Config’s Character Count limit.
