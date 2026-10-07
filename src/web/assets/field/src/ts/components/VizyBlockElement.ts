@@ -4,6 +4,8 @@ import { unsafeHTML } from 'lit/directives/unsafe-html.js';
 import '@verbb/plugin-kit-web/components/dropdown-menu';
 import '@verbb/plugin-kit-web/components/popup';
 import '@verbb/plugin-kit-web/components/status';
+import '@verbb/plugin-kit-web/components/button';
+import '@verbb/plugin-kit-web/components/state-panel';
 import type { BlockSummaryData, BlockViewState } from '../blocks/types';
 import { nodeViewShellStyles } from './node-view-shell';
 import { preserveEditorSelection } from '../editor-field-focus';
@@ -61,6 +63,8 @@ export class VizyBlockElement extends LitElement {
     accessor fieldLayoutState: BlockViewState['fieldLayout'] = 'unmounted';
     /** Author-facing FieldLayout failure copy when `fieldLayoutState` is `error`. */
     @property({ attribute: false }) accessor fieldLayoutError: string | null = null;
+    /** Diagnostic detail shown on demand and available to copy. */
+    @property({ attribute: false }) accessor fieldLayoutErrorDetail: string | null = null;
     /** True while Retry is in flight — shows loading instead of a blank card. */
     @state() accessor fieldLayoutRetrying = false;
     /**
@@ -482,14 +486,12 @@ export class VizyBlockElement extends LitElement {
             flex-direction: column;
             white-space: normal;
         }
+        .block-contents[hidden] {
+            display: none;
+        }
         .field-layout-failure {
-            box-sizing: border-box;
             margin: 0 0.5rem 0.5rem;
-            padding: 0.85rem 1rem;
-            border: 1px solid var(--error-color, #ef4444);
-            border-radius: var(--vizy-radius, 4px);
-            background: var(--pk-color-red-50, #fef2f2);
-            color: var(--pk-color-gray-800, #33404d);
+            --pk-state-panel-min-height: 9rem;
         }
         .field-layout-loading {
             box-sizing: border-box;
@@ -500,34 +502,6 @@ export class VizyBlockElement extends LitElement {
             background: var(--pk-color-gray-50, #f3f7fc);
             color: var(--pk-color-gray-600, #515f6c);
             font-size: 12.5px;
-        }
-        .field-layout-failure__title {
-            margin: 0 0 0.35rem;
-            color: var(--error-color, #b91c1c);
-            font-size: 13px;
-            font-weight: 600;
-        }
-        .field-layout-failure__body {
-            margin: 0 0 0.75rem;
-            font-size: 12.5px;
-            line-height: 1.4;
-            white-space: pre-wrap;
-            word-break: break-word;
-        }
-        .field-layout-failure__retry {
-            appearance: none;
-            margin: 0;
-            padding: 0.35rem 0.65rem;
-            border: 1px solid var(--vizy-border-subtle, #cdd8e4);
-            border-radius: var(--vizy-radius, 4px);
-            background: var(--white, #fff);
-            color: var(--pk-color-gray-800, #33404d);
-            font: inherit;
-            font-size: 12px;
-            cursor: pointer;
-        }
-        .field-layout-failure__retry:hover {
-            border-color: var(--pk-color-gray-400, #7b8793);
         }
     `];
 
@@ -707,17 +681,29 @@ export class VizyBlockElement extends LitElement {
         }
         if (this.fieldLayoutState !== 'error') return nothing;
         return html`
-            <div class="field-layout-failure" role="alert" part="field-layout-failure">
-                <div class="field-layout-failure__title">Block fields could not load</div>
-                <div class="field-layout-failure__body">${this.fieldLayoutError
-                    || 'This Block’s fields failed to render. Check the browser console for details.'}</div>
-                <button
+            <pk-state-panel
+                class="field-layout-failure"
+                part="field-layout-failure"
+                variant="error"
+                size="sm"
+                heading="Block fields could not load"
+                announce="assertive"
+                details-label="Technical details"
+                ?copyable=${Boolean(this.fieldLayoutErrorDetail)}
+            >
+                ${this.fieldLayoutError
+                    || 'This Block’s fields failed to render. Check the browser console for details.'}
+                ${this.fieldLayoutErrorDetail
+                    ? html`<pre slot="details">${this.fieldLayoutErrorDetail}</pre>`
+                    : nothing}
+                <pk-button
+                    slot="actions"
                     type="button"
-                    class="field-layout-failure__retry"
+                    size="sm"
                     @click=${this.#retryFieldLayout}
                     @pointerdown=${preserveEditorSelection}
-                >Retry</button>
-            </div>
+                >Retry</pk-button>
+            </pk-state-panel>
         `;
     }
 
@@ -727,6 +713,7 @@ export class VizyBlockElement extends LitElement {
         this.fieldLayoutRetrying = true;
         this.fieldLayoutState = 'loading';
         this.fieldLayoutError = null;
+        this.fieldLayoutErrorDetail = null;
         // Dedicated event — not vizy-edit-fields (that guards event.target === host
         // and was easy to miss from this click path). Editor retries the mount.
         this.dispatchEvent(new CustomEvent('vizy-retry-field-layout', {

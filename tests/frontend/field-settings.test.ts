@@ -150,23 +150,24 @@ describe('vizy field settings configurator', () => {
         expect(items[4].hasAttribute('destructive')).toBe(true);
     });
 
-    it('reveals the matching native Craft availability panel from the row menu', () => {
-        const panel = document.createElement('section');
-        panel.className = 'hidden';
-        panel.dataset.vizyBlockAvailabilityPanel = TYPE_A;
-        panel.setAttribute('aria-hidden', 'true');
-        const close = document.createElement('button');
+    it('opens the matching native Craft availability conditions in a Plugin Kit dialog', async () => {
+        const dialog = document.createElement('pk-dialog') as HTMLElement & {
+            open: boolean;
+            updateComplete: Promise<unknown>;
+        };
+        dialog.dataset.vizyBlockAvailabilityPanel = TYPE_A;
+        dialog.setAttribute('label', 'Alpha availability');
+        const close = document.createElement('pk-button');
         close.dataset.vizyCloseBlockAvailability = '';
-        panel.append(close);
-        document.body.append(panel);
+        dialog.append(close);
+        element.parentElement?.append(dialog);
+        await dialog.updateComplete;
 
         selectBlockMenu(element, TYPE_A, 'availability');
-        expect(panel.classList.contains('hidden')).toBe(false);
-        expect(panel.getAttribute('aria-hidden')).toBe('false');
+        await vi.waitFor(() => expect(dialog.open).toBe(true));
 
         close.click();
-        expect(panel.classList.contains('hidden')).toBe(true);
-        expect(panel.getAttribute('aria-hidden')).toBe('true');
+        await vi.waitFor(() => expect(dialog.open).toBe(false));
     });
 
     it('nudges a block type down through its row menu', async () => {

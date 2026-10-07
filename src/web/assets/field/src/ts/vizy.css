@@ -38,84 +38,16 @@ vizy-editor:not(:has(.vizy-editor-shell)) {
     background: var(--white, #fff);
 }
 
-.vizy-upload-status:not([hidden]) {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: center;
-    gap: var(--pk-space-2, 0.5rem);
-    padding: var(--pk-space-3, 0.75rem);
+pk-alert.vizy-upload-status:not([hidden]),
+pk-alert.vizy-unsupported-status:not([hidden]),
+pk-alert.vizy-clipboard-status:not([hidden]),
+pk-alert.vizy-capture-status:not([hidden]) {
     margin-bottom: var(--pk-space-2, 0.5rem);
-    border: 1px solid var(--vizy-border);
-    border-radius: var(--vizy-radius);
-    background: var(--vizy-panel);
-    color: var(--vizy-text);
-}
-
-.vizy-unsupported-status:not([hidden]) {
-    display: flex;
-    flex-direction: column;
-    gap: 0.2rem;
-    padding: var(--pk-space-3, 0.75rem);
-    margin-bottom: var(--pk-space-2, 0.5rem);
-    border: 1px solid var(--warning-color, #cf6d17);
-    border-radius: var(--vizy-radius);
-    background: var(--pk-color-orange-50, #fff7ed);
-    color: var(--vizy-text);
-    font-size: 13px;
-    line-height: 1.4;
-}
-
-.vizy-clipboard-status:not([hidden]),
-.vizy-capture-status:not([hidden]) {
-    display: block;
-    padding: var(--pk-space-3, 0.75rem);
-    margin-bottom: var(--pk-space-2, 0.5rem);
-    border: 1px solid var(--error-color, var(--pk-color-red-500, #ef4444));
-    border-radius: var(--vizy-radius);
-    background: var(--pk-color-red-50, #fef2f2);
-    color: var(--vizy-text);
-    font-size: 13px;
-    line-height: 1.4;
 }
 
 /* Boot failure — replaces a blank frame when the editor module or initialize() throws. */
-.vizy-field-boot-failure {
-    box-sizing: border-box;
-    border: 1px solid var(--error-color, var(--pk-color-red-500, #ef4444));
-    border-radius: var(--vizy-radius);
-    background: var(--pk-color-red-50, #fef2f2);
-    color: var(--pk-color-gray-800, #33404d);
-    padding: 1rem 1.15rem;
-    min-height: 8rem;
-}
-
-.vizy-field-boot-failure__title {
-    margin: 0 0 0.35rem;
-    color: var(--error-color, var(--pk-color-red-700, #b91c1c));
-    font-size: 14px;
-    font-weight: 600;
-}
-
-.vizy-field-boot-failure__body {
-    margin: 0 0 0.75rem;
-    font-size: 13px;
-    line-height: 1.4;
-}
-
-.vizy-field-boot-failure__detail {
-    margin: 0;
-    max-height: 10rem;
-    overflow: auto;
-    padding: 0.5rem 0.65rem;
-    border-radius: var(--vizy-radius);
-    background: var(--white, #fff);
-    border: 1px solid var(--vizy-border-subtle, #cdd8e4);
-    color: var(--pk-color-gray-700, #3f4d5a);
-    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
-    font-size: 11px;
-    line-height: 1.35;
-    white-space: pre-wrap;
-    word-break: break-word;
+pk-alert.vizy-field-boot-failure {
+    --pk-alert-details-max-height: 10rem;
 }
 
 .vizy-editor-shell {
@@ -694,20 +626,21 @@ vizy-layout-preset-chooser {
         list-style: none;
     }
 
-    li[data-type='taskItem'] {
+    ul[data-type='taskList'] li[data-checked] {
         display: flex;
         align-items: flex-start;
         gap: 0.5em;
     }
 
-    li[data-type='taskItem'] > label {
+    ul[data-type='taskList'] li[data-checked] > label {
         flex: 0 0 auto;
         padding-top: 0.15em;
     }
 
-    li[data-type='taskItem'] > div {
+    ul[data-type='taskList'] li[data-checked] > div {
         flex: 1 1 auto;
         min-width: 0;
+        margin-top: 0;
     }
 
     li {

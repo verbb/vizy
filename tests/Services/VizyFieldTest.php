@@ -472,6 +472,9 @@ it('renders native user and Entry condition builders for referenced Block Types'
 
     expect($html)
         ->toContain("data-vizy-block-availability-panel=\"{$uid}\"")
+        ->toContain('<pk-dialog')
+        ->toContain('label="Missing: 44444444-4444-4444-8444-444444444444 availability"')
+        ->toContain('description="These conditions control new insertions only. Existing blocks remain editable."')
         ->toContain('Current User Condition')
         ->toContain('Entry Condition');
 });

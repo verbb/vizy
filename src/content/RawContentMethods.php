@@ -27,6 +27,11 @@ trait RawContentMethods
         return $this->rawContent()->modifyFieldValues($map, $transform, $options);
     }
 
+    public function copyFieldValues(array $map, array $placementMap, callable $transform, array $options = []): array
+    {
+        return $this->rawContent()->copyFieldValues($map, $placementMap, $transform, $options);
+    }
+
     public function getRawContentAdapter(): RawContentAdapter
     {
         return new RawContentAdapter();

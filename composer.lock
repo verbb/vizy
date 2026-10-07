@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "d287cf2d63b79bf6044b21901f432f15",
+    "content-hash": "6d1b58ac2f4c508b40e8116db922aa58",
     "packages": [
         {
             "name": "bacon/bacon-qr-code",
@@ -7048,16 +7048,16 @@
         },
         {
             "name": "verbb/base",
-            "version": "3.0.19",
+            "version": "3.0.20",
             "source": {
                 "type": "git",
                 "url": "https://github.com/verbb/verbb-base.git",
-                "reference": "36addde3aee74adaa2b7c13ec0724f2d27b39ef5"
+                "reference": "0b60c166a79e2762aa968e062dc84ca6c0a9406e"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/verbb/verbb-base/zipball/36addde3aee74adaa2b7c13ec0724f2d27b39ef5",
-                "reference": "36addde3aee74adaa2b7c13ec0724f2d27b39ef5",
+                "url": "https://api.github.com/repos/verbb/verbb-base/zipball/0b60c166a79e2762aa968e062dc84ca6c0a9406e",
+                "reference": "0b60c166a79e2762aa968e062dc84ca6c0a9406e",
                 "shasum": ""
             },
             "require": {
@@ -7094,7 +7094,7 @@
                     "type": "github"
                 }
             ],
-            "time": "2026-10-02T04:48:53+00:00"
+            "time": "2026-10-04T21:22:12+00:00"
         },
         {
             "name": "voku/portable-ascii",

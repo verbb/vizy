@@ -42,6 +42,20 @@ final class Renderer extends Component
         return $this->renderContent($document->content(), $config);
     }
 
+    /**
+     * Renders stable migration HTML without project templates or Vizy Blocks.
+     */
+    public function renderPortableDocument(VizyDocument $document): string
+    {
+        return $this->_renderNodes(
+            $document->content()->nodes(),
+            $document,
+            ['portable' => true],
+            $document->content()->path(),
+            RenderContext::fromDocument($document),
+        );
+    }
+
     public function renderContent(VizyContent $content, array $config = []): Markup
     {
         // Path prefix matches VizyContent::blocks() so blockFromNode cache keys
@@ -98,7 +112,7 @@ final class Renderer extends Component
                 continue;
             }
 
-            if ($this->_shouldTrimEmptyParagraph($node, $index, $parentType, $document)) {
+            if ($this->_shouldTrimEmptyParagraph($node, $index, $parentType, $document, $config)) {
                 continue;
             }
 
@@ -176,7 +190,12 @@ final class Renderer extends Component
         int $index,
         ?string $parentType,
         VizyDocument $document,
+        array $config,
     ): bool {
+        if (($config['portable'] ?? false) === true) {
+            return false;
+        }
+
         if (($node['type'] ?? null) !== 'paragraph' || !($document->field()?->trimEmptyParagraphs ?? false)) {
             return false;
         }
@@ -258,6 +277,10 @@ final class Renderer extends Component
 
     private function _renderBlock(VizyBlock $block, array $config): string
     {
+        if (($config['portable'] ?? false) === true) {
+            return '';
+        }
+
         if (!$block->isEnabled() || !($type = $block->blockType())) {
             return '';
         }
@@ -278,6 +301,10 @@ final class Renderer extends Component
 
     private function _renderTemplate(string $kind, string $type, array $config): ?string
     {
+        if (($config['portable'] ?? false) === true) {
+            return null;
+        }
+
         $configKey = $kind . 'Templates';
         $configuredTemplates = $config[$configKey] ?? [];
         $configured = is_array($configuredTemplates) ? ($configuredTemplates[$type] ?? null) : null;

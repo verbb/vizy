@@ -736,7 +736,13 @@ for (const secondFails of [false, true]) {
             (window as any).Craft.Vizy.bootstrapEditor('second', {
                 document: content, manifest, editorContextToken: 'second',
                 initialFieldLayouts: [secondFails
-                    ? { ok: false, blockUid: 'shared', error: 'renderFailed', message: 'Second editor layout failed.' }
+                    ? {
+                        ok: false,
+                        blockUid: 'shared',
+                        error: 'renderFailed',
+                        message: 'Second editor layout failed.',
+                        detail: 'RuntimeException: simulated server trace',
+                    }
                     : { ...layout, hostNamespace: 'vizyHost[second]', tabLabels: ['Summary', 'Settings'] }],
             });
         }, { content: document, manifest: editorManifest, layout, secondFails });
@@ -747,6 +753,10 @@ for (const secondFails of [false, true]) {
         await expect(first.getByRole('tab', { name: 'Details', exact: true })).toBeVisible();
         if (secondFails) {
             await expect(second).toContainText('Second editor layout failed.');
+            expect(await second.evaluate((element: any) => element.fieldLayoutErrorDetail)).toContain('Code: renderFailed');
+            await second.getByText('Technical details', { exact: true }).click();
+            await expect(second).toContainText('Code: renderFailed');
+            await expect(second).toContainText('Detail: RuntimeException: simulated server trace');
         } else {
             await second.getByRole('tab', { name: 'Settings', exact: true }).click();
             await expect(second.locator('.flex-fields').nth(1)).toBeVisible();
@@ -856,7 +866,8 @@ test('cancels submission and omits stale JSON when a live Block field cannot be 
             hasStaleDocument: formData.has('fields[body]'),
             notice: notice?.textContent ?? '',
             hidden: (notice as HTMLElement | null)?.hidden ?? true,
-            role: notice?.getAttribute('role'),
+            role: notice?.shadowRoot?.querySelector('[role]')?.getAttribute('role'),
+            element: notice?.localName,
         };
     });
     expect(result).toMatchObject({
@@ -865,6 +876,7 @@ test('cancels submission and omits stale JSON when a live Block field cannot be 
         hasStaleDocument: false,
         hidden: false,
         role: 'alert',
+        element: 'pk-alert',
     });
     expect(result.notice).toContain('was not saved');
 });
@@ -1013,7 +1025,7 @@ test('upload retries recover from request failures and ignore results superseded
     const retry = page.getByRole('button', { name: 'Retry uploads', exact: true });
     await retry.focus();
     await page.keyboard.press('Enter');
-    await expect(page.locator('[data-vizy-upload-status]')).toBeFocused();
+    await expect(page.locator('[data-vizy-upload-status]').getByRole('status')).toBeVisible();
     await expect(retry).toBeEnabled();
     await expect(page.locator('[data-vizy-upload-status]')).toContainText('Some files could not be uploaded');
 
@@ -1313,7 +1325,8 @@ for (const reason of ['oversized', 'readonly'] as const) {
                 rejected,
                 retained: editor.getJSON().content[0].attrs.blockUid,
                 notice: notice?.textContent ?? '',
-                noticeRole: notice?.getAttribute('role'),
+                noticeRole: notice?.shadowRoot?.querySelector('[role]')?.getAttribute('role'),
+                noticeElement: notice?.localName,
             };
         }, reason);
         expect(outcome.retained).toBe('cut-guard');
@@ -1321,6 +1334,7 @@ for (const reason of ['oversized', 'readonly'] as const) {
         if (reason === 'oversized') {
             expect(outcome.notice).toContain('too large');
             expect(outcome.noticeRole).toBe('alert');
+            expect(outcome.noticeElement).toBe('pk-alert');
         }
     });
 }

@@ -34,7 +34,7 @@
 
     {{ forms.autosuggestField({
         label: 'Render Templates Path' | t('vizy'),
-        instructions: 'Optional site-template folder containing nodes and marks subfolders for frontend rendering.' | t('vizy'),
+        instructions: 'Optional path relative to the Craft `templates/` directory, containing `nodes` and `marks` subfolders.' | t('vizy'),
         name: 'renderTemplatesPath',
         value: settings.renderTemplatesPath,
         suggestEnvVars: true,

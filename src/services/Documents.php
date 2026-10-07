@@ -45,6 +45,12 @@ final class Documents extends Component
         return (new RawDocument())->transform($value, $schema, $visit);
     }
 
+    /** Raw migration edge that preserves a source placement while populating its paired destination. */
+    public function copyRawValue(mixed $value, array $schema, callable $visit): mixed
+    {
+        return (new RawDocument())->copy($value, $schema, $visit);
+    }
+
     public function normalizeValue(
         mixed $value,
         ElementInterface $owner,

@@ -12,13 +12,19 @@
 - Added a schema-aware HTML importer API with complete loss diagnostics, strict conversion, caller-owned Asset resolution, and extension rules for custom nodes and marks. ([#142](https://github.com/verbb/vizy/issues/142))
 - Added explicit Feed Me mappings that turn matched HTML elements into custom Vizy Blocks, populate UID-addressed field placements through their Feed Me adapters, and support matching or creating Assets from image attributes. ([#251](https://github.com/verbb/vizy/issues/251))
 - Added convention-based and per-render Twig template partials for built-in and custom node and mark types, including schema-safe frontend markup customisation without relying on editor HTML. ([#29](https://github.com/verbb/vizy/issues/29), [#212](https://github.com/verbb/vizy/issues/212), [#291](https://github.com/verbb/vizy/issues/291), [#298](https://github.com/verbb/vizy/issues/298))
-- Added recoverable CKEditor and Redactor field conversion commands with placement and site analysis, generated content migrations, strict loss checks, source checkpoints, and post-write verification. See [Migrating CKEditor and Redactor Fields](https://verbb.io/craft-plugins/vizy/docs/v4/user-guides/migrating-rich-text-fields). ([#288](https://github.com/verbb/vizy/issues/288))
+- Added control-panel and console workflows for conversion between Vizy and CKEditor, Redactor, or Plain Text fields. Conversions to Vizy use recovery checkpoints, while the guided From Vizy workflow copies into an existing destination wherever both fields share a layout, clearly skips unpaired layouts, preserves the complete source, refuses to overwrite destination content, provides rendered before-and-after previews, and generates a verified deployment migration for a staged cutover. See [Migrating Rich-Text Fields](https://verbb.io/craft-plugins/vizy/docs/v4/user-guides/migrating-rich-text-fields). ([#288](https://github.com/verbb/vizy/issues/288))
 
 ### Changed
-- Require Verbb Base 3.0.19 or later for the current control-panel asset bundle namespace.
+- Clarified field-local Asset and Link authoring settings and moved per-field Block Type availability conditions into a focused modal.
+- Standardised control-panel failure, warning, completion, and empty states on Plugin Kit alerts and state panels, including editor boot, Block field loading, upload finalisation, clipboard, save capture, field settings, Block browsing, and migration workflows.
+- Clarified that the Render Templates Path setting is relative to Craft’s `templates/` directory.
+- Require Verbb Base 3.0.20 or later so shared control-panel layouts use the current asset bundle namespace. ([verbb-base#3](https://github.com/verbb/verbb-base/issues/3))
 - Feed Me HTML mappings now use Vizy’s field and Editor Config-aware importer, record conversion-loss diagnostics, and can require lossless conversion before accepting a mapped value. See [Importing with Feed Me](https://verbb.io/craft-plugins/vizy/docs/v4/user-guides/importing-with-feed-me). ([#289](https://github.com/verbb/vizy/issues/289))
 
 ### Fixed
+- Fixed the From Vizy migration wizard reloading the settings page between steps and rendering a corrupted completion icon.
+- Fixed the field-settings separator appearing directly against the Plain Text Paste control.
+- Fixed Task List checkboxes rendering separately from or misaligned with their text in the editor.
 - Avoid Verbb Base deprecation warnings by using its current control-panel asset bundle namespace. ([verbb-base#3](https://github.com/verbb/verbb-base/issues/3))
 - Fixed empty Task List items and Details content becoming preserved, unsupported content after Craft autosaves.
 - Fixed consecutive empty paragraphs being removed from the editor after Craft autosaves.

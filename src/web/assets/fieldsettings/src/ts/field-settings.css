@@ -6,6 +6,10 @@
     max-width: 600px;
 }
 
+.vizy-availability-warning {
+    margin-bottom: 14px;
+}
+
 /* Groups */
 
 /* Outer edge uses the same token as Craft's own .card / .chip / .matrixblock
@@ -300,33 +304,22 @@
     margin-top: 2px;
 }
 
-/* Native Craft condition builders live outside Lit's frequently re-rendered
-   row tree. One panel is revealed at a time from the Block Type action menu. */
-.vizy-block-availability-panels {
-    max-width: 600px;
+/* Craft removes the top margin from an hr when it is its wrapper's first child.
+   Keep the mode-specific wrapper so Blocks Only still gets a separator, and
+   provide the missing space on the wrapper itself. */
+.vizy-block-limits {
+    padding-top: var(--xl, 24px);
 }
 
-.vizy-block-availability-panel {
-    margin-top: 14px;
-    padding: 14px;
-    border: 1px solid var(--gray-200, hsl(212, 30%, 85%));
-    border-radius: var(--large-border-radius, 5px);
-    background: var(--white, #fff);
+/* Native Craft condition builders remain outside Lit's frequently re-rendered
+   row tree, but the Plugin Kit dialog keeps them close to the row action that
+   opened them without extending a long field-settings page. */
+.vizy-block-availability-dialog {
+    --pk-dialog-width: min(42rem, calc(100vw - 2rem));
+    --pk-dialog-max-width: min(42rem, calc(100vw - 2rem));
+    --pk-dialog-max-height: calc(100vh - 2rem);
 }
 
-.vizy-block-availability-header {
-    display: flex;
-    align-items: flex-start;
-    justify-content: space-between;
-    gap: 14px;
-    margin-bottom: 18px;
-}
-
-.vizy-block-availability-header h3,
-.vizy-block-availability-header p {
-    margin: 0;
-}
-
-.vizy-block-availability-header p {
-    margin-top: 3px;
+.vizy-block-availability-dialog-body {
+    min-width: 0;
 }

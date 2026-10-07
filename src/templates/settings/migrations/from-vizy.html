@@ -1,0 +1,332 @@
+{% extends 'vizy/_layouts/settings' %}
+
+{% set selectedTab = 'migrations-from-vizy' %}
+{% set title = 'Migrate from Vizy' | t('vizy') %}
+{% set canStart = source.fieldCount and destination.fieldCount %}
+
+{% block blockContent %}
+    <div class="vizy-migration-intro">
+        <h2>{{ 'Copy content to another field' | t('vizy') }}</h2>
+
+        <p>{{ 'Copy converted content from an existing Vizy field into an existing Plain Text, CKEditor, or Redactor field. Vizy does not create fields, change field layouts, or modify the source.' | t('vizy') }}</p>
+
+        <p>{{ 'First create the destination field and attach it to every entry type or other field layout you want to migrate. Only layouts containing both selected fields are included in the copy.' | t('vizy') }}</p>
+
+        <p><a href="https://verbb.io/craft-plugins/vizy/docs/v4/user-guides/migrating-rich-text-fields" class="go" target="_blank" rel="noopener">{{ 'Read the migration guide' | t('vizy') }}</a></p>
+    </div>
+
+    {% if not source.fieldCount %}
+        <div class="notice with-icon">
+            <p>{{ 'Create a Vizy field before starting this migration.' | t('vizy') }}</p>
+        </div>
+    {% elseif not destination.fieldCount %}
+        <div class="notice with-icon">
+            <p>{{ 'Create a Plain Text, CKEditor, or Redactor field and add it to the layouts you want to migrate.' | t('vizy') }}</p>
+        </div>
+    {% endif %}
+
+    <vizy-migration-wizard initial-step="{{ wizardStep }}"{% if openWizard %} auto-open{% endif %}>
+        <pk-dialog label="{{ 'Migrate from Vizy' | t('vizy') }}" size="wide" disable-pointer-dismissal>
+            <pk-button slot="trigger" variant="primary"{% if not canStart %} disabled{% endif %}>{{ 'Start migration' | t('vizy') }}</pk-button>
+
+            <ol class="vizy-migration-steps" aria-label="{{ 'Migration progress' | t('vizy') }}">
+                <li class="vizy-migration-step" data-vizy-step="1">{{ 'Choose fields' | t('vizy') }}</li>
+                <li class="vizy-migration-step" data-vizy-step="2">{{ 'Preview' | t('vizy') }}</li>
+                <li class="vizy-migration-step" data-vizy-step="3">{{ 'Confirm' | t('vizy') }}</li>
+                <li class="vizy-migration-step" data-vizy-step="4">{{ 'Copy' | t('vizy') }}</li>
+            </ol>
+
+            <section data-vizy-step-panel="1">
+                <h2>{{ 'Choose the fields' | t('vizy') }}</h2>
+                <p>{{ 'The fields must already exist. Add the destination field to the same field layouts as the source wherever content should be copied.' | t('vizy') }}</p>
+
+                <pk-alert class="vizy-migration-notice" variant="info">
+                    <strong>{{ 'The source stays untouched.' | t('vizy') }}</strong>
+                    <p>{{ 'Analysis is read-only. The later copy writes only to empty destination values and refuses to overwrite different content.' | t('vizy') }}</p>
+                </pk-alert>
+
+                <pk-alert class="vizy-migration-notice" data-vizy-request-error variant="error" hidden>
+                    <strong>{{ 'Vizy could not continue.' | t('vizy') }}</strong>
+                    <p>{{ 'Check your connection and try again.' | t('vizy') }}</p>
+                </pk-alert>
+
+                {% if error and wizardStep == 1 %}
+                    <pk-alert class="vizy-migration-notice" variant="warning" size="sm">
+                        <strong>{{ 'The fields could not be analysed.' | t('vizy') }}</strong>
+                        <p>{{ error }}</p>
+                    </pk-alert>
+                {% endif %}
+
+                <form id="vizy-from-vizy-analyze" method="post" accept-charset="UTF-8" data-vizy-loading-step="2">
+                    {{ csrfInput() }}
+                    {{ actionInput('vizy/rich-text-conversions/analyze-from-vizy') }}
+
+                    <div class="vizy-migration-fields">
+                        <pk-field label="{{ 'Source Vizy field' | t('vizy') }}" required>
+                            <pk-select name="field" value="{{ selectedField ?? '' }}" placeholder="{{ 'Choose a Vizy field' | t('vizy') }}" width="full" required>
+                                {% for field in source.fields %}
+                                    <pk-option value="{{ field.uid }}"{% if field.uid == selectedField %} selected{% endif %}>{{ field.label }}</pk-option>
+                                {% endfor %}
+                            </pk-select>
+                        </pk-field>
+
+                        <pk-field label="{{ 'Destination field' | t('vizy') }}" required>
+                            <pk-select name="destination" value="{{ selectedDestination ?? '' }}" placeholder="{{ 'Choose a destination field' | t('vizy') }}" width="full" required>
+                                {% for field in destination.fields %}
+                                    <pk-option value="{{ field.uid }}"{% if field.uid == selectedDestination %} selected{% endif %}>{{ field.label }}</pk-option>
+                                {% endfor %}
+                            </pk-select>
+                        </pk-field>
+                    </div>
+                </form>
+            </section>
+
+            <section data-vizy-step-panel="2" hidden>
+                <h2>{{ 'Preview the copy' | t('vizy') }}</h2>
+
+                {% if analysis %}
+                    {% set statusLabel = analysis.status == 'ready'
+                        ? ('Ready to copy' | t('vizy'))
+                        : (analysis.status == 'changes'
+                            ? ('Ready with destination changes' | t('vizy'))
+                            : ('Cannot copy yet' | t('vizy')))
+                    %}
+                    {% set statusClass = analysis.status == 'ready'
+                        ? 'green'
+                        : (analysis.status == 'changes' ? 'orange' : 'red')
+                    %}
+
+                    <p><span class="status {{ statusClass }}"></span> <strong>{{ statusLabel }}</strong> · <code>{{ analysis.source.handle }}</code> → <code>{{ analysis.target.handle }}</code> ({{ analysis.target.label }})</p>
+
+                    {% if error and wizardStep == 2 %}
+                        <pk-alert class="vizy-migration-notice" variant="warning" size="sm"><p>{{ error }}</p></pk-alert>
+                    {% endif %}
+
+                    <div class="vizy-migration-summary">
+                        <div class="vizy-migration-stat">
+                            <strong>{{ analysis.scope.includedLayouts | length }}</strong>
+                            <span>{{ 'Included layouts' | t('vizy') }}</span>
+                        </div>
+                        <div class="vizy-migration-stat">
+                            <strong>{{ analysis.content.elements }}</strong>
+                            <span>{{ 'Elements' | t('vizy') }}</span>
+                        </div>
+                        <div class="vizy-migration-stat">
+                            <strong>{{ analysis.content.populated }}</strong>
+                            <span>{{ 'Populated values' | t('vizy') }}</span>
+                        </div>
+                        <div class="vizy-migration-stat">
+                            <strong>{{ analysis.content.failures }}</strong>
+                            <span>{{ 'Conversion failures' | t('vizy') }}</span>
+                        </div>
+                    </div>
+
+                    <div class="vizy-migration-layouts">
+                        <div class="vizy-migration-card">
+                            <h3>{{ 'Included' | t('vizy') }}</h3>
+                            {% if analysis.scope.includedLayouts %}
+                                <ul>
+                                    {% for layout in analysis.scope.includedLayouts %}
+                                        <li>{{ layout.label }}</li>
+                                    {% endfor %}
+                                </ul>
+                            {% else %}
+                                <p class="error">{{ 'No field layout contains both selected fields.' | t('vizy') }}</p>
+                            {% endif %}
+                        </div>
+
+                        <div class="vizy-migration-card">
+                            <h3>{{ 'Not included' | t('vizy') }}</h3>
+                            {% if analysis.scope.skippedLayouts or analysis.scope.ambiguousLayouts %}
+                                <ul>
+                                    {% for layout in analysis.scope.skippedLayouts %}
+                                        <li><strong>{{ layout.label }}</strong> — {{ layout.reason }}</li>
+                                    {% endfor %}
+                                    {% for layout in analysis.scope.ambiguousLayouts %}
+                                        <li class="error"><strong>{{ layout.label }}</strong> — {{ layout.reason }}</li>
+                                    {% endfor %}
+                                </ul>
+                            {% else %}
+                                <p>{{ 'Every layout containing the source also contains one destination placement.' | t('vizy') }}</p>
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    <pk-alert class="vizy-migration-notice" variant="success" size="sm">
+                        <strong>{{ 'Only the included layouts will be copied.' | t('vizy') }}</strong>
+                        <p>{{ 'Entries using a source-only layout are skipped. Their Vizy content remains exactly where it is.' | t('vizy') }}</p>
+                    </pk-alert>
+
+                    {% if analysis.status == 'changes' %}
+                        <pk-alert class="vizy-migration-notice" variant="warning" size="sm">
+                            <strong>{{ 'The destination cannot represent everything in Vizy.' | t('vizy') }}</strong>
+                            <ul>
+                                {% if analysis.target.id == 'plain-text' %}
+                                    <li>{{ 'Formatting and rich-text structure will become readable plain text.' | t('vizy') }}</li>
+                                {% endif %}
+                                {% if analysis.content.diagnosticCounts['non-text-content-discarded'] ?? 0 %}
+                                    <li>{{ 'Images, embeds, rules, or other non-text content will not be copied.' | t('vizy') }}</li>
+                                {% endif %}
+                                {% if analysis.content.diagnosticCounts['unsupported-node-discarded'] ?? 0 %}
+                                    <li>{{ 'Some editor nodes cannot be represented in portable HTML.' | t('vizy') }}</li>
+                                {% endif %}
+                                {% if analysis.content.diagnosticCounts['unsupported-mark-discarded'] ?? 0 %}
+                                    <li>{{ 'Some inline formatting cannot be represented in portable HTML.' | t('vizy') }}</li>
+                                {% endif %}
+                                {% if analysis.content.diagnosticCounts['vizy-blocks-discarded'] ?? 0 %}
+                                    <li>{{ 'Vizy Blocks remain in the source and are not copied to the destination.' | t('vizy') }}</li>
+                                {% endif %}
+                            </ul>
+                        </pk-alert>
+                    {% endif %}
+
+                    {% if analysis.content.blockTypeCounts %}
+                        <h3>{{ 'Vizy Blocks retained only in the source' | t('vizy') }}</h3>
+                        <table class="data fullwidth">
+                            <thead><tr><th>{{ 'Block Type' | t('vizy') }}</th><th>{{ 'Blocks' | t('vizy') }}</th></tr></thead>
+                            <tbody>
+                                {% for blockType in analysis.content.blockTypeCounts %}
+                                    <tr><td>{{ blockType.label }}</td><td>{{ blockType.count }}</td></tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    {% endif %}
+
+                    {% if analysis.content.samples %}
+                        <h3>{{ 'Before and after examples' | t('vizy') }}</h3>
+                        <div class="vizy-migration-examples">
+                            {% for sample in analysis.content.samples %}
+                                <section>
+                                    <p class="light">{{ 'Element {element}, site {site}' | t('vizy', { element: sample.elementId, site: sample.siteId }) }}</p>
+
+                                    {% if sample.error is defined %}
+                                        <p class="error">{{ sample.error }}</p>
+                                    {% else %}
+                                        <div class="vizy-migration-preview-grid">
+                                            <div class="vizy-migration-card vizy-migration-preview">
+                                                <h4>{{ 'Vizy source' | t('vizy') }}</h4>
+                                                <iframe sandbox srcdoc="{{ sample.sourcePreview | e('html_attr') }}" title="{{ 'Vizy source preview' | t('vizy') }}"></iframe>
+                                            </div>
+                                            <div class="vizy-migration-card vizy-migration-preview">
+                                                <h4>{{ analysis.target.label ~ ' destination' }}</h4>
+                                                {% if analysis.target.id == 'plain-text' %}
+                                                    <pre>{{ sample.destinationPreview }}</pre>
+                                                {% else %}
+                                                    <iframe sandbox srcdoc="{{ sample.destinationPreview | e('html_attr') }}" title="{{ analysis.target.label ~ ' destination preview' }}"></iframe>
+                                                {% endif %}
+                                            </div>
+                                        </div>
+                                    {% endif %}
+                                </section>
+                            {% endfor %}
+                        </div>
+
+                        {% if analysis.content.samplesTruncated %}
+                            <p class="light">{{ 'The first 25 populated values are shown. Every included value is still analysed.' | t('vizy') }}</p>
+                        {% endif %}
+                    {% endif %}
+                {% else %}
+                    <p>{{ 'Choose the source and destination fields first.' | t('vizy') }}</p>
+                {% endif %}
+            </section>
+
+            <section data-vizy-step-panel="3" hidden>
+                <h2>{{ 'Confirm the copy' | t('vizy') }}</h2>
+
+                {% if analysis %}
+                    <p>{{ 'Vizy will copy {count, plural, =1{1 populated value} other{# populated values}} from {source} to {destination}. Existing Vizy content is not changed.' | t('vizy', {
+                        count: analysis.content.populated,
+                        source: analysis.source.name,
+                        destination: analysis.target.name,
+                    }) }}</p>
+
+                    {% if error and wizardStep == 3 %}
+                        <pk-alert class="vizy-migration-notice" variant="warning" size="sm"><p>{{ error }}</p></pk-alert>
+                    {% endif %}
+
+                    {% if not allowAdminChanges %}
+                        <pk-alert class="vizy-migration-notice" variant="warning" size="sm">
+                            <p>{{ 'Administrative changes are disabled in this environment. Run the console copy in an environment where allowAdminChanges is enabled.' | t('vizy') }}</p>
+                        </pk-alert>
+                    {% else %}
+                        <form id="vizy-from-vizy-run" method="post" accept-charset="UTF-8" data-vizy-loading-step="4">
+                            {{ csrfInput() }}
+                            {{ actionInput('vizy/rich-text-conversions/run-from-vizy') }}
+                            {{ hiddenInput('field', selectedField) }}
+                            {{ hiddenInput('destination', selectedDestination) }}
+
+                            <div class="vizy-migration-confirmation">
+                                <pk-checkbox name="createBackup" checked>{{ 'Create a database backup before copying' | t('vizy') }}</pk-checkbox>
+
+                                {% if analysis.status == 'changes' %}
+                                    <pk-checkbox name="allowLossy" required>{{ 'I reviewed and accept how the destination differs from the Vizy source' | t('vizy') }}</pk-checkbox>
+                                {% endif %}
+
+                                <pk-checkbox name="confirm" required>{{ 'I understand that only existing paired field placements are copied and the Vizy source remains unchanged' | t('vizy') }}</pk-checkbox>
+                            </div>
+                        </form>
+                    {% endif %}
+                {% endif %}
+            </section>
+
+            <section data-vizy-step-panel="4" hidden>
+                {% if result %}
+                    <h2 class="success">{{ 'Copy completed' | t('vizy') }}</h2>
+
+                    <pk-alert class="vizy-migration-notice" variant="success" size="sm">
+                        <strong>{{ 'Your original Vizy content has not been changed.' | t('vizy') }}</strong>
+                        <p>{{ 'The existing {name} field was populated and verified for every included layout.' | t('vizy', { name: result.destinationFieldName }) }}</p>
+                    </pk-alert>
+
+                    <table class="data fullwidth">
+                        <tbody>
+                            <tr><th>{{ 'Destination field' | t('vizy') }}</th><td>{{ result.destinationFieldName }} <code>{{ result.destinationFieldHandle }}</code></td></tr>
+                            <tr><th>{{ 'Generated migration' | t('vizy') }}</th><td><code>{{ result.migrationPath }}</code></td></tr>
+                            <tr><th>{{ 'Copy policy' | t('vizy') }}</th><td>{{ result.strict ? ('Only content with no representation changes' | t('vizy')) : ('Reviewed destination changes accepted' | t('vizy')) }}</td></tr>
+                        </tbody>
+                    </table>
+
+                    <h3>{{ 'Next steps' | t('vizy') }}</h3>
+                    <ol>
+                        <li>{{ 'Inspect the original and destination fields on representative entries.' | t('vizy') }}</li>
+                        <li>{{ 'Commit the generated content migration. The destination field and its field-layout placements should already be in Project Config.' | t('vizy') }}</li>
+                        <li>{{ 'Deploy Project Config first, then run `php craft up` while Vizy remains installed.' | t('vizy') | md }}</li>
+                        <li>{{ 'Only remove the Vizy field after every environment has applied and verified the copy.' | t('vizy') }}</li>
+                    </ol>
+                {% else %}
+                    <h2>{{ 'Copy content' | t('vizy') }}</h2>
+                    <p>{{ 'The copy begins after confirmation.' | t('vizy') }}</p>
+                {% endif %}
+            </section>
+
+            <div class="vizy-migration-loading" data-vizy-loading hidden aria-live="polite">
+                <pk-spinner size="large"></pk-spinner>
+                <div data-vizy-loading-analyze hidden>
+                    <h2>{{ 'Analysing both fields' | t('vizy') }}</h2>
+                    <p>{{ 'Checking shared layouts and previewing every applicable value…' | t('vizy') }}</p>
+                </div>
+                <div data-vizy-loading-copy hidden>
+                    <h2>{{ 'Copying and verifying content' | t('vizy') }}</h2>
+                    <p>{{ 'Keep this window open while Vizy creates the content migration and verifies the destination…' | t('vizy') }}</p>
+                </div>
+            </div>
+
+            <pk-button slot="footer" data-vizy-footer-step="1" data-vizy-close>{{ 'Cancel' | t('app') }}</pk-button>
+            <pk-button slot="footer" data-vizy-footer-step="1" type="submit" form="vizy-from-vizy-analyze" variant="primary">{{ 'Preview copy' | t('vizy') }}</pk-button>
+
+            <pk-button slot="footer" data-vizy-footer-step="2" data-vizy-go-to="1">{{ 'Back' | t('app') }}</pk-button>
+            {% if analysis and analysis.status != 'blocked' %}
+                <pk-button slot="footer" data-vizy-footer-step="2" data-vizy-go-to="3" variant="primary">{{ 'Continue' | t('app') }}</pk-button>
+            {% endif %}
+
+            <pk-button slot="footer" data-vizy-footer-step="3" data-vizy-go-to="2">{{ 'Back' | t('app') }}</pk-button>
+            {% if analysis and analysis.status != 'blocked' and allowAdminChanges %}
+                <pk-button slot="footer" data-vizy-footer-step="3" type="submit" form="vizy-from-vizy-run" variant="primary">{{ 'Copy content' | t('vizy') }}</pk-button>
+            {% endif %}
+
+            <pk-button slot="footer" data-vizy-footer-step="4" data-vizy-close variant="primary">{{ 'Done' | t('app') }}</pk-button>
+        </pk-dialog>
+    </vizy-migration-wizard>
+
+    <p class="light">{{ 'Console equivalents: `php craft vizy/convert/analyze-from-vizy sourceHandle destinationHandle` and `php craft vizy/convert/from-vizy sourceHandle destinationHandle`.' | t('vizy') | md }}</p>
+{% endblock %}

@@ -221,6 +221,183 @@ final class RawContent
         return $result;
     }
 
+    /** Copies a field into paired placements while leaving every source value untouched. */
+    public function copyFieldValues(array $map, array $placementMap, callable $transform, array $options = []): array
+    {
+        $this->_validateMap($map);
+
+        foreach ($placementMap as $sourcePlacementUid => $destinationPlacementUid) {
+            if (!is_string($sourcePlacementUid) || $sourcePlacementUid === '' || !is_string($destinationPlacementUid) || $destinationPlacementUid === '') {
+                throw new InvalidArgumentException('Field copy placement maps must pair non-empty placement UUIDs.');
+            }
+        }
+
+        $db = $options['db'] ?? Craft::$app->getDb();
+        $dryRun = $options['dryRun'] ?? false;
+        $overwrite = $options['overwrite'] ?? false;
+
+        if (!$db instanceof Connection || (!$dryRun && !$db->getTransaction()?->getIsActive())) {
+            throw new RuntimeException('Raw content writes require an active transaction on the supplied database connection.');
+        }
+
+        $batchSize = $options['batchSize'] ?? 100;
+
+        if (!is_int($batchSize) || $batchSize < 1 || $batchSize > 1000) {
+            throw new InvalidArgumentException('batchSize must be between 1 and 1000.');
+        }
+
+        $result = [
+            'rows' => 0,
+            'matched' => 0,
+            'copied' => 0,
+            'alreadyCopied' => 0,
+            'modified' => 0,
+            'lastRowId' => 0,
+        ];
+
+        if ($map['roots'] === []) {
+            return $result;
+        }
+
+        $after = $options['afterRowId'] ?? 0;
+
+        while (true) {
+            $query = (new Query())->select(['s.id', 's.elementId', 's.siteId', 's.content', 'e.type', 'e.enabled', 'e.dateDeleted', 'e.draftId', 'e.revisionId'])
+                ->from(['s' => '{{%elements_sites}}'])->innerJoin(['e' => '{{%elements}}'], '[[e.id]] = [[s.elementId]]')
+                ->where(['>', 's.id', $after])->andWhere(['not', ['s.content' => null]])->orderBy(['s.id' => SORT_ASC])->limit($batchSize);
+
+            foreach (['elementIds' => 's.elementId', 'siteIds' => 's.siteId'] as $option => $column) {
+                if (array_key_exists($option, $options) && $options[$option] !== null) {
+                    $query->andWhere([$column => $options[$option]]);
+                }
+            }
+
+            foreach (['includeDrafts' => 'e.draftId', 'includeRevisions' => 'e.revisionId', 'includeTrashed' => 'e.dateDeleted'] as $option => $column) {
+                if (($options[$option] ?? true) === false) {
+                    $query->andWhere([$column => null]);
+                }
+            }
+
+            if (($options['includeDisabled'] ?? true) === false) {
+                $query->andWhere(['e.enabled' => true, 's.enabled' => true]);
+            }
+
+            $rows = $query->all($db);
+
+            if (!$rows) {
+                break;
+            }
+
+            foreach ($rows as $row) {
+                $after = (int)$row['id'];
+                $result['lastRowId'] = $after;
+                $content = is_string($row['content']) ? RawJson::decode($row['content']) : $row['content'];
+
+                if ($content instanceof \stdClass) {
+                    $content = (array)$content;
+                }
+
+                if (!is_array($content)) {
+                    throw new RuntimeException("Malformed element content at row {$after}.");
+                }
+
+                $before = $content;
+
+                foreach ($map['roots'] as $placementUid => $root) {
+                    if (!array_key_exists($placementUid, $content)) {
+                        continue;
+                    }
+
+                    $context = [
+                        'rowId' => $after,
+                        'elementId' => (int)$row['elementId'],
+                        'siteId' => (int)$row['siteId'],
+                        'elementType' => $row['type'],
+                        'enabled' => (bool)$row['enabled'],
+                        'trashed' => $row['dateDeleted'] !== null,
+                        'draftId' => $row['draftId'],
+                        'revisionId' => $row['revisionId'],
+                        'rootFieldUid' => $root['fieldUid'],
+                        'rootPlacementUid' => $placementUid,
+                        'rootLayoutUid' => $root['layoutUid'],
+                        'path' => [$placementUid],
+                        'hasDurableOwner' => false,
+                    ];
+
+                    if ($root['direct'] ?? false) {
+                        $destinationPlacementUid = $placementMap[$placementUid] ?? null;
+
+                        if ($destinationPlacementUid === null) {
+                            throw new RuntimeException("No destination placement was prepared for source placement {$placementUid}.");
+                        }
+
+                        $context += [
+                            'fieldUid' => $map['fieldUid'],
+                            'placementUid' => $placementUid,
+                            'destinationPlacementUid' => $destinationPlacementUid,
+                            'layoutUid' => $root['layoutUid'],
+                        ];
+                        $replacement = $transform($content[$placementUid], $context);
+                        $result['matched']++;
+
+                        if (array_key_exists($destinationPlacementUid, $content)) {
+                            if (RawJson::same($content[$destinationPlacementUid], $replacement)) {
+                                $result['alreadyCopied']++;
+                                continue;
+                            }
+
+                            if (!$overwrite && !$this->_vacantCopyDestination($content[$destinationPlacementUid])) {
+                                throw new RuntimeException('The destination field contains content that differs from the planned conversion. Its source was not changed.');
+                            }
+                        }
+
+                        $content[$destinationPlacementUid] = $replacement;
+                        $result['copied']++;
+                    } else {
+                        $content[$placementUid] = $this->_copy(
+                            $content[$placementUid],
+                            $root['fieldUid'],
+                            $map,
+                            $placementMap,
+                            $transform,
+                            $context,
+                            $result,
+                            $overwrite,
+                            0,
+                        );
+                    }
+                }
+
+                if (RawJson::same($before, $content)) {
+                    continue;
+                }
+
+                $result['rows']++;
+
+                if ($dryRun) {
+                    continue;
+                }
+
+                $current = $db->createCommand('SELECT [[content]] FROM {{%elements_sites}} WHERE [[id]] = :id FOR UPDATE', [':id' => $after])->queryScalar();
+                $current = is_string($current) ? RawJson::decode($current) : $current;
+
+                if (!RawJson::same($current, $before)) {
+                    throw new RuntimeException("Content changed concurrently at row {$after}.");
+                }
+
+                $db->createCommand()->update('{{%elements_sites}}', [
+                    'content' => new Expression(':rawContent', [
+                        ':rawContent' => RawJson::encode(is_string($row['content']) ? RawJson::preserve($row['content'], $content) : $content),
+                    ]),
+                ], ['id' => $after])->execute();
+                $result['modified']++;
+                $this->invalidateAfterCommit($db);
+            }
+        }
+
+        return $result;
+    }
+
 
     /** @internal Called by content writers only after a successful database update. */
     public function invalidateAfterCommit(Connection $db): void
@@ -259,6 +436,112 @@ final class RawContent
         if (($map['version'] ?? null) !== 1 || !is_string($map['fieldUid'] ?? null) || !is_array($map['schemas'] ?? null) || !is_array($map['roots'] ?? null)) {
             throw new InvalidArgumentException('Unsupported or incomplete raw content location map.');
         }
+    }
+
+    private function _copy(
+        mixed $value,
+        string $fieldUid,
+        array $map,
+        array $placementMap,
+        callable $transform,
+        array $context,
+        array &$stats,
+        bool $overwrite,
+        int $depth,
+    ): mixed {
+        if ($depth > 64) {
+            throw new RuntimeException('Embedded content exceeds the migration traversal depth limit.');
+        }
+
+        $definition = $map['schemas'][$fieldUid] ?? null;
+
+        if (!$definition) {
+            return $value;
+        }
+
+        $adapter = $this->adapters[$definition['adapter']] ?? null;
+
+        if (!$adapter || !method_exists($adapter, 'copy')) {
+            throw new RuntimeException('A containing field does not support non-destructive field copies: ' . $definition['adapter']);
+        }
+
+        return $adapter->copy($value, $definition['schema'], function(mixed $raw, array $placement, array $segment) use (
+            $fieldUid,
+            $map,
+            $placementMap,
+            $transform,
+            $context,
+            &$stats,
+            $overwrite,
+            $depth,
+        ): array {
+            $segment += [
+                'containerFieldUid' => $fieldUid,
+                'fieldUid' => $placement['fieldUid'],
+                'layoutUid' => $placement['layoutUid'],
+            ];
+            $childContext = array_replace($context, [
+                'containerFieldUid' => $fieldUid,
+                'fieldUid' => $placement['fieldUid'],
+                'placementUid' => $placement['placementUid'],
+                'layoutUid' => $placement['layoutUid'],
+                'path' => [...$context['path'], $segment],
+                'hasDurableOwner' => false,
+            ]);
+
+            if ($placement['fieldUid'] !== $map['fieldUid']) {
+                $nested = $this->_copy(
+                    $raw,
+                    $placement['fieldUid'],
+                    $map,
+                    $placementMap,
+                    $transform,
+                    $childContext,
+                    $stats,
+                    $overwrite,
+                    $depth + 1,
+                );
+
+                return RawJson::same($nested, $raw)
+                    ? ['action' => 'unchanged']
+                    : ['action' => 'replace', 'value' => $nested];
+            }
+
+            $destinationPlacementUid = $placementMap[$placement['placementUid']] ?? null;
+
+            if ($destinationPlacementUid === null) {
+                throw new RuntimeException("No destination placement was prepared for source placement {$placement['placementUid']}.");
+            }
+
+            $childContext['destinationPlacementUid'] = $destinationPlacementUid;
+            $replacement = $transform($raw, $childContext);
+            $fieldSlots = $segment['fieldSlots'] ?? [];
+            $stats['matched']++;
+
+            if (array_key_exists($destinationPlacementUid, $fieldSlots)) {
+                if (RawJson::same($fieldSlots[$destinationPlacementUid], $replacement)) {
+                    $stats['alreadyCopied']++;
+                    return ['action' => 'unchanged'];
+                }
+
+                if (!$overwrite && !$this->_vacantCopyDestination($fieldSlots[$destinationPlacementUid])) {
+                    throw new RuntimeException('The destination field contains content that differs from the planned conversion. Its source was not changed.');
+                }
+            }
+
+            $stats['copied']++;
+
+            return [
+                'action' => 'copy',
+                'placementUid' => $destinationPlacementUid,
+                'value' => $replacement,
+            ];
+        });
+    }
+
+    private function _vacantCopyDestination(mixed $value): bool
+    {
+        return $value === null || $value === '';
     }
 
     private function _transform(mixed $value, string $fieldUid, array $map, callable $transform, array $context, array &$stats, int $depth): mixed

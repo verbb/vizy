@@ -16,7 +16,7 @@ describe('field boot failure UI', () => {
         expect(formatBootFailureDetail(error)).toContain('focused is not defined');
     });
 
-    it('paints an alert beside the preserved document input', () => {
+    it('paints a filled outlined alert beside the preserved document input', async () => {
         const host = document.createElement('vizy-editor');
         const input = document.createElement('input');
         input.type = 'hidden';
@@ -27,10 +27,17 @@ describe('field boot failure UI', () => {
 
         paintFieldBootFailure(host, new Error('focused is not defined'));
 
-        const alert = host.querySelector('[data-vizy-boot-failure]');
+        const alert = host.querySelector<HTMLElementTagNameMap['pk-alert']>('[data-vizy-boot-failure]');
         expect(alert).not.toBeNull();
-        expect(alert?.getAttribute('role')).toBe('alert');
-        expect(alert?.textContent).toContain('Vizy failed to load');
+        await alert?.updateComplete;
+        expect(alert?.localName).toBe('pk-alert');
+        expect(alert?.variant).toBe('error');
+        expect(alert?.appearance).toBe('filled-outlined');
+        expect(alert?.hideIcon).toBe(true);
+        expect(alert?.announce).toBe('assertive');
+        expect(alert?.heading).toBe('Vizy failed to load');
+        expect(alert?.shadowRoot?.querySelector('[role="alert"]')).not.toBeNull();
+        expect(alert?.shadowRoot?.querySelector('details')?.open).toBe(false);
         expect(alert?.textContent).toContain('focused is not defined');
         expect((host.querySelector('input[data-vizy-document]') as HTMLInputElement | null)?.value).toBe(
             '{"type":"doc","content":[]}',

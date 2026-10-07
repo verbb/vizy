@@ -304,6 +304,7 @@ class BlockNodeView implements NodeView {
         this.#services.ui.get(this.#uid).view.fieldLayout = fieldLayout;
         this.dom.fieldLayoutState = fieldLayout;
         this.dom.fieldLayoutError = status === 'failed' ? (record?.errorMessage ?? null) : null;
+        this.dom.fieldLayoutErrorDetail = status === 'failed' ? (record?.errorDetail ?? null) : null;
         if (status === 'mounted' || status === 'failed') {
             this.dom.fieldLayoutRetrying = false;
         }

@@ -1,3 +1,5 @@
+import { readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { Editor } from '@tiptap/core';
 import {
@@ -145,6 +147,18 @@ describe('manifest-owned schema', () => {
         expect(prose.map((extension) => extension.name)).not.toContain('listKeymap');
         expect(list.map((extension) => extension.name)).toContain('listKeymap');
         expect(tasks.map((extension) => extension.name)).toContain('listKeymap');
+    });
+
+    it('styles task items against TipTap’s rendered data-checked contract', () => {
+        const css = readFileSync(
+            resolve(process.cwd(), 'src/web/assets/field/src/ts/vizy.css'),
+            'utf8',
+        );
+
+        expect(css).toMatch(/ul\[data-type='taskList'\] li\[data-checked\]\s*\{/);
+        expect(css).toMatch(/ul\[data-type='taskList'\] li\[data-checked\] > label\s*\{/);
+        expect(css).toMatch(/ul\[data-type='taskList'\] li\[data-checked\] > div\s*\{[^}]*margin-top:\s*0/);
+        expect(css).not.toContain("li[data-type='taskItem']");
     });
 
     it('loads and applies the complete official TextStyle family behind one mark capability', () => {

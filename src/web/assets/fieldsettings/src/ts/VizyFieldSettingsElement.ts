@@ -7,7 +7,9 @@ import { BlockTypeSortableList } from './BlockTypeSortableList';
 // Plugin Kit tokens must land on `:root` — component shadow styles read `var(--pk-*)`.
 import '@verbb/plugin-kit-web/tokens.css';
 import '@verbb/plugin-kit-web/components/button';
+import '@verbb/plugin-kit-web/components/alert';
 import '@verbb/plugin-kit-web/components/combobox';
+import '@verbb/plugin-kit-web/components/dialog';
 import '@verbb/plugin-kit-web/components/dropdown-menu';
 import '@verbb/plugin-kit-web/components/icon';
 import '@verbb/plugin-kit-web/components/lightswitch';
@@ -84,6 +86,12 @@ type SlideoutSubmitEvent = {
     response?: { data?: Record<string, unknown> };
 };
 
+type AvailabilityDialog = HTMLElement & {
+    updateComplete?: Promise<unknown>;
+    show: () => Promise<void>;
+    hide: (source?: string) => Promise<void>;
+};
+
 function t(message: string, params: Record<string, unknown> = {}): string {
     return (window as CraftGlobals).Craft?.t('vizy', message, params) ?? message;
 }
@@ -101,6 +109,7 @@ class VizyFieldSettingsElement extends LitElement {
 
     #state: ConfiguratorState = { groups: [], blockTypes: {}, availableBlockTypes: [] };
     #pickerGroupsInputName = 'blockTypePickerGroups';
+    #availabilityWarning = '';
 
     connectedCallback(): void {
         super.connectedCallback();
@@ -378,29 +387,27 @@ class VizyFieldSettingsElement extends LitElement {
         return this.#state.groups.some((group) => group.disabledBlockTypeUids.includes(uid));
     }
 
-    #openAvailabilityConditions(uid: string): void {
+    async #openAvailabilityConditions(uid: string): Promise<void> {
         const host = this.parentElement;
-        const panels = host?.querySelectorAll<HTMLElement>('[data-vizy-block-availability-panel]');
-        const panel = [...(panels ?? [])].find((item) => item.dataset.vizyBlockAvailabilityPanel === uid);
-        if (!panel) {
-            window.alert(t('Save the field before adding availability conditions to this new block type.'));
+        const dialogs = host?.querySelectorAll<AvailabilityDialog>('[data-vizy-block-availability-panel]');
+        const dialog = [...(dialogs ?? [])].find((item) => item.dataset.vizyBlockAvailabilityPanel === uid);
+        if (!dialog) {
+            this.#availabilityWarning = t('Save the field before adding availability conditions to this new block type.');
+            this.#changed();
             return;
         }
 
-        panels?.forEach((item) => {
-            const active = item === panel;
-            item.classList.toggle('hidden', !active);
-            item.setAttribute('aria-hidden', active ? 'false' : 'true');
-        });
-        panel.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        this.#availabilityWarning = '';
+        this.#changed();
+        await dialog.updateComplete;
+        await dialog.show();
     }
 
     #onAvailabilityPanelClick = (event: Event): void => {
         const button = (event.target as Element | null)?.closest('[data-vizy-close-block-availability]');
         if (!button) return;
-        const panel = button.closest<HTMLElement>('[data-vizy-block-availability-panel]');
-        panel?.classList.add('hidden');
-        panel?.setAttribute('aria-hidden', 'true');
+        const dialog = button.closest<AvailabilityDialog>('[data-vizy-block-availability-panel]');
+        void dialog?.hide('button');
     };
 
     // Drag and drop
@@ -551,7 +558,7 @@ class VizyFieldSettingsElement extends LitElement {
 
     #onBlockMenuSelect(uid: string, value?: string): void {
         if (value === 'edit') this.#openBlockTypeSlideout(uid, null);
-        if (value === 'availability') this.#openAvailabilityConditions(uid);
+        if (value === 'availability') void this.#openAvailabilityConditions(uid);
         if (value === 'move-up') this.nudgeBlock(uid, -1);
         if (value === 'move-down') this.nudgeBlock(uid, 1);
         if (value === 'delete') this.removeBlock(uid);
@@ -718,6 +725,15 @@ class VizyFieldSettingsElement extends LitElement {
     render(): TemplateResult {
         return html`
             <div class="vizy-configurator">
+                ${this.#availabilityWarning ? html`
+                    <pk-alert
+                        class="vizy-availability-warning"
+                        variant="warning"
+                        size="sm"
+                        announce="assertive"
+                    >${this.#availabilityWarning}</pk-alert>
+                ` : nothing}
+
                 ${repeat(
             this.#state.groups,
             (group) => group.id,

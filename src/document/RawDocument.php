@@ -42,6 +42,42 @@ final class RawDocument
         return $encoded ? RawJson::encode(RawJson::preserve($value, $decoded)) : $decoded;
     }
 
+    /** Copies selected field slots to paired placements without changing their source slots. */
+    public function copy(mixed $value, array $schema, callable $visit): mixed
+    {
+        if ($value === null || $value === '') {
+            return $value;
+        }
+
+        $encoded = is_string($value);
+        $decoded = $encoded ? RawJson::decode($value) : $value;
+
+        if (!is_array($decoded)) {
+            throw new RuntimeException('Malformed raw Vizy container.');
+        }
+
+        $before = $decoded;
+        $seen = [];
+
+        if (array_is_list($decoded)) {
+            if (!is_array($schema['legacy'] ?? null)) {
+                throw new RuntimeException('Raw Vizy 3 traversal requires the captured Vizy 3 upgrade mapping.');
+            }
+
+            $this->_copyNodes($decoded, $schema, $visit, true, [], $seen);
+        } elseif (($decoded['type'] ?? null) === 'doc' && in_array($decoded['attrs']['schemaVersion'] ?? null, [1, 2], true) && is_array($decoded['content'] ?? null)) {
+            $this->_copyNodes($decoded['content'], $schema, $visit, false, ['content'], $seen);
+        } else {
+            throw new RuntimeException('Unsupported raw Vizy document version or envelope.');
+        }
+
+        if (RawJson::same($before, $decoded)) {
+            return $value;
+        }
+
+        return $encoded ? RawJson::encode(RawJson::preserve($value, $decoded)) : $decoded;
+    }
+
 
     // Private Methods
     // =========================================================================
@@ -113,6 +149,94 @@ final class RawDocument
             if ($objectSlots) {
                 $slots = (object)$slots;
             }
+            unset($slots);
+        }
+    }
+
+    private function _copyNodes(array &$nodes, array $schema, callable $visit, bool $legacy, array $path, array &$seen): void
+    {
+        foreach ($nodes as $index => &$node) {
+            if (!is_array($node) || !is_string($node['type'] ?? null)) {
+                throw new RuntimeException('Malformed Vizy node during raw traversal.');
+            }
+
+            $nodePath = [...$path, $index];
+
+            if ($node['type'] !== 'vizyBlock') {
+                if (isset($node['content'])) {
+                    $this->_copyNodes($node['content'], $schema, $visit, $legacy, [...$nodePath, 'content'], $seen);
+                }
+
+                continue;
+            }
+
+            $attrs = &$node['attrs'];
+            $blockUid = $legacy ? ($attrs['id'] ?? null) : ($attrs['blockUid'] ?? null);
+
+            if (!is_string($blockUid) || isset($seen[$blockUid])) {
+                throw new RuntimeException('Missing or ambiguous raw Vizy block identity.');
+            }
+
+            $seen[$blockUid] = true;
+            $mapping = $legacy ? ($schema['legacy'][$attrs['values']['type'] ?? ''] ?? null) : null;
+            $typeUid = $legacy ? ($mapping['blockTypeUid'] ?? null) : ($attrs['blockTypeUid'] ?? null);
+
+            if (!is_string($typeUid) || !array_key_exists($typeUid, $schema['types'])) {
+                throw new RuntimeException('Missing captured Vizy block type identity.');
+            }
+
+            if ($legacy) {
+                $slots = &$attrs['values']['content']['fields'];
+            } else {
+                $slots = &$attrs['fieldSlots'];
+            }
+
+            $objectSlots = $slots instanceof \stdClass;
+
+            if ($objectSlots) {
+                $slots = (array)$slots;
+            }
+
+            if (!is_array($slots)) {
+                throw new RuntimeException('Malformed raw Vizy field map.');
+            }
+
+            // Iterate a snapshot so newly copied destination slots cannot be
+            // mistaken for another source during the same traversal.
+            foreach (array_keys($slots) as $key) {
+                $raw = $slots[$key];
+                $placementUid = $legacy ? ($mapping['placementUids'][$key] ?? null) : $key;
+                $placement = $schema['types'][$typeUid][$placementUid ?? ''] ?? null;
+
+                if (!$placement) {
+                    continue;
+                }
+
+                $change = $visit($raw, $placement, [
+                    'kind' => 'vizy',
+                    'blockUid' => $blockUid,
+                    'blockTypeUid' => $typeUid,
+                    'placementUid' => $placementUid,
+                    'storedKey' => $key,
+                    'nodePath' => $nodePath,
+                    'enabled' => $attrs['enabled'] ?? $attrs['values']['enabled'] ?? true,
+                    'representation' => $legacy ? 'v3' : 'canonical',
+                    'fieldSlots' => $slots,
+                ]);
+
+                if (($change['action'] ?? null) === 'replace') {
+                    $slots[$key] = $change['value'];
+                } elseif (($change['action'] ?? null) === 'copy') {
+                    $slots[$change['placementUid']] = $change['value'];
+                } elseif (($change['action'] ?? null) !== 'unchanged') {
+                    throw new RuntimeException('Raw copy visitors must return an unchanged, replace, or copy action.');
+                }
+            }
+
+            if ($objectSlots) {
+                $slots = (object)$slots;
+            }
+
             unset($slots);
         }
     }

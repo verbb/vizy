@@ -1,0 +1,188 @@
+vizy-migration-wizard pk-dialog {
+    --pk-dialog-width: min(96rem, calc(100vw - 4rem));
+    --pk-dialog-max-width: min(96rem, calc(100vw - 4rem));
+    --pk-dialog-height: min(60rem, calc(100vh - 4rem));
+    --pk-dialog-max-height: calc(100vh - 4rem);
+}
+
+.vizy-migration-intro {
+    max-width: 48rem;
+}
+
+.vizy-migration-steps {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 0;
+    margin: 0 0 1.75rem;
+    padding: 0.25rem 1rem 1.5rem;
+    border-bottom: 1px solid var(--hairline-color);
+    list-style: none;
+}
+
+.vizy-migration-step {
+    position: relative;
+    display: grid;
+    gap: 0.5rem;
+    justify-items: center;
+    min-width: 0;
+    color: var(--gray-500);
+    font-weight: 600;
+    text-align: center;
+}
+
+.vizy-migration-step:not(:last-child)::after {
+    position: absolute;
+    z-index: 0;
+    top: 0.875rem;
+    left: calc(50% + 1.25rem);
+    width: calc(100% - 2.5rem);
+    height: 1px;
+    content: '';
+    background: var(--hairline-color);
+}
+
+.vizy-migration-step::before {
+    position: relative;
+    z-index: 1;
+    display: grid;
+    flex: 0 0 1.75rem;
+    width: 1.75rem;
+    height: 1.75rem;
+    border: 1px solid var(--hairline-color);
+    border-radius: 50%;
+    place-items: center;
+    content: attr(data-vizy-step);
+    background: var(--gray-050);
+}
+
+.vizy-migration-step.is-active {
+    color: var(--text-color);
+}
+
+.vizy-migration-step.is-active::before {
+    border-color: var(--blue-500);
+    color: white;
+    background: var(--blue-500);
+}
+
+.vizy-migration-step.is-complete::before {
+    border-color: var(--green-500);
+    content: '';
+    background-color: var(--green-500);
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath d='m3 8 3 3 7-7' fill='none' stroke='%23fff' stroke-linecap='round' stroke-linejoin='round' stroke-width='2'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: center;
+    background-size: 0.875rem;
+}
+
+.vizy-migration-fields {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 1.5rem;
+    margin-top: 1.5rem;
+}
+
+.vizy-migration-summary {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(9rem, 1fr));
+    gap: 0.75rem;
+    margin: 1.5rem 0;
+}
+
+.vizy-migration-stat,
+.vizy-migration-card {
+    padding: 1rem;
+    border: 1px solid var(--hairline-color);
+    border-radius: var(--large-border-radius);
+    background: var(--gray-050);
+}
+
+.vizy-migration-stat strong {
+    display: block;
+    margin-bottom: 0.25rem;
+    font-size: 1.375rem;
+}
+
+.vizy-migration-card > :last-child {
+    margin-bottom: 0;
+}
+
+.vizy-migration-notice {
+    margin-top: 1rem;
+}
+
+.vizy-migration-layouts {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 1rem;
+    margin: 1.5rem 0;
+}
+
+.vizy-migration-layouts ul {
+    margin-bottom: 0;
+}
+
+.vizy-migration-examples {
+    display: grid;
+    gap: 1.5rem;
+}
+
+.vizy-migration-preview-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 1rem;
+    margin-top: 0.75rem;
+}
+
+.vizy-migration-preview iframe {
+    width: 100%;
+    min-height: 10rem;
+    border: 0;
+    background: white;
+}
+
+.vizy-migration-preview pre {
+    margin: 0;
+    white-space: pre-wrap;
+}
+
+.vizy-migration-confirmation {
+    display: grid;
+    gap: 1rem;
+    margin-top: 1.5rem;
+}
+
+.vizy-migration-loading {
+    display: grid;
+    min-height: 24rem;
+    text-align: center;
+    place-content: center;
+    gap: 1rem;
+}
+
+.vizy-migration-loading pk-spinner {
+    justify-self: center;
+}
+
+[data-vizy-step-panel][hidden],
+[data-vizy-footer-step][hidden],
+[data-vizy-loading][hidden],
+[data-vizy-loading] [hidden] {
+    display: none !important;
+}
+
+@media (max-width: 700px) {
+    .vizy-migration-fields,
+    .vizy-migration-layouts,
+    .vizy-migration-preview-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .vizy-migration-steps {
+        padding-inline: 0;
+    }
+
+    .vizy-migration-step {
+        font-size: 0.75rem;
+    }
+}

@@ -12,6 +12,8 @@
  * does not wipe stored content.
  */
 
+import '@verbb/plugin-kit-web/components/alert';
+
 const FAILURE_ATTR = 'data-vizy-boot-failure';
 
 export function formatBootFailureDetail(error: unknown): string {
@@ -21,38 +23,39 @@ export function formatBootFailureDetail(error: unknown): string {
     return String(error);
 }
 
-/** Paint (or replace) the failure panel inside one field host. */
+/** Paint (or replace) the failure alert inside one field host. */
 export function paintFieldBootFailure(host: Element, error: unknown): void {
     if (!(host instanceof HTMLElement)) return;
 
     host.setAttribute('data-vizy-failed', '');
     host.querySelectorAll(`[${FAILURE_ATTR}]`).forEach((node) => node.remove());
 
-    const shell = document.createElement('div');
-    shell.className = 'vizy-editor-shell vizy-field-boot-failure';
-    shell.setAttribute(FAILURE_ATTR, '');
-    shell.setAttribute('role', 'alert');
-
-    const title = document.createElement('p');
-    title.className = 'vizy-field-boot-failure__title';
-    title.textContent = 'Vizy failed to load';
+    const alert = document.createElement('pk-alert');
+    alert.className = 'vizy-editor-shell vizy-field-boot-failure';
+    alert.setAttribute(FAILURE_ATTR, '');
+    alert.variant = 'error';
+    alert.appearance = 'filled-outlined';
+    alert.hideIcon = true;
+    alert.heading = 'Vizy failed to load';
+    alert.announce = 'assertive';
+    alert.detailsLabel = 'Technical details';
+    alert.copyable = true;
 
     const body = document.createElement('p');
-    body.className = 'vizy-field-boot-failure__body';
     body.textContent = 'This field could not start. Your saved content is unchanged — reload the page, or check the browser console if this continues.';
 
     const detail = document.createElement('pre');
-    detail.className = 'vizy-field-boot-failure__detail';
+    detail.slot = 'details';
     detail.textContent = formatBootFailureDetail(error);
 
-    shell.append(title, body, detail);
+    alert.append(body, detail);
 
     // Keep the hidden document input as a sibling after the alert.
     const input = host.querySelector('input[data-vizy-document]');
     if (input) {
-        host.insertBefore(shell, input);
+        host.insertBefore(alert, input);
     } else {
-        host.prepend(shell);
+        host.prepend(alert);
     }
 }
 

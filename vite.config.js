@@ -23,6 +23,7 @@ export default ({ command }) => ({
                 'field-settings': '/fieldsettings/src/ts/field-settings.ts',
                 'editor-config-settings': '/editorconfigsettings/src/ts/editor-config-settings.ts',
                 'icon-picker': '/iconpicker/src/ts/icon-picker.ts',
+                migrations: '/migrations/src/ts/migrations.ts',
             },
             output: {
                 sourcemapExcludeSources: true,

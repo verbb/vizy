@@ -7,6 +7,7 @@ import '@verbb/plugin-kit-web/components/tabs/pk-tab.js';
 import '@verbb/plugin-kit-web/components/tabs/pk-tab-panel.js';
 import '@verbb/plugin-kit-web/components/toggle/pk-toggle.js';
 import '@verbb/plugin-kit-web/components/toggle-group/pk-toggle-group.js';
+import '@verbb/plugin-kit-web/components/state-panel';
 import { BLOCK_TYPE_FALLBACK_ICON } from '../../../../shared/block-type-icon';
 import type { AvailableInsertion } from '../insertion/types';
 import type { BlockInsertView } from '../insertion/insert-view-storage';
@@ -160,10 +161,7 @@ export class VizyBlockBrowseDialogElement extends LitElement {
             overflow-wrap: anywhere;
         }
         .empty {
-            padding: 1.5rem 1rem;
-            color: var(--pk-color-gray-550, #596673);
-            font-size: 0.875rem;
-            text-align: center;
+            --pk-state-panel-min-height: 10rem;
         }
     `;
 
@@ -365,7 +363,14 @@ export class VizyBlockBrowseDialogElement extends LitElement {
     #panelBody(tabId: string) {
         const filtered = this.#filtered(tabId);
         if (!filtered.length) {
-            return html`<div class="empty">${this.query ? 'No matching Blocks.' : 'No Blocks available.'}</div>`;
+            return html`
+                <pk-state-panel
+                    class="empty"
+                    variant="empty"
+                    size="sm"
+                    heading=${this.query ? 'No matching Blocks' : 'No Blocks available'}
+                >${this.query ? 'Try a different search.' : 'There are no Block types available in this field.'}</pk-state-panel>
+            `;
         }
         const tabbableId = filtered.some((entry) => entry.item.id === this.activeId)
             ? this.activeId

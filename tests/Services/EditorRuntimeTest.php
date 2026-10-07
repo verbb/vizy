@@ -95,14 +95,22 @@ it('publishes the built production entry and css when the real field input rende
     $html = $field->getInputHtml($value, $owner);
     $bundle = $view->assetBundles[VizyAsset::class] ?? null;
     $bundle?->registerAssetFiles($view);
+    $vizyCss = array_values(array_filter(
+        $bundle?->css ?? [],
+        static fn(string $file): bool => preg_match('/^assets\/vizy-.*\.css$/', $file) === 1,
+    ));
+    $cssFilesExist = array_reduce(
+        $bundle?->css ?? [],
+        static fn(bool $exists, string $file): bool => $exists && is_file($bundle->sourcePath . DIRECTORY_SEPARATOR . $file),
+        true,
+    );
 
     expect($bundle)->toBeInstanceOf(VizyAsset::class)
         ->and($bundle->js)->toHaveCount(1)
         ->and($bundle->js[0])->toMatch('/^assets\/vizy-.*\.js$/')
-        ->and($bundle->css)->toHaveCount(1)
-        ->and($bundle->css[0])->toMatch('/^assets\/vizy-.*\.css$/')
+        ->and($vizyCss)->toHaveCount(1)
         ->and(is_file($bundle->sourcePath . DIRECTORY_SEPARATOR . $bundle->js[0]))->toBeTrue()
-        ->and(is_file($bundle->sourcePath . DIRECTORY_SEPARATOR . $bundle->css[0]))->toBeTrue()
+        ->and($cssFilesExist)->toBeTrue()
         ->and(Json::encode($view->jsFiles))->toContain('vizy-')
         ->and(Json::encode($view->cssFiles))->toContain('vizy-')
         // Bootstrap rides on the host via <template data-vizy-bootstrap> (not registerJs).

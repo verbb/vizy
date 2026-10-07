@@ -38,4 +38,9 @@ final class RawContentAdapter
     {
         return Vizy::$plugin->getDocuments()->transformRawValue($value, $schema, $visit);
     }
+
+    public function copy(mixed $value, array $schema, callable $visit): mixed
+    {
+        return Vizy::$plugin->getDocuments()->copyRawValue($value, $schema, $visit);
+    }
 }

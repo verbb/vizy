@@ -86,6 +86,8 @@ export interface FieldHostRecord {
     response: FieldLayoutResponse | null;
     /** Author-facing explanation when status is `failed`. */
     errorMessage: string | null;
+    /** Debug-safe code, server detail, or client stack for the failure disclosure. */
+    errorDetail: string | null;
     /**
      * Last successfully captured widget values, keyed by FieldLayout element UID.
      * Unchanged controls must not overwrite server-normalized canonical values.
@@ -145,6 +147,7 @@ export class FieldHostRegistry {
                 requestKey: null,
                 response: null,
                 errorMessage: null,
+                errorDetail: null,
                 capturedValues: new Map(),
                 pending: null,
                 disposals: [],

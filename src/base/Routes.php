@@ -25,6 +25,9 @@ trait Routes
                 'vizy/settings/editor-configs' => 'vizy/editor-configs/index',
                 'vizy/settings/editor-configs/new' => 'vizy/editor-configs/edit',
                 'vizy/settings/editor-configs/<id:[\\w\\-]+>' => 'vizy/editor-configs/edit',
+                'vizy/settings/migrations' => 'vizy/rich-text-conversions/index',
+                'vizy/settings/migrations/to-vizy' => 'vizy/rich-text-conversions/to-vizy',
+                'vizy/settings/migrations/from-vizy' => 'vizy/rich-text-conversions/from-vizy',
             ]);
         });
     }

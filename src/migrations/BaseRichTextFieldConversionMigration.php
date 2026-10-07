@@ -3,6 +3,7 @@ namespace verbb\vizy\migrations;
 
 use verbb\vizy\Vizy;
 
+use Craft;
 use craft\db\Migration;
 use craft\helpers\Json;
 
@@ -40,7 +41,12 @@ abstract class BaseRichTextFieldConversionMigration extends Migration
             'planHash' => $this->planHash,
             'strict' => $this->strict,
         ]);
-        echo Json::encode($result, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES) . "\n";
+
+        // Keep `craft up` informative without writing into a control-panel
+        // response when the same migration is applied by the migration UI.
+        if (Craft::$app->getRequest()->getIsConsoleRequest()) {
+            echo Json::encode($result, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES) . "\n";
+        }
 
         return true;
     }

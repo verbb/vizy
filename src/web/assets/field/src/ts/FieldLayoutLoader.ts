@@ -13,7 +13,11 @@ import type {
 import type { VizyBlockElement } from './components/VizyBlockElement';
 import { applyCraftFieldHtml } from './craft-field-html';
 import { wireDismissibleTips } from './dismissible-tips';
-import { FieldLayoutMountError, formatFieldLayoutError } from './field-layout-error';
+import {
+    FieldLayoutMountError,
+    formatFieldLayoutError,
+    formatFieldLayoutErrorDetail,
+} from './field-layout-error';
 
 /** Stylesheet / external-script hrefs already applied for a layout hash. */
 const mountedHeadResources = new Set<string>();
@@ -174,6 +178,7 @@ export class FieldLayoutLoader {
                         throw new FieldLayoutMountError(
                             (result && result.ok === false ? result.error : null) ?? 'fieldLayoutRejected',
                             result && result.ok === false ? result.message : null,
+                            result && result.ok === false ? result.detail : null,
                         );
                     }
                     this.#pendingByUid.set(item.blockUid, result);
@@ -239,6 +244,7 @@ export class FieldLayoutLoader {
         // Retry / openFields sync paints busy state immediately.
         record.status = 'loading';
         record.errorMessage = null;
+        record.errorDetail = null;
         const opening = this.#open(blockUid).finally(() => {
             if (this.#opening.get(openingKey)?.promise === opening) this.#opening.delete(openingKey);
         });
@@ -265,6 +271,7 @@ export class FieldLayoutLoader {
         record.requestId = null;
         record.requestKey = null;
         record.errorMessage = null;
+        record.errorDetail = null;
         record.status = 'idle';
 
         const current = this.findBlock(blockUid);
@@ -361,6 +368,7 @@ export class FieldLayoutLoader {
             ) {
                 record.status = 'failed';
                 record.errorMessage = formatFieldLayoutError(error);
+                record.errorDetail = formatFieldLayoutErrorDetail(error);
                 console.error(`[Vizy] FieldLayout failed for block ${blockUid}`, error);
             }
             throw error;
@@ -420,6 +428,7 @@ export class FieldLayoutLoader {
                     entry.reject(new FieldLayoutMountError(
                         result.error ?? 'fieldLayoutRejected',
                         result.message,
+                        result.detail,
                     ));
                 } else {
                     entry.resolve(result);
@@ -586,7 +595,10 @@ export class FieldLayoutLoader {
         record.requestKey = null;
         record.status = 'failed';
         record.errorMessage = formatFieldLayoutError(
-            new FieldLayoutMountError(failure.error, failure.message),
+            new FieldLayoutMountError(failure.error, failure.message, failure.detail),
+        );
+        record.errorDetail = formatFieldLayoutErrorDetail(
+            new FieldLayoutMountError(failure.error, failure.message, failure.detail),
         );
         record.root.innerHTML = '';
         console.error(`[Vizy] Initial FieldLayout failed for block ${blockUid}`, failure);
@@ -612,6 +624,7 @@ export class FieldLayoutLoader {
         // Keep loading UI while waiting for ProseMirror to insert the NodeView.
         record.status = 'loading';
         record.errorMessage = null;
+        record.errorDetail = null;
 
         return new Promise((resolve) => {
             const finish = (connected: boolean): void => {
@@ -673,6 +686,7 @@ export class FieldLayoutLoader {
             window.Craft?.initUiElements?.(record.root);
             record.response = response;
             record.errorMessage = null;
+            record.errorDetail = null;
             record.status = 'mounted';
             this.#syncBlockTabs(record, response);
             // bindHost clears disposals first; tip wiring must land after it.
@@ -752,6 +766,7 @@ export class FieldLayoutLoader {
 
             record.response = { ...response, html: record.response?.html ?? '' };
             record.errorMessage = null;
+            record.errorDetail = null;
             record.status = 'mounted';
             stampLayoutTabIndexes(record.root);
             this.#syncBlockTabs(record, record.response, activeTabUid);
@@ -767,6 +782,7 @@ export class FieldLayoutLoader {
         record.status = 'failed';
         record.response = null;
         record.errorMessage = formatFieldLayoutError(error);
+        record.errorDetail = formatFieldLayoutErrorDetail(error);
         record.root.innerHTML = '';
         console.error(`[Vizy] FieldLayout mount crashed for block ${record.blockUid}`, error);
         this.#syncBlockError(record);
@@ -789,6 +805,7 @@ export class FieldLayoutLoader {
                 block.layoutTabLabels = labels;
             }
             block.fieldLayoutError = null;
+            block.fieldLayoutErrorDetail = null;
             block.fieldLayoutState = 'mounted';
         }
         const panes = [...record.root.querySelectorAll<HTMLElement>(':scope > .flex-fields')];
@@ -803,6 +820,7 @@ export class FieldLayoutLoader {
         if (!block) return;
         block.fieldLayoutState = 'error';
         block.fieldLayoutError = record.errorMessage;
+        block.fieldLayoutErrorDetail = record.errorDetail;
         block.fieldLayoutRetrying = false;
     }
 }

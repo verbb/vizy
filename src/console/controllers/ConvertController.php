@@ -26,7 +26,7 @@ final class ConvertController extends Controller
     {
         $options = parent::options($actionID);
 
-        if ($actionID === 'field') {
+        if (in_array($actionID, ['field', 'from-vizy'], true)) {
             $options[] = 'allowLossy';
         }
         return $options;
@@ -51,6 +51,43 @@ final class ConvertController extends Controller
         $result = Vizy::$plugin->getRichTextConversions()->convert(
             $field,
             $editorConfig,
+            $samples,
+            $this->allowLossy,
+        );
+        $this->stdout(Json::encode($result, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES) . "\n");
+
+        return ExitCode::OK;
+    }
+
+    /**
+     * Analyses a Vizy field before converting it to a portable field type.
+     */
+    public function actionAnalyzeFromVizy(
+        string $source,
+        string $destination,
+        int $samples = 25,
+    ): int {
+        $plan = Vizy::$plugin->getRichTextConversions()->analyzeFromVizy(
+            $source,
+            $destination,
+            $samples,
+        );
+        $this->stdout(Json::encode($plan, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES) . "\n");
+
+        return $plan['status'] === 'blocked' ? ExitCode::DATAERR : ExitCode::OK;
+    }
+
+    /**
+     * Copies a Vizy field to an existing Plain Text, CKEditor, or Redactor field.
+     */
+    public function actionFromVizy(
+        string $source,
+        string $destination,
+        int $samples = 25,
+    ): int {
+        $result = Vizy::$plugin->getRichTextConversions()->convertFromVizy(
+            $source,
+            $destination,
             $samples,
             $this->allowLossy,
         );

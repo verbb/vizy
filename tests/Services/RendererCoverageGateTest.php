@@ -217,6 +217,81 @@ TWIG,
     }
 });
 
+it('renders portable HTML without project templates or Vizy Blocks', function() {
+    Vizy::$plugin->getExtensions()->reset();
+
+    $view = Craft::$app->getView();
+    $settings = Vizy::$plugin->getSettings();
+    $previousMode = $view->getTemplateMode();
+    $previousPath = $view->getTemplatesPath();
+    $previousRenderTemplatesPath = $settings->renderTemplatesPath;
+    $templatesPath = sys_get_temp_dir() . '/vizy-portable-render-' . StringHelper::randomString(6);
+
+    mkdir($templatesPath . '/_vizy/types/nodes', 0777, true);
+    mkdir($templatesPath . '/_vizy/types/marks', 0777, true);
+    file_put_contents(
+        $templatesPath . '/_vizy/types/nodes/paragraph.twig',
+        '<article class="project-paragraph">{{ content }}</article>',
+    );
+    file_put_contents(
+        $templatesPath . '/_vizy/types/marks/bold.twig',
+        '<span class="project-bold">{{ content }}</span>',
+    );
+
+    $view->setTemplateMode(\craft\web\View::TEMPLATE_MODE_SITE);
+    $view->setTemplatesPath($templatesPath);
+    $settings->renderTemplatesPath = '_vizy/types';
+
+    try {
+        $document = (new DocumentParser())->parse([
+            'type' => 'doc',
+            'attrs' => ['schemaVersion' => VizyDocument::CURRENT_SCHEMA_VERSION],
+            'content' => [
+                ['type' => 'paragraph'],
+                [
+                    'type' => 'paragraph',
+                    'content' => [[
+                        'type' => 'text',
+                        'text' => 'Portable',
+                        'marks' => [['type' => 'bold']],
+                    ]],
+                ],
+                [
+                    'type' => 'vizyBlock',
+                    'attrs' => [
+                        'blockUid' => StringHelper::UUID(),
+                        'blockTypeUid' => StringHelper::UUID(),
+                        'enabled' => true,
+                        'fieldSlots' => [],
+                    ],
+                ],
+            ],
+        ], new Entry(['title' => 'Owner']), new VizyField([
+            'name' => 'Body',
+            'handle' => 'body',
+            'trimEmptyParagraphs' => true,
+        ]));
+
+        $projectHtml = (string)$document->render();
+        $portableHtml = Vizy::$plugin->getRenderer()->renderPortableDocument($document);
+
+        expect($projectHtml)->toContain('project-paragraph', 'project-bold')
+            ->and($portableHtml)->toBe('<p></p><p><strong>Portable</strong></p>')
+            ->and($portableHtml)->not->toContain('project-paragraph', 'project-bold');
+    } finally {
+        $settings->renderTemplatesPath = $previousRenderTemplatesPath;
+        $view->setTemplatesPath($previousPath);
+        $view->setTemplateMode($previousMode);
+        @unlink($templatesPath . '/_vizy/types/nodes/paragraph.twig');
+        @unlink($templatesPath . '/_vizy/types/marks/bold.twig');
+        @rmdir($templatesPath . '/_vizy/types/nodes');
+        @rmdir($templatesPath . '/_vizy/types/marks');
+        @rmdir($templatesPath . '/_vizy/types');
+        @rmdir($templatesPath . '/_vizy');
+        @rmdir($templatesPath);
+    }
+});
+
 it('renders iframe and unknown mediaEmbed via type classes', function() {
     Vizy::$plugin->getExtensions()->reset();
 

@@ -17,6 +17,7 @@ import type { InsertionRegistry } from './insertion/types';
 import { InsertionOverlay } from './insertion/overlay';
 import type { CanonicalNode, EditorBootstrap, EditorManifest, FinalizationResult, JsonValue } from './types';
 import '@verbb/plugin-kit-web/components/button/pk-button.js';
+import '@verbb/plugin-kit-web/components/alert';
 import type { ToolbarUiActionDetail } from './toolbar/VizyToolbarElement';
 import { refreshBlockSummaries } from './blocks/summary-sync';
 import { selectLayoutTab } from './layout-tabs';
@@ -127,10 +128,10 @@ export class VizyEditorElement extends HTMLElement {
     #retryToken: string | null = null;
     #finalizationDeferredReason: string | null = null;
     #finalizationVersion = 0;
-    #uploadNotice: HTMLDivElement | null = null;
-    #unsupportedNotice: HTMLDivElement | null = null;
-    #clipboardNotice: HTMLDivElement | null = null;
-    #captureNotice: HTMLDivElement | null = null;
+    #uploadNotice: HTMLElementTagNameMap['pk-alert'] | null = null;
+    #unsupportedNotice: HTMLElementTagNameMap['pk-alert'] | null = null;
+    #clipboardNotice: HTMLElementTagNameMap['pk-alert'] | null = null;
+    #captureNotice: HTMLElementTagNameMap['pk-alert'] | null = null;
     #characterCount: HTMLDivElement | null = null;
     #retryingUploads = false;
     #showUploadSuccess = false;
@@ -397,6 +398,11 @@ export class VizyEditorElement extends HTMLElement {
         const notice = this.#uploadNotice;
         if (!notice) return;
         notice.hidden = this.#finalizationStatus === 'complete' && !this.#showUploadSuccess;
+        notice.variant = this.#finalizationStatus === 'complete'
+            ? 'success'
+            : this.#finalizationStatus === 'failed'
+                ? 'error'
+                : 'info';
         const t = (message: string) => window.Craft?.t?.('vizy', message) ?? message;
         const message = document.createElement('span');
         if (this.#finalizationStatus === 'complete') {
@@ -411,6 +417,7 @@ export class VizyEditorElement extends HTMLElement {
         notice.replaceChildren(message);
         if (this.#retryToken && this.#finalizationStatus !== 'complete') {
             const button = document.createElement('pk-button');
+            button.slot = 'actions';
             button.type = 'button';
             button.size = 'sm';
             button.textContent = t('Retry uploads');
@@ -529,6 +536,7 @@ export class VizyEditorElement extends HTMLElement {
                     ? 'error'
                     : 'unmounted';
         element.fieldLayoutError = status === 'failed' ? (record?.errorMessage ?? null) : null;
+        element.fieldLayoutErrorDetail = status === 'failed' ? (record?.errorDetail ?? null) : null;
         if (status === 'mounted' || status === 'failed') {
             element.fieldLayoutRetrying = false;
         }
@@ -624,34 +632,40 @@ export class VizyEditorElement extends HTMLElement {
         // under the editor body (that forced absolute coords + clipping).
         const shell = document.createElement('div');
         shell.className = 'vizy-editor-shell';
-        this.#uploadNotice = document.createElement('div');
+        this.#uploadNotice = document.createElement('pk-alert');
         this.#uploadNotice.className = 'vizy-upload-status';
         this.#uploadNotice.dataset.vizyUploadStatus = '';
-        this.#uploadNotice.setAttribute('role', 'status');
+        this.#uploadNotice.size = 'sm';
+        this.#uploadNotice.announce = 'polite';
         this.#uploadNotice.tabIndex = -1;
-        this.#unsupportedNotice = document.createElement('div');
+        this.#unsupportedNotice = document.createElement('pk-alert');
         this.#unsupportedNotice.className = 'vizy-unsupported-status';
         this.#unsupportedNotice.dataset.vizyUnsupportedStatus = '';
-        this.#unsupportedNotice.setAttribute('role', 'status');
-        this.#unsupportedNotice.hidden = true;
-        const unsupportedTitle = document.createElement('strong');
-        unsupportedTitle.textContent = window.Craft?.t?.('vizy', 'Some content can’t be edited here.')
+        this.#unsupportedNotice.variant = 'warning';
+        this.#unsupportedNotice.size = 'sm';
+        this.#unsupportedNotice.announce = 'polite';
+        this.#unsupportedNotice.heading = window.Craft?.t?.('vizy', 'Some content can’t be edited here.')
             ?? 'Some content can’t be edited here.';
+        this.#unsupportedNotice.hidden = true;
         const unsupportedBody = document.createElement('span');
         unsupportedBody.textContent = window.Craft?.t?.(
             'vizy',
             'Vizy has preserved it and will keep it unchanged when you save.',
         ) ?? 'Vizy has preserved it and will keep it unchanged when you save.';
-        this.#unsupportedNotice.append(unsupportedTitle, unsupportedBody);
-        this.#clipboardNotice = document.createElement('div');
+        this.#unsupportedNotice.append(unsupportedBody);
+        this.#clipboardNotice = document.createElement('pk-alert');
         this.#clipboardNotice.className = 'vizy-clipboard-status';
         this.#clipboardNotice.dataset.vizyClipboardStatus = '';
-        this.#clipboardNotice.setAttribute('role', 'alert');
+        this.#clipboardNotice.variant = 'error';
+        this.#clipboardNotice.size = 'sm';
+        this.#clipboardNotice.announce = 'assertive';
         this.#clipboardNotice.hidden = true;
-        this.#captureNotice = document.createElement('div');
+        this.#captureNotice = document.createElement('pk-alert');
         this.#captureNotice.className = 'vizy-capture-status';
         this.#captureNotice.dataset.vizyCaptureStatus = '';
-        this.#captureNotice.setAttribute('role', 'alert');
+        this.#captureNotice.variant = 'error';
+        this.#captureNotice.size = 'sm';
+        this.#captureNotice.announce = 'assertive';
         this.#captureNotice.hidden = true;
         shell.append(this.#uploadNotice, this.#unsupportedNotice, this.#clipboardNotice, this.#captureNotice, this.#mount);
         this.prepend(shell);
