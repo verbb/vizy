@@ -292,7 +292,7 @@
     ]
   },
   "migrations/src/ts/migrations.ts": {
-    "file": "assets/migrations-BgUDOgGx.js",
+    "file": "assets/migrations-BnrSDSg8.js",
     "name": "migrations",
     "src": "migrations/src/ts/migrations.ts",
     "isEntry": true,
@@ -305,7 +305,7 @@
       "_field-Cocqhglf.js"
     ],
     "css": [
-      "assets/migrations-CYjBELeN.css"
+      "assets/migrations-DklN4zFV.css"
     ]
   }
 }

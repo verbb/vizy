@@ -5,6 +5,7 @@ declare(strict_types=1);
 use craft\behaviors\CustomFieldBehavior;
 use craft\elements\Entry;
 use craft\elements\User;
+use craft\events\CreateFieldLayoutFormEvent;
 use craft\fieldlayoutelements\CustomField;
 use craft\fields\Assets;
 use craft\fields\Entries;
@@ -21,6 +22,7 @@ use Tests\Support\WebControllerHarness;
 use verbb\vizy\elements\Block;
 use verbb\vizy\models\BlockType;
 use verbb\vizy\Vizy;
+use yii\base\Event;
 use yii\web\ForbiddenHttpException;
 
 beforeEach(function() {
@@ -125,6 +127,38 @@ function fieldLayoutRequest(array $fixture, array $overrides = []): array
     }
     return $request;
 }
+
+it('passes the persisted owner to transient Block field layouts', function() {
+    $fixture = fieldLayoutSecurityFixture('OwnerContext');
+    $captured = [];
+    $handler = function(CreateFieldLayoutFormEvent $event) use (&$captured): void {
+        if ($event->element instanceof Block) {
+            $captured[] = $event->element;
+        }
+    };
+    Event::on(FieldLayout::class, FieldLayout::EVENT_CREATE_FORM, $handler);
+
+    try {
+        $result = Vizy::$plugin->getFieldLayoutForms()->renderInitial(
+            $fixture['context'],
+            $fixture['owner'],
+            $fixture['field'],
+            $fixture['block'],
+            ['kind' => 'root'],
+        );
+    } finally {
+        Event::off(FieldLayout::class, FieldLayout::EVENT_CREATE_FORM, $handler);
+    }
+
+    expect($result['ok'])->toBeTrue()
+        ->and($captured)->not->toBeEmpty();
+
+    foreach ($captured as $block) {
+        expect($block->id)->toBeNull()
+            ->and($block->getOwner())->toBe($fixture['owner'])
+            ->and($block->siteId)->toBe($fixture['owner']->siteId);
+    }
+});
 
 it('renders typed adapters for Plain Text and Lightswitch without saving the owner', function() {
     $fixture = fieldLayoutSecurityFixture('Mount');

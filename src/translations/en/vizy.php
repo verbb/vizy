@@ -181,8 +181,6 @@ return [
   'Vizy Editor Config' => 'Vizy Editor Config',
   'The selected config determines which HTML structures and formatting Vizy can preserve.' => 'The selected config determines which HTML structures and formatting Vizy can preserve.',
   'Analyse' => 'Analyse',
-  'Console equivalents: `php craft vizy/convert/analyze` and `php craft vizy/convert/field`.' => 'Console equivalents: `php craft vizy/convert/analyze` and `php craft vizy/convert/field`.',
-  'Console equivalents: `php craft vizy/convert/analyze-from-vizy` and `php craft vizy/convert/from-vizy`.' => 'Console equivalents: `php craft vizy/convert/analyze-from-vizy` and `php craft vizy/convert/from-vizy`.',
   'Unknown Block Type' => 'Unknown Block Type',
   'Confirm that you understand this migration changes the field and its stored content.' => 'Confirm that you understand this migration changes the field and its stored content.',
   'Min Blocks' => 'Min Blocks',

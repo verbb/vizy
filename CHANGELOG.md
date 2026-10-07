@@ -22,7 +22,7 @@
 - Feed Me HTML mappings now use Vizy’s field and Editor Config-aware importer, record conversion-loss diagnostics, and can require lossless conversion before accepting a mapped value. See [Importing with Feed Me](https://verbb.io/craft-plugins/vizy/docs/v4/user-guides/importing-with-feed-me). ([#289](https://github.com/verbb/vizy/issues/289))
 
 ### Fixed
-- Fixed the From Vizy migration wizard reloading the settings page between steps and rendering a corrupted completion icon.
+- Fixed the From Vizy migration wizard reloading the settings page between steps, rendering a corrupted completion icon, and crowding the guide link against the start button.
 - Fixed the field-settings separator appearing directly against the Plain Text Paste control.
 - Fixed Task List checkboxes rendering separately from or misaligned with their text in the editor.
 - Avoid Verbb Base deprecation warnings by using its current control-panel asset bundle namespace. ([verbb-base#3](https://github.com/verbb/verbb-base/issues/3))
