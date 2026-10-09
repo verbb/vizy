@@ -114,7 +114,7 @@ class Block extends Element
 
     public function canSave(User $user): bool
     {
-        $owner = $this->getOwner();
+        $owner = \verbb\vizy\helpers\EmbeddedOwners::scope($this)['owner'] ?? $this->getOwner();
 
         if ($owner instanceof ElementInterface) {
             return Craft::$app->getElements()->canSave($owner, $user);

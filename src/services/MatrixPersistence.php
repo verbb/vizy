@@ -90,6 +90,12 @@ final class MatrixPersistence extends Component
                     foreach ($layout->getCustomFieldElements() as $placement) {
                         $field = $placement->getField();
 
+                        if (is_a($field, 'verbb\\hyper\\fields\\HyperField') && method_exists($field, 'serializeValueForDb')) {
+                            $host = $document->blockElement($block);
+                            $node['attrs']['fieldSlots'][$placement->uid] = $field->serializeValueForDb($host->getFieldValue($field->handle), $host);
+                            continue;
+                        }
+
                         if (!$field instanceof VizyField) {
                             continue;
                         }

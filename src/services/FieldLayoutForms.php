@@ -235,7 +235,7 @@ final class FieldLayoutForms extends Component
             $matrixContext['matrixAnchorUid'] = $anchorUid;
             $token = rtrim(strtr(base64_encode(Craft::$app->getSecurity()->hashData(Json::encode($matrixContext))), '+/', '-_'), '=');
             $namespace = sprintf('vizyHost[%s][%s][fields]', $token, $attrs['blockUid']);
-            $anchor = Vizy::$plugin->getAnchors()->getAnchor(
+            $anchor = isset($context['embeddedPath']) ? null : Vizy::$plugin->getAnchors()->getAnchor(
                 $owner,
                 $field,
                 $attrs['blockUid'],

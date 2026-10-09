@@ -180,7 +180,20 @@ final class FieldLayoutController extends Controller
         if (!$user || !Craft::$app->getElements()->canSave($owner, $user)) {
             throw new ForbiddenHttpException('forbidden');
         }
-        $field = $this->_placedField($owner, $context);
+
+        if (isset($context['embeddedPath'])) {
+            if ($owner->getFieldLayout()?->uid !== $context['ownerLayoutUid']) {
+                return null;
+            }
+            $owner = \verbb\vizy\helpers\EmbeddedOwners::resolve($owner, $context['embeddedPath']);
+            $field = \verbb\vizy\helpers\FieldPlacements::field($owner, $context['entryFieldUid'] ?? $context['fieldUid'], $context['embeddedPlacementUid']);
+
+            if ($field && isset($context['entryFieldUid'])) {
+                $field = $this->_hostedField($context, $field, $context['fieldUid']);
+            }
+        } else {
+            $field = $this->_placedField($owner, $context);
+        }
 
         if (!$field) {
             return null;

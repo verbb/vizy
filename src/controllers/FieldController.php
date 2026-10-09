@@ -375,10 +375,22 @@ class FieldController extends Controller
             throw new BadRequestHttpException('Entry type is not available for this Matrix field.');
         }
 
+        if (isset($context['embeddedPath'])) {
+            if ($matrixAnchorUid) {
+                throw new BadRequestHttpException('An embedded Matrix field cannot reference another owner’s stored rows.');
+            }
+            $projection = new \verbb\vizy\elements\Block();
+            $projection->setOwner($parentOwner);
+            $projection->setField($vizyField);
+            $projection->setType($blockType);
+            $projection->setBlockUid($blockInstanceId);
+            $projection->setFieldLayout($blockType->getFieldLayout());
+            return [$field, $entryType, $projection, $blockInstanceId];
+        }
         $documentKey = isset($context) && is_array($context)
             ? AnchorDocuments::keyFromEditorContext($context)
             : null;
-        $anchor = Vizy::$plugin->getAnchors()->getAnchor($parentOwner, $vizyField, $blockInstanceId, $matrixAnchorUid, $documentKey);
+        $anchor = isset($context['embeddedPath']) ? null : Vizy::$plugin->getAnchors()->getAnchor($parentOwner, $vizyField, $blockInstanceId, $matrixAnchorUid, $documentKey);
 
         if (!$anchor && $matrixAnchorUid) {
             throw new BadRequestHttpException('Stored Matrix content could not be resolved. Restore it before adding rows.');

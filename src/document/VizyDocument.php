@@ -241,8 +241,13 @@ final class VizyDocument
 
         // Matrix-in-Block: hydrate Matrix values from MatrixAnchor (not fieldSlots).
         $anchor = null;
+        $embedded = \verbb\vizy\helpers\EmbeddedOwners::scope($this->owner) !== null;
 
-        if (Vizy::$plugin->getAnchors()->blockHasMatrixFields($layout)) {
+        if ($embedded && $block->matrixAnchorUid()) {
+            throw new LogicException('Embedded Vizy Matrix content must include its rows. A stored anchor cannot be moved into a Hyper link by reference.');
+        }
+
+        if (!$embedded && Vizy::$plugin->getAnchors()->blockHasMatrixFields($layout)) {
             $anchor = Vizy::$plugin->getAnchors()->getAnchor(
                 $this->owner,
                 $this->field,
@@ -283,7 +288,9 @@ final class VizyDocument
             $craftField = $placement->getField();
 
             if ($craftField instanceof \craft\fields\Matrix) {
-                if ($anchor) {
+                if ($embedded && $block->hasRawFieldValue($uid)) {
+                    $element->setFieldValue($craftField->handle, MatrixHelper::normalizeContent($craftField, $block->rawFieldValue($uid), $element));
+                } elseif ($anchor) {
                     $element->setFieldValue($craftField->handle, MatrixHelper::nestedEntryQuery($craftField, $anchor));
                 }
                 continue;

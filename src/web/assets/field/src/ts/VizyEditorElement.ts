@@ -1332,7 +1332,7 @@ export class VizyEditorElement extends HTMLElement {
 
     #encodeSubmission(document: CanonicalNode): string {
         const token = this.#bootstrap?.storageToken;
-        return stable(token ? { ...document, attrs: { ...document.attrs, _storageToken: token } } : document);
+        return stable(token ? { ...document, attrs: { ...document.attrs, _storageToken: token, _editorId: this.id } } : document);
     }
 
     /** Same restore+collapse pipeline used by flush / dirty — never compare raw TipTap JSON. */

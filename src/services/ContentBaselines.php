@@ -49,6 +49,19 @@ final class ContentBaselines extends Component
 
     public function document(ElementInterface $owner, VizyField $field): ?VizyDocument
     {
+        $embedded = \verbb\vizy\helpers\EmbeddedOwners::scope($owner);
+
+        if ($embedded) {
+            $root = $embedded['owner'];
+            $root = (!$root->id && $root->duplicateOf) ? $root->duplicateOf : $root;
+            $content = (new Query())->select('content')->from('{{%elements_sites}}')
+                ->where(['elementId' => $root->id, 'siteId' => $root->siteId])->scalar();
+            $placement = FieldPlacements::uid($owner, $field);
+            $raw = $content && $placement
+                ? \verbb\vizy\helpers\EmbeddedOwners::storedValue($content, $embedded['path'], $placement, $field->handle)
+                : null;
+            return $raw === null ? null : \verbb\vizy\Vizy::$plugin->getDocuments()->normalizeValue($raw, $owner, $field);
+        }
         $key = $this->_key($owner, $field);
 
         if ($key === null) {

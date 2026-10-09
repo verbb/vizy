@@ -36,6 +36,7 @@ final class EditorAcknowledgements extends Component
     // =========================================================================
 
     private array $accepted = [];
+    private array $embedded = [];
 
 
     // Public Methods
@@ -44,6 +45,7 @@ final class EditorAcknowledgements extends Component
     public function resetRequestStateForTesting(): void
     {
         $this->accepted = [];
+        $this->embedded = [];
     }
 
     public function initialFinalization(VizyDocument $document, string $editorId): array
@@ -52,6 +54,29 @@ final class EditorAcknowledgements extends Component
             Vizy::$plugin->getAssetUploads()->resultForDocument($document) ?? ['status' => 'complete'],
             ['editorId' => $editorId, 'generation' => 0, 'clientRevision' => 0],
         );
+    }
+
+    /** Keep transport identity until the real owner confirms persistence. */
+    public function stageEmbedded(ElementInterface $owner, VizyField $field, VizyDocument $document): void
+    {
+        if (Craft::$app->getRequest()->getIsConsoleRequest()) {
+            return;
+        }
+        $root = \verbb\vizy\helpers\EmbeddedOwners::scope($owner)['owner'] ?? null;
+
+        if ($root) {
+            $this->embedded[spl_object_id($owner) . ':' . $field->handle] = compact('root', 'owner', 'field', 'document');
+        }
+    }
+
+    public function collectEmbedded(ElementInterface $root): void
+    {
+        foreach ($this->embedded as $key => $item) {
+            if ($item['root'] === $root) {
+                $this->collect($item['owner'], $item['field'], $item['document']);
+                unset($this->embedded[$key]);
+            }
+        }
     }
 
     public function collect(ElementInterface $owner, VizyField $field, VizyDocument $document): void
@@ -86,6 +111,10 @@ final class EditorAcknowledgements extends Component
             ) {
                 continue;
             }
+
+            if (isset($context['embeddedPath']) && ($document->toArray()['attrs']['_editorId'] ?? null) !== ($metadata['editorId'] ?? null)) {
+                continue;
+            }
             $metadata['generation'] = (int)$metadata['generation'];
             $metadata['clientRevision'] = (int)$metadata['clientRevision'];
             // First autosave serializes the initial draft copy before applying
@@ -97,6 +126,8 @@ final class EditorAcknowledgements extends Component
 
     public function augmentResponse(Event $event): void
     {
+        $this->embedded = [];
+
         if ($this->accepted === []) {
             return;
         }
@@ -124,7 +155,7 @@ final class EditorAcknowledgements extends Component
                 'generation' => $metadata['generation'],
                 'requestKind' => $metadata['requestKind'],
                 'submittedClientRevision' => $metadata['clientRevision'],
-                'canonicalDocument' => $item['document']->toArray(),
+                'canonicalDocument' => Json::decode(Vizy::$plugin->getDocuments()->serializeValue($item['document'])),
                 'storageToken' => Vizy::$plugin->getContentVersions()->issue($item['owner'], $item['field']),
                 'success' => true,
                 ...$this->_finalization($assetResult, $metadata),
@@ -220,11 +251,14 @@ final class EditorAcknowledgements extends Component
 
     private function _contextMatches(array $context, ElementInterface $owner, VizyField $field): bool
     {
+        $embedded = \verbb\vizy\helpers\EmbeddedOwners::scope($owner);
+        $placement = $embedded ? $embedded['path'][0]['placementUid'] : FieldPlacements::uid($owner, $field);
+        $owner = $embedded['owner'] ?? $owner;
         return ($context['ownerClass'] ?? null) === $owner::class
             && (int)($context['siteId'] ?? 0) === (int)$owner->siteId
             && ($context['fieldUid'] ?? null) === $field->uid
             && ($context['ownerLayoutUid'] ?? null) === $owner->getFieldLayout()?->uid
-            && ($context['ownerPlacementUid'] ?? null) === FieldPlacements::uid($owner, $field)
+            && ($context['ownerPlacementUid'] ?? null) === $placement
             && (
                 ((int)($context['ownerId'] ?? 0) > 0 && (int)$context['ownerId'] === (int)$owner->id)
                 || (($context['ownerUid'] ?? null) && $context['ownerUid'] === $owner->uid)

@@ -454,6 +454,47 @@ class VizyField extends Field implements PreviewableFieldInterface
         return parent::serializeValueForDb($value, $element);
     }
 
+    /** Hyper persists the whole subtree as JSON within its real owner's transaction. */
+    public function serializeValueForEmbeddedOwner(mixed $value, ElementInterface $owner): mixed
+    {
+        $document = $this->normalizeValue($value, $owner);
+        Vizy::$plugin->getContentVersions()->check($owner, $this, $document->toArray()['attrs']['_storageToken'] ?? null);
+        Vizy::$plugin->getSemanticReferences()->assertAuthorized($document, Vizy::$plugin->getContentBaselines()->document($owner, $this));
+        $canonical = $document->toArray();
+        $visit = function(array &$nodes, string $path = 'content') use (&$visit, $document): void {
+            foreach ($nodes as $index => &$node) {
+                if (($node['type'] ?? null) === 'vizyBlock') {
+                    $block = $document->blockFromNode($node, $path . '.' . $index);
+
+                    if ($block->blockType()?->getFieldLayout()) {
+                        $slots = \verbb\hyper\services\EmbeddedFields::serialize($document->blockElement($block));
+                        $node['attrs']['fieldSlots'] = [...$node['attrs']['fieldSlots'], ...$slots];
+                    }
+                }
+
+                if (isset($node['content'])) {
+                    $visit($node['content'], $path . '.' . $index . '.content');
+                }
+            }
+        };
+        $visit($canonical['content']);
+        Vizy::$plugin->getEditorAcknowledgements()->stageEmbedded($owner, $this, $document);
+        $serialized = Vizy::$plugin->getDocuments()->serializeValue($this->normalizeValue($canonical, $owner));
+        // Derivative copies must not inherit this editor's submission token.
+        // Keep the containing link and its validation scenario intact.
+        $owner->setFieldValue($this->handle, $this->normalizeValue($serialized, $owner));
+        return $serialized;
+    }
+
+    public function afterEmbeddedOwnerSave(mixed $value, ElementInterface $owner): void
+    {
+        $root = \verbb\vizy\helpers\EmbeddedOwners::scope($owner)['owner'] ?? null;
+
+        if ($root) {
+            Vizy::$plugin->getEditorAcknowledgements()->collectEmbedded($root);
+        }
+    }
+
     public function getElementConditionRuleType(): array|string|null
     {
         return EmptyFieldConditionRule::class;
@@ -585,6 +626,7 @@ class VizyField extends Field implements PreviewableFieldInterface
     public function afterElementSave(ElementInterface $element, bool $isNew): void
     {
         parent::afterElementSave($element, $isNew);
+        Vizy::$plugin->getEditorAcknowledgements()->collectEmbedded($element);
 
         $document = $element->getFieldValue($this->handle);
 
@@ -731,6 +773,8 @@ class VizyField extends Field implements PreviewableFieldInterface
      */
     public function blockTypeIsAvailableFor(string $uid, ElementInterface $owner): bool
     {
+        $owner = \verbb\vizy\helpers\EmbeddedOwners::scope($owner)['owner'] ?? $owner;
+
         while ($owner instanceof Block) {
             try {
                 $owner = $owner->getOwner();

@@ -30,7 +30,7 @@ final class DocumentSerializer
         }
 
         $canonical = $document->toArray();
-        unset($canonical['attrs']['_storageToken']);
+        unset($canonical['attrs']['_storageToken'], $canonical['attrs']['_editorId']);
 
         if ($persistMatrix) {
             Vizy::$plugin->getMatrixPersistence()->syncCanonicalTree($document, $canonical);

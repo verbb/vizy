@@ -3,6 +3,7 @@ namespace verbb\vizy\services;
 
 use verbb\vizy\fields\VizyField;
 use verbb\vizy\helpers\FieldPlacements;
+use verbb\vizy\helpers\EmbeddedOwners;
 
 use Craft;
 use craft\base\Component;
@@ -102,8 +103,15 @@ final class EditorContexts extends Component
         string $renderFieldUid,
         ?array $hosted,
     ): array {
+        $embedded = EmbeddedOwners::scope($owner);
+        $embeddedPlacement = FieldPlacements::uid($owner, $placementField);
+
+        if ($embedded) {
+            $owner = $embedded['owner'];
+            $hosted = [...($hosted ?? []), 'embeddedPath' => $embedded['path'], 'embeddedPlacementUid' => $embeddedPlacement];
+        }
         $layout = $owner->getFieldLayout();
-        $placementUid = FieldPlacements::uid($owner, $placementField);
+        $placementUid = $embedded ? $embedded['path'][0]['placementUid'] : FieldPlacements::uid($owner, $placementField);
         $payload = [
             'version' => self::VERSION,
             'purpose' => self::PURPOSE,
