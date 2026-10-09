@@ -60,7 +60,10 @@ export function rewriteCraftSerializedForm(
         kept.push(pair);
     }
 
-    kept.push(encodeCraftQueryPair(fieldName, canonical));
+    // Nested field values belong to the enclosing field's canonical store. A hook
+    // may run after that field stripped its authoring inputs; do not put them back.
+    const isPortalField = /(?:^|\[)(?:hyperData|vizyHost)\[|\[(?:hyperData|vizyHost)\]/.test(fieldName);
+    if (!isPortalField) kept.push(encodeCraftQueryPair(fieldName, canonical));
 
     if (editorId && metadata) {
         const prefix = `vizyTransport[${editorId}]`;
@@ -70,4 +73,49 @@ export function rewriteCraftSerializedForm(
     }
 
     return kept.join('&');
+}
+
+/** Visit documents even when an enclosing field stores their JSON as a string. */
+function mapDocumentTransport(value: unknown, mapAttrs: (attrs: Record<string, unknown>) => Record<string, unknown>): unknown {
+    if (typeof value === 'string') {
+        if (!/^[\[{]/.test(value)) return value;
+        try {
+            const parsed: unknown = JSON.parse(value);
+            const mapped = mapDocumentTransport(parsed, mapAttrs);
+            return JSON.stringify(parsed) === JSON.stringify(mapped) ? value : JSON.stringify(mapped);
+        } catch {
+            return value;
+        }
+    }
+    if (Array.isArray(value)) return value.map((item) => mapDocumentTransport(item, mapAttrs));
+    if (!value || typeof value !== 'object') return value;
+    const record = value as Record<string, unknown>;
+    return Object.fromEntries(Object.entries(record).map(([key, item]) => [
+        key,
+        key === 'attrs' && record.type === 'doc' && item && typeof item === 'object' && !Array.isArray(item)
+            ? mapAttrs(item as Record<string, unknown>)
+            : mapDocumentTransport(item, mapAttrs),
+    ]));
+}
+
+/** A server acknowledgement changes transport credentials, not the author's revision. */
+export function submissionContentKey(canonical: string): string {
+    return String(mapDocumentTransport(canonical, ({ _storageToken, _editorId, ...attrs }) => attrs));
+}
+
+/** Advance only this editor's acknowledged token; preserve newer edits in every field. */
+export function refreshCraftSerializedVizyToken(serialized: string, editorId: string, storageToken: string): string {
+    return serialized.split('&').map((pair) => {
+        const eq = pair.indexOf('=');
+        if (eq === -1) return pair;
+        try {
+            const rawValue = decodeURIComponent(pair.slice(eq + 1));
+            const value = mapDocumentTransport(rawValue, (attrs) => attrs._editorId === editorId
+                ? { ...attrs, _storageToken: storageToken }
+                : attrs);
+            return value === rawValue ? pair : `${pair.slice(0, eq + 1)}${encodeURIComponent(String(value))}`;
+        } catch {
+            return pair;
+        }
+    }).join('&');
 }

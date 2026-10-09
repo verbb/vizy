@@ -1,10 +1,38 @@
 import { describe, expect, it } from 'vitest';
 import {
     encodeCraftQueryPair,
+    refreshCraftSerializedVizyToken,
+    submissionContentKey,
     rewriteCraftSerializedForm,
 } from '../../src/web/assets/field/src/ts/serialize-form-capture';
 
 describe('rewriteCraftSerializedForm', () => {
+    it.each([
+        'fields[hyperData][123][fields][body]',
+        'hyperData[123][fields][body]',
+        'fields[parent][vizyHost][block][fields][body]',
+        'vizyHost[block][fields][body]',
+    ])('does not reintroduce an enclosing field portal: %s', (fieldName) => {
+        const serialized = rewriteCraftSerializedForm('title=Keep&fields%5Blinks%5D=canonical', {
+            fieldName, canonical: '{"type":"doc"}', editorId: 'child', metadata: { generation: '1' },
+        });
+        const params = new URLSearchParams(serialized);
+        expect(params.has(fieldName)).toBe(false);
+        expect(params.get('fields[links]')).toBe('canonical');
+        expect(params.get('vizyTransport[child][generation]')).toBe('1');
+        expect(rewriteCraftSerializedForm(serialized, {
+            fieldName, canonical: '{"type":"doc"}', editorId: 'child', metadata: { generation: '1' },
+        })).toBe(serialized);
+    });
+
+    it('adopts a late editor baseline without accepting unrelated early edits', () => {
+        const options = { fieldName: 'fields[body]', canonical: '{"type":"doc"}', editorId: 'body', metadata: { generation: '1' } };
+        const baseline = rewriteCraftSerializedForm('title=Saved&fields%5Bbody%5D=server', options);
+        const edited = rewriteCraftSerializedForm('title=Early%20edit&fields%5Bbody%5D=server', options);
+        expect(new URLSearchParams(baseline).get('title')).toBe('Saved');
+        expect(new URLSearchParams(edited).get('title')).toBe('Early edit');
+        expect(baseline).not.toBe(edited);
+    });
     it('replaces duplicate values in nested namespaces while preserving other editors and encoded text', () => {
         const fieldName = 'fields[parent][fields][body]';
         const canonical = JSON.stringify({ type: 'doc', content: [{ type: 'paragraph', content: [{ type: 'text', text: 'Café & tea + 日本語 😀' }] }] });
@@ -90,5 +118,26 @@ describe('rewriteCraftSerializedForm', () => {
         expect(second.match(/vizyTransport%5Bvizy-1%5D%5Bgeneration%5D=/g)?.length).toBe(1);
         expect(second).toContain(encodeCraftQueryPair('vizyTransport[vizy-1][generation]', '2'));
         expect(second).toContain('title=Keep');
+    });
+});
+
+
+describe('acknowledged transport', () => {
+    const doc = (token: string, text = 'Saved') => ({ type: 'doc', attrs: { schemaVersion: 2, _editorId: 'inner', _storageToken: token }, content: [{ type: 'text', text }] });
+    it('does not mint another submission for token rotation, including stringified nested documents', () => {
+        const wrap = (token: string, text = 'Saved') => JSON.stringify({ type: 'doc', content: [{ fields: { nested: JSON.stringify(doc(token, text)) } }] });
+        expect(submissionContentKey(wrap('before'))).toBe(submissionContentKey(wrap('after')));
+        expect(submissionContentKey(wrap('after', 'New edit'))).not.toBe(submissionContentKey(wrap('after')));
+    });
+    it('advances only the acknowledged editor token without accepting newer author changes', () => {
+        const saved = encodeCraftQueryPair('fields[links]', JSON.stringify([{ fields: { body: JSON.stringify(doc('before')) } }]));
+        const baseline = `title=Saved&${saved}&untouched=Caf%C3%A9%20%2B%20tea`;
+        const refreshed = refreshCraftSerializedVizyToken(baseline, 'inner', 'after');
+        expect(refreshed).toContain('title=Saved');
+        expect(refreshed).toContain('untouched=Caf%C3%A9%20%2B%20tea');
+        const links = JSON.parse(new URLSearchParams(refreshed).get('fields[links]')!);
+        expect(JSON.parse(links[0].fields.body)).toEqual(doc('after'));
+        expect(refreshCraftSerializedVizyToken(baseline, 'other', 'after')).toBe(baseline);
+        expect(refreshed).not.toContain('New edit');
     });
 });

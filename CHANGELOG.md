@@ -22,6 +22,7 @@
 - Feed Me HTML mappings now use Vizy’s field and Editor Config-aware importer, record conversion-loss diagnostics, and can require lossless conversion before accepting a mapped value. See [Importing with Feed Me](https://verbb.io/craft-plugins/vizy/docs/v4/user-guides/importing-with-feed-me). ([#289](https://github.com/verbb/vizy/issues/289))
 
 ### Fixed
+- Fixed late-loading editors hiding early changes, nested Hyper fields appearing unsaved without edits, and unnecessary autosaves after server acknowledgements.
 - Fixed Undo getting stuck after opening the Block picker from a saved slash.
 - Fixed creating Blocks and retaining nested Matrix content when Vizy is placed inside Hyper 3 links.
 - Fixed field conditions failing to refresh in newly added Matrix rows inside Vizy.

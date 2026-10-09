@@ -47,7 +47,7 @@ import './semantic/image-dialog';
 import './semantic/url-node-dialog';
 import { NodeSelection } from '@tiptap/pm/state';
 import { DOMParser as ProseMirrorDOMParser } from '@tiptap/pm/model';
-import { rewriteCraftSerializedForm } from './serialize-form-capture';
+import { refreshCraftSerializedVizyToken, rewriteCraftSerializedForm, submissionContentKey } from './serialize-form-capture';
 import {
     EDITOR_FIELD_HAS_FOCUS_ATTR,
     installEditorSelectionGuard,
@@ -1045,6 +1045,7 @@ export class VizyEditorElement extends HTMLElement {
     #attachElementEditor(
         form: HTMLFormElement,
         serialize: (event: { data: { serialized: string } }) => void,
+        adoptBaseline: (serialized: string) => string,
     ): void {
         let frame = 0;
         const deadline = performance.now() + ELEMENT_EDITOR_TIMEOUT_MS;
@@ -1068,15 +1069,31 @@ export class VizyEditorElement extends HTMLElement {
 
             editor.on('serializeForm', serialize);
             this.#disposals.push(() => editor.off?.('serializeForm', serialize));
+            const afterSave = () => {
+                const token = this.#bootstrap?.storageToken;
+                if (!token) return;
+                // Craft adopts the submitted wire data after handling the response.
+                // Only then advance acknowledged transport tokens in its snapshots.
+                const initial = $form?.data('initialSerializedValue');
+                if (typeof initial === 'string') {
+                    $form?.data('initialSerializedValue', refreshCraftSerializedVizyToken(initial, this.id, token));
+                }
+                if (typeof editor.lastSerializedValue === 'string') {
+                    editor.lastSerializedValue = refreshCraftSerializedVizyToken(editor.lastSerializedValue, this.id, token);
+                }
+            };
+            editor.on('afterSaveDraft', afterSave);
+            this.#disposals.push(() => editor.off?.('afterSaveDraft', afterSave));
 
-            // Craft snapshots `serializeForm()` as its dirty baseline during its own
-            // init and once more a frame later, so a baseline taken before this hook
-            // existed was produced by the unhooked serializer. Re-take it through the
-            // hooked one, or the very next check would diff hook output against
-            // unhooked output and autosave. Skipped once anything has actually been
-            // saved, since then the baseline reflects real persisted state.
-            if (editor.lastSerializedValue == null && typeof editor.serializeForm === 'function') {
-                $form?.data('initialSerializedValue', editor.serializeForm(true));
+            // A late hook adds Vizy's transport fields to the wire format. Adapt
+            // only those fields in the existing snapshots: re-serializing the live
+            // form here would swallow edits made while the runtime was loading.
+            const initial = $form?.data('initialSerializedValue');
+            if (typeof initial === 'string') {
+                $form?.data('initialSerializedValue', adoptBaseline(initial));
+            }
+            if (typeof editor.lastSerializedValue === 'string') {
+                editor.lastSerializedValue = adoptBaseline(editor.lastSerializedValue);
             }
         };
         attempt();
@@ -1499,7 +1516,18 @@ export class VizyEditorElement extends HTMLElement {
                 ),
             });
         };
-        this.#attachElementEditor(form, serialize);
+        // Capture the loaded value before authors can interact with this editor.
+        // Use it for baseline adoption even if ElementEditor itself attaches later.
+        const initialCanonical = this.#input.value;
+        const initialMetadata = this.#prepareSubmission('autosave', initialCanonical);
+        this.#attachElementEditor(form, serialize, (serialized) => rewriteCraftSerializedForm(serialized, {
+            fieldName,
+            canonical: initialCanonical,
+            editorId: this.id,
+            metadata: Object.fromEntries(
+                Object.entries(initialMetadata).map(([key, value]) => [key, String(value)]),
+            ),
+        }));
 
         const response = (event: Event) => {
             const payload = (event as CustomEvent<unknown>).detail;
@@ -1548,16 +1576,16 @@ export class VizyEditorElement extends HTMLElement {
      * page load, and again on every subsequent check, without the author touching
      * anything.
      *
-     * A real edit bumps `#revision`, which changes the key and mints a new generation,
-     * so genuine changes are still tracked one generation per distinct state. An actual
-     * `save` always mints fresh, because a submit is an event rather than a state.
+     * Distinct content mints a new generation. Revision counters can also advance
+     * for an edit immediately reverted before serialization, so they are not part
+     * of the state key. An actual `save` always mints fresh: it is an event.
      */
     #prepareSubmission(
         requestKind: 'save' | 'autosave' | 'livePreview' | 'validation',
         canonical?: string,
     ): SubmissionMetadata {
         if (!this.#bootstrap) throw new Error('editorNotReady');
-        const key = `${requestKind}:${this.#revision}:${canonical ?? stable(this.#canonicalProjection())}`;
+        const key = `${requestKind}:${submissionContentKey(canonical ?? stable(this.#canonicalProjection()))}`;
         if (requestKind !== 'save' && this.#lastSubmissionMetadata?.key === key) {
             return this.#lastSubmissionMetadata.metadata;
         }
