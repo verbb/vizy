@@ -186,7 +186,13 @@ export function createSlashExtension(services: () => NodeViewServices) {
                             // Consume `/` and leave TipTap Suggestion; panel owns Search.
                             handoffToPanel = true;
                             const insertPos = range.from;
-                            svc.editor.chain().focus().deleteRange(range).run();
+                            // The slash is an insertion gesture, not an author deletion.
+                            // Recording its consumption lets Undo restore `/` and fire
+                            // this handoff again, trapping history behind the palette.
+                            svc.editor.chain().focus().command(({ tr }) => {
+                                tr.setMeta('addToHistory', false);
+                                return true;
+                            }).deleteRange(range).run();
                             exitSuggestion(svc.editor.view, VizySlashPluginKey);
 
                             const fresh = svc.insertion.buildContext('slash', insertPos) ?? context;

@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
-import { Editor } from '@tiptap/core';
+import { Editor, type JSONContent } from '@tiptap/core';
 import { nodeViewServices } from './support/node-view-services';
 import { createEditorExtensions } from '../../src/web/assets/field/src/ts/editor-schema';
 import { BlockUiStateRegistry, FieldHostRegistry } from '../../src/web/assets/field/src/ts/registries';
@@ -112,7 +112,7 @@ function testManifest(overrides: Partial<EditorManifest> = {}): EditorManifest {
     };
 }
 
-function createHarness(manifest = testManifest()) {
+function createHarness(manifest = testManifest(), content: JSONContent = { type: 'doc', attrs: { schemaVersion: 2 }, content: [{ type: 'paragraph' }] }) {
     const ui = new BlockUiStateRegistry();
     const hosts = new FieldHostRegistry();
     let revision = 1;
@@ -126,7 +126,7 @@ function createHarness(manifest = testManifest()) {
             hosts,
             insertion,
         })),
-        content: { type: 'doc', attrs: { schemaVersion: 2 }, content: [{ type: 'paragraph' }] },
+        content,
         onTransaction: ({ transaction }) => {
             if (transaction.docChanged) revision += 1;
         },
@@ -959,6 +959,31 @@ describe('slash insertion UI', () => {
         await Promise.resolve();
 
         expect(document.querySelector('vizy-insertion-list')).toBeNull();
+    });
+
+    it('does not put consumption of a stored slash into undo history', async () => {
+        const manifest = testManifest({
+            field: {
+                ...testManifest().field,
+                allowedBlockTypeUids: ['type-a'], insertableBlockTypeUids: ['type-a'], showBlockSearch: false,
+            },
+            blockTypes: { 'type-a': { uid: 'type-a', name: 'Alpha', handle: 'alpha' } },
+            insertionItems: [{
+                id: 'block:type-a', kind: 'block', blockTypeUid: 'type-a', label: 'Alpha',
+                description: null, icon: null, group: 'Blocks', keywords: [], aliases: [],
+                order: 0, surfaces: ['slash', 'inline'], requiresInput: false,
+            }],
+        });
+        const { editor } = createHarness(manifest, {
+            type: 'doc', attrs: { schemaVersion: 2 },
+            content: [{ type: 'paragraph', content: [{ type: 'text', text: '/' }] }],
+        });
+        editor.commands.focus('end');
+        await new Promise((resolve) => setTimeout(resolve, 30));
+        expect(editor.state.doc.textContent).toBe('');
+        // Undo must not restore `/`, immediately consume it, and create another
+        // undoable deletion that prevents the author reaching earlier changes.
+        expect(editor.can().undo()).toBe(false);
     });
 
     it('does not activate slash mid-sentence', async () => {
