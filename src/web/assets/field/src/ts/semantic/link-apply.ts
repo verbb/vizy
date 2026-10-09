@@ -105,14 +105,24 @@ export function unsetSemanticLinkFromEditor(editor: Editor, options?: { focus?: 
     chain.extendMarkRange('link').unsetSemanticLink().run();
 }
 
-const PLAIN_EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/u;
+const MAX_PLAIN_EMAIL_LENGTH = 320;
+
+function isPlainEmail(value: string): boolean {
+    if (value.length > MAX_PLAIN_EMAIL_LENGTH || /\s/u.test(value)) return false;
+
+    const at = value.indexOf('@');
+    if (at <= 0 || at !== value.lastIndexOf('@')) return false;
+
+    const dot = value.indexOf('.', at + 2);
+    return dot > at + 1 && dot < value.length - 1;
+}
 
 /** Normalize common author-friendly inputs into explicit link schemes. */
 export function normalizeUrlDialogValue(url: string): string {
     const trimmed = url.trim();
     if (/^www\./i.test(trimmed)) return `https://${trimmed}`;
     if (/^[a-z][a-z\d+.-]*:/i.test(trimmed)) return trimmed;
-    if (PLAIN_EMAIL_RE.test(trimmed)) return `mailto:${trimmed}`;
+    if (isPlainEmail(trimmed)) return `mailto:${trimmed}`;
     return trimmed;
 }
 

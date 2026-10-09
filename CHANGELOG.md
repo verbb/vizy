@@ -23,6 +23,7 @@
 
 ### Fixed
 - Fixed a medium-severity remote code execution vulnerability.
+- Fixed generic field transport accepting prototype mutation paths and bounded plain-email detection for pasted links.
 - Fixed late-loading editors hiding early changes, nested Hyper fields appearing unsaved without edits, and unnecessary autosaves after server acknowledgements.
 - Fixed conflicting edits opening an error page when saving. The editor now retains unsaved changes, pauses further saves, and offers saved-version review and an unsaved-content download.
 - Fixed Undo getting stuck after opening the Block picker from a saved slash.

@@ -116,6 +116,8 @@ describe('semantic link apply (dialog path)', () => {
     it('normalizes schemeless www links and rejects unsafe schemes before insertion', () => {
         expect(normalizeUrlDialogValue('  WWW.Example.com/path  '))
             .toBe('https://WWW.Example.com/path');
+        expect(normalizeUrlDialogValue(`${'a'.repeat(321)}@example.com`))
+            .toBe(`${'a'.repeat(321)}@example.com`);
         expect(urlDialogValidationError('www.example.com')).toBeNull();
         expect(urlDialogValidationError('https://example.com')).toBeNull();
         expect(urlDialogValidationError('/relative/path')).toBeNull();

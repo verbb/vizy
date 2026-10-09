@@ -237,10 +237,15 @@ export function readGenericFieldValue(root: HTMLElement): JsonValue {
         entries.push({ name: el.name, value: el.value });
     }
 
-    if (!entries.length) return null;
+    const safeEntries = entries.filter(({ name }) => !parseBracketPath(name).some(isUnsafePathSegment));
+    if (!safeEntries.length) return null;
 
-    const tree = buildBracketTree(entries);
-    return unwrapSingleFieldValue(tree, entries[0]!.name);
+    const tree = buildBracketTree(safeEntries);
+    return unwrapSingleFieldValue(tree, safeEntries[0]!.name);
+}
+
+function isUnsafePathSegment(segment: string): boolean {
+    return segment === '__proto__' || segment === 'prototype' || segment === 'constructor';
 }
 
 function buildBracketTree(entries: Array<{ name: string; value: string }>): JsonValue {
@@ -248,7 +253,7 @@ function buildBracketTree(entries: Array<{ name: string; value: string }>): Json
 
     for (const { name, value } of entries) {
         const path = parseBracketPath(name);
-        if (!path.length) continue;
+        if (!path.length || path.some(isUnsafePathSegment)) continue;
         assignPath(root, path, value);
     }
 

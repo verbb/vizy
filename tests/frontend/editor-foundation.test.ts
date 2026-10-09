@@ -284,6 +284,18 @@ describe('typed field adapters', () => {
         expect(getFieldAdapter('craft.generic').read(root)).toEqual(['a', 'c']);
     });
 
+    it('ignores prototype mutation paths in generic Craft field names', () => {
+        const root = document.createElement('div');
+        root.innerHTML = `
+            <input name="fields[choice][safe]" value="kept">
+            <input name="fields[choice][__proto__][polluted]" value="yes">
+            <input name="fields[choice][constructor][prototype][polluted]" value="yes">
+        `;
+
+        expect(getFieldAdapter('craft.generic').read(root)).toEqual({ safe: 'kept' });
+        expect((Object.prototype as Record<string, unknown>).polluted).toBeUndefined();
+    });
+
     it('preserves singleton structured values after removing the field namespace', () => {
         const root = document.createElement('div');
         root.innerHTML = '<input name="vizyHost[n][b][fields][fields][choice][value]" value="kept">';
