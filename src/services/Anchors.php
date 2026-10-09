@@ -522,10 +522,21 @@ class Anchors extends Component
     /** Raw storage includes trash, derivatives and unresolved historical schemas. */
     public function hasExternalReferences(MatrixAnchor $anchor): bool
     {
-        return (new Query())->from(Table::ELEMENTS_SITES)
+        $query = (new Query())
+            ->select(['elementId', 'content'])
+            ->from(Table::ELEMENTS_SITES)
             ->where(['not', ['elementId' => $anchor->parentOwnerId]])
-            ->andWhere(['like', new Expression('CAST([[content]] AS ' . (Craft::$app->getDb()->getIsPgsql() ? 'TEXT' : 'CHAR') . ')'), $anchor->uid])
-            ->exists();
+            ->andWhere(['like', new Expression('CAST([[content]] AS ' . (Craft::$app->getDb()->getIsPgsql() ? 'TEXT' : 'CHAR') . ')'), $anchor->uid]);
+
+        foreach ($query->batch(100) as $rows) {
+            foreach ($rows as $row) {
+                if ($this->_containsStoredAnchorReference($row['content'], (string)$anchor->blockInstanceId, $anchor->uid)) {
+                    return true;
+                }
+            }
+        }
+
+        return false;
     }
 
     /**

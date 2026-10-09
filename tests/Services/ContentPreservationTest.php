@@ -336,6 +336,23 @@ it('recreates hard-deleted nested draft and revision graphs from a durable journ
     expect($f->rows($uid)[0]->getFieldValue($f->text->handle))->toBe('Recover derivatives');
 });
 
+it('ignores unrelated content that only contains an anchor UID as text', function() {
+    $f = new MatrixSupportFixture();
+    $uid = StringHelper::UUID();
+    $owner = $f->save([$f->block($uid, $f->payload(['Original']))]);
+    $draft = Craft::$app->getDrafts()->createDraft($owner);
+    $anchor = Vizy::$plugin->getAnchors()->getAnchor($owner, $f->field, $uid);
+
+    Craft::$app->getDb()->createCommand()->update(Table::ELEMENTS_SITES, [
+        'content' => ['plainText' => 'Unrelated reference ' . $anchor->uid],
+    ], [
+        'elementId' => $draft->id,
+        'siteId' => $draft->siteId,
+    ])->execute();
+
+    expect(Vizy::$plugin->getAnchors()->hasExternalReferences($anchor))->toBeFalse();
+});
+
 it('preserves a canonical anchor still referenced by a historical shared draft', function() {
     $f = new MatrixSupportFixture();
     $uid = StringHelper::UUID();
