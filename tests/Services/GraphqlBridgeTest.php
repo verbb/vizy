@@ -97,6 +97,32 @@ it('filters GraphQL nodes with Twig-query spirit where/limit', function() {
         ->and($paragraphs[0]->text())->toBe('A');
 });
 
+it('rejects callback predicates at the GraphQL query boundary', function() {
+    $document = (new DocumentParser())->parse([
+        'type' => 'doc',
+        'attrs' => ['schemaVersion' => VizyDocument::CURRENT_SCHEMA_VERSION],
+        'content' => [[
+            'type' => 'paragraph',
+            'content' => [['type' => 'text', 'text' => 'A']],
+        ]],
+    ]);
+
+    expect(fn() => GqlHelpers::queryRootNodes($document, [
+        'where' => ['CaLlBaCk', 'strtolower'],
+    ]))->toThrow(\InvalidArgumentException::class, 'Callback conditions are not available in GraphQL queries.');
+
+    expect(fn() => GqlHelpers::queryBlocks($document, [
+        'where' => ['or', ['type' => 'vizyBlock'], [0 => 'CALLBACK', 2 => 'strtolower']],
+    ]))->toThrow(\InvalidArgumentException::class, 'Callback conditions are not available in GraphQL queries.');
+
+    expect(GqlHelpers::queryRootNodes($document, [
+        'where' => ['type' => ['callback', 'paragraph']],
+    ]))->toHaveCount(1)
+        ->and(GqlHelpers::queryRootNodes($document, [
+            'where' => ['in', 'type', ['callback', 'paragraph']],
+        ]))->toHaveCount(1);
+});
+
 it('exposes layout stack/span/proportion on structural nodes', function() {
     $layoutUid = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa';
     $colA = 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb';

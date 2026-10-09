@@ -1,6 +1,8 @@
 <?php
 namespace verbb\vizy\gql;
 
+use InvalidArgumentException;
+
 use verbb\vizy\document\VizyBlock;
 use verbb\vizy\document\VizyDocument;
 use verbb\vizy\document\VizyNodeQuery;
@@ -92,6 +94,7 @@ final class GqlHelpers
         $query = $document->query();
 
         if (isset($args['where'])) {
+            self::_assertSafeWhereCondition($args['where']);
             $query->where($args['where']);
         }
 
@@ -117,6 +120,7 @@ final class GqlHelpers
         $query = (new VizyNodeQuery())->from($document->blocks(null));
 
         if (isset($args['where'])) {
+            self::_assertSafeWhereCondition($args['where']);
             $query->where($args['where']);
         }
 
@@ -139,6 +143,35 @@ final class GqlHelpers
         VizyNodeGenerator::generateTypes($context);
         VizyMarkGenerator::generateTypes($context);
         VizyBlockTypeGenerator::generateTypes($context);
+    }
+
+
+    // Private Methods
+    // =========================================================================
+
+    private static function _assertSafeWhereCondition(mixed $condition): void
+    {
+        if (!is_array($condition)) {
+            return;
+        }
+
+        if (!isset($condition[0])) {
+            return;
+        }
+
+        $operator = strtolower((string)$condition[0]);
+
+        if ($operator === 'callback') {
+            throw new InvalidArgumentException('Callback conditions are not available in GraphQL queries.');
+        }
+
+        if (in_array($operator, ['and', 'or', 'not'], true)) {
+            foreach ($condition as $index => $operand) {
+                if ($index !== 0) {
+                    self::_assertSafeWhereCondition($operand);
+                }
+            }
+        }
     }
 
 }

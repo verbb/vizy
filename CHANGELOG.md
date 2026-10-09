@@ -22,6 +22,7 @@
 - Feed Me HTML mappings now use Vizy’s field and Editor Config-aware importer, record conversion-loss diagnostics, and can require lossless conversion before accepting a mapped value. See [Importing with Feed Me](https://verbb.io/craft-plugins/vizy/docs/v4/user-guides/importing-with-feed-me). ([#289](https://github.com/verbb/vizy/issues/289))
 
 ### Fixed
+- Fixed a medium-severity remote code execution vulnerability.
 - Fixed late-loading editors hiding early changes, nested Hyper fields appearing unsaved without edits, and unnecessary autosaves after server acknowledgements.
 - Fixed conflicting edits opening an error page when saving. The editor now retains unsaved changes, pauses further saves, and offers saved-version review and an unsaved-content download.
 - Fixed Undo getting stuck after opening the Block picker from a saved slash.
