@@ -1,4 +1,5 @@
 import '@verbb/plugin-kit-web/plugin-kit.css';
+import { observeConflict, preventConflictedRequest } from './craft-conflicts';
 import '@verbb/plugin-kit-web/components/tooltip';
 import '@verbb/plugin-kit-web/components/dropdown-menu';
 import '@verbb/plugin-kit-web/components/popup';
@@ -36,6 +37,7 @@ import {
     upRightAndDownLeftFromCenter,
 } from './icons/fa-block-menu';
 import { bootstrapEditorWhenReady } from './bootstrap-queue';
+import { installCraftSubmitQueue } from './craft-submit-queue';
 import { reportFieldBootFailure } from './field-boot-failure';
 import type { EditorBootstrap } from './types';
 import './vizy.css';
@@ -112,6 +114,7 @@ document.dispatchEvent(new CustomEvent('vizy:register', { bubbles: true }));
 
 // Sticky toolbar pin under Live Preview / slideout scrollports (not entry #header).
 installToolbarStickyOffsetBridge();
+installCraftSubmitQueue();
 
 // Craft's ElementEditor owns the request lifecycle. Observe its public request
 // helper once and route only structured Vizy acknowledgements back to editors.
@@ -119,11 +122,17 @@ const craft = window.Craft as typeof window.Craft & { __vizyRequestBridge?: bool
 if (craft?.sendActionRequest && !craft.__vizyRequestBridge) {
     const original = craft.sendActionRequest.bind(craft);
     craft.sendActionRequest = (async (...args: Parameters<typeof original>) => {
-        const response = await original(...args);
-        if (response?.data && typeof response.data === 'object' && 'vizy' in response.data) {
-            document.dispatchEvent(new CustomEvent('vizy:server-response', { detail: response.data }));
+        try {
+            preventConflictedRequest(args[2]?.data);
+            const response = await original(...args);
+            if (response?.data && typeof response.data === 'object' && 'vizy' in response.data) {
+                document.dispatchEvent(new CustomEvent('vizy:server-response', { detail: response.data }));
+            }
+            return response;
+        } catch (error) {
+            observeConflict(error, args[2]?.data);
+            throw error;
         }
-        return response;
     }) as typeof craft.sendActionRequest;
     craft.__vizyRequestBridge = true;
 }

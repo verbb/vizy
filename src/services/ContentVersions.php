@@ -2,6 +2,7 @@
 namespace verbb\vizy\services;
 
 use verbb\vizy\Vizy;
+use verbb\vizy\exceptions\ContentConflictException;
 use verbb\vizy\fields\VizyField;
 use verbb\vizy\helpers\EmbeddedOwners;
 
@@ -109,7 +110,7 @@ final class ContentVersions extends Component
         $snapshot = $embedded ? $this->_embeddedSnapshot($source, $embedded['path'][0]['placementUid'], true) : Vizy::$plugin->getContentRecovery()->snapshot($source, $field, true);
 
         if (!hash_equals($version['hash'], Vizy::$plugin->getContentRecovery()->hash($snapshot))) {
-            throw new RuntimeException('This Vizy content changed after it was opened. Your submitted edits have been retained. Reload and reconcile the newer content before saving again.');
+            throw new ContentConflictException($source);
         }
         $checked[$token] = true;
 

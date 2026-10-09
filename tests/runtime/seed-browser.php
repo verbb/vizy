@@ -291,6 +291,7 @@ $metadata = [
     ],
     'siteId' => $owner->siteId, 'sectionUid' => $section->uid,
 ];
+$metadata['conflicts'] = require __DIR__ . '/seed-browser-conflicts.php';
 // A long-lived fixture lease does not reach Craft's after-request event yet.
 Craft::$app->getProjectConfig()->flush();
 file_put_contents(dirname(__DIR__, 2) . '/.cache/verbb-tests/browser.json', json_encode($metadata, JSON_PRETTY_PRINT));

@@ -145,6 +145,7 @@ class Vizy extends Plugin
         Event::on(Fields::class, Fields::EVENT_AFTER_SAVE_FIELD_LAYOUT, [$this->getBlockTypes(), 'handleAfterSaveFieldLayout']);
         Event::on(Elements::class, Elements::EVENT_AFTER_SAVE_ELEMENT, [$this->getAssetUploads(), 'handleAfterSave']);
         Event::on(Response::class, Response::EVENT_BEFORE_SEND, [$this->getEditorAcknowledgements(), 'augmentResponse']);
+        Event::on(Response::class, Response::EVENT_BEFORE_SEND, [\verbb\vizy\helpers\ConflictResponse::class, 'beforeSend']);
         $db = Craft::$app->getDb();
         $db->on(Connection::EVENT_COMMIT_TRANSACTION, [$this->getAssetUploads(), 'handleTransactionCommit']);
         $db->on(Connection::EVENT_ROLLBACK_TRANSACTION, [$this->getAssetUploads(), 'handleTransactionRollback']);

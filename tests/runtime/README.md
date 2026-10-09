@@ -32,3 +32,5 @@ The DDEV project includes a separate `matrix-pgsql` PostgreSQL 16 service. Start
 ## Browser Submission Timing
 
 `node tests/browser-cp/run.mjs matrix-scale.spec.ts` checks 30 blocks / 90 rows through both awaited autosave and immediate publication. It verifies every saved value using a separate PHP process and then reopens the editor. Craft 5.11.1 and 5.11.3 can reject pending Matrix layout updates during submission, including a secondary undefined rejection from `Craft.Queue`. These content-preservation tests retain browser errors in `browser-errors.json` artifacts rather than failing solely on native Craft diagnostics. A passing result establishes exact saved content and reopen behaviour; it does not claim an error-free native Matrix console.
+
+`node tests/browser-cp/run.mjs new-authoring.spec.ts save-autosave.spec.ts` checks cold field initialization and publication while an autosave response is delayed after the server commits. Both the Save button and keyboard shortcut must publish successfully, including edits made while autosave is pending.

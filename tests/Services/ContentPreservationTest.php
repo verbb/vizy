@@ -371,7 +371,7 @@ it('rejects a stale content version without overwriting the newer Matrix values'
     $f->save([$f->block($uid, $f->payload(['Newer edit']))]);
     $owner = $f->reload();
     $owner->setFieldValue($f->field->handle, $stale);
-    expect(fn() => Craft::$app->getElements()->saveElement($owner))->toThrow(RuntimeException::class, 'changed after it was opened');
+    expect(fn() => Craft::$app->getElements()->saveElement($owner))->toThrow(\verbb\vizy\exceptions\ContentConflictException::class, 'changed after it was opened');
     expect($f->rows($uid)[0]->getFieldValue($f->text->handle))->toBe('Newer edit');
     expect($owner->getFieldValue($f->field->handle)->toArray())->toBe($stale);
 });

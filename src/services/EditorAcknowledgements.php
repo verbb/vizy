@@ -140,7 +140,7 @@ final class EditorAcknowledgements extends Component
         $route = (string)(Craft::$app->requestedRoute ?? '');
         $response = $event->sender;
 
-        if (!$response instanceof Response || !str_starts_with($route, 'elements/') || !is_array($response->data)) {
+        if (!$response instanceof Response || !$response->getIsSuccessful() || !str_starts_with($route, 'elements/') || !is_array($response->data)) {
             return;
         }
 

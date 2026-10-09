@@ -23,8 +23,10 @@
 
 ### Fixed
 - Fixed late-loading editors hiding early changes, nested Hyper fields appearing unsaved without edits, and unnecessary autosaves after server acknowledgements.
+- Fixed conflicting edits opening an error page when saving. The editor now retains unsaved changes, pauses further saves, and offers saved-version review and an unsaved-content download.
 - Fixed Undo getting stuck after opening the Block picker from a saved slash.
 - Fixed creating Blocks and retaining nested Matrix content when Vizy is placed inside Hyper 3 links.
+- Fixed an error when saving an entry while Vizy content was still being autosaved.
 - Fixed field conditions failing to refresh in newly added Matrix rows inside Vizy.
 - Fixed Vizy 3 upgrades failing when existing Matrix content was read before its anchor schema migration.
 - Fixed Block fields failing to load after Craft autosaved a newly created Matrix entry or while editing a provisional draft.

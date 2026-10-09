@@ -533,3 +533,26 @@ it('reopens a failed upload with a retry token for the current saved document on
         ->and(Entry::find()->id($owner->id)->status(null)->one()->dateUpdated->format('c'))->toBe($before)
         ->and($readBootstrap($value)['finalization']['finalizationStatus'])->toBe('complete');
 });
+
+it('does not acknowledge fields from a failed owner save and drains staged results', function(int $status) {
+    \Tests\Support\Fixtures\AssetSpikeFixture::ensureAdminUser();
+    $owner = VizyFixtureFactory::entry('Rejected acknowledgement');
+    $field = VizyFixtureFactory::vizyField();
+    $context = Vizy::$plugin->getEditorContexts()->issue($owner, $field);
+    WebControllerHarness::withWebRequest([
+        'vizyTransport' => WebControllerHarness::transportMetadata('rejected-editor', $field->uid, $context['token'], 1, 1, 'save'),
+    ], 'elements/save', function() use ($owner, $field, $status) {
+        $acks = Vizy::$plugin->getEditorAcknowledgements();
+        $acks->collect($owner, $field, $owner->getFieldValue($field->handle));
+        $response = new WebResponse();
+        $response->setStatusCode($status);
+        $response->format = Response::FORMAT_JSON;
+        $response->data = ['message' => 'Save failed'];
+        $acks->augmentResponse(new Event(['sender' => $response]));
+        expect($response->data)->not->toHaveKey('vizy');
+        $response->setStatusCode(200);
+        $response->data = ['success' => true];
+        $acks->augmentResponse(new Event(['sender' => $response]));
+        expect($response->data)->not->toHaveKey('vizy');
+    });
+})->with([400, 409, 500]);
