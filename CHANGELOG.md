@@ -24,6 +24,8 @@
 ### Fixed
 - Fixed field conditions failing to refresh in newly added Matrix rows inside Vizy.
 - Fixed Vizy 3 upgrades failing when existing Matrix content was read before its anchor schema migration.
+- Fixed Block fields failing to load after Craft autosaved a newly created Matrix entry or while editing a provisional draft.
+- Fixed fields such as JSON failing to initialize when their script dependencies were first loaded by an inserted Block.
 - Fixed the From Vizy migration wizard reloading the settings page between steps, rendering a corrupted completion icon, and crowding the guide link against the start button.
 - Fixed the field-settings separator appearing directly against the Plain Text Paste control.
 - Fixed Task List checkboxes rendering separately from or misaligned with their text in the editor.

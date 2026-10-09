@@ -12,6 +12,8 @@
 
 const seenStylesheets = new Set<string>();
 const seenExternalScripts = new Set<string>();
+const pendingExternalScripts = new Map<string, Promise<void>>();
+let externalScriptQueue = Promise.resolve();
 
 function normalizeAssetUrl(url: string): string {
     return url.replace(/&/g, '&amp;');
@@ -60,6 +62,41 @@ function appendStylesheet(link: HTMLLinkElement): void {
     if (seen.has(key)) return;
     seen.add(key);
     document.head.appendChild(link);
+}
+
+/** Load shared dependencies in response order before mounting instance scripts. */
+export function prepareCraftFieldAssets(...fragments: string[]): Promise<void> | null {
+    const pending: Promise<void>[] = [];
+    for (const fragment of fragments) {
+        for (const source of parseCraftFragment(fragment)) {
+            if (!(source instanceof HTMLScriptElement) || !source.src) continue;
+            const key = normalizeAssetUrl(source.src);
+            const existing = pendingExternalScripts.get(key);
+            if (existing) {
+                pending.push(existing);
+                continue;
+            }
+            if (existingScriptSrcs().has(key)) continue;
+            const loading = Promise.all([externalScriptQueue, ...pending]).then(() => new Promise<void>((resolve, reject) => {
+                const script = document.createElement('script');
+                for (const attr of Array.from(source.attributes)) script.setAttribute(attr.name, attr.value);
+                script.async = false;
+                script.onload = () => {
+                    seenExternalScripts.add(key);
+                    resolve();
+                };
+                script.onerror = () => {
+                    script.remove();
+                    reject(new Error(`fieldAssetLoadFailed: ${source.src}`));
+                };
+                document.head.appendChild(script);
+            })).finally(() => pendingExternalScripts.delete(key));
+            pendingExternalScripts.set(key, loading);
+            externalScriptQueue = loading.catch(() => {});
+            pending.push(loading);
+        }
+    }
+    return pending.length ? Promise.all(pending).then(() => {}) : null;
 }
 
 /**

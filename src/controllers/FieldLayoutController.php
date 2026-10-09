@@ -221,7 +221,18 @@ final class FieldLayoutController extends Controller
         if ($context['revisionId'] ?? null) {
             $owner = (clone $query)->revisionId((int)$context['revisionId'])->one();
         } elseif ($context['draftId'] ?? null) {
-            $owner = (clone $query)->draftId((int)$context['draftId'])->one();
+            $owner = (clone $query)->draftId((int)$context['draftId'])->provisionalDrafts(null)->one();
+
+            // Craft can apply a new nested entry's draft during autosave while
+            // its editor remains open. Only follow that transition when the
+            // same element identity survives as a canonical entry.
+            if (!$owner && !empty($context['ownerId']) && !empty($context['ownerUid'])) {
+                $candidate = Craft::$app->getElements()->getElementById((int)$context['ownerId'], $class, (int)$context['siteId']);
+
+                if ($candidate && $candidate->uid === $context['ownerUid'] && !$candidate->draftId && !$candidate->revisionId) {
+                    $owner = $candidate;
+                }
+            }
         } elseif ($context['ownerId'] ?? null) {
             $owner = Craft::$app->getElements()->getElementById((int)$context['ownerId'], $class, (int)$context['siteId']);
         } elseif ($context['ownerUid'] ?? null) {

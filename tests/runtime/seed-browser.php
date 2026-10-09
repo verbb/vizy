@@ -113,7 +113,9 @@ $rootJsonPlacement = new CustomField($rootJson);
 $rootJsonPlacement->uid = StringHelper::UUID();
 $cardPreviewMatrixPlacement = new CustomField($cardPreviewMatrix);
 $cardPreviewMatrixPlacement->uid = StringHelper::UUID();
-$entryTabs[0]->setElements([...$entryTabs[0]->getElements(), $rootJsonPlacement, $cardPreviewMatrixPlacement]);
+// Put the title on the shared layout before any owner caches it. Adding it
+// later lets subsequent nested-field layout saves overwrite it with a stale copy.
+$entryTabs[0]->setElements([new \craft\fieldlayoutelements\entries\EntryTitleField(['required' => true]), ...$entryTabs[0]->getElements(), $rootJsonPlacement, $cardPreviewMatrixPlacement]);
 $entryLayout->setTabs($entryTabs);
 $entryType->setFieldLayout($entryLayout);
 $save($entryType, Craft::$app->getEntries()->saveEntryType(...));
@@ -235,6 +237,7 @@ $matrixModes['scale'] = $matrixFixture + [
 $privateAsset = AssetSpikeFixture::createTempAsset('private-metadata.txt', 'private browser fixture');
 require __DIR__ . '/seed-browser-matrix-integrations.php';
 $matrixIntegrations = seedBrowserMatrixIntegrations($rootField, $matrixFixture, $sourceBlock, $actor, $save);
+require __DIR__ . '/seed-browser-new-authoring.php';
 $runId = null;
 foreach ($argv as $argument) {
     if (str_starts_with($argument, '--browser-run=')) $runId = substr($argument, 14);
@@ -242,6 +245,7 @@ foreach ($argv as $argument) {
 if ($runId !== null && !preg_match('/^[a-f0-9-]{36}$/', $runId)) throw new RuntimeException('Invalid browser run ID');
 $metadata = [
     'runId' => $runId,
+    'freshAuthoring' => ['editPath' => '/index.php?p=admin/entries/' . $section->handle . '/' . $coldOwner->id],
     'matrix' => $matrixFixture,
     'matrixModes' => $matrixModes,
     'matrixIntegrations' => $matrixIntegrations,

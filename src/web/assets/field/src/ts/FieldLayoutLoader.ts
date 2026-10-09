@@ -11,7 +11,7 @@ import type {
     FieldLayoutResponse,
 } from './types';
 import type { VizyBlockElement } from './components/VizyBlockElement';
-import { applyCraftFieldHtml } from './craft-field-html';
+import { applyCraftFieldHtml, prepareCraftFieldAssets } from './craft-field-html';
 import { wireDismissibleTips } from './dismissible-tips';
 import {
     FieldLayoutMountError,
@@ -181,6 +181,8 @@ export class FieldLayoutLoader {
                             result && result.ok === false ? result.detail : null,
                         );
                     }
+                    await prepareCraftFieldAssets(result.headHtml, result.bodyHtml);
+                    if (this.#destroyed || controller.signal.aborted) throw new Error('loaderDestroyed');
                     this.#pendingByUid.set(item.blockUid, result);
                 }
             } finally {
@@ -343,7 +345,8 @@ export class FieldLayoutLoader {
                 block,
                 destination: current.destination,
             },
-        }).then((response) => {
+        }).then(async (response) => {
+            await prepareCraftFieldAssets(response.headHtml, response.bodyHtml);
             const latest = this.findBlock(blockUid);
             const latestType = this.manifest.blockTypes[String(latest?.node.attrs.blockTypeUid)];
             if (
@@ -518,6 +521,7 @@ export class FieldLayoutLoader {
                 visibleElements: mounted.visibleElements ?? {},
                 staticElements: mounted.staticElements ?? {},
             }, controller.signal);
+            await prepareCraftFieldAssets(response.headHtml, response.bodyHtml);
             const latest = this.findBlock(blockUid);
             const latestType = this.manifest.blockTypes[String(latest?.node.attrs.blockTypeUid)];
             if (
@@ -616,6 +620,17 @@ export class FieldLayoutLoader {
      * the first paint is fields, not a loading flash.
      */
     #mount(record: FieldHostRecord, response: FieldLayoutResponse): Promise<FieldHostRecord> {
+        const assets = prepareCraftFieldAssets(response.headHtml, response.bodyHtml);
+        if (assets) {
+            record.status = 'loading';
+            return assets.then(() => {
+                if (this.#destroyed || record.status === 'disposed' || this.hosts.get(record.blockUid) !== record) return record;
+                return this.#mount(record, response);
+            }).catch((error: unknown) => {
+                if (!this.#destroyed && record.status !== 'disposed') this.#failMount(record, error);
+                return record;
+            });
+        }
         if (record.root.isConnected) {
             this.#applyMount(record, response);
             return Promise.resolve(record);

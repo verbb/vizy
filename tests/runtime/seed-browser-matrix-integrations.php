@@ -15,13 +15,6 @@ function seedBrowserMatrixIntegrations($rootField, array $matrix, array $sourceB
     foreach (['neo', 'hyper', 'typedlinkfield', 'super-table'] as $handle) {
         if (!Craft::$app->getPlugins()->isPluginInstalled($handle)) Craft::$app->getPlugins()->installPlugin($handle);
     }
-    // The validation-recovery journey needs a real required title control.
-    // hasTitleField alone does not add it to an explicit Craft field layout.
-    $ownerType = VizyFixtureFactory::section()->getEntryTypes()[0];
-    $ownerLayout = $ownerType->getFieldLayout();
-    $ownerTab = $ownerLayout->getTabs()[0];
-    $ownerTab->setElements([new \craft\fieldlayoutelements\entries\EntryTitleField(['required' => true]), ...$ownerTab->getElements()]);
-    $save($ownerType, Craft::$app->getEntries()->saveEntryType(...));
     $hyper = new \verbb\hyper\fields\HyperField(['name' => 'Hyper link', 'handle' => 'browserHyper']);
     $url = new \verbb\hyper\links\Url(['handle' => 'url', 'enabled' => true]);
     $hyper->setLinkTypes([$url->getSettingsConfigForDb()]);

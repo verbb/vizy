@@ -765,6 +765,37 @@ it('covers draft and revision owner contexts for FieldLayout render', function()
     expect($revisionResponse->getStatusCode())->toBe(200);
 });
 
+it('keeps a new draft context usable after Craft applies it without replacing its identity', function() {
+    $fixture = fieldLayoutSecurityFixture('AppliedNewDraft');
+    $original = $fixture['owner'];
+    $owner = new Entry([
+        'sectionId' => $original->sectionId, 'typeId' => $original->getTypeId(),
+        'siteId' => $original->siteId, 'title' => 'New draft owner', 'slug' => 'new-draft-owner',
+    ]);
+    $owner->setAuthorIds([Craft::$app->getUser()->getId()]);
+    expect(Craft::$app->getDrafts()->saveElementAsDraft($owner, Craft::$app->getUser()->getId()))->toBeTrue();
+    $context = Vizy::$plugin->getEditorContexts()->issue($owner, $fixture['field']);
+    $request = fieldLayoutRequest($fixture, ['editorContextToken' => $context['token']]);
+    expect(WebControllerHarness::renderFieldLayout($request)->getStatusCode())->toBe(200);
+    $applied = Craft::$app->getDrafts()->applyDraft($owner);
+    expect($applied->id)->toBe($context['ownerId'])
+        ->and($applied->uid)->toBe($context['ownerUid'])
+        ->and($applied->draftId)->toBeNull();
+    expect(WebControllerHarness::renderFieldLayout($request)->getStatusCode())->toBe(200);
+    expect(WebControllerHarness::renderFieldLayoutBatch([
+        'editorContextToken' => $context['token'], 'items' => [$request],
+    ])->getStatusCode())->toBe(200);
+});
+
+it('loads provisional draft owner contexts', function() {
+    $fixture = fieldLayoutSecurityFixture('Provisional');
+    $draft = Craft::$app->getDrafts()->createDraft($fixture['owner'], Craft::$app->getUser()->getId(), provisional: true);
+    $context = Vizy::$plugin->getEditorContexts()->issue($draft, $fixture['field']);
+    expect(WebControllerHarness::renderFieldLayout(fieldLayoutRequest($fixture, [
+        'editorContextToken' => $context['token'],
+    ]))->getStatusCode())->toBe(200);
+});
+
 it('reauthorizes an authenticated editor for the exact owner and after permissions are revoked', function() {
     $fixture = fieldLayoutSecurityFixture('EditorPermissions');
     $admin = AssetSpikeFixture::ensureAdminUser();
