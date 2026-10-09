@@ -5,6 +5,7 @@ declare(strict_types=1);
 use verbb\vizy\Vizy;
 use verbb\vizy\db\Table;
 use verbb\vizy\migrations\m260924_010000_matrix_anchor_documents;
+use verbb\vizy\migrations\m260921_000000_vizy3_upgrade;
 use craft\helpers\StringHelper;
 
 it('advertises and applies placement-path Matrix anchor ownership', function() {
@@ -24,8 +25,8 @@ it('advertises and applies placement-path Matrix anchor ownership', function() {
         ->and($unique)->not->toContain(['parentOwnerId', 'vizyFieldId', 'blockInstanceId']);
 });
 
-it('upgrades the beta 1 Matrix anchor key without changing legacy rows', function(bool $partiallyApplied) {
-    $migration = new m260924_010000_matrix_anchor_documents();
+it('upgrades the beta 1 Matrix anchor key without changing legacy rows', function(bool $partiallyApplied, string $migrationClass) {
+    $migration = new $migrationClass();
     $db = Craft::$app->getDb();
     $backup = '{{%vizy_anchor_backup_' . strtolower(StringHelper::randomString(8)) . '}}';
     $parents = '{{%vizy_anchor_parents_' . strtolower(StringHelper::randomString(8)) . '}}';
@@ -80,6 +81,8 @@ it('upgrades the beta 1 Matrix anchor key without changing legacy rows', functio
         $db->getSchema()->refreshTableSchema(Table::MATRIX_ANCHORS);
     }
 })->with([
-    'unapplied migration' => false,
-    'partially applied migration' => true,
+    'unapplied schema migration' => [false, m260924_010000_matrix_anchor_documents::class],
+    'partially applied schema migration' => [true, m260924_010000_matrix_anchor_documents::class],
+    'Vizy 3 upgrade prerequisites' => [false, m260921_000000_vizy3_upgrade::class],
+    'resumed Vizy 3 prerequisites' => [true, m260921_000000_vizy3_upgrade::class],
 ]);

@@ -22,7 +22,12 @@ final class m260921_000000_vizy3_upgrade extends Migration
 
     public function safeUp(): bool
     {
-        return true;
+        // Content promotion reads anchors through the current element query.
+        // Prepare its columns before afterUp(), even though the standalone
+        // schema migration sorts after this upgrade in existing installations.
+        return (new m260924_010000_matrix_anchor_documents([
+            'db' => $this->db,
+        ]))->safeUp();
     }
 
     public function safeDown(): bool
