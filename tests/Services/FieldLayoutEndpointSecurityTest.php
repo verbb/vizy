@@ -21,6 +21,7 @@ use Tests\Support\Fixtures\VizyFixtureFactory;
 use Tests\Support\WebControllerHarness;
 use verbb\vizy\elements\Block;
 use verbb\vizy\models\BlockType;
+use verbb\vizy\services\FieldLayoutForms;
 use verbb\vizy\Vizy;
 use yii\base\Event;
 use yii\web\ForbiddenHttpException;
@@ -177,6 +178,44 @@ it('renders typed adapters for Plain Text and Lightswitch without saving the own
         ->and($reloaded->dateUpdated?->format('c') ?? 'null')->toBe($before)
         ->and($reloaded->id)->toBe($fixture['owner']->id);
 });
+
+it('keeps arbitrary legacy block identities out of generated input namespaces', function(string $blockUid) {
+    $fixture = fieldLayoutSecurityFixture('Namespace' . StringHelper::randomString(4));
+    $fixture['block']['attrs']['blockUid'] = $blockUid;
+    $request = fieldLayoutRequest($fixture);
+    $lazy = WebControllerHarness::renderFieldLayout($request);
+    $initial = Vizy::$plugin->getFieldLayoutForms()->renderInitial(
+        $fixture['context'],
+        $fixture['owner'],
+        $fixture['field'],
+        $fixture['block'],
+        ['kind' => 'root'],
+    );
+    $batch = WebControllerHarness::renderFieldLayoutBatch([
+        'editorContextToken' => $fixture['context']['token'],
+        'items' => [$request],
+    ]);
+    $refresh = WebControllerHarness::refreshFieldLayout([
+        ...$request,
+        'visibleElements' => $lazy->data['visibleElements'],
+        'staticElements' => $lazy->data['staticElements'],
+    ]);
+    $expectedSegment = FieldLayoutForms::blockNamespaceSegment($blockUid);
+
+    foreach ([$lazy->data, $initial['data'], $batch->data['results'][0], $refresh->data] as $result) {
+        expect($result['blockUid'])->toBe($blockUid)
+            ->and($result['hostNamespace'])->toContain("[$expectedSegment]")
+            ->and($result['hostNamespace'])->not->toContain($blockUid)
+            ->and($result['hostNamespace'])->toMatch('/^vizyHost\[[A-Za-z0-9_-]+\]\[b-[0-9a-f]{64}\]\[fields\]$/D')
+            ->and($result['html'])->not->toContain('<script')
+            ->and($result['html'])->not->toContain('data-injected');
+    }
+})->with([
+    'UUID' => StringHelper::UUID(),
+    'Vizy 3 generated ID' => 'vizy-block-X2y6Pysezv',
+    'safe imported slug' => 'legacy-imported-block',
+    'hostile stored ID' => 'legacy][x"><script data-injected>1</script>',
+]);
 
 it('refreshes Craft-native sibling field conditions without replacing unchanged controls', function() {
     $fixture = fieldLayoutSecurityFixture('Conditions');

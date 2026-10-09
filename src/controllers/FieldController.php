@@ -6,6 +6,7 @@ use verbb\vizy\fields\VizyField;
 use verbb\vizy\helpers\AnchorDocuments;
 use verbb\vizy\helpers\Fields;
 use verbb\vizy\models\BlockType;
+use verbb\vizy\services\FieldLayoutForms;
 
 use Craft;
 use craft\base\Element;
@@ -242,9 +243,18 @@ class FieldController extends Controller
 
         // Only pending rows directly owned by this signed Vizy placement use
         // this route. Persisted and deeper native Matrix rows retain Craft's path.
-        $suffix = '[' . $blockUid . '][fields][fields][' . $field->handle . '][entries][uid:' . $uid . ']';
+        $namespaceSegment = FieldLayoutForms::blockNamespaceSegment($blockUid);
+        $suffix = '[' . $namespaceSegment . '][fields][fields][' . $field->handle . '][entries][uid:' . $uid . ']';
+        $namespaceMatches = str_ends_with($namespace, $suffix);
 
-        if (!preg_match('/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/iD', $uid) || !str_ends_with($namespace, $suffix)
+        // Let already-open editors finish requests made with the previous safe
+        // literal namespace. Unsafe identifiers must use the hashed form.
+        if (!$namespaceMatches && preg_match('/^[A-Za-z0-9_-]+$/D', $blockUid)) {
+            $legacySuffix = '[' . $blockUid . '][fields][fields][' . $field->handle . '][entries][uid:' . $uid . ']';
+            $namespaceMatches = str_ends_with($namespace, $legacySuffix);
+        }
+
+        if (!preg_match('/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/iD', $uid) || !$namespaceMatches
             || $this->request->getBodyParam('elementType') !== Entry::class
             || $this->request->getBodyParam('elementId')
             || $this->request->getBodyParam('draftId')
@@ -527,7 +537,7 @@ class FieldController extends Controller
         }
 
         if ($namespace = $this->request->getBodyParam('namespace')) {
-            // Vizy 4: vizyHost[nonce][blockUid][fields]…
+            // Vizy 4 before namespace hardening: vizyHost[nonce][blockUid][fields]…
             if (preg_match('/vizyHost\[[^\]]+\]\[([^\]]+)\]/', $namespace, $matches)) {
                 return $matches[1];
             }

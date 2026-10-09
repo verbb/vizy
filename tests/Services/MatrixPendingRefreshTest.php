@@ -11,14 +11,15 @@ use Tests\Support\Fixtures\AssetSpikeFixture;
 use Tests\Support\Fixtures\MatrixSupportFixture;
 use Tests\Support\WebControllerHarness;
 use verbb\vizy\controllers\FieldController;
+use verbb\vizy\services\FieldLayoutForms;
 use verbb\vizy\Vizy;
 use yii\web\BadRequestHttpException;
 
-function pendingMatrixFixture(): array
+function pendingMatrixFixture(?string $blockUid = null): array
 {
     AssetSpikeFixture::ensureAdminUser();
     $f = new MatrixSupportFixture();
-    $blockUid = StringHelper::UUID();
+    $blockUid ??= StringHelper::UUID();
     $rowUid = StringHelper::UUID();
     $context = Vizy::$plugin->getEditorContexts()->issue($f->owner, $f->field);
     unset($context['token']);
@@ -26,9 +27,10 @@ function pendingMatrixFixture(): array
     $context['matrixBlockTypeUid'] = $f->blockType->uid;
     $context['matrixAnchorUid'] = null;
     $token = rtrim(strtr(base64_encode(Craft::$app->security->hashData(Json::encode($context))), '+/', '-_'), '=');
-    $namespace = "vizyHost[$token][$blockUid][fields][fields][{$f->matrix->handle}][entries][uid:$rowUid]";
+    $namespaceSegment = FieldLayoutForms::blockNamespaceSegment($blockUid);
+    $namespace = "vizyHost[$token][$namespaceSegment][fields][fields][{$f->matrix->handle}][entries][uid:$rowUid]";
     $params = ['elementType'=>Entry::class, 'elementUid'=>$rowUid, 'fieldId'=>$f->matrix->id, 'typeId'=>$f->rowType->id, 'siteId'=>$f->owner->siteId, 'ownerId'=>$f->owner->id, 'fields'=>[$f->text->handle=>'Pending row value'], 'visibleLayoutElements'=>[], 'staticLayoutElements'=>[]];
-    return compact('f', 'namespace', 'params');
+    return compact('f', 'blockUid', 'namespace', 'params');
 }
 
 function refreshPendingMatrix(array $fixture, array $overrides = [], ?string $namespace = null, bool $ensureAdmin = true): array
@@ -57,6 +59,29 @@ it('refreshes pending Matrix fields without creating entries or anchors', functi
         ->and($result)->toHaveKeys(['tabs','missingElements','headHtml','bodyHtml','uiLabel'])
         ->and((new Query())->from('{{%elements}}')->count())->toBe($before)
         ->and(Entry::find()->uid($fixture['params']['elementUid'])->drafts(null)->status(null)->exists())->toBeFalse();
+});
+
+it('refreshes pending Matrix fields while preserving a legacy block identity', function() {
+    $blockUid = 'legacy][x"><script data-injected>1</script>';
+    $fixture = pendingMatrixFixture($blockUid);
+    $result = refreshPendingMatrix($fixture);
+
+    expect($result)->toHaveKeys(['tabs', 'missingElements', 'headHtml', 'bodyHtml', 'uiLabel'])
+        ->and($fixture['namespace'])->toContain('[' . FieldLayoutForms::blockNamespaceSegment($blockUid) . ']')
+        ->and($fixture['namespace'])->not->toContain($blockUid);
+
+    $safeSegment = FieldLayoutForms::blockNamespaceSegment($blockUid);
+    $unsafeLegacyNamespace = str_replace("[$safeSegment]", "[$blockUid]", $fixture['namespace']);
+    expect(fn() => refreshPendingMatrix($fixture, [], $unsafeLegacyNamespace))->toThrow(BadRequestHttpException::class);
+});
+
+it('allows an already-open editor to finish with its previous safe namespace', function() {
+    $fixture = pendingMatrixFixture();
+    $safeSegment = FieldLayoutForms::blockNamespaceSegment($fixture['blockUid']);
+    $legacyNamespace = str_replace("[$safeSegment]", "[{$fixture['blockUid']}]", $fixture['namespace']);
+    $result = refreshPendingMatrix($fixture, [], $legacyNamespace);
+
+    expect($result)->toHaveKeys(['tabs', 'missingElements', 'headHtml', 'bodyHtml', 'uiLabel']);
 });
 
 it('rejects pending Matrix requests outside their signed placement', function(string $case) {

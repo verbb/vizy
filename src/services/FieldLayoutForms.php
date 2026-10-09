@@ -151,6 +151,15 @@ final class FieldLayoutForms extends Component
         return hash('sha256', $this->_stableJson($block));
     }
 
+    /**
+     * Keep document identities out of HTML input namespaces without narrowing
+     * the legacy block UID formats accepted by stored and imported content.
+     */
+    public static function blockNamespaceSegment(string $blockUid): string
+    {
+        return 'b-' . hash('sha256', $blockUid);
+    }
+
 
     // Private Methods
     // =========================================================================
@@ -209,7 +218,8 @@ final class FieldLayoutForms extends Component
         $blockHash = $this->blockHash($blockObject);
         $layoutHash = hash('sha256', $this->_stableJson($layout->getConfig() ?? []));
         $layout = $this->_matrixInputLayout($layout);
-        $namespace = sprintf('vizyHost[%s][%s][fields]', $context['nonce'], $attrs['blockUid']);
+        $namespaceSegment = self::blockNamespaceSegment($attrs['blockUid']);
+        $namespace = sprintf('vizyHost[%s][%s][fields]', $context['nonce'], $namespaceSegment);
 
         $block = new Block();
         $block->setOwner($owner);
@@ -234,7 +244,7 @@ final class FieldLayoutForms extends Component
             $matrixContext['matrixBlockTypeUid'] = $attrs['blockTypeUid'];
             $matrixContext['matrixAnchorUid'] = $anchorUid;
             $token = rtrim(strtr(base64_encode(Craft::$app->getSecurity()->hashData(Json::encode($matrixContext))), '+/', '-_'), '=');
-            $namespace = sprintf('vizyHost[%s][%s][fields]', $token, $attrs['blockUid']);
+            $namespace = sprintf('vizyHost[%s][%s][fields]', $token, $namespaceSegment);
             $anchor = isset($context['embeddedPath']) ? null : Vizy::$plugin->getAnchors()->getAnchor(
                 $owner,
                 $field,
