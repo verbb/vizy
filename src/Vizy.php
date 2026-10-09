@@ -240,6 +240,20 @@ class Vizy extends Plugin
             }
         });
 
+        // Pending Matrix rows are deliberately not persisted by the form endpoint.
+        // Their condition refresh must use the same signed placement as creation.
+        Event::on(Controller::class, Controller::EVENT_BEFORE_ACTION, function(ActionEvent $event) {
+            if ($event->sender->id !== 'elements' || $event->action->id !== 'update-field-layout') {
+                return;
+            }
+            $namespace = (string)$event->sender->request->getHeaders()->get('X-Craft-Namespace');
+
+            if (preg_match('/^vizyHost\[[A-Za-z0-9_-]+\]\[[^\]]+\]\[fields\]\[fields\]\[[^\]]+\]\[entries\]\[uid:[^\]]+\]$/D', $namespace)) {
+                $event->isValid = false;
+                Craft::$app->end(0, Craft::$app->runAction('vizy/field/refresh-matrix-entry'));
+            }
+        });
+
         // Content Blocks within Vizy Blocks will try and save immediately, so we need to prevent that.
         Event::on(ContentBlock::class, ContentBlock::EVENT_BEFORE_SAVE, function(ModelEvent $event) {
             $contentBlock = $event->sender;

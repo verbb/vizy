@@ -109,95 +109,9 @@ class FieldController extends Controller
         $namespace = $this->request->getRequiredBodyParam('namespace');
         $staticEntries = $this->request->getBodyParam('staticEntries', false);
 
-        $field = Craft::$app->getFields()->getFieldById($fieldId);
-
-        if (!$field instanceof Matrix) {
-            throw new BadRequestHttpException("Invalid Matrix field ID: $fieldId");
-        }
-
-        $entryType = Craft::$app->getEntries()->getEntryTypeById($entryTypeId);
-
-        if (!$entryType) {
-            throw new BadRequestHttpException("Invalid entry type ID: $entryTypeId");
-        }
-
-        $site = Craft::$app->getSites()->getSiteById($siteId, true);
-
-        if (!$site) {
-            throw new BadRequestHttpException("Invalid site ID: $siteId");
-        }
-
+        [$field, $entryType, $anchor] = $this->_matrixContext((int)$fieldId, (int)$entryTypeId, $ownerId, (int)$siteId, (string)$namespace);
         $user = static::currentUser();
         $elementsService = Craft::$app->getElements();
-
-        // Matrix row construction is a read-only form operation. A signed
-        // namespace binds even a new block to its authorized owner and layout.
-        if (preg_match('/vizyHost\[([A-Za-z0-9_-]+)\]/', (string)$namespace, $matches) && strlen($matches[1]) > 100) {
-            try {
-                $resolver = new FieldLayoutController('field-layout', $this->module);
-                $resolved = $resolver->resolveEditorContext($matches[1]);
-            } catch (\Throwable $exception) {
-                throw new BadRequestHttpException('Invalid Vizy Matrix editor context.', 0, $exception);
-            }
-
-            if (!$resolved) {
-                throw new BadRequestHttpException('The Vizy Matrix placement has changed. Reload the editor.');
-            }
-            [$context, $parentOwner, $vizyField] = $resolved;
-
-            if ((int)$context['siteId'] !== (int)$siteId) {
-                throw new BadRequestHttpException('Vizy Matrix site does not match its editor.');
-            }
-            $blockInstanceId = $context['matrixBlockUid'] ?? '';
-            $blockType = Vizy::$plugin->getBlockTypes()->getBlockTypeByUid($context['matrixBlockTypeUid'] ?? '');
-
-            if (!$blockType || !in_array($blockType->uid, $vizyField->getAllowedBlockTypeUids(), true)) {
-                throw new BadRequestHttpException('Vizy Matrix block type is no longer available.');
-            }
-            $matrixAnchorUid = $context['matrixAnchorUid'] ?? null;
-        } else {
-            // Older open editors can still resolve an existing anchor, but
-            // cannot manufacture a replacement through this render endpoint.
-            $resolved = $this->_resolveMatrixAnchorContext($ownerId, (int)$siteId);
-            $vizyField = $resolved['vizyField'];
-            $blockInstanceId = $resolved['blockInstanceId'];
-            $matrixAnchorUid = $resolved['matrixAnchorUid'];
-            $parentOwner = $resolved['parentOwner'];
-
-            if (!$parentOwner || !$elementsService->canSave($parentOwner, $user)) {
-                throw new ForbiddenHttpException('User not authorized to create this element.');
-            }
-            $blockType = $this->_resolveBlockType($vizyField, $blockInstanceId, $parentOwner);
-        }
-        $field = $blockType?->getFieldLayout()?->getFieldById($fieldId);
-
-        if (!$field instanceof Matrix) {
-            throw new BadRequestHttpException('Matrix field is not placed in this Vizy block type.');
-        }
-
-        if (!in_array((int)$entryType->id, array_map(static fn($type): int => (int)$type->id, $field->getEntryTypes()), true)) {
-            throw new BadRequestHttpException('Entry type is not available for this Matrix field.');
-        }
-        $documentKey = isset($context) && is_array($context)
-            ? AnchorDocuments::keyFromEditorContext($context)
-            : null;
-        $anchor = Vizy::$plugin->getAnchors()->getAnchor($parentOwner, $vizyField, $blockInstanceId, $matrixAnchorUid, $documentKey);
-
-        if (!$anchor && $matrixAnchorUid) {
-            throw new BadRequestHttpException('Stored Matrix content could not be resolved. Restore it before adding rows.');
-        }
-
-        if (!$anchor) {
-            $anchor = new \verbb\vizy\elements\MatrixAnchor([
-                'parentOwnerId' => $parentOwner->id,
-                'vizyFieldId' => $vizyField->id,
-                'blockInstanceId' => $blockInstanceId,
-                'documentKey' => $documentKey ?? '',
-                'siteId' => $siteId,
-            ]);
-            $anchor->setParentOwner($parentOwner);
-        }
-        $anchor->setFieldLayout($blockType->getFieldLayout());
 
         $attributes = [
             'siteId' => $siteId,
@@ -302,8 +216,188 @@ class FieldController extends Controller
     }
 
 
+    public function actionRefreshMatrixEntry(): Response
+    {
+        $this->requireCpRequest();
+        $this->requirePostRequest();
+        $this->requireAcceptsJson();
+
+        $namespace = (string)$this->request->getHeaders()->get('X-Craft-Namespace');
+
+        if (!preg_match('/^vizyHost\[[A-Za-z0-9_-]{101,}\]/', $namespace)) {
+            throw new BadRequestHttpException('A signed Vizy Matrix placement is required.');
+        }
+
+        $uid = (string)$this->request->getRequiredBodyParam('elementUid');
+        $fieldId = (int)$this->request->getRequiredBodyParam('fieldId');
+        $typeId = (int)$this->request->getRequiredBodyParam('typeId');
+        $siteId = (int)$this->request->getRequiredBodyParam('siteId');
+        [$field, $type, $anchor, $blockUid] = $this->_matrixContext(
+            $fieldId,
+            $typeId,
+            (int)$this->request->getBodyParam('ownerId'),
+            $siteId,
+            $namespace,
+        );
+
+        // Only pending rows directly owned by this signed Vizy placement use
+        // this route. Persisted and deeper native Matrix rows retain Craft's path.
+        $suffix = '[' . $blockUid . '][fields][fields][' . $field->handle . '][entries][uid:' . $uid . ']';
+
+        if (!preg_match('/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/iD', $uid) || !str_ends_with($namespace, $suffix)
+            || $this->request->getBodyParam('elementType') !== Entry::class
+            || $this->request->getBodyParam('elementId')
+            || $this->request->getBodyParam('draftId')
+            || $this->request->getBodyParam('revisionId')) {
+            throw new BadRequestHttpException('Invalid pending Vizy Matrix row.');
+        }
+
+        $entry = new Entry([
+            'uid' => $uid, 'siteId' => $siteId, 'typeId' => $type->id,
+            'fieldId' => $field->id, 'owner' => $anchor, 'primaryOwner' => $anchor,
+            'slug' => ElementHelper::tempSlug(),
+        ]);
+        // Use Craft's request normalization so widget helper inputs are not
+        // mistaken for fields, and non-editable fields remain protected.
+        $entry->setFieldValuesFromRequest('fields');
+        $entry->sortOrder = (int)$this->request->getBodyParam('sortOrder', 1);
+        $entry->enabled = (bool)$this->request->getBodyParam('enabled', true);
+        $entry->setScenario(Element::SCENARIO_ESSENTIALS);
+
+        $view = $this->getView();
+        $form = $entry->getFieldLayout()->createForm($entry, false, [
+            'namespace' => $namespace,
+            'registerDeltas' => false,
+            'visibleElements' => $this->request->getBodyParam('visibleLayoutElements', []),
+            'staticElements' => $this->request->getBodyParam('staticLayoutElements', []),
+        ]);
+        $missingElements = [];
+
+        foreach ($form->tabs as $tab) {
+            if (!$tab->getUid()) {
+                continue;
+            }
+            $elements = [];
+
+            foreach ($tab->elements as [$layoutElement, $conditional, $html, $static]) {
+                if ($conditional) {
+                    $elements[] = ['uid' => $layoutElement->uid, 'html' => $html, 'static' => $static];
+                }
+            }
+            $missingElements[] = ['uid' => $tab->getUid(), 'id' => $tab->getId(), 'elements' => $elements];
+        }
+        $tabs = $form->getTabMenu();
+        $selected = $this->request->getBodyParam('selectedTab');
+        $tabHtml = count($tabs) > 1 ? $view->namespaceInputs(fn() => $view->renderTemplate('_includes/tabs.twig', [
+            'tabs' => $tabs, 'selectedTab' => isset($tabs[$selected]) ? $selected : null,
+        ]), $namespace) : null;
+
+        return $this->asJson([
+            'tabs' => $tabHtml, 'missingElements' => $missingElements,
+            'headHtml' => $view->getHeadHtml(), 'bodyHtml' => $view->getBodyHtml(),
+            'initialDeltaValues' => $view->getInitialDeltaValues(), 'uiLabel' => $entry->getUiLabel(),
+        ]);
+    }
+
+
     // Private Methods
     // =========================================================================
+
+    private function _matrixContext(int $fieldId, int $entryTypeId, int $ownerId, int $siteId, string $namespace): array
+    {
+        $field = Craft::$app->getFields()->getFieldById($fieldId);
+
+        if (!$field instanceof Matrix) {
+            throw new BadRequestHttpException("Invalid Matrix field ID: $fieldId");
+        }
+
+        $entryType = Craft::$app->getEntries()->getEntryTypeById($entryTypeId);
+
+        if (!$entryType) {
+            throw new BadRequestHttpException("Invalid entry type ID: $entryTypeId");
+        }
+
+        $site = Craft::$app->getSites()->getSiteById($siteId, true);
+
+        if (!$site) {
+            throw new BadRequestHttpException("Invalid site ID: $siteId");
+        }
+
+        $user = static::currentUser();
+        $elementsService = Craft::$app->getElements();
+
+        // Matrix row construction is a read-only form operation. A signed
+        // namespace binds even a new block to its authorized owner and layout.
+        if (preg_match('/vizyHost\[([A-Za-z0-9_-]+)\]/', (string)$namespace, $matches) && strlen($matches[1]) > 100) {
+            try {
+                $resolver = new FieldLayoutController('field-layout', $this->module);
+                $resolved = $resolver->resolveEditorContext($matches[1]);
+            } catch (\Throwable $exception) {
+                throw new BadRequestHttpException('Invalid Vizy Matrix editor context.', 0, $exception);
+            }
+
+            if (!$resolved) {
+                throw new BadRequestHttpException('The Vizy Matrix placement has changed. Reload the editor.');
+            }
+            [$context, $parentOwner, $vizyField] = $resolved;
+
+            if ((int)$context['siteId'] !== (int)$siteId) {
+                throw new BadRequestHttpException('Vizy Matrix site does not match its editor.');
+            }
+            $blockInstanceId = $context['matrixBlockUid'] ?? '';
+            $blockType = Vizy::$plugin->getBlockTypes()->getBlockTypeByUid($context['matrixBlockTypeUid'] ?? '');
+
+            if (!$blockType || !in_array($blockType->uid, $vizyField->getAllowedBlockTypeUids(), true)) {
+                throw new BadRequestHttpException('Vizy Matrix block type is no longer available.');
+            }
+            $matrixAnchorUid = $context['matrixAnchorUid'] ?? null;
+        } else {
+            // Older open editors can still resolve an existing anchor, but
+            // cannot manufacture a replacement through this render endpoint.
+            $resolved = $this->_resolveMatrixAnchorContext($ownerId, (int)$siteId);
+            $vizyField = $resolved['vizyField'];
+            $blockInstanceId = $resolved['blockInstanceId'];
+            $matrixAnchorUid = $resolved['matrixAnchorUid'];
+            $parentOwner = $resolved['parentOwner'];
+
+            if (!$parentOwner || !$elementsService->canSave($parentOwner, $user)) {
+                throw new ForbiddenHttpException('User not authorized to create this element.');
+            }
+            $blockType = $this->_resolveBlockType($vizyField, $blockInstanceId, $parentOwner);
+        }
+        $field = $blockType?->getFieldLayout()?->getFieldById($fieldId);
+
+        if (!$field instanceof Matrix) {
+            throw new BadRequestHttpException('Matrix field is not placed in this Vizy block type.');
+        }
+
+        if (!in_array((int)$entryType->id, array_map(static fn($type): int => (int)$type->id, $field->getEntryTypes()), true)) {
+            throw new BadRequestHttpException('Entry type is not available for this Matrix field.');
+        }
+
+        $documentKey = isset($context) && is_array($context)
+            ? AnchorDocuments::keyFromEditorContext($context)
+            : null;
+        $anchor = Vizy::$plugin->getAnchors()->getAnchor($parentOwner, $vizyField, $blockInstanceId, $matrixAnchorUid, $documentKey);
+
+        if (!$anchor && $matrixAnchorUid) {
+            throw new BadRequestHttpException('Stored Matrix content could not be resolved. Restore it before adding rows.');
+        }
+
+        if (!$anchor) {
+            $anchor = new \verbb\vizy\elements\MatrixAnchor([
+                'parentOwnerId' => $parentOwner->id,
+                'vizyFieldId' => $vizyField->id,
+                'blockInstanceId' => $blockInstanceId,
+                'documentKey' => $documentKey ?? '',
+                'siteId' => $siteId,
+            ]);
+            $anchor->setParentOwner($parentOwner);
+        }
+        $anchor->setFieldLayout($blockType->getFieldLayout());
+
+        return [$field, $entryType, $anchor, $blockInstanceId];
+    }
 
     private function _resolveMatrixAnchorContext(int $ownerId, int $siteId): array
     {
