@@ -1,5 +1,10 @@
 # Changelog
 
+## Unreleased
+
+### Fixed
+- Fixed a high-severity input validation vulnerability. ([GHSA-4595-7fjw-r3jh](https://github.com/advisories/GHSA-4595-7fjw-r3jh))
+
 ## 3.2.14 - 2026-10-07
 
 ### Changed

@@ -40,10 +40,10 @@ class Nodes
             foreach ($node->content as $index => $nestedNode) {
                 $prevNestedNode = $node->content[$index - 1] ?? null;
                 $nextNestedNode = $node->content[$index + 1] ?? null;
-            
+
                 $html[] = self::renderNode($nestedNode, $prevNestedNode, $nextNestedNode, $nestedNodeMarkStack);
             }
-        } else if ($text = $node->renderText()) {
+        } elseif ($text = $node->renderText()) {
             $html[] = $text;
         }
 
@@ -84,12 +84,12 @@ class Nodes
             $mark = array_pop($markStack);
             $html[] = $mark->renderClosingTag();
 
-            if (count(array_filter($markTagsToClose, function ($markToClose) use ($mark) {
+            if (count(array_filter($markTagsToClose, function($markToClose) use ($mark) {
                 return $mark == $markToClose;
             })) == 0) {
                 $markTagsToReopen[] = $mark;
             } else {
-                $markTagsToClose = array_udiff($markTagsToClose, [$mark], function ($a1, $a2) {
+                $markTagsToClose = array_udiff($markTagsToClose, [$mark], function($a1, $a2) {
                     return strcmp($a1->type, $a2->type);
                 });
             }
@@ -181,6 +181,10 @@ class Nodes
 
     public static function parseRefTags($value, $siteId): array|string|null
     {
+        if (!is_string($value)) {
+            return null;
+        }
+
         $value = preg_replace_callback('/([^\'"\?#]*)(\?[^\'"\?#]+)?(#[^\'"\?#]+)?(?:#|%23)([\w]+)\:(\d+)(?:@(\d+))?(\:(?:transform\:)?' . HandleValidator::$handlePattern . ')?/', function($matches) {
             [, $url, $query, $hash, $elementType, $ref, $siteId, $transform] = array_pad($matches, 10, null);
 
@@ -202,6 +206,7 @@ class Nodes
                         $query = '';
                     }
                 }
+
                 if ($hash && str_contains($parsed, $hash)) {
                     $url .= $hash;
                     $hash = '';
@@ -237,5 +242,5 @@ class Nodes
 
         return $rawNode;
     }
-    
+
 }

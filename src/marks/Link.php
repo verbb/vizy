@@ -30,6 +30,12 @@ class Link extends Mark
         // On-load, parse the link URL for ref tags
         $href = $this->attrs['href'] ?? '';
 
+        if (!is_string($href)) {
+            // Preserve the linked text while dropping malformed imported or stored targets.
+            $this->attrs['href'] = null;
+            $href = '';
+        }
+
         // Store the original for later (GQL)
         $this->_originalHref = $href;
 
