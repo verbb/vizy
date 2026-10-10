@@ -539,6 +539,58 @@ it('grandfathers existing conditional Blocks but rejects new identities', functi
         ->toContain('is not available for this entry or user');
 });
 
+it('grandfathers existing disabled Blocks but rejects new identities', function() {
+    $typeUid = craft\helpers\StringHelper::UUID();
+    $field = new VizyField([
+        'name' => 'Disabled content',
+        'handle' => 'disabledContent',
+        'editorConfig' => 'standard',
+        'blockTypePickerGroups' => [[
+            'name' => 'Content',
+            'blockTypeUids' => [$typeUid],
+            'disabledBlockTypeUids' => [$typeUid],
+        ]],
+    ]);
+    $owner = new class([
+        'title' => 'Disabled Block owner',
+        'siteId' => Craft::$app->getSites()->getPrimarySite()->id,
+    ]) extends Entry {
+        public mixed $testFieldValue = null;
+
+        public function getFieldValue(string $fieldHandle): mixed
+        {
+            return $this->testFieldValue;
+        }
+    };
+    $blockUid = craft\helpers\StringHelper::UUID();
+    $document = static fn(string $uid): array => [
+        'type' => 'doc',
+        'attrs' => ['schemaVersion' => VizyDocument::CURRENT_SCHEMA_VERSION],
+        'content' => [[
+            'type' => 'vizyBlock',
+            'attrs' => [
+                'blockUid' => $uid,
+                'blockTypeUid' => $typeUid,
+                'enabled' => true,
+                'fieldSlots' => [],
+            ],
+        ]],
+    ];
+
+    $baseline = $field->normalizeValue($document($blockUid), $owner);
+    $owner->testFieldValue = $baseline;
+    $field->validateBlocks($owner, $baseline);
+    expect($owner->getErrors($field->handle))->toBe([]);
+
+    $owner->testFieldValue = $field->normalizeValue(
+        $document(craft\helpers\StringHelper::UUID()),
+        $owner,
+    );
+    $field->validateBlocks($owner, $baseline);
+    expect(implode(' ', $owner->getErrors($field->handle)))
+        ->toContain('is not available for this entry or user');
+});
+
 it('offers private volumes in image and file picker settings', function() {
     AssetSpikeFixture::ensureAdminUser();
     $volume = AssetSpikeFixture::volume();

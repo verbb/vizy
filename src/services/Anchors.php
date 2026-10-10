@@ -30,8 +30,56 @@ use RuntimeException;
 
 class Anchors extends Component
 {
+    // Properties
+    // =========================================================================
+
+    private array $trustedMigrationReferences = [];
+
+
     // Public Methods
     // =========================================================================
+
+    /**
+     * Grant one migration operation access only to the candidate's exact
+     * existing anchor references. Ordinary validation must never call this.
+     */
+    public function trustMigrationReferences(
+        ElementInterface $owner,
+        VizyField $field,
+        VizyDocument $candidate,
+    ): void {
+        $key = $this->_migrationTrustKey($owner, $field);
+
+        if ($key === null) {
+            return;
+        }
+
+        $this->trustedMigrationReferences[$key] = [];
+
+        foreach ($this->_documentAnchorReferences($candidate->toArray()) as [$blockUid, $anchorUid]) {
+            $anchorId = (new Query())
+                ->select('a.id')
+                ->from(['a' => MatrixAnchorRecord::tableName()])
+                ->innerJoin(['e' => Table::ELEMENTS], '[[e.id]] = [[a.id]]')
+                ->where([
+                    'a.vizyFieldId' => $field->id,
+                    'a.blockInstanceId' => $blockUid,
+                    'e.uid' => $anchorUid,
+                ])
+                ->scalar();
+
+            if ($anchorId !== false) {
+                $this->trustedMigrationReferences[$key][$blockUid][$anchorUid] = (int)$anchorId;
+            }
+        }
+    }
+
+    public function forgetMigrationReferences(ElementInterface $owner, VizyField $field): void
+    {
+        if ($key = $this->_migrationTrustKey($owner, $field)) {
+            unset($this->trustedMigrationReferences[$key]);
+        }
+    }
 
     /**
      * Resolve a MatrixAnchor for the authorized ownership tuple only.
@@ -615,6 +663,10 @@ class Anchors extends Component
             return null;
         }
 
+        if (!$this->_canReferenceForeignParent($owner, $field, $anchor, $blockUid, $uid)) {
+            return null;
+        }
+
         $stored = (new Query())
             ->select('content')
             ->from(Table::ELEMENTS_SITES)
@@ -708,6 +760,83 @@ class Anchors extends Component
 
     // Private Methods
     // =========================================================================
+
+    /**
+     * A stored UID proves reference shape, not authority over another owner.
+     */
+    private function _canReferenceForeignParent(
+        ElementInterface $owner,
+        VizyField $field,
+        MatrixAnchor $anchor,
+        string $blockUid,
+        string $anchorUid,
+    ): bool {
+        $sourceOwnerId = (int)$anchor->parentOwnerId;
+
+        if ($owner->duplicateOf?->id === $sourceOwnerId) {
+            return true;
+        }
+
+        if ($owner->getIsDerivative() && (int)$owner->getCanonicalId() === $sourceOwnerId) {
+            return true;
+        }
+
+        if ($this->_isTrustedMigrationReference($owner, $field, $anchor, $blockUid, $anchorUid)) {
+            return true;
+        }
+
+        $currentUser = Craft::$app->getUser()->getIdentity();
+        $sourceOwner = $anchor->getParentOwner();
+        return $currentUser && $sourceOwner && Craft::$app->getElements()->canView($sourceOwner, $currentUser);
+    }
+
+    private function _isTrustedMigrationReference(
+        ElementInterface $owner,
+        VizyField $field,
+        MatrixAnchor $anchor,
+        string $blockUid,
+        string $anchorUid,
+    ): bool {
+        $key = $this->_migrationTrustKey($owner, $field);
+        return $key !== null
+            && ($this->trustedMigrationReferences[$key][$blockUid][$anchorUid] ?? null) === (int)$anchor->id;
+    }
+
+    private function _migrationTrustKey(ElementInterface $owner, VizyField $field): ?string
+    {
+        if (!$owner->id || !$owner->siteId || !$field->id) {
+            return null;
+        }
+
+        return implode(':', [$owner::class, $owner->id, $owner->siteId, $field->id, AnchorDocuments::key($owner, $field)]);
+    }
+
+    private function _documentAnchorReferences(mixed $value, int $depth = 0): array
+    {
+        if ($depth > 64 || !is_array($value)) {
+            return [];
+        }
+
+        $references = [];
+        $attrs = is_array($value['attrs'] ?? null) ? $value['attrs'] : [];
+        $values = is_array($attrs['values'] ?? null) ? $attrs['values'] : [];
+        $content = is_array($values['content'] ?? null) ? $values['content'] : [];
+        $blockUid = $attrs['blockUid'] ?? $attrs['id'] ?? null;
+        $anchorUid = $attrs['matrixAnchorUid']
+            ?? $values['matrixAnchorUid']
+            ?? $content['matrixAnchorUid']
+            ?? null;
+
+        if (($value['type'] ?? null) === 'vizyBlock' && is_string($blockUid) && is_string($anchorUid)) {
+            $references[] = [$blockUid, $anchorUid];
+        }
+
+        foreach ($value as $child) {
+            $references = [...$references, ...$this->_documentAnchorReferences($child, $depth + 1)];
+        }
+
+        return $references;
+    }
 
     private function _referencedAnchorUids(array $nodes): array
     {

@@ -5,6 +5,7 @@ declare(strict_types=1);
 use craft\db\Query;
 use craft\db\Table;
 use craft\elements\Entry;
+use craft\elements\User;
 use craft\enums\PropagationMethod;
 use craft\helpers\Json;
 use craft\helpers\StringHelper;
@@ -145,20 +146,36 @@ it('repairs a historical duplicate that persisted another owner\'s Matrix anchor
     // The migration layer supplies the canonical candidate while the database
     // still contains the Vizy 3 source used to authorize recovery.
     $historical->setFieldValue($f->field->handle, $sourceDocument);
+    $candidate = Vizy::$plugin->getDocuments()->normalizeValue($sourceDocument, $historical, $f->field);
 
     $reject = static function() {
         throw new RuntimeException('Reject historical anchor repair');
     };
     $historical->on(Entry::EVENT_AFTER_PROPAGATE, $reject);
-    expect(fn() => Craft::$app->getElements()->saveElement($historical))
-        ->toThrow(RuntimeException::class, 'Reject historical anchor repair');
-    $historical->off(Entry::EVENT_AFTER_PROPAGATE, $reject);
+    Vizy::$plugin->getContentBaselines()->trust($historical, $f->field, $candidate);
+    Vizy::$plugin->getAnchors()->trustMigrationReferences($historical, $f->field, $candidate);
+    try {
+        expect(fn() => Craft::$app->getElements()->saveElement($historical))
+            ->toThrow(RuntimeException::class, 'Reject historical anchor repair');
+    } finally {
+        Vizy::$plugin->getAnchors()->forgetMigrationReferences($historical, $f->field);
+        Vizy::$plugin->getContentBaselines()->forget($historical, $f->field);
+        $historical->off(Entry::EVENT_AFTER_PROPAGATE, $reject);
+    }
     expect(Vizy::$plugin->getAnchors()->getAnchor($historical, $f->field, $uid))->toBeNull()
         ->and($f->rows($uid, $sourceOwner)[0]->id)->toBe($sourceRow->id);
 
     $historical = $f->reload($historical);
     $historical->setFieldValue($f->field->handle, $sourceDocument);
-    expect(Craft::$app->getElements()->saveElement($historical))->toBeTrue();
+    $candidate = Vizy::$plugin->getDocuments()->normalizeValue($sourceDocument, $historical, $f->field);
+    Vizy::$plugin->getContentBaselines()->trust($historical, $f->field, $candidate);
+    Vizy::$plugin->getAnchors()->trustMigrationReferences($historical, $f->field, $candidate);
+    try {
+        expect(Craft::$app->getElements()->saveElement($historical))->toBeTrue();
+    } finally {
+        Vizy::$plugin->getAnchors()->forgetMigrationReferences($historical, $f->field);
+        Vizy::$plugin->getContentBaselines()->forget($historical, $f->field);
+    }
 
     $historical = $f->reload($historical);
     $repairedAnchor = Vizy::$plugin->getAnchors()->getAnchor($historical, $f->field, $uid);
@@ -172,6 +189,74 @@ it('repairs a historical duplicate that persisted another owner\'s Matrix anchor
     $repairedRow->setFieldValue($f->text->handle, 'Historical owner only');
     expect(Craft::$app->getElements()->saveElement($repairedRow))->toBeTrue()
         ->and($f->rows($uid, $sourceOwner)[0]->getFieldValue($f->text->handle))->toBe('Surviving shared row');
+});
+
+it('requires parent-owner access before repairing a persisted foreign Matrix anchor reference', function() {
+    $f = new MatrixSupportFixture();
+    $uid = StringHelper::UUID();
+    $sourceOwner = $f->save([$f->block($uid, $f->payload(['Private source row']))]);
+    $sourceDocument = $sourceOwner->getFieldValue($f->field->handle)->toArray();
+    $sourceAnchor = Vizy::$plugin->getAnchors()->getAnchor($sourceOwner, $f->field, $uid);
+    $requestingOwner = new Entry([
+        'sectionId' => $sourceOwner->sectionId,
+        'typeId' => $sourceOwner->typeId,
+        'siteId' => $sourceOwner->siteId,
+        'title' => 'Forged anchor owner',
+    ]);
+    expect(Craft::$app->getElements()->saveElement($requestingOwner))->toBeTrue();
+    $placementUid = FieldPlacements::uid($requestingOwner, $f->field);
+    $stored = (new Query())
+        ->select('content')
+        ->from(Table::ELEMENTS_SITES)
+        ->where(['elementId' => $requestingOwner->id, 'siteId' => $requestingOwner->siteId])
+        ->scalar();
+    $stored = is_string($stored) ? Json::decode($stored) : $stored;
+    $stored[$placementUid] = Json::encode($sourceDocument);
+    Craft::$app->getDb()->createCommand()->update(Table::ELEMENTS_SITES, ['content' => $stored], [
+        'elementId' => $requestingOwner->id,
+        'siteId' => $requestingOwner->siteId,
+    ])->execute();
+    $requestingOwner = $f->reload($requestingOwner);
+    $originalUser = Craft::$app->getUser()->getIdentity();
+    $actor = new User([
+        'username' => 'foreignAnchor' . StringHelper::randomString(6),
+        'email' => StringHelper::randomString(8) . '@example.test',
+        'active' => true,
+        'pending' => false,
+    ]);
+    $actor->newPassword = 'Testing1!';
+    expect(Craft::$app->getElements()->saveElement($actor))->toBeTrue();
+
+    try {
+        Craft::$app->getUser()->setIdentity($actor);
+        expect(Vizy::$plugin->getAnchors()->getStoredReferencedAnchor(
+            $requestingOwner,
+            $f->field,
+            $uid,
+            $sourceAnchor->uid,
+        ))->toBeNull();
+
+        $trustedCandidate = Vizy::$plugin->getDocuments()->normalizeValue($sourceDocument, $requestingOwner, $f->field);
+        Vizy::$plugin->getContentBaselines()->trust($requestingOwner, $f->field, $trustedCandidate);
+        expect(Vizy::$plugin->getAnchors()->getStoredReferencedAnchor(
+            $requestingOwner,
+            $f->field,
+            $uid,
+            $sourceAnchor->uid,
+        ))->toBeNull();
+
+        Vizy::$plugin->getAnchors()->trustMigrationReferences($requestingOwner, $f->field, $trustedCandidate);
+        expect(Vizy::$plugin->getAnchors()->getStoredReferencedAnchor(
+            $requestingOwner,
+            $f->field,
+            $uid,
+            $sourceAnchor->uid,
+        )?->id)->toBe($sourceAnchor->id);
+    } finally {
+        Vizy::$plugin->getAnchors()->forgetMigrationReferences($requestingOwner, $f->field);
+        Vizy::$plugin->getContentBaselines()->forget($requestingOwner, $f->field);
+        Craft::$app->getUser()->setIdentity($originalUser);
+    }
 });
 
 it('keeps site-specific Matrix rows separate on the same logical Vizy block', function() {

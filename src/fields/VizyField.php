@@ -955,6 +955,7 @@ class VizyField extends Field implements PreviewableFieldInterface
             $baselineTypes[$block->uid()] = $block->blockTypeUid();
             $baselineBlocks[$block->uid()] = $block;
         }
+        $insertableBlockTypeUids = $this->getInsertableBlockTypeUids($element);
 
         foreach ($allBlocks as $block) {
             $uid = $block->uid();
@@ -962,7 +963,7 @@ class VizyField extends Field implements PreviewableFieldInterface
 
             if (
                 $this->allowsBlockTypeUid($typeUid)
-                && !$this->blockTypeIsAvailableFor($typeUid, $element)
+                && !in_array($typeUid, $insertableBlockTypeUids, true)
                 && ($baselineTypes[$uid] ?? null) !== $typeUid
             ) {
                 $element->addError(

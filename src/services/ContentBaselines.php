@@ -52,8 +52,11 @@ final class ContentBaselines extends Component
         $embedded = \verbb\vizy\helpers\EmbeddedOwners::scope($owner);
 
         if ($embedded) {
-            $root = $embedded['owner'];
-            $root = (!$root->id && $root->duplicateOf) ? $root->duplicateOf : $root;
+            $root = $this->_persistedBaselineOwner($embedded['owner']);
+
+            if (!$root) {
+                return null;
+            }
             $content = (new Query())->select('content')->from('{{%elements_sites}}')
                 ->where(['elementId' => $root->id, 'siteId' => $root->siteId])->scalar();
             $placement = FieldPlacements::uid($owner, $field);
@@ -72,13 +75,9 @@ final class ContentBaselines extends Component
             return $this->documents[$key];
         }
 
-        $ownerId = $owner->id;
-        $siteId = $owner->siteId;
-
-        if ((!$ownerId || !$siteId) && $owner->duplicateOf instanceof ElementInterface) {
-            $ownerId = $owner->duplicateOf->id;
-            $siteId = $owner->duplicateOf->siteId;
-        }
+        $baselineOwner = $this->_persistedBaselineOwner($owner);
+        $ownerId = $baselineOwner?->id;
+        $siteId = $baselineOwner?->siteId;
 
         if (!$ownerId || !$siteId || !$field->uid) {
             return null;
@@ -119,6 +118,29 @@ final class ContentBaselines extends Component
 
     // Private Methods
     // =========================================================================
+
+    /**
+     * Draft rows are author-controlled snapshots, so only their canonical can
+     * grandfather capabilities. Revisions remain trusted persisted snapshots.
+     */
+    private function _persistedBaselineOwner(ElementInterface $owner): ?ElementInterface
+    {
+        if ($owner->getIsDraft()) {
+            $canonicalId = $owner->getCanonicalId();
+
+            if (!$canonicalId || $canonicalId === $owner->id) {
+                return null;
+            }
+            $canonical = $owner->getCanonical();
+            return $canonical->id === $owner->id ? null : $canonical;
+        }
+
+        if ((!$owner->id || !$owner->siteId) && $owner->duplicateOf instanceof ElementInterface) {
+            return $owner->duplicateOf;
+        }
+
+        return $owner->id && $owner->siteId ? $owner : null;
+    }
 
     private function _key(ElementInterface $owner, VizyField $field): ?string
     {

@@ -444,10 +444,12 @@ it('resumes a persisting checkpoint when live content already matches the candid
     $candidateArray = Json::decode((string)$checkpoint->candidateJson);
     $candidate = (new \verbb\vizy\document\DocumentParser())->parse($candidateArray, $owner, $field);
     Vizy::$plugin->getContentBaselines()->trust($owner, $field, $candidate);
+    Vizy::$plugin->getAnchors()->trustMigrationReferences($owner, $field, $candidate);
     try {
         $owner->setFieldValue($field->handle, $candidate);
         expect(Craft::$app->getElements()->saveElement($owner, true, false))->toBeTrue();
     } finally {
+        Vizy::$plugin->getAnchors()->forgetMigrationReferences($owner, $field);
         Vizy::$plugin->getContentBaselines()->forget($owner, $field);
     }
 

@@ -274,6 +274,7 @@ final class OwnerContentMigrator extends Component
             $candidateArray = Json::decode((string)$checkpoint->candidateJson);
             $candidate = (new DocumentParser())->parse($candidateArray, $owner, $field);
             Vizy::$plugin->getContentBaselines()->trust($owner, $field, $candidate);
+            Vizy::$plugin->getAnchors()->trustMigrationReferences($owner, $field, $candidate);
             $owner->setFieldValue($field->handle, $candidate);
 
             // ContentBaselines trust lets Editor Config preserve unknown/disabled capabilities
@@ -308,6 +309,7 @@ final class OwnerContentMigrator extends Component
             $checkpoint->persistedAt = null;
             return $this->_fail($checkpoint, 'ownerSaveFailed', $exception->getMessage());
         } finally {
+            Vizy::$plugin->getAnchors()->forgetMigrationReferences($owner, $field);
             Vizy::$plugin->getContentBaselines()->forget($owner, $field);
             unset($this->saving[$key]);
         }

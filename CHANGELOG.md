@@ -22,6 +22,8 @@
 - Feed Me HTML mappings now use Vizy’s field and Editor Config-aware importer, record conversion-loss diagnostics, and can require lossless conversion before accepting a mapped value. See [Importing with Feed Me](https://verbb.io/craft-plugins/vizy/docs/v4/user-guides/importing-with-feed-me). ([#289](https://github.com/verbb/vizy/issues/289))
 
 ### Fixed
+- Fixed a medium-severity content authorization vulnerability.
+- Fixed a low-severity content disclosure vulnerability.
 - Fixed unrelated content containing a Matrix anchor identifier being treated as a live cross-owner reference.
 - Fixed arbitrary legacy Block identifiers being interpolated into control-panel input namespaces.
 - Fixed a medium-severity remote code execution vulnerability.
