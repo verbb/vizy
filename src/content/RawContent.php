@@ -235,9 +235,16 @@ final class RawContent
         $db = $options['db'] ?? Craft::$app->getDb();
         $dryRun = $options['dryRun'] ?? false;
         $overwrite = $options['overwrite'] ?? false;
+        $skipConflicts = $options['skipConflicts'] ?? false;
+        $skipEmptySources = $options['skipEmptySources'] ?? false;
+        $onConflict = $options['onConflict'] ?? null;
 
         if (!$db instanceof Connection || (!$dryRun && !$db->getTransaction()?->getIsActive())) {
             throw new RuntimeException('Raw content writes require an active transaction on the supplied database connection.');
+        }
+
+        if ($onConflict !== null && !is_callable($onConflict)) {
+            throw new InvalidArgumentException('onConflict must be callable.');
         }
 
         $batchSize = $options['batchSize'] ?? 100;
@@ -251,6 +258,8 @@ final class RawContent
             'matched' => 0,
             'copied' => 0,
             'alreadyCopied' => 0,
+            'skippedExisting' => 0,
+            'skippedEmpty' => 0,
             'modified' => 0,
             'lastRowId' => 0,
         ];
@@ -337,8 +346,14 @@ final class RawContent
                             'destinationPlacementUid' => $destinationPlacementUid,
                             'layoutUid' => $root['layoutUid'],
                         ];
-                        $replacement = $transform($content[$placementUid], $context);
                         $result['matched']++;
+
+                        if ($skipEmptySources && $this->_vacantCopyValue($content[$placementUid])) {
+                            $result['skippedEmpty']++;
+                            continue;
+                        }
+
+                        $replacement = $transform($content[$placementUid], $context);
 
                         if (array_key_exists($destinationPlacementUid, $content)) {
                             if (RawJson::same($content[$destinationPlacementUid], $replacement)) {
@@ -346,8 +361,17 @@ final class RawContent
                                 continue;
                             }
 
-                            if (!$overwrite && !$this->_vacantCopyDestination($content[$destinationPlacementUid])) {
-                                throw new RuntimeException('The destination field contains content that differs from the planned conversion. Its source was not changed.');
+                            if (!$overwrite && !$this->_vacantCopyValue($content[$destinationPlacementUid])) {
+                                if (!$skipConflicts) {
+                                    throw new RuntimeException('The destination field contains content that differs from the planned conversion. Its source was not changed.');
+                                }
+
+                                $result['skippedExisting']++;
+
+                                if ($onConflict !== null) {
+                                    $onConflict($content[$placementUid], $content[$destinationPlacementUid], $replacement, $context);
+                                }
+                                continue;
                             }
                         }
 
@@ -363,6 +387,9 @@ final class RawContent
                             $context,
                             $result,
                             $overwrite,
+                            $skipConflicts,
+                            $skipEmptySources,
+                            $onConflict,
                             0,
                         );
                     }
@@ -447,6 +474,9 @@ final class RawContent
         array $context,
         array &$stats,
         bool $overwrite,
+        bool $skipConflicts,
+        bool $skipEmptySources,
+        ?callable $onConflict,
         int $depth,
     ): mixed {
         if ($depth > 64) {
@@ -473,6 +503,9 @@ final class RawContent
             $context,
             &$stats,
             $overwrite,
+            $skipConflicts,
+            $skipEmptySources,
+            $onConflict,
             $depth,
         ): array {
             $segment += [
@@ -499,6 +532,9 @@ final class RawContent
                     $childContext,
                     $stats,
                     $overwrite,
+                    $skipConflicts,
+                    $skipEmptySources,
+                    $onConflict,
                     $depth + 1,
                 );
 
@@ -514,9 +550,15 @@ final class RawContent
             }
 
             $childContext['destinationPlacementUid'] = $destinationPlacementUid;
-            $replacement = $transform($raw, $childContext);
             $fieldSlots = $segment['fieldSlots'] ?? [];
             $stats['matched']++;
+
+            if ($skipEmptySources && $this->_vacantCopyValue($raw)) {
+                $stats['skippedEmpty']++;
+                return ['action' => 'unchanged'];
+            }
+
+            $replacement = $transform($raw, $childContext);
 
             if (array_key_exists($destinationPlacementUid, $fieldSlots)) {
                 if (RawJson::same($fieldSlots[$destinationPlacementUid], $replacement)) {
@@ -524,8 +566,17 @@ final class RawContent
                     return ['action' => 'unchanged'];
                 }
 
-                if (!$overwrite && !$this->_vacantCopyDestination($fieldSlots[$destinationPlacementUid])) {
-                    throw new RuntimeException('The destination field contains content that differs from the planned conversion. Its source was not changed.');
+                if (!$overwrite && !$this->_vacantCopyValue($fieldSlots[$destinationPlacementUid])) {
+                    if (!$skipConflicts) {
+                        throw new RuntimeException('The destination field contains content that differs from the planned conversion. Its source was not changed.');
+                    }
+
+                    $stats['skippedExisting']++;
+
+                    if ($onConflict !== null) {
+                        $onConflict($raw, $fieldSlots[$destinationPlacementUid], $replacement, $childContext);
+                    }
+                    return ['action' => 'unchanged'];
                 }
             }
 
@@ -539,7 +590,7 @@ final class RawContent
         });
     }
 
-    private function _vacantCopyDestination(mixed $value): bool
+    private function _vacantCopyValue(mixed $value): bool
     {
         return $value === null || $value === '';
     }

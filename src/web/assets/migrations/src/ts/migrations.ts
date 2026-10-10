@@ -2,28 +2,24 @@ import '@verbb/plugin-kit-web/plugin-kit.css';
 import '@verbb/plugin-kit-web/components/button';
 import '@verbb/plugin-kit-web/components/alert';
 import '@verbb/plugin-kit-web/components/checkbox';
-import '@verbb/plugin-kit-web/components/dialog';
 import '@verbb/plugin-kit-web/components/field';
 import '@verbb/plugin-kit-web/components/select';
 import '@verbb/plugin-kit-web/components/spinner';
+import '@verbb/plugin-kit-web/components/state-panel';
 
 import { requestMigrationWizard } from './migration-request';
 import './migrations.css';
 
-interface MigrationDialog extends HTMLElement {
-    updateComplete: Promise<unknown>;
-    show: () => Promise<void>;
-    hide: () => Promise<void>;
-}
-
 class VizyMigrationWizard extends HTMLElement {
     private currentStep = 1;
-    private dialog: MigrationDialog | null = null;
     private submitting = false;
 
     connectedCallback(): void {
         this.currentStep = Number.parseInt(this.getAttribute('initial-step') ?? '1', 10) || 1;
-        this.dialog = this.querySelector<MigrationDialog>('pk-dialog');
+
+        this.startButton()?.addEventListener('click', () => {
+            this.showWorkflow();
+        });
 
         this.querySelectorAll<HTMLElement>('[data-vizy-go-to]').forEach((button) => {
             button.addEventListener('click', () => {
@@ -31,35 +27,48 @@ class VizyMigrationWizard extends HTMLElement {
             });
         });
 
-        this.querySelectorAll<HTMLElement>('[data-vizy-close]').forEach((button) => {
-            button.addEventListener('click', () => void this.dialog?.hide());
+        this.querySelectorAll<HTMLElement>('[data-vizy-show-start]').forEach((button) => {
+            button.addEventListener('click', () => this.showStart());
         });
 
         this.querySelectorAll<HTMLFormElement>('form').forEach((form) => {
             form.addEventListener('submit', (event) => void this.submitForm(event, form));
         });
 
-        this.showStep(this.currentStep);
-
-        if (this.hasAttribute('auto-open')) {
-            void customElements.whenDefined('pk-dialog').then(async () => {
-                const dialog = this.dialog;
-
-                if (!dialog) {
-                    return;
-                }
-
-                await dialog.updateComplete;
-
-                if (this.isConnected) {
-                    await dialog.show();
-                }
-            });
+        if (this.hasAttribute('active')) {
+            this.showWorkflow();
+        } else {
+            this.showStart(false);
         }
     }
 
-    private showStep(step: number): void {
+    private showStart(moveFocus = true): void {
+        this.currentStep = 1;
+        this.removeAttribute('active');
+        this.querySelector<HTMLElement>('[data-vizy-start]')?.toggleAttribute('hidden', false);
+        this.querySelector<HTMLElement>('[data-vizy-workflow]')?.toggleAttribute('hidden', true);
+
+        if (moveFocus) {
+            this.startButton()?.focus();
+        }
+    }
+
+    private showWorkflow(moveFocus = true): void {
+        this.setAttribute('active', '');
+        this.querySelector<HTMLElement>('[data-vizy-start]')?.toggleAttribute('hidden', true);
+        this.querySelector<HTMLElement>('[data-vizy-workflow]')?.toggleAttribute('hidden', false);
+        this.showStep(this.currentStep, moveFocus);
+    }
+
+    private startButton(): HTMLElement | null {
+        return this.querySelector<HTMLElement>('[data-vizy-start-wizard], [data-vizy-start-copy]');
+    }
+
+    private showStep(step: number, moveFocus = true): void {
         this.currentStep = Math.min(4, Math.max(1, step));
+        this.setAttribute('active', '');
+        this.querySelector<HTMLElement>('[data-vizy-start]')?.toggleAttribute('hidden', true);
+        this.querySelector<HTMLElement>('[data-vizy-workflow]')?.toggleAttribute('hidden', false);
 
         this.querySelectorAll<HTMLElement>('[data-vizy-step-panel]').forEach((panel) => {
             panel.hidden = Number.parseInt(panel.dataset.vizyStepPanel ?? '0', 10) !== this.currentStep;
@@ -76,19 +85,34 @@ class VizyMigrationWizard extends HTMLElement {
             button.hidden = Number.parseInt(button.dataset.vizyFooterStep ?? '0', 10) !== this.currentStep;
         });
 
+        const actions = this.querySelector<HTMLElement>('[data-vizy-actions]');
+
+        if (actions) {
+            actions.hidden = !Array.from(actions.querySelectorAll<HTMLElement>('[data-vizy-footer-step]'))
+                .some((button) => !button.hidden);
+        }
+
         const loading = this.querySelector<HTMLElement>('[data-vizy-loading]');
 
         if (loading) {
             loading.hidden = true;
         }
+
+        if (moveFocus) {
+            this.querySelector<HTMLElement>(`[data-vizy-step-panel="${this.currentStep}"] [data-vizy-step-heading]`)?.focus();
+        }
     }
 
     private showLoading(step: number): void {
         this.currentStep = step;
+        this.setAttribute('active', '');
+        this.querySelector<HTMLElement>('[data-vizy-start]')?.toggleAttribute('hidden', true);
+        this.querySelector<HTMLElement>('[data-vizy-workflow]')?.toggleAttribute('hidden', false);
 
         this.querySelectorAll<HTMLElement>('[data-vizy-step-panel], [data-vizy-footer-step]').forEach((element) => {
             element.hidden = true;
         });
+        this.querySelector<HTMLElement>('[data-vizy-actions]')?.toggleAttribute('hidden', true);
 
         this.querySelectorAll<HTMLElement>('[data-vizy-step]').forEach((item) => {
             const itemStep = Number.parseInt(item.dataset.vizyStep ?? '0', 10);

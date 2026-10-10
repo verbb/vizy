@@ -1,12 +1,8 @@
-vizy-migration-wizard pk-dialog {
-    --pk-dialog-width: min(96rem, calc(100vw - 4rem));
-    --pk-dialog-max-width: min(96rem, calc(100vw - 4rem));
-    --pk-dialog-height: min(60rem, calc(100vh - 4rem));
-    --pk-dialog-max-height: calc(100vh - 4rem);
+vizy-migration-wizard {
+    display: block;
 }
 
 .vizy-migration-intro {
-    max-width: 48rem;
     margin-bottom: 1.5rem;
 }
 
@@ -83,6 +79,11 @@ vizy-migration-wizard pk-dialog {
     margin-top: 1.5rem;
 }
 
+.vizy-migration-fields--stacked {
+    grid-template-columns: minmax(0, 1fr);
+    max-width: 48rem;
+}
+
 .vizy-migration-summary {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(9rem, 1fr));
@@ -112,6 +113,97 @@ vizy-migration-wizard pk-dialog {
     margin-top: 1rem;
 }
 
+.vizy-migration-notice > strong {
+    display: block;
+}
+
+.vizy-migration-notice > p {
+    margin: 0;
+}
+
+.vizy-migration-notice > strong + p {
+    margin-top: 0.125rem;
+}
+
+.vizy-migration-feedback-list {
+    display: grid;
+    gap: 0.75rem;
+    margin-block: 1rem 1.5rem;
+    padding: 0;
+    list-style: none;
+}
+
+.vizy-migration-feedback-list li {
+    padding: 0.875rem 1rem;
+    border: 1px solid var(--hairline-color);
+    border-radius: var(--large-border-radius);
+    background: var(--gray-050);
+}
+
+.vizy-migration-feedback-heading {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 0.25rem 0.75rem;
+}
+
+.vizy-migration-feedback-meta {
+    color: var(--gray-500);
+    font-size: 0.875rem;
+}
+
+.vizy-migration-feedback-list p {
+    margin: 0.375rem 0 0;
+    color: var(--gray-700);
+}
+
+.vizy-migration-details {
+    margin: 1.75rem 0;
+    padding: 1rem;
+    border: 1px solid var(--hairline-color);
+    border-radius: var(--large-border-radius);
+}
+
+.vizy-migration-details h3 {
+    margin-top: 0;
+}
+
+.vizy-migration-details dl {
+    margin: 0;
+}
+
+.vizy-migration-details dl > div {
+    display: grid;
+    grid-template-columns: minmax(9rem, 0.3fr) minmax(0, 1fr);
+    gap: 1rem;
+    padding: 0.875rem 0;
+    border-top: 1px solid var(--hairline-color);
+}
+
+.vizy-migration-details dt {
+    font-weight: 600;
+}
+
+.vizy-migration-details dd {
+    min-width: 0;
+    margin: 0;
+}
+
+.vizy-migration-field-value {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 0.375rem 0.75rem;
+}
+
+.vizy-migration-path code {
+    overflow-wrap: anywhere;
+}
+
+.vizy-migration-blocked {
+    margin-top: 1.5rem;
+}
+
 .vizy-migration-layouts {
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -128,6 +220,10 @@ vizy-migration-wizard pk-dialog {
     gap: 1.5rem;
 }
 
+.vizy-migration-example-heading {
+    margin-bottom: 0.75rem;
+}
+
 .vizy-migration-preview-grid {
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -136,21 +232,44 @@ vizy-migration-wizard pk-dialog {
 }
 
 .vizy-migration-preview iframe {
+    display: block;
+    box-sizing: border-box;
     width: 100%;
     min-height: 10rem;
     border: 0;
+    border-radius: var(--small-border-radius);
     background: white;
 }
 
 .vizy-migration-preview pre {
     margin: 0;
+    padding: 1rem;
+    border-radius: var(--small-border-radius);
+    color: var(--text-color);
+    background: white;
+    font: inherit;
     white-space: pre-wrap;
+}
+
+.vizy-migration-diagnostics {
+    margin: 0.75rem 0 0;
+    color: var(--gray-700);
 }
 
 .vizy-migration-confirmation {
     display: grid;
     gap: 1rem;
     margin-top: 1.5rem;
+}
+
+.vizy-migration-actions {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    gap: 0.5rem;
+    margin-top: 1.75rem;
+    padding-top: 1.25rem;
+    border-top: 1px solid var(--hairline-color);
 }
 
 .vizy-migration-loading {
@@ -165,8 +284,11 @@ vizy-migration-wizard pk-dialog {
     justify-self: center;
 }
 
+[data-vizy-start][hidden],
+[data-vizy-workflow][hidden],
 [data-vizy-step-panel][hidden],
 [data-vizy-footer-step][hidden],
+[data-vizy-actions][hidden],
 [data-vizy-loading][hidden],
 [data-vizy-loading] [hidden] {
     display: none !important;
@@ -175,7 +297,8 @@ vizy-migration-wizard pk-dialog {
 @media (max-width: 700px) {
     .vizy-migration-fields,
     .vizy-migration-layouts,
-    .vizy-migration-preview-grid {
+    .vizy-migration-preview-grid,
+    .vizy-migration-details dl > div {
         grid-template-columns: 1fr;
     }
 

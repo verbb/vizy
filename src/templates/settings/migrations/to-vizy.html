@@ -1,243 +1,367 @@
 {% extends 'vizy/_layouts/settings' %}
 
-{% import '_includes/forms' as forms %}
-
 {% set selectedTab = 'migrations-to-vizy' %}
-{% set title = 'Migrate to Vizy' | t('vizy') %}
+{% set title = 'Other Fields to Vizy' | t('vizy') %}
+{% set canStart = (sources.ckeditor.fieldCount ?? 0) + (sources.redactor.fieldCount ?? 0) %}
 
 {% block blockContent %}
-    <div>
-        <h2>{{ 'Migrate CKEditor and Redactor fields' | t('vizy') }}</h2>
+    <vizy-migration-wizard initial-step="{{ wizardStep }}"{% if openWizard %} active{% endif %}>
+        <section data-vizy-start{% if openWizard %} hidden{% endif %}>
+            <div class="vizy-migration-intro">
+                <p>{{ 'Convert an existing CKEditor or Redactor field to Vizy without changing its handle or field-layout placements. Review the content first, then migrate the field and its values together.' | t('vizy') }}</p>
 
-        <p>{{ 'Convert existing CKEditor and Redactor fields to Vizy without changing their handles or field-layout placements. Analyse a field first, review any representation loss, then run the migration locally.' | t('vizy') }}</p>
+                <p>{{ 'Vizy checkpoints the original HTML, generates a deployable content migration, and verifies the converted content before completing.' | t('vizy') }}</p>
 
-        <p>{{ 'Vizy generates a deployable content migration, changes the field through Project Config, checkpoints the original HTML, converts every known placement and site, and verifies the resulting documents.' | t('vizy') }}</p>
+                <p><a href="https://verbb.io/craft-plugins/vizy/docs/v4/user-guides/migrating-rich-text-fields" class="go" target="_blank" rel="noopener">{{ 'Read the migration guide' | t('vizy') }}</a></p>
+            </div>
 
-        <p><a href="https://verbb.io/craft-plugins/vizy/docs/v4/user-guides/migrating-rich-text-fields" class="go" target="_blank" rel="noopener">{{ 'Read the migration guide' | t('vizy') }}</a></p>
-    </div>
-
-    {% if error %}
-        <hr>
-        <pk-alert variant="error" heading="{{ 'Migration could not continue' | t('vizy') }}" announce="assertive">
-            {{ error }}
-        </pk-alert>
-    {% endif %}
-
-    {% if result %}
-        <hr>
-        <div>
-            <h2 class="success">{{ 'Migration completed' | t('vizy') }}</h2>
-            <p>{{ 'The field and its content were converted and verified. Commit the generated content migration and Project Config changes together.' | t('vizy') }}</p>
-
-            <table class="data fullwidth">
-                <tbody>
-                    <tr>
-                        <th>{{ 'Generated migration' | t('vizy') }}</th>
-                        <td><code>{{ result.migrationPath }}</code></td>
-                    </tr>
-                    <tr>
-                        <th>{{ 'Project Config path' | t('vizy') }}</th>
-                        <td><code>{{ result.projectConfigPath }}</code></td>
-                    </tr>
-                    <tr>
-                        <th>{{ 'Conversion policy' | t('vizy') }}</th>
-                        <td>{{ result.strict ? ('Lossless only' | t('vizy')) : ('Reviewed loss accepted' | t('vizy')) }}</td>
-                    </tr>
-                </tbody>
-            </table>
-        </div>
-    {% endif %}
-
-    {% if analysis %}
-        <hr>
-        <div>
-            <h2>{{ 'Analysis for {name}' | t('vizy', { name: analysis.source.name }) }}</h2>
-
-            {% set statusLabel = analysis.status == 'ready'
-                ? ('Ready' | t('vizy'))
-                : (analysis.status == 'requires-review'
-                    ? ('Requires review' | t('vizy'))
-                    : ('Blocked' | t('vizy')))
-            %}
-            {% set statusClass = analysis.status == 'ready'
-                ? 'green'
-                : (analysis.status == 'requires-review' ? 'orange' : 'red')
-            %}
-
-            <p><span class="status {{ statusClass }}"></span> <strong>{{ statusLabel }}</strong> · <code>{{ analysis.source.handle }}</code> · {{ analysis.source.editor }}</p>
-
-            <table class="data fullwidth">
-                <tbody>
-                    <tr>
-                        <th>{{ 'Occurrences' | t('vizy') }}</th>
-                        <td>{{ analysis.content.occurrences }}</td>
-                        <th>{{ 'Elements' | t('vizy') }}</th>
-                        <td>{{ analysis.content.elements }}</td>
-                    </tr>
-                    <tr>
-                        <th>{{ 'Populated values' | t('vizy') }}</th>
-                        <td>{{ analysis.content.populated }}</td>
-                        <th>{{ 'Sites' | t('vizy') }}</th>
-                        <td>{{ analysis.content.siteIds | length }}</td>
-                    </tr>
-                    <tr>
-                        <th>{{ 'Lossless' | t('vizy') }}</th>
-                        <td>{{ analysis.content.lossless }}</td>
-                        <th>{{ 'Lossy' | t('vizy') }}</th>
-                        <td>{{ analysis.content.lossy }}</td>
-                    </tr>
-                    <tr>
-                        <th>{{ 'Failures' | t('vizy') }}</th>
-                        <td>{{ analysis.content.failures }}</td>
-                        <th>{{ 'Editor Config' | t('vizy') }}</th>
-                        <td><code>{{ analysis.target.editorConfig }}</code></td>
-                    </tr>
-                </tbody>
-            </table>
-
-            {% if analysis.content.diagnosticCounts %}
-                <h3>{{ 'Diagnostics' | t('vizy') }}</h3>
-                <table class="data fullwidth">
-                    <thead>
-                        <tr>
-                            <th>{{ 'Code' | t('vizy') }}</th>
-                            <th>{{ 'Occurrences' | t('vizy') }}</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% for code, count in analysis.content.diagnosticCounts %}
-                            <tr>
-                                <td><code>{{ code }}</code></td>
-                                <td>{{ count }}</td>
-                            </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
+            {% if not canStart %}
+                <div class="notice with-icon">
+                    <p>{{ 'Create a CKEditor or Redactor field before starting this migration.' | t('vizy') }}</p>
+                </div>
             {% endif %}
 
-            {% if analysis.content.samples %}
-                <h3>{{ 'Representative content requiring attention' | t('vizy') }}</h3>
-                <table class="data fullwidth fixed-layout">
-                    <thead>
-                        <tr>
-                            <th>{{ 'Element' | t('vizy') }}</th>
-                            <th>{{ 'Site' | t('vizy') }}</th>
-                            <th>{{ 'Preview' | t('vizy') }}</th>
-                            <th>{{ 'Result' | t('vizy') }}</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% for sample in analysis.content.samples %}
-                            <tr>
-                                <td>{{ sample.elementId }}</td>
-                                <td>{{ sample.siteId }}</td>
-                                <td><code>{{ sample.preview }}</code></td>
-                                <td>
-                                    {% if sample.error is defined %}
-                                        <span class="error">{{ sample.error }}</span>
-                                    {% elseif sample.lossless %}
-                                        {{ 'Lossless' | t('vizy') }}
-                                    {% else %}
-                                        {{ 'Requires review' | t('vizy') }}
-                                    {% endif %}
-                                </td>
-                            </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
+            <pk-button data-vizy-start-wizard variant="primary"{% if not canStart %} disabled{% endif %}>{{ 'Start' | t('app') }}</pk-button>
+        </section>
 
-                {% if analysis.content.samplesTruncated %}
-                    <p class="light">{{ 'Only the first 25 affected values are shown. Use the console analysis command for the complete machine-readable plan.' | t('vizy') }}</p>
+        <div class="vizy-migration-workflow" data-vizy-workflow{% if not openWizard %} hidden{% endif %}>
+            <ol class="vizy-migration-steps" aria-label="{{ 'Migration progress' | t('vizy') }}">
+                <li class="vizy-migration-step" data-vizy-step="1">{{ 'Choose field' | t('vizy') }}</li>
+                <li class="vizy-migration-step" data-vizy-step="2">{{ 'Review' | t('vizy') }}</li>
+                <li class="vizy-migration-step" data-vizy-step="3">{{ 'Confirm' | t('vizy') }}</li>
+                <li class="vizy-migration-step" data-vizy-step="4">{{ 'Migrate' | t('vizy') }}</li>
+            </ol>
+
+            <section data-vizy-step-panel="1">
+                <h2 data-vizy-step-heading tabindex="-1">{{ 'Choose how to convert the field' | t('vizy') }}</h2>
+                <p>{{ 'Select the CKEditor or Redactor field that should become a Vizy field, then choose how its converted content should be configured.' | t('vizy') }}</p>
+
+                <pk-alert class="vizy-migration-notice" variant="warning">
+                    <strong>{{ 'Confirming this migration changes saved data.' | t('vizy') }}</strong>
+                    <p>{{ 'Reviewing the migration is read-only. Once confirmed, Vizy replaces the selected field and converts its stored content.' | t('vizy') }}</p>
+                </pk-alert>
+
+                <pk-alert class="vizy-migration-notice" data-vizy-request-error variant="error" hidden>
+                    <strong>{{ 'Vizy could not continue.' | t('vizy') }}</strong>
+                    <p>{{ 'Check your connection and try again.' | t('vizy') }}</p>
+                </pk-alert>
+
+                {% if error and wizardStep == 1 %}
+                    <pk-alert class="vizy-migration-notice" variant="warning" size="sm">
+                        <strong>{{ 'The field could not be analysed.' | t('vizy') }}</strong>
+                        <p>{{ error }}</p>
+                    </pk-alert>
                 {% endif %}
-            {% endif %}
-        </div>
 
-        {% if not result and analysis.status != 'blocked' %}
-            <hr>
-            <div>
-                <h2>{{ 'Migrate field and content' | t('vizy') }}</h2>
+                <form id="vizy-to-vizy-analyze" method="post" accept-charset="UTF-8" data-vizy-loading-step="2">
+                    {{ csrfInput() }}
+                    {{ actionInput('vizy/rich-text-conversions/analyze') }}
 
-                {% if not allowAdminChanges %}
-                    <pk-alert variant="warning" size="sm">{{ 'Administrative changes are disabled in this environment. Run the console conversion in an environment where allowAdminChanges is enabled.' | t('vizy') }}</pk-alert>
-                {% else %}
-                    <p>{{ 'This permanently replaces the source field with Vizy and converts its stored values. Vizy keeps recovery checkpoints, but restoring also requires the matching pre-conversion Project Config.' | t('vizy') }}</p>
+                    <div class="vizy-migration-fields vizy-migration-fields--stacked">
+                        <pk-field label="{{ 'Field to convert' | t('vizy') }}" instructions="{{ 'This field becomes Vizy and keeps its name, handle, and field-layout placements.' | t('vizy') }}" required>
+                            <pk-select name="field" value="{{ selectedField ?? '' }}" placeholder="{{ 'Choose a CKEditor or Redactor field' | t('vizy') }}" width="full" required>
+                                {% for source in sources %}
+                                    {% for field in source.fields %}
+                                        <pk-option value="{{ field.uid }}"{% if field.uid == selectedField %} selected{% endif %}>{{ field.label }} — {{ source.label }}</pk-option>
+                                    {% endfor %}
+                                {% endfor %}
+                            </pk-select>
+                        </pk-field>
 
-                    <form method="post" accept-charset="UTF-8">
-                        {{ csrfInput() }}
-                        {{ actionInput('vizy/rich-text-conversions/run') }}
-                        {{ hiddenInput('field', selectedField) }}
-                        {{ hiddenInput('editorConfig', selectedEditorConfig) }}
+                        <pk-field label="{{ 'Vizy Editor Config' | t('vizy') }}" instructions="{{ 'This controls which HTML structures and formatting the converted field can preserve.' | t('vizy') }}" required>
+                            <pk-select name="editorConfig" value="{{ selectedEditorConfig }}" placeholder="{{ 'Choose an Editor Config' | t('vizy') }}" width="full" required>
+                                {% for option in editorConfigOptions %}
+                                    <pk-option value="{{ option.value }}"{% if option.value == selectedEditorConfig %} selected{% endif %}>{{ option.label }}</pk-option>
+                                {% endfor %}
+                            </pk-select>
+                        </pk-field>
+                    </div>
+                </form>
+            </section>
 
-                        {{ forms.checkboxField({
-                            id: 'create-backup',
-                            name: 'createBackup',
-                            label: 'Create a database backup before migrating' | t('vizy'),
-                            checked: true,
-                        }) }}
+            <section data-vizy-step-panel="2" hidden>
+                {% if not analysis or analysis.status != 'blocked' %}
+                    <h2 data-vizy-step-heading tabindex="-1">{{ 'Review the migration' | t('vizy') }}</h2>
+                {% endif %}
 
-                        {% if analysis.status == 'requires-review' %}
-                            {{ forms.checkboxField({
-                                id: 'allow-lossy',
-                                name: 'allowLossy',
-                                label: 'I reviewed the diagnostics and accept the listed representation loss' | t('vizy'),
-                            }) }}
+                {% if analysis %}
+                    {% if analysis.status == 'blocked' %}
+                        <pk-state-panel
+                            class="vizy-migration-blocked"
+                            data-vizy-step-heading
+                            variant="error"
+                            size="lg"
+                            announce="assertive"
+                            tabindex="-1"
+                            heading="{{ 'Some content could not be converted.' | t('vizy') }}"
+                        >
+                            <p>{{ 'Vizy found {count, plural, =1{1 value that could not be converted} other{# values that could not be converted}}. Review the affected content below, then choose the field again.' | t('vizy', { count: analysis.content.failures }) }}</p>
+
+                            {% for sample in analysis.content.samples %}
+                                {% if sample.error is defined %}
+                                    <p>
+                                        <strong>
+                                            {% if sample.elementUrl %}<a href="{{ sample.elementUrl }}" target="_blank" rel="noopener">{% endif %}
+                                            {{ sample.elementLabel }}
+                                            {% if sample.elementUrl %}</a>{% endif %}
+                                        </strong>
+                                        {% if sample.siteName or (sample.variantLabel ?? null) %}
+                                            · {% if sample.siteName %}{{ sample.siteName }}{% endif %}{% if sample.siteName and (sample.variantLabel ?? null) %} · {% endif %}{% if sample.variantLabel ?? null %}{{ sample.variantLabel }}{% endif %}
+                                        {% endif %}
+                                        — {{ sample.error }}
+                                    </p>
+                                {% endif %}
+                            {% endfor %}
+
+                            <pk-button slot="actions" data-vizy-go-to="1" variant="primary">{{ 'Choose a different field' | t('vizy') }}</pk-button>
+                        </pk-state-panel>
+                    {% else %}
+                        {% set statusLabel = analysis.status == 'ready'
+                            ? ('Ready to migrate' | t('vizy'))
+                            : ('Ready with changes' | t('vizy'))
+                        %}
+                        {% set statusClass = analysis.status == 'ready' ? 'green' : 'orange' %}
+
+                        <p><span class="status {{ statusClass }}"></span> <strong>{{ statusLabel }}</strong> · <code>{{ analysis.source.handle }}</code> ({{ analysis.source.editor }}) → Vizy</p>
+
+                        <div class="vizy-migration-summary">
+                            <div class="vizy-migration-stat">
+                                <strong>{{ analysis.content.populated }}</strong>
+                                <span>{{ 'Populated values' | t('vizy') }}</span>
+                            </div>
+                            <div class="vizy-migration-stat">
+                                <strong>{{ analysis.content.lossless }}</strong>
+                                <span>{{ 'No content changes' | t('vizy') }}</span>
+                            </div>
+                            <div class="vizy-migration-stat">
+                                <strong>{{ analysis.content.lossy }}</strong>
+                                <span>{{ 'Changes to review' | t('vizy') }}</span>
+                            </div>
+                            <div class="vizy-migration-stat">
+                                <strong>{{ analysis.content.failures }}</strong>
+                                <span>{{ 'Conversion failures' | t('vizy') }}</span>
+                            </div>
+                        </div>
+
+                        {% if analysis.status == 'ready' %}
+                            <p class="light">{{ 'Everything in the populated values can be represented in the selected Vizy Editor Config.' | t('vizy') }}</p>
+                        {% else %}
+                            <pk-alert class="vizy-migration-notice" variant="warning" size="sm">
+                                <strong>{{ '{count, plural, =1{1 value will look or behave differently in Vizy.} other{# values will look or behave differently in Vizy.}}' | t('vizy', { count: analysis.content.lossy }) }}</strong>
+                                <p>{{ 'Review the examples below before continuing. The original HTML is retained in recovery checkpoints.' | t('vizy') }}</p>
+                            </pk-alert>
                         {% endif %}
 
-                        {{ forms.checkboxField({
-                            id: 'confirm-migration',
-                            name: 'confirm',
-                            label: 'I understand this changes the field definition and stored content' | t('vizy'),
-                            inputAttributes: { required: true },
-                        }) }}
+                        {% if analysis.content.samples %}
+                            {% set previewStyles = '<style>html{background:#fff;color:#3f4d5a}body{box-sizing:border-box;margin:0;padding:16px;font:14px/1.5 system-ui,-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif}body>:first-child{margin-top:0}body>:last-child{margin-bottom:0}h1,h2,h3,h4,h5,h6{line-height:1.25}img{max-width:100%;height:auto}pre{white-space:pre-wrap}</style>' %}
+                            <h3>{{ 'Content that will change' | t('vizy') }}</h3>
+                            <p>{{ 'These examples compare the current rich text with the content Vizy will store.' | t('vizy') }}</p>
+                            <div class="vizy-migration-examples">
+                                {% for sample in analysis.content.samples %}
+                                    <section>
+                                        <p class="light vizy-migration-example-heading">
+                                            {% if sample.elementUrl %}
+                                                <a href="{{ sample.elementUrl }}" target="_blank" rel="noopener">{{ sample.elementLabel }}</a>
+                                            {% else %}
+                                                {{ sample.elementLabel }}
+                                            {% endif %}
+                                            {% if sample.siteName %} · {{ sample.siteName }}{% endif %}
+                                            {% if sample.variantLabel ?? null %} · {{ sample.variantLabel }}{% endif %}
+                                        </p>
 
-                        <button type="submit" class="btn submit">{{ 'Migrate field and content' | t('vizy') }}</button>
-                    </form>
-                {% endif %}
-            </div>
-        {% endif %}
-    {% endif %}
+                                        {% if sample.error is defined %}
+                                            <p class="error">{{ sample.error }}</p>
+                                        {% else %}
+                                            <div class="vizy-migration-preview-grid">
+                                                <div class="vizy-migration-card vizy-migration-preview">
+                                                    <h4>{{ analysis.source.editor }}</h4>
+                                                    <iframe sandbox srcdoc="{{ (previewStyles ~ sample.sourcePreview) | e('html_attr') }}" title="{{ 'Current rich-text preview' | t('vizy') }}"></iframe>
+                                                </div>
+                                                <div class="vizy-migration-card vizy-migration-preview">
+                                                    <h4>{{ 'Vizy' | t('vizy') }}</h4>
+                                                    <iframe sandbox srcdoc="{{ (previewStyles ~ sample.destinationPreview) | e('html_attr') }}" title="{{ 'Vizy content preview' | t('vizy') }}"></iframe>
+                                                </div>
+                                            </div>
 
-    <hr>
+                                            {% if sample.diagnostics %}
+                                                <ul class="vizy-migration-diagnostics">
+                                                    {% for diagnostic in sample.diagnostics %}
+                                                        <li>{{ diagnostic.message }}</li>
+                                                    {% endfor %}
+                                                </ul>
+                                            {% endif %}
+                                        {% endif %}
+                                    </section>
+                                {% endfor %}
+                            </div>
 
-    <h2>{{ 'Available source fields' | t('vizy') }}</h2>
-
-    {% for source in sources %}
-        <div class="pane{% if not loop.last %} mb-l{% endif %}">
-            <div>
-                <h3>{{ source.label }}</h3>
-
-                {% if source.fieldCount %}
-                    <p class="light">{{ '{count, plural, =1{1 matching field found.} other{# matching fields found.}}' | t('vizy', { count: source.fieldCount }) }}</p>
-
-                    <form method="post" accept-charset="UTF-8">
-                        {{ csrfInput() }}
-                        {{ actionInput('vizy/rich-text-conversions/analyze') }}
-
-                        {{ forms.selectField({
-                            id: 'source-field-' ~ source.id,
-                            name: 'field',
-                            label: 'Field' | t('app'),
-                            options: source.fieldOptions,
-                            value: selectedField,
-                            required: true,
-                        }) }}
-
-                        {{ forms.selectField({
-                            id: 'editor-config-' ~ source.id,
-                            name: 'editorConfig',
-                            label: 'Vizy Editor Config' | t('vizy'),
-                            instructions: 'The selected config determines which HTML structures and formatting Vizy can preserve.' | t('vizy'),
-                            options: editorConfigOptions,
-                            value: selectedEditorConfig,
-                            required: true,
-                        }) }}
-
-                        <button type="submit" class="btn submit">{{ 'Analyse' | t('vizy') }}</button>
-                    </form>
+                            {% if analysis.content.samplesTruncated %}
+                                <p class="light">{{ 'The first 25 affected values are shown. Every value is still analysed.' | t('vizy') }}</p>
+                            {% endif %}
+                        {% endif %}
+                    {% endif %}
                 {% else %}
-                    <p class="light">{{ 'No {source} fields were found.' | t('vizy', { source: source.label }) }}</p>
+                    <p>{{ 'Choose a source field first.' | t('vizy') }}</p>
+                {% endif %}
+            </section>
+
+            <section data-vizy-step-panel="3" hidden>
+                <h2 data-vizy-step-heading tabindex="-1">{{ 'Confirm the migration' | t('vizy') }}</h2>
+
+                {% if analysis %}
+                    <p>{{ 'Vizy will replace {name} with a Vizy field and convert {count, plural, =1{1 populated value} other{# populated values}}. Its handle and field-layout placements will stay the same.' | t('vizy', {
+                        name: analysis.source.name,
+                        count: analysis.content.populated,
+                    }) }}</p>
+
+                    <pk-alert class="vizy-migration-notice" variant="warning">
+                        <strong>{{ 'This migration cannot be undone.' | t('vizy') }}</strong>
+                    </pk-alert>
+
+                    {% if analysis.content.lossy %}
+                        <p class="warning">{{ '{count, plural, =1{1 value has a reviewed representation change.} other{# values have reviewed representation changes.}}' | t('vizy', { count: analysis.content.lossy }) }}</p>
+                    {% endif %}
+
+                    {% if not allowAdminChanges %}
+                        <pk-alert class="vizy-migration-notice" variant="warning" size="sm">
+                            <p>{{ 'Administrative changes are disabled in this environment. Run the console conversion in an environment where allowAdminChanges is enabled.' | t('vizy') }}</p>
+                        </pk-alert>
+                    {% else %}
+                        <form id="vizy-to-vizy-run" method="post" accept-charset="UTF-8" data-vizy-loading-step="4">
+                            {{ csrfInput() }}
+                            {{ actionInput('vizy/rich-text-conversions/run') }}
+                            {{ hiddenInput('field', selectedField) }}
+                            {{ hiddenInput('editorConfig', selectedEditorConfig) }}
+
+                            <div class="vizy-migration-confirmation">
+                                <pk-checkbox name="createBackup" checked>{{ 'Create a database backup before migrating' | t('vizy') }}</pk-checkbox>
+
+                                {% if analysis.status == 'requires-review' %}
+                                    <pk-checkbox name="allowLossy" required>{{ 'I reviewed and accept the content changes shown in the preview' | t('vizy') }}</pk-checkbox>
+                                {% endif %}
+
+                                <pk-checkbox name="confirm" required>{{ 'I understand this replaces the field definition and converts its stored content' | t('vizy') }}</pk-checkbox>
+                            </div>
+                        </form>
+                    {% endif %}
+                {% endif %}
+            </section>
+
+            <section data-vizy-step-panel="4" hidden>
+                {% if result %}
+                    <h2 class="success" data-vizy-step-heading tabindex="-1">{{ 'Migration completed' | t('vizy') }}</h2>
+
+                    <p>{{ '{name} is now a Vizy field. Its populated content was converted and verified.' | t('vizy', { name: analysis.source.name }) }}</p>
+
+                    <div class="vizy-migration-summary">
+                        <div class="vizy-migration-stat">
+                            <strong>{{ analysis.content.populated }}</strong>
+                            <span>{{ 'Populated values' | t('vizy') }}</span>
+                        </div>
+                        <div class="vizy-migration-stat">
+                            <strong>{{ analysis.content.lossless }}</strong>
+                            <span>{{ 'Converted exactly' | t('vizy') }}</span>
+                        </div>
+                        <div class="vizy-migration-stat">
+                            <strong>{{ analysis.content.lossy }}</strong>
+                            <span>{{ 'Converted with changes' | t('vizy') }}</span>
+                        </div>
+                        <div class="vizy-migration-stat">
+                            <strong>0</strong>
+                            <span>{{ 'Failed' | t('vizy') }}</span>
+                        </div>
+                    </div>
+
+                    <section class="vizy-migration-details">
+                        <h3>{{ 'Migration details' | t('vizy') }}</h3>
+                        <dl>
+                            <div>
+                                <dt>{{ 'Field' | t('app') }}</dt>
+                                <dd class="vizy-migration-field-value">
+                                    <span>{{ analysis.source.name }}</span>
+                                    <code>{{ analysis.source.handle }}</code>
+                                </dd>
+                            </div>
+                            <div>
+                                <dt>{{ 'Previous field type' | t('vizy') }}</dt>
+                                <dd>{{ analysis.source.editor }}</dd>
+                            </div>
+                            <div>
+                                <dt>{{ 'Vizy Editor Config' | t('vizy') }}</dt>
+                                <dd><code>{{ analysis.target.editorConfig }}</code></dd>
+                            </div>
+                            <div>
+                                <dt>{{ 'Generated migration' | t('vizy') }}</dt>
+                                <dd class="vizy-migration-path"><code>{{ result.migrationPath }}</code></dd>
+                            </div>
+                            <div>
+                                <dt>{{ 'Project Config path' | t('vizy') }}</dt>
+                                <dd class="vizy-migration-path"><code>{{ result.projectConfigPath }}</code></dd>
+                            </div>
+                            <div>
+                                <dt>{{ 'Conversion policy' | t('vizy') }}</dt>
+                                <dd>{{ result.strict ? ('Only content with no representation changes' | t('vizy')) : ('Reviewed representation changes accepted' | t('vizy')) }}</dd>
+                            </div>
+                        </dl>
+                    </section>
+
+                    <h3>{{ 'Next steps' | t('vizy') }}</h3>
+                    <ol>
+                        <li>{{ 'Inspect representative entries in the Vizy editor and on the frontend.' | t('vizy') }}</li>
+                        <li>{{ 'Commit the generated content migration and Project Config changes together.' | t('vizy') }}</li>
+                        <li>{{ 'Deploy both, then run `php craft up` on each environment.' | t('vizy') | md }}</li>
+                    </ol>
+                {% elseif error %}
+                    <pk-state-panel
+                        data-vizy-step-heading
+                        variant="error"
+                        size="lg"
+                        announce="assertive"
+                        tabindex="-1"
+                        heading="{{ 'Migration could not be completed' | t('vizy') }}"
+                    >
+                        <p>{{ 'The migration was rolled back. The original field definition and content remain in place.' | t('vizy') }}</p>
+                        <p>{{ error }}</p>
+                        <pk-button slot="actions" data-vizy-go-to="2" variant="primary">{{ 'Review the preview' | t('vizy') }}</pk-button>
+                    </pk-state-panel>
+                {% else %}
+                    <h2 data-vizy-step-heading tabindex="-1">{{ 'Migrate field and content' | t('vizy') }}</h2>
+                    <p>{{ 'The migration begins after confirmation.' | t('vizy') }}</p>
+                {% endif %}
+            </section>
+
+            <div class="vizy-migration-loading" data-vizy-loading hidden aria-live="polite">
+                <pk-spinner></pk-spinner>
+                <div data-vizy-loading-analyze hidden>
+                    <h2>{{ 'Analysing the field' | t('vizy') }}</h2>
+                    <p>{{ 'Checking every known placement and previewing the converted content…' | t('vizy') }}</p>
+                </div>
+                <div data-vizy-loading-copy hidden>
+                    <h2>{{ 'Migrating and verifying content' | t('vizy') }}</h2>
+                    <p>{{ 'Keep this window open while Vizy creates the content migration, converts the field, and verifies the result…' | t('vizy') }}</p>
+                </div>
+            </div>
+
+            <div class="vizy-migration-actions" data-vizy-actions>
+                <pk-button data-vizy-footer-step="1" data-vizy-show-start>{{ 'Cancel' | t('app') }}</pk-button>
+                <pk-button data-vizy-footer-step="1" type="submit" form="vizy-to-vizy-analyze" variant="primary">{{ 'Review migration' | t('vizy') }}</pk-button>
+
+                {% if not analysis or analysis.status != 'blocked' %}
+                    <pk-button data-vizy-footer-step="2" data-vizy-go-to="1">{{ 'Back' | t('app') }}</pk-button>
+                {% endif %}
+                {% if analysis and analysis.status != 'blocked' %}
+                    <pk-button data-vizy-footer-step="2" data-vizy-go-to="3" variant="primary">{{ 'Continue' | t('app') }}</pk-button>
+                {% endif %}
+
+                <pk-button data-vizy-footer-step="3" data-vizy-go-to="2">{{ 'Back' | t('app') }}</pk-button>
+                {% if analysis and analysis.status != 'blocked' and allowAdminChanges %}
+                    <pk-button data-vizy-footer-step="3" type="submit" form="vizy-to-vizy-run" variant="primary">{{ 'Migrate field and content' | t('vizy') }}</pk-button>
+                {% endif %}
+
+                {% if result %}
+                    <pk-button data-vizy-footer-step="4" data-vizy-show-start variant="primary">{{ 'Done' | t('app') }}</pk-button>
                 {% endif %}
             </div>
         </div>
-    {% endfor %}
+    </vizy-migration-wizard>
 {% endblock %}

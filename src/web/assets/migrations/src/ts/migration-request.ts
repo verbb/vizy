@@ -3,7 +3,7 @@
  * navigating the surrounding Craft control-panel page.
  */
 export async function requestMigrationWizard(form: HTMLFormElement): Promise<HTMLElement> {
-    const response = await fetch(form.action || window.location.href, {
+    const response = await fetch(form.getAttribute('action') || window.location.href, {
         method: form.method || 'post',
         body: new FormData(form),
         credentials: 'same-origin',

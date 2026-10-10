@@ -1,11 +1,11 @@
-import{C as e,D as t,E as n,I as r,N as i,O as a,P as o,R as s,S as c,T as l,U as u,_ as d,g as f,h as p,j as m,k as h,w as g,x as _,z as v}from"./dismissible-stack-CwhtwAyo-b1ey4DTC.js";import{t as y}from"./unsafe-html-BHNDtu1P.js";function b(e=`default`){return e===`xxs`||e===`xs`?`xxs`:e===`lg`||e===`xl`?`sm`:`xs`}function x(e=`default`,t){return t||(e===`primary`||e===`secondary`||e===`dashed`||e===`outline`||e===`transparent`?e:`default`)}function S(e,t=`var(--pk-btn-radius, var(--pk-radius-lg))`){let n=o(e),r=o(t);return i`
+import{B as e,C as t,D as n,E as r,I as i,N as a,O as o,P as s,R as c,S as l,T as u,U as d,V as f,_ as p,g as m,h,j as g,k as _,w as v,x as y,z as b}from"./dismissible-stack-CwhtwAyo-b1ey4DTC.js";import{t as x}from"./unsafe-html-BHNDtu1P.js";function S(e=`default`){return e===`xxs`||e===`xs`?`xxs`:e===`lg`||e===`xl`?`sm`:`xs`}function C(e=`default`,t){return t||(e===`primary`||e===`secondary`||e===`dashed`||e===`outline`||e===`transparent`?e:`default`)}function w(e,t=`var(--pk-btn-radius, var(--pk-radius-lg))`){let n=s(e),r=s(t);return a`
         ${n} {
             border-top-left-radius: var(--pk-bg-start-start-radius, ${r});
             border-top-right-radius: var(--pk-bg-start-end-radius, ${r});
             border-bottom-left-radius: var(--pk-bg-end-start-radius, ${r});
             border-bottom-right-radius: var(--pk-bg-end-end-radius, ${r});
         }
-    `}function C(){return i`
+    `}function T(){return a`
         :host([data-pk-group-orientation='horizontal']:not([data-pk-group-item-first]):not([data-pk-group-item-last])) {
             --pk-bg-start-start-radius: 0;
             --pk-bg-start-end-radius: 0;
@@ -39,7 +39,7 @@ import{C as e,D as t,E as n,I as r,N as i,O as a,P as o,R as s,S as c,T as l,U a
             --pk-bg-start-start-radius: 0;
             --pk-bg-start-end-radius: 0;
         }
-    `}function w(){return i`
+    `}function E(){return a`
         :host([data-pk-group-orientation='horizontal'][data-pk-group-join][variant='outline']),
         :host([data-pk-group-orientation='horizontal'][data-pk-group-join][variant='dashed']) {
             margin-inline-start: var(--pk-bg-horizontal-indent-outlined, 0);
@@ -91,7 +91,7 @@ import{C as e,D as t,E as n,I as r,N as i,O as a,P as o,R as s,S as c,T as l,U a
         :host([data-pk-group-orientation='vertical'][data-pk-group-internal-trail][variant='default']) {
             margin-block-end: var(--pk-btn-group-gap, 1px) !important;
         }
-    `}function T(e){let t=o(e);return i`
+    `}function D(e){let t=s(e);return a`
         :host([data-pk-group-orientation='horizontal'][data-pk-group-join]:not([data-pk-group-divider])) ${t} {
             border-left-width: 0;
         }
@@ -117,7 +117,7 @@ import{C as e,D as t,E as n,I as r,N as i,O as a,P as o,R as s,S as c,T as l,U a
         :host([data-pk-group-orientation='vertical'][data-pk-group-internal-trail][variant='dashed']) ${t} {
             border-bottom-width: 0;
         }
-    `}var E=[a,_,C(),S(`.button`),w(),T(`.button`),i`
+    `}var O=[o,y,T(),w(`.button`),E(),D(`.button`),a`
         @layer pk-component {
             :host {
                 font-family: var(--pk-font-family);
@@ -715,59 +715,59 @@ import{C as e,D as t,E as n,I as r,N as i,O as a,P as o,R as s,S as c,T as l,U a
                 border-bottom-width: 0;
             }
         }
-    `],D=v(u),O=class extends l{constructor(...e){super(...e),this.variant=`default`,this.size=`default`,this.disabled=!1,this.loading=!1,this.withCaret=!1,this.groupTrigger=!1,this.icon=!1,this.title=``,this.ariaLabel=null,this.type=`button`,this.hasDefaultSlotContent=!1,this.hasStartSlotContent=!1,this.hasEndSlotContent=!1,this.startSlotChanged=e=>{this.iconSlotChanged(e,`start`)},this.endSlotChanged=e=>{this.iconSlotChanged(e,`end`)},this.handleHostClick=e=>{if(this.disabled||this.loading||this.href||this.type!==`submit`&&this.type!==`reset`)return;let t=this.resolveAssociatedForm();if(t){if(e.preventDefault(),e.stopPropagation(),this.type===`reset`){t.reset();return}if(typeof t.requestSubmit==`function`){t.requestSubmit();return}t.dispatchEvent(new Event(`submit`,{bubbles:!0,cancelable:!0}))}}}static{this.shadowRootOptions={mode:`open`,delegatesFocus:!0}}static{this.styles=E}defaultSlotChanged(e){let t=e.target;this.hasDefaultSlotContent=t.assignedNodes({flatten:!0}).some(e=>e.nodeType===Node.TEXT_NODE?e.textContent?.trim():e.nodeType===Node.ELEMENT_NODE)}iconSlotChanged(e,t){let n=e.target.assignedNodes({flatten:!0}).some(e=>e.nodeType===Node.TEXT_NODE?e.textContent?.trim():e.nodeType===Node.ELEMENT_NODE);t===`start`?this.hasStartSlotContent=n:this.hasEndSlotContent=n}buttonClasses(){return p({button:!0,"has-label":this.hasDefaultSlotContent,loading:this.loading,caret:this.withCaret,"group-trigger":this.groupTrigger})}connectedCallback(){super.connectedCallback(),this.setAttribute(`data-slot`,`button`),this.addEventListener(`click`,this.handleHostClick)}disconnectedCallback(){this.removeEventListener(`click`,this.handleHostClick),super.disconnectedCallback()}resolveAssociatedForm(){let e=(this.form||this.getAttribute(`form`)||``).trim();if(e){let t=this.ownerDocument?.getElementById(e);if(t instanceof HTMLFormElement&&t.id!==`main`)return t}let t=this.closest(`form`);return t&&t.id!==`main`?t:null}render(){let e=this.spinnerSize||b(this.size),t=x(this.variant,this.spinnerVariant),n=!!this.href,r=this.ariaLabel||this.title||``;return m`
-            ${n?m`
+    `],k=b(d),A=class extends u{constructor(...e){super(...e),this.variant=`default`,this.size=`default`,this.disabled=!1,this.loading=!1,this.withCaret=!1,this.groupTrigger=!1,this.icon=!1,this.title=``,this.ariaLabel=null,this.type=`button`,this.hasDefaultSlotContent=!1,this.hasStartSlotContent=!1,this.hasEndSlotContent=!1,this.startSlotChanged=e=>{this.iconSlotChanged(e,`start`)},this.endSlotChanged=e=>{this.iconSlotChanged(e,`end`)},this.handleHostClick=e=>{if(this.disabled||this.loading||this.href||this.type!==`submit`&&this.type!==`reset`)return;let t=this.resolveAssociatedForm();if(t){if(e.preventDefault(),e.stopPropagation(),this.type===`reset`){t.reset();return}if(typeof t.requestSubmit==`function`){t.requestSubmit();return}t.dispatchEvent(new Event(`submit`,{bubbles:!0,cancelable:!0}))}}}static{this.shadowRootOptions={mode:`open`,delegatesFocus:!0}}static{this.styles=O}defaultSlotChanged(e){let t=e.target;this.hasDefaultSlotContent=t.assignedNodes({flatten:!0}).some(e=>e.nodeType===Node.TEXT_NODE?e.textContent?.trim():e.nodeType===Node.ELEMENT_NODE)}iconSlotChanged(e,t){let n=e.target.assignedNodes({flatten:!0}).some(e=>e.nodeType===Node.TEXT_NODE?e.textContent?.trim():e.nodeType===Node.ELEMENT_NODE);t===`start`?this.hasStartSlotContent=n:this.hasEndSlotContent=n}buttonClasses(){return h({button:!0,"has-label":this.hasDefaultSlotContent,loading:this.loading,caret:this.withCaret,"group-trigger":this.groupTrigger})}connectedCallback(){super.connectedCallback(),this.setAttribute(`data-slot`,`button`),this.addEventListener(`click`,this.handleHostClick)}disconnectedCallback(){this.removeEventListener(`click`,this.handleHostClick),super.disconnectedCallback()}resolveAssociatedForm(){let e=(this.form||this.getAttribute(`form`)||``).trim();if(e){let t=this.ownerDocument?.getElementById(e);if(t instanceof HTMLFormElement&&t.id!==`main`)return t}let t=this.closest(`form`);return t&&t.id!==`main`?t:null}render(){let e=this.spinnerSize||S(this.size),t=C(this.variant,this.spinnerVariant),n=!!this.href,r=this.ariaLabel||this.title||``;return g`
+            ${n?g`
                     <a
                         part="base"
                         class=${this.buttonClasses()}
                         href=${this.href}
-                        target=${this.target??h}
-                        rel=${this.rel??h}
-                        aria-label=${r||h}
+                        target=${this.target??_}
+                        rel=${this.rel??_}
+                        aria-label=${r||_}
                     >
                         ${this.renderInner(e,t)}
                     </a>
-                `:m`
+                `:g`
                     <button
                         part="base"
                         class=${this.buttonClasses()}
                         type=${this.type}
                         ?disabled=${this.disabled}
-                        aria-disabled=${this.disabled?`true`:h}
-                        aria-busy=${this.loading?`true`:h}
-                        aria-label=${r||h}
-                        name=${this.name??h}
-                        value=${this.value??h}
+                        aria-disabled=${this.disabled?`true`:_}
+                        aria-busy=${this.loading?`true`:_}
+                        aria-label=${r||_}
+                        name=${this.name??_}
+                        value=${this.value??_}
                     >
                         ${this.renderInner(e,t)}
                     </button>
                 `}
-        `}renderInner(e,t){return m`
+        `}renderInner(e,t){return g`
             <span
-                class=${p({"icon-slot":!0,"icon-slot--start":!0,"icon-slot--has-content":this.hasStartSlotContent})}
+                class=${h({"icon-slot":!0,"icon-slot--start":!0,"icon-slot--has-content":this.hasStartSlotContent})}
             >
                 <slot name="start" @slotchange=${this.startSlotChanged}></slot>
             </span>
-            ${this.loading?m`
+            ${this.loading?g`
                     <pk-spinner
                         variant=${t}
                         size=${e}
-                        tone=${this.spinnerTone??h}
+                        tone=${this.spinnerTone??_}
                         centered
                     ></pk-spinner>
-                `:h}
+                `:_}
             <span
-                class=${p({label:!0,"is-empty":!this.hasDefaultSlotContent,loading:this.loading})}
+                class=${h({label:!0,"is-empty":!this.hasDefaultSlotContent,loading:this.loading})}
             >
                 <slot @slotchange=${this.defaultSlotChanged}></slot>
             </span>
             <span
-                class=${p({"icon-slot":!0,"icon-slot--end":!0,"icon-slot--has-content":this.hasEndSlotContent})}
+                class=${h({"icon-slot":!0,"icon-slot--end":!0,"icon-slot--has-content":this.hasEndSlotContent})}
             >
                 <slot name="end" @slotchange=${this.endSlotChanged}></slot>
             </span>
-            ${this.withCaret||this.groupTrigger?m`<span part="caret" class="caret">${f(D)}</span>`:h}
-        `}};n([g({reflect:!0})],O.prototype,`variant`,void 0),n([g({reflect:!0})],O.prototype,`size`,void 0),n([g({type:Boolean,reflect:!0})],O.prototype,`disabled`,void 0),n([g({type:Boolean,reflect:!0})],O.prototype,`loading`,void 0),n([g({reflect:!0,attribute:`spinner-size`})],O.prototype,`spinnerSize`,void 0),n([g({reflect:!0,attribute:`spinner-variant`})],O.prototype,`spinnerVariant`,void 0),n([g({reflect:!0,attribute:`spinner-tone`})],O.prototype,`spinnerTone`,void 0),n([g({type:Boolean,reflect:!0,attribute:`with-caret`})],O.prototype,`withCaret`,void 0),n([g({type:Boolean,reflect:!0,attribute:`group-trigger`})],O.prototype,`groupTrigger`,void 0),n([g({type:Boolean,reflect:!0})],O.prototype,`icon`,void 0),n([g()],O.prototype,`href`,void 0),n([g()],O.prototype,`target`,void 0),n([g()],O.prototype,`rel`,void 0),n([g()],O.prototype,`name`,void 0),n([g()],O.prototype,`value`,void 0),n([g()],O.prototype,`title`,void 0),n([g({attribute:`aria-label`})],O.prototype,`ariaLabel`,void 0),n([g()],O.prototype,`type`,void 0),n([g({reflect:!0})],O.prototype,`form`,void 0),n([e()],O.prototype,`hasDefaultSlotContent`,void 0),n([e()],O.prototype,`hasStartSlotContent`,void 0),n([e()],O.prototype,`hasEndSlotContent`,void 0),O=n([t(`pk-button`)],O);var k=class extends Event{constructor(e){super(`pk-copy`,{bubbles:!0,cancelable:!1,composed:!0}),this.detail={value:e}}},A=class extends Event{constructor(){super(`pk-copy-error`,{bubbles:!0,cancelable:!1,composed:!0})}};async function j(e){await navigator.clipboard.writeText(e)}function M(e,t,n){if(!t)return n||null;let r=t.includes(`.`),i=t.includes(`[`)&&t.includes(`]`),a=t,o=``;r?[a,o]=t.trim().split(`.`):i&&([a,o]=t.trim().replace(/\]$/,``).split(`[`));let s=`getElementById`in e?e.getElementById(a):null;if(!s)return null;if(i)return s.getAttribute(o)??``;if(r){let e=s[o];return e==null?``:String(e)}return s.textContent??``}var N=i`
+            ${this.withCaret||this.groupTrigger?g`<span part="caret" class="caret">${m(k)}</span>`:_}
+        `}};r([v({reflect:!0})],A.prototype,`variant`,void 0),r([v({reflect:!0})],A.prototype,`size`,void 0),r([v({type:Boolean,reflect:!0})],A.prototype,`disabled`,void 0),r([v({type:Boolean,reflect:!0})],A.prototype,`loading`,void 0),r([v({reflect:!0,attribute:`spinner-size`})],A.prototype,`spinnerSize`,void 0),r([v({reflect:!0,attribute:`spinner-variant`})],A.prototype,`spinnerVariant`,void 0),r([v({reflect:!0,attribute:`spinner-tone`})],A.prototype,`spinnerTone`,void 0),r([v({type:Boolean,reflect:!0,attribute:`with-caret`})],A.prototype,`withCaret`,void 0),r([v({type:Boolean,reflect:!0,attribute:`group-trigger`})],A.prototype,`groupTrigger`,void 0),r([v({type:Boolean,reflect:!0})],A.prototype,`icon`,void 0),r([v()],A.prototype,`href`,void 0),r([v()],A.prototype,`target`,void 0),r([v()],A.prototype,`rel`,void 0),r([v()],A.prototype,`name`,void 0),r([v()],A.prototype,`value`,void 0),r([v()],A.prototype,`title`,void 0),r([v({attribute:`aria-label`})],A.prototype,`ariaLabel`,void 0),r([v()],A.prototype,`type`,void 0),r([v({reflect:!0})],A.prototype,`form`,void 0),r([t()],A.prototype,`hasDefaultSlotContent`,void 0),r([t()],A.prototype,`hasStartSlotContent`,void 0),r([t()],A.prototype,`hasEndSlotContent`,void 0),A=r([n(`pk-button`)],A);var j=class extends Event{constructor(e){super(`pk-copy`,{bubbles:!0,cancelable:!1,composed:!0}),this.detail={value:e}}},M=class extends Event{constructor(){super(`pk-copy-error`,{bubbles:!0,cancelable:!1,composed:!0})}};async function N(e){await navigator.clipboard.writeText(e)}function P(e,t,n){if(!t)return n||null;let r=t.includes(`.`),i=t.includes(`[`)&&t.includes(`]`),a=t,o=``;r?[a,o]=t.trim().split(`.`):i&&([a,o]=t.trim().replace(/\]$/,``).split(`[`));let s=`getElementById`in e?e.getElementById(a):null;if(!s)return null;if(i)return s.getAttribute(o)??``;if(r){let e=s[o];return e==null?``:String(e)}return s.textContent??``}var F=a`
     @layer pk-component {
         :host {
             display: inline-block;
@@ -832,7 +832,7 @@ import{C as e,D as t,E as n,I as r,N as i,O as a,P as o,R as s,S as c,T as l,U a
             color: var(--pk-color-gray-800);
         }
     }
-`,P=s(r.check).replace(`<svg`,`<svg slot="start" part="success-icon"`),F=s(r.copy).replace(`<svg`,`<svg slot="start" part="copy-icon"`),I=2e3,L=class extends l{constructor(...e){super(...e),this.hasSlotController=new y(this,`icon`),this.value=``,this.from=``,this.disabled=!1,this.variant=`transparent`,this.ariaLabel=`Copy`,this.copiedLabel=`Copied`,this.copied=!1,this.resetCopied=()=>{this.copied=!1}}static{this.styles=N}disconnectedCallback(){window.clearTimeout(this.resetTimer),super.disconnectedCallback()}scheduleReset(){window.clearTimeout(this.resetTimer),this.resetTimer=window.setTimeout(this.resetCopied,I)}async copy(){if(this.disabled)return;let e=M(this.getRootNode(),this.from,this.value);if(e==null||e===``){this.dispatchEvent(new A);return}try{await j(e),this.copied=!0,this.scheduleReset(),this.dispatchEvent(new k(e))}catch{this.dispatchEvent(new A)}}render(){let e=this.getAttribute(`slot`)===`end`;return m`
+`,I=c(i.check).replace(`<svg`,`<svg slot="start" part="success-icon"`),L=c(i.copy).replace(`<svg`,`<svg slot="start" part="copy-icon"`),R=2e3,z=class extends u{constructor(...e){super(...e),this.hasSlotController=new x(this,`icon`),this.value=``,this.from=``,this.disabled=!1,this.variant=`transparent`,this.ariaLabel=`Copy`,this.copiedLabel=`Copied`,this.copied=!1,this.resetCopied=()=>{this.copied=!1}}static{this.styles=F}disconnectedCallback(){window.clearTimeout(this.resetTimer),super.disconnectedCallback()}scheduleReset(){window.clearTimeout(this.resetTimer),this.resetTimer=window.setTimeout(this.resetCopied,R)}async copy(){if(this.disabled)return;let e=P(this.getRootNode(),this.from,this.value);if(e==null||e===``){this.dispatchEvent(new M);return}try{await N(e),this.copied=!0,this.scheduleReset(),this.dispatchEvent(new j(e))}catch{this.dispatchEvent(new M)}}render(){let e=this.getAttribute(`slot`)===`end`;return g`
             <pk-button
                 part="button"
                 variant=${e?`none`:this.variant}
@@ -842,9 +842,9 @@ import{C as e,D as t,E as n,I as r,N as i,O as a,P as o,R as s,S as c,T as l,U a
                 ?disabled=${this.disabled}
                 @click=${this.copy}
             >
-                ${this.copied?d(P):this.hasSlotController.test(`icon`)?m`<slot name="icon" slot="start"></slot>`:d(F)}
+                ${this.copied?p(I):this.hasSlotController.test(`icon`)?g`<slot name="icon" slot="start"></slot>`:p(L)}
             </pk-button>
-        `}};n([g()],L.prototype,`value`,void 0),n([g()],L.prototype,`from`,void 0),n([g({type:Boolean,reflect:!0})],L.prototype,`disabled`,void 0),n([g({reflect:!0})],L.prototype,`variant`,void 0),n([g({attribute:`aria-label`})],L.prototype,`ariaLabel`,void 0),n([g({attribute:`copied-label`})],L.prototype,`copiedLabel`,void 0),n([e()],L.prototype,`copied`,void 0),L=n([t(`pk-copy-button`)],L);var R=class extends Event{constructor(){super(`pk-dismiss`,{bubbles:!0,cancelable:!0,composed:!0})}},z=i`
+        `}};r([v()],z.prototype,`value`,void 0),r([v()],z.prototype,`from`,void 0),r([v({type:Boolean,reflect:!0})],z.prototype,`disabled`,void 0),r([v({reflect:!0})],z.prototype,`variant`,void 0),r([v({attribute:`aria-label`})],z.prototype,`ariaLabel`,void 0),r([v({attribute:`copied-label`})],z.prototype,`copiedLabel`,void 0),r([t()],z.prototype,`copied`,void 0),z=r([n(`pk-copy-button`)],z);var B=class extends Event{constructor(){super(`pk-dismiss`,{bubbles:!0,cancelable:!0,composed:!0})}},V=a`
     @layer pk-component {
         :host {
             display: block;
@@ -1243,28 +1243,28 @@ import{C as e,D as t,E as n,I as r,N as i,O as a,P as o,R as s,S as c,T as l,U a
             }
         }
     }
-`,B=3e3,V={neutral:r.circleInfo,info:r.circleInfo,success:r.circleCheck,warning:r.triangleExclamation,error:r.circleExclamation},H=class extends l{constructor(...e){super(...e),this.hasSlotController=new y(this,`title`,`icon`,`actions`,`details`),this.variant=`info`,this.size=`default`,this.appearance=`accent`,this.heading=``,this.hideIcon=!1,this.dismissible=!1,this.announce=`off`,this.detailsLabel=`Details`,this.detailsOpen=!1,this.copyable=!1,this.copyLabel=`Copy details`,this.copiedLabel=`Details copied.`,this.copyErrorLabel=`Copy failed. Select the details and copy them manually.`,this.dismissLabel=`Dismiss`,this.copyStatus=``,this.copyFailed=!1}static{this.styles=z}disconnectedCallback(){window.clearTimeout(this.copyStatusResetTimer),super.disconnectedCallback()}hasTitle(){return!!this.heading||this.hasSlotController.test(`title`)}hasDetails(){return this.hasSlotController.test(`details`)}get detailsValue(){return(this.detailsSlot?.assignedNodes({flatten:!0})??[]).map(e=>e.textContent??``).join(``).trim()}resetCopyStatusLater(){window.clearTimeout(this.copyStatusResetTimer),this.copyStatusResetTimer=window.setTimeout(()=>{this.copyStatus=``,this.copyFailed=!1},B)}showCopySuccess(){this.copyFailed=!1,this.copyStatus=this.copiedLabel,this.resetCopyStatusLater()}showCopyError(){this.copyFailed=!0,this.copyStatus=this.copyErrorLabel,this.resetCopyStatusLater()}handleCopySuccess(){this.showCopySuccess()}handleCopyError(){this.showCopyError(),this.selectDetails()}selectDetails(){let e=this.detailsSlot?.assignedNodes({flatten:!0})??[],t=e[0],n=e[e.length-1];if(!t||!n)return;this.detailsOpen=!0;let r=document.createRange();r.setStartBefore(t),r.setEndAfter(n);let i=window.getSelection();i?.removeAllRanges(),i?.addRange(r)}async copyDetails(){let e=this.detailsValue;if(!e){this.showCopyError(),this.dispatchEvent(new A);return}if(this.copyButton){this.copyButton.value=e,await this.copyButton.copy();return}try{await j(e),this.showCopySuccess();let t=new k(e);this.dispatchEvent(t)}catch{this.showCopyError(),this.selectDetails(),this.dispatchEvent(new A)}}dismiss(){this.dispatchEvent(new R)&&(this.hidden=!0)}show(){this.hidden=!1}handleDetailsToggle(e){this.detailsOpen=e.currentTarget.open}renderIcon(){if(this.hideIcon)return h;let e=this.hasSlotController.test(`icon`)?m`<slot name="icon"></slot>`:f(s(V[this.variant]??V.info));return m`<span part="icon" class="icon" aria-hidden="true">${e}</span>`}render(){let e=this.announce===`assertive`?`alert`:this.announce===`polite`?`status`:h,t=this.announce===`off`?h:this.announce,n=this.hasSlotController.test(`actions`),i=this.hasDetails();return m`
+`,H=3e3,U={neutral:i.circleInfo,info:i.circleInfo,success:i.circleCheck,warning:i.triangleExclamation,error:i.circleExclamation},W=class extends u{constructor(...e){super(...e),this.hasSlotController=new x(this,`title`,`icon`,`actions`,`details`),this.variant=`info`,this.size=`default`,this.appearance=`accent`,this.heading=``,this.hideIcon=!1,this.dismissible=!1,this.announce=`off`,this.detailsLabel=`Details`,this.detailsOpen=!1,this.copyable=!1,this.copyLabel=`Copy details`,this.copiedLabel=`Details copied.`,this.copyErrorLabel=`Copy failed. Select the details and copy them manually.`,this.dismissLabel=`Dismiss`,this.copyStatus=``,this.copyFailed=!1}static{this.styles=V}disconnectedCallback(){window.clearTimeout(this.copyStatusResetTimer),super.disconnectedCallback()}hasTitle(){return!!this.heading||this.hasSlotController.test(`title`)}hasDetails(){return this.hasSlotController.test(`details`)}get detailsValue(){return(this.detailsSlot?.assignedNodes({flatten:!0})??[]).map(e=>e.textContent??``).join(``).trim()}resetCopyStatusLater(){window.clearTimeout(this.copyStatusResetTimer),this.copyStatusResetTimer=window.setTimeout(()=>{this.copyStatus=``,this.copyFailed=!1},H)}showCopySuccess(){this.copyFailed=!1,this.copyStatus=this.copiedLabel,this.resetCopyStatusLater()}showCopyError(){this.copyFailed=!0,this.copyStatus=this.copyErrorLabel,this.resetCopyStatusLater()}handleCopySuccess(){this.showCopySuccess()}handleCopyError(){this.showCopyError(),this.selectDetails()}selectDetails(){let e=this.detailsSlot?.assignedNodes({flatten:!0})??[],t=e[0],n=e[e.length-1];if(!t||!n)return;this.detailsOpen=!0;let r=document.createRange();r.setStartBefore(t),r.setEndAfter(n);let i=window.getSelection();i?.removeAllRanges(),i?.addRange(r)}async copyDetails(){let e=this.detailsValue;if(!e){this.showCopyError(),this.dispatchEvent(new M);return}if(this.copyButton){this.copyButton.value=e,await this.copyButton.copy();return}try{await N(e),this.showCopySuccess();let t=new j(e);this.dispatchEvent(t)}catch{this.showCopyError(),this.selectDetails(),this.dispatchEvent(new M)}}dismiss(){this.dispatchEvent(new B)&&(this.hidden=!0)}show(){this.hidden=!1}handleDetailsToggle(e){this.detailsOpen=e.currentTarget.open}renderIcon(){if(this.hideIcon)return _;let e=this.hasSlotController.test(`icon`)?g`<slot name="icon"></slot>`:m(c(U[this.variant]??U.info));return g`<span part="icon" class="icon" aria-hidden="true">${e}</span>`}render(){let e=this.announce===`assertive`?`alert`:this.announce===`polite`?`status`:_,t=this.announce===`off`?_:this.announce,n=this.hasSlotController.test(`actions`),r=this.hasDetails();return g`
             <div
                 part="base"
                 class="alert"
                 role=${e}
                 aria-live=${t}
-                aria-atomic=${this.announce===`off`?h:`true`}
+                aria-atomic=${this.announce===`off`?_:`true`}
             >
                 <div part="notice" class="notice">
                     ${this.renderIcon()}
 
                     <div part="content" class="content">
-                        ${this.hasTitle()?m`
+                        ${this.hasTitle()?g`
                                 <strong part="title" class="title">
-                                    ${this.hasSlotController.test(`title`)?m`<slot name="title"></slot>`:this.heading}
+                                    ${this.hasSlotController.test(`title`)?g`<slot name="title"></slot>`:this.heading}
                                 </strong>
-                            `:h}
+                            `:_}
 
                         <div part="body" class="body"><slot></slot></div>
                     </div>
 
-                    ${this.dismissible?m`
+                    ${this.dismissible?g`
                             <button
                                 part="dismiss-button"
                                 class="dismiss"
@@ -1272,14 +1272,14 @@ import{C as e,D as t,E as n,I as r,N as i,O as a,P as o,R as s,S as c,T as l,U a
                                 aria-label=${this.dismissLabel}
                                 @click=${this.dismiss}
                             >
-                                ${f(s(r.xmark))}
+                                ${m(c(i.xmark))}
                             </button>
-                        `:h}
+                        `:_}
                 </div>
 
-                ${n?m`<div part="actions" class="actions"><slot name="actions"></slot></div>`:h}
+                ${n?g`<div part="actions" class="actions"><slot name="actions"></slot></div>`:_}
 
-                ${i?m`
+                ${r?g`
                         <details
                             part="details"
                             class="details"
@@ -1289,7 +1289,7 @@ import{C as e,D as t,E as n,I as r,N as i,O as a,P as o,R as s,S as c,T as l,U a
                             <summary part="details-summary">${this.detailsLabel}</summary>
                             <div part="details-content" class="details-content">
                                 <div class="details-scroll">
-                                    ${this.copyable?m`
+                                    ${this.copyable?g`
                                             <div class="copy-overlay">
                                                 <pk-copy-button
                                                     part="copy-button"
@@ -1302,22 +1302,44 @@ import{C as e,D as t,E as n,I as r,N as i,O as a,P as o,R as s,S as c,T as l,U a
                                                     @pk-copy-error=${this.handleCopyError}
                                                 ></pk-copy-button>
                                             </div>
-                                        `:h}
+                                        `:_}
                                     <slot name="details"></slot>
                                 </div>
                             </div>
 
-                            ${this.copyable?m`
+                            ${this.copyable?g`
                                     <span
                                         part="copy-status"
                                         class="copy-status"
-                                        data-error=${this.copyFailed?``:h}
+                                        data-error=${this.copyFailed?``:_}
                                         role="status"
                                         aria-live="polite"
                                     >${this.copyStatus}</span>
-                                `:h}
+                                `:_}
                         </details>
-                    `:h}
+                    `:_}
             </div>
-        `}};n([g({reflect:!0})],H.prototype,`variant`,void 0),n([g({reflect:!0})],H.prototype,`size`,void 0),n([g({reflect:!0})],H.prototype,`appearance`,void 0),n([g()],H.prototype,`heading`,void 0),n([g({type:Boolean,attribute:`hide-icon`,reflect:!0})],H.prototype,`hideIcon`,void 0),n([g({type:Boolean,reflect:!0})],H.prototype,`dismissible`,void 0),n([g({reflect:!0})],H.prototype,`announce`,void 0),n([g({attribute:`details-label`})],H.prototype,`detailsLabel`,void 0),n([g({type:Boolean,attribute:`details-open`,reflect:!0})],H.prototype,`detailsOpen`,void 0),n([g({type:Boolean,reflect:!0})],H.prototype,`copyable`,void 0),n([g({attribute:`copy-label`})],H.prototype,`copyLabel`,void 0),n([g({attribute:`copied-label`})],H.prototype,`copiedLabel`,void 0),n([g({attribute:`copy-error-label`})],H.prototype,`copyErrorLabel`,void 0),n([g({attribute:`dismiss-label`})],H.prototype,`dismissLabel`,void 0),n([c(`slot[name="details"]`)],H.prototype,`detailsSlot`,void 0),n([c(`pk-copy-button.copy`)],H.prototype,`copyButton`,void 0),n([e()],H.prototype,`copyStatus`,void 0),n([e()],H.prototype,`copyFailed`,void 0),H=n([t(`pk-alert`)],H);function U(e,t,n=500){return new Promise(r=>{let i=new AbortController,{signal:a}=i;if(e.classList.contains(t)){r();return}e.classList.add(t);let o=!1,s=()=>{o||(o=!0,e.classList.remove(t),window.clearTimeout(c),r(),i.abort())};e.addEventListener(`animationend`,s,{once:!0,signal:a}),e.addEventListener(`animationcancel`,s,{once:!0,signal:a});let c=window.setTimeout(s,n);requestAnimationFrame(()=>{!o&&e.getAnimations().length===0&&s()})})}export{T as a,w as c,j as i,A as n,S as o,k as r,C as s,U as t};
-//# sourceMappingURL=animate-with-class-CjTZI0NU-C8Z4yc0d.js.map
+        `}};r([v({reflect:!0})],W.prototype,`variant`,void 0),r([v({reflect:!0})],W.prototype,`size`,void 0),r([v({reflect:!0})],W.prototype,`appearance`,void 0),r([v()],W.prototype,`heading`,void 0),r([v({type:Boolean,attribute:`hide-icon`,reflect:!0})],W.prototype,`hideIcon`,void 0),r([v({type:Boolean,reflect:!0})],W.prototype,`dismissible`,void 0),r([v({reflect:!0})],W.prototype,`announce`,void 0),r([v({attribute:`details-label`})],W.prototype,`detailsLabel`,void 0),r([v({type:Boolean,attribute:`details-open`,reflect:!0})],W.prototype,`detailsOpen`,void 0),r([v({type:Boolean,reflect:!0})],W.prototype,`copyable`,void 0),r([v({attribute:`copy-label`})],W.prototype,`copyLabel`,void 0),r([v({attribute:`copied-label`})],W.prototype,`copiedLabel`,void 0),r([v({attribute:`copy-error-label`})],W.prototype,`copyErrorLabel`,void 0),r([v({attribute:`dismiss-label`})],W.prototype,`dismissLabel`,void 0),r([l(`slot[name="details"]`)],W.prototype,`detailsSlot`,void 0),r([l(`pk-copy-button.copy`)],W.prototype,`copyButton`,void 0),r([t()],W.prototype,`copyStatus`,void 0),r([t()],W.prototype,`copyFailed`,void 0),W=r([n(`pk-alert`)],W);var G=class extends u{constructor(...e){super(...e),this.icon=``,this.name=``,this.unsubscribeRegistry=null}static{this.styles=a`
+        :host {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            flex: none;
+            /* Square em box + slight baseline nudge for inline text. Flex
+             * parents (e.g. button slots) should zero vertical-align. */
+            width: 1em;
+            height: 1em;
+            line-height: 1;
+            vertical-align: -0.125em;
+        }
+
+        svg {
+            display: block;
+            width: 100%;
+            height: 100%;
+            fill: currentColor;
+            /* Allow intentional path overhang past the icon canvas. */
+            overflow: visible;
+        }
+    `}connectedCallback(){super.connectedCallback(),this.unsubscribeRegistry=f(()=>{this.requestUpdate()})}disconnectedCallback(){this.unsubscribeRegistry?.(),this.unsubscribeRegistry=null,super.disconnectedCallback()}render(){let t=e(this.icon||this.name);return t?g`${m(b(t,{title:this.label}))}`:_}};r([v()],G.prototype,`icon`,void 0),r([v()],G.prototype,`name`,void 0),r([v()],G.prototype,`label`,void 0),G=r([n(`pk-icon`)],G);export{w as a,D as i,j as n,T as o,N as r,E as s,M as t};
+//# sourceMappingURL=pk-icon-SO6LFMt-.js.map

@@ -8,7 +8,7 @@ Run the conversion locally before deploying it to another environment. Commit th
 
 ### Analyse the Field
 
-Go to **Settings → Vizy → Migrations → To Vizy**. CKEditor and Redactor are shown separately, with every matching field listed beneath its source editor. Choose the field you want to replace, select the Vizy Editor Config that should govern its content, then select **Analyse**.
+Go to **Settings → Vizy → Migrations → To Vizy** and start the guided migration. Choose the CKEditor or Redactor field you want to replace, select the Vizy Editor Config that should govern its content, then review the migration. The wizard stays on the same page while it analyses, confirms, migrates, and reports the result.
 
 The analysis is read-only. It reports the number of occurrences, rows, elements, and sites found, together with representative content that Vizy cannot reproduce exactly. The selected Editor Config matters because it determines which HTML structures and formatting the destination field can preserve.
 
@@ -38,9 +38,11 @@ If the source field uses the Verbb Footnotes plugin, choose an Editor Config wit
 
 ### Convert Locally
 
-When the control-panel analysis is `ready`, review its counts and select **Migrate field and content**. Keep **Create a database backup before migrating** enabled unless you already manage backups outside Craft, then confirm that you understand the field definition and stored content will change.
+When the control-panel review is **Ready to migrate**, review its counts and continue to the confirmation step. **Ready with changes** also includes rendered before-and-after examples and a plain-language explanation of anything Vizy cannot represent exactly. Keep **Create a database backup before migrating** enabled unless you already manage backups outside Craft, then confirm that you understand the field definition and stored content will change.
 
 Vizy keeps the field change and content conversion together so the destination field is never deliberately left pointing at unconverted HTML. It runs the analysis again, changes the field type through Project Config, writes a migration to the project’s configured content-migration directory, applies it locally, and verifies the resulting documents.
+
+The completion step summarises values converted exactly, values converted with reviewed changes, and failures, then lists the generated migration and Project Config path together with the deployment steps.
 
 You can perform the same conversion from the console:
 
@@ -95,11 +97,11 @@ The destination type determines the result:
 - **CKEditor** exports compatible rich text as portable HTML using the selected field's configuration.
 - **Redactor** exports compatible rich text as portable HTML using the selected field's configuration.
 
-The review uses three outcomes. **Ready to copy** means the destination can represent the analysed content. **Ready with destination changes** means the copy can proceed, but the destination will flatten or omit something. **Cannot copy** is reserved for values that could not be read or converted. Representation changes do not block a copy because the source remains intact.
+The review uses three outcomes. **Ready to copy** means every applicable destination is empty or already matches and the field can represent the analysed content. **Ready with warnings** means the copy can proceed, but some destination values will be skipped or the destination will flatten or omit something. **Cannot copy** is reserved for values that could not be read or converted. Skips and representation changes do not block a copy because the existing source and destination content remain intact.
 
 Rendered before-and-after examples show the actual portable HTML or Plain Text result. Vizy Blocks are grouped by Block Type and are not rendered into destination content, but their complete data remains in the source Vizy field. Unsupported nodes and marks are also explained in the review rather than silently omitted.
 
-Continue to the confirmation step only after reviewing the included and skipped layouts. Vizy copies converted content between the paired placements and verifies the result. It does not modify either field definition or any field layout. Existing destination content is never overwritten, and any write or verification failure rolls the transaction back.
+Continue to the confirmation step only after reviewing the included and skipped layouts. The preview also counts values that will be copied, values that already match, and values that will be skipped because the destination contains different content. Vizy leaves those existing destination values unchanged while copying and verifying the remaining values. It does not modify either field definition or any field layout. The completion screen reports each outcome and identifies skipped entries. An unexpected write or verification failure rolls the transaction back, so it never leaves a partially completed copy.
 
 The console equivalents are:
 

@@ -39,6 +39,14 @@ final class RichTextConversions extends Component
     public const TARGET_CKEDITOR = 'ckeditor';
     public const TARGET_REDACTOR = 'redactor';
 
+    private const OUTBOUND_FEEDBACK_LIMIT = 25;
+
+
+    // Properties
+    // =========================================================================
+
+    private ?array $lastOutboundApplyResult = null;
+
 
     // Public Methods
     // =========================================================================
@@ -243,6 +251,8 @@ final class RichTextConversions extends Component
         $groups = [];
         $diagnosticCounts = [];
         $blockTypeCounts = [];
+        $convertedValues = [];
+        $feedbackSamples = [];
         $populated = 0;
         $empty = 0;
         $lossless = 0;
@@ -259,6 +269,8 @@ final class RichTextConversions extends Component
             &$groups,
             &$diagnosticCounts,
             &$blockTypeCounts,
+            &$convertedValues,
+            &$feedbackSamples,
             &$populated,
             &$empty,
             &$lossless,
@@ -289,10 +301,18 @@ final class RichTextConversions extends Component
                 [$document, $owner] = $this->_outboundDocument($value, $context, $field);
                 $assessment = $this->_outboundAssessment($document->toArray(), $target['id']);
                 $destinationValue = $this->_outboundValue($document, $owner, $targetField, $target['id']);
+                $site = Craft::$app->getSites()->getSiteById((int)$context['siteId']);
                 $sample['lossless'] = $assessment['diagnostics'] === [];
                 $sample['diagnostics'] = $assessment['diagnostics'];
+                $sample['elementLabel'] = method_exists($owner, 'getUiLabel') ? $owner->getUiLabel() : "Element {$context['elementId']}";
+                $sample['elementUrl'] = method_exists($owner, 'getCpEditUrl') ? $owner->getCpEditUrl() : null;
+                $sample['siteName'] = $site?->name;
+                $sample['variantLabel'] = $this->_occurrenceVariantLabel($context, $owner);
                 $sample['sourcePreview'] = Vizy::$plugin->getRenderer()->renderPortableDocument($document);
                 $sample['destinationPreview'] = $destinationValue;
+                $occurrenceKey = $this->_outboundOccurrenceKey($context);
+                $convertedValues[$occurrenceKey] = $destinationValue;
+                $feedbackSamples[$occurrenceKey] = $sample;
 
                 foreach ($assessment['diagnostics'] as $diagnostic) {
                     $code = $diagnostic['code'];
@@ -313,7 +333,7 @@ final class RichTextConversions extends Component
                 $sample['error'] = $exception->getMessage();
             }
 
-            if (count($samples) < $sampleLimit) {
+            if (count($samples) < $sampleLimit && (isset($sample['error']) || !$sample['lossless'])) {
                 $samples[] = $sample;
             }
 
@@ -326,6 +346,50 @@ final class RichTextConversions extends Component
         $siteIds = array_map('intval', array_keys($siteIds));
         sort($siteIds);
         $blocked = $pairing['placementMap'] === [] || $pairing['ambiguous'] !== [] || $failures > 0;
+        $copyPreview = [
+            'matched' => 0,
+            'copied' => 0,
+            'alreadyCopied' => 0,
+            'skippedExisting' => 0,
+            'skippedEmpty' => 0,
+        ];
+        $conflictSamples = [];
+
+        if (!$blocked) {
+            $copyPreview = Vizy::$plugin->getContent()->copyFieldValues(
+                $map,
+                $pairing['placementMap'],
+                function(mixed $value, array $context) use ($convertedValues): string {
+                    $occurrenceKey = $this->_outboundOccurrenceKey($context);
+
+                    if (!array_key_exists($occurrenceKey, $convertedValues)) {
+                        throw new RuntimeException('The analysed Vizy value could not be matched to its planned destination value.');
+                    }
+
+                    return $convertedValues[$occurrenceKey];
+                },
+                [
+                    'dryRun' => true,
+                    'skipConflicts' => true,
+                    'skipEmptySources' => true,
+                    'onConflict' => function(mixed $sourceValue, mixed $destinationValue, mixed $replacement, array $context) use (
+                        &$conflictSamples,
+                        $feedbackSamples,
+                        $sampleLimit,
+                    ): void {
+                        if (count($conflictSamples) >= $sampleLimit) {
+                            return;
+                        }
+
+                        $occurrenceKey = $this->_outboundOccurrenceKey($context);
+                        $sample = $feedbackSamples[$occurrenceKey] ?? $this->_sample($context, $sourceValue);
+                        $sample['reason'] = Craft::t('vizy', 'The destination already contains different content, so this value will be left unchanged.');
+                        $conflictSamples[] = $sample;
+                    },
+                ],
+            );
+        }
+
         $status = $blocked ? 'blocked' : ($lossy > 0 ? 'changes' : 'ready');
         $sourceSettings = $field->getSettings();
         $targetSettings = $targetField->getSettings();
@@ -367,6 +431,10 @@ final class RichTextConversions extends Component
                 'lossless' => $lossless,
                 'lossy' => $lossy,
                 'failures' => $failures,
+                'willCopy' => $copyPreview['copied'],
+                'alreadyCopied' => $copyPreview['alreadyCopied'],
+                'skippedExisting' => $copyPreview['skippedExisting'],
+                'skippedEmpty' => $copyPreview['skippedEmpty'],
                 'rows' => count($rowIds),
                 'elements' => count($elementIds),
                 'siteIds' => $siteIds,
@@ -374,13 +442,16 @@ final class RichTextConversions extends Component
                 'diagnosticCounts' => $diagnosticCounts,
                 'blockTypeCounts' => $this->_blockTypeLabels($blockTypeCounts),
                 'samples' => $samples,
-                'samplesTruncated' => $populated > count($samples),
+                'samplesTruncated' => ($lossy + $failures) > count($samples),
+                'conflictSamples' => $conflictSamples,
+                'conflictSamplesTruncated' => $copyPreview['skippedExisting'] > count($conflictSamples),
             ],
             'locationMapHash' => hash('sha256', Json::encode($map)),
             'locationMap' => $map,
-            'nextStep' => match ($status) {
-                'blocked' => 'Resolve the layout or conversion problems and run the analysis again. No field or content has been changed.',
-                'changes' => 'Review what the destination cannot represent, then confirm the copy. The source Vizy field and its content will remain unchanged.',
+            'nextStep' => match (true) {
+                $status === 'blocked' => 'Resolve the layout or conversion problems and run the analysis again. No field or content has been changed.',
+                $status === 'changes' => 'Review what the destination cannot represent, then confirm the copy. The source Vizy field and its content will remain unchanged.',
+                $copyPreview['skippedExisting'] > 0 => 'Review the existing destination values that will be skipped, then confirm the remaining copy. The source Vizy field and existing destination content will remain unchanged.',
                 default => 'Analysis is complete. Confirm the copy to populate the existing destination field without changing the source Vizy field.',
             },
         ];
@@ -462,6 +533,7 @@ final class RichTextConversions extends Component
                 $sample['error'] = 'The stored rich-text value is not a string.';
 
                 if (count($samples) < $sampleLimit) {
+                    $sample = array_replace($this->_inboundFeedbackSample($context, $value), $sample);
                     $samples[] = $sample;
                 }
                 return Change::unchanged();
@@ -470,6 +542,8 @@ final class RichTextConversions extends Component
             try {
                 $result = Vizy::$plugin->getHtmlImporter()->convert($value, $targetField);
                 $sample['lossless'] = $result->isLossless();
+                $sample['sourcePreview'] = $value;
+                $sample['destinationPreview'] = Vizy::$plugin->getRenderer()->renderPortableDocument($result->document());
                 $sample['diagnostics'] = array_map(
                     static fn(HtmlImportDiagnostic $diagnostic): array => $diagnostic->toArray(),
                     $result->diagnostics(),
@@ -492,6 +566,7 @@ final class RichTextConversions extends Component
             }
 
             if (count($samples) < $sampleLimit && (isset($sample['error']) || !$sample['lossless'])) {
+                $sample = array_replace($this->_inboundFeedbackSample($context, $value), $sample);
                 $samples[] = $sample;
             }
             return Change::unchanged();
@@ -829,12 +904,15 @@ final class RichTextConversions extends Component
 
         $lossy = 0;
         $diagnosticCounts = [];
+        $feedbackSamples = [];
+        $skippedSamples = [];
         $convert = function(mixed $value, array $context) use (
             $sourceField,
             $targetField,
             $plan,
             &$lossy,
             &$diagnosticCounts,
+            &$feedbackSamples,
         ): string {
             if ($value === null || $value === '') {
                 return '';
@@ -848,6 +926,7 @@ final class RichTextConversions extends Component
             }
 
             $replacement = $this->_outboundValue($document, $owner, $targetField, $plan['targetId']);
+            $feedbackSamples[$this->_outboundOccurrenceKey($context)] = $this->_outboundFeedbackSample($context, $value, $owner);
 
             if ($assessment['diagnostics'] !== []) {
                 $lossy++;
@@ -864,7 +943,24 @@ final class RichTextConversions extends Component
             $plan['sourceLocationMap'],
             $plan['placementMap'],
             $convert,
-            ['db' => $db],
+            [
+                'db' => $db,
+                'skipConflicts' => true,
+                'skipEmptySources' => true,
+                'onConflict' => function(mixed $sourceValue, mixed $destinationValue, mixed $replacement, array $context) use (
+                    &$skippedSamples,
+                    &$feedbackSamples,
+                ): void {
+                    if (count($skippedSamples) >= self::OUTBOUND_FEEDBACK_LIMIT) {
+                        return;
+                    }
+
+                    $occurrenceKey = $this->_outboundOccurrenceKey($context);
+                    $sample = $feedbackSamples[$occurrenceKey] ?? $this->_sample($context, $sourceValue);
+                    $sample['reason'] = Craft::t('vizy', 'The destination already contains different content, so this value was left unchanged.');
+                    $skippedSamples[] = $sample;
+                },
+            ],
         );
         $writeLossy = $lossy;
         $writeDiagnosticCounts = $diagnosticCounts;
@@ -872,15 +968,23 @@ final class RichTextConversions extends Component
             $plan['sourceLocationMap'],
             $plan['placementMap'],
             $convert,
-            ['db' => $db, 'dryRun' => true],
+            [
+                'db' => $db,
+                'dryRun' => true,
+                'skipConflicts' => true,
+                'skipEmptySources' => true,
+            ],
         );
         ksort($writeDiagnosticCounts);
 
-        if ($verification['matched'] !== $write['matched'] || $verification['copied'] !== 0) {
+        if ($verification['matched'] !== $write['matched']
+            || $verification['copied'] !== 0
+            || $verification['skippedExisting'] !== $write['skippedExisting']
+            || $verification['skippedEmpty'] !== $write['skippedEmpty']) {
             throw new RuntimeException('Outbound copy verification did not find every converted destination value.');
         }
 
-        return [
+        $result = [
             'planHash' => $plan['planHash'],
             'sourceFieldUid' => $plan['sourceFieldUid'],
             'destinationFieldUid' => $plan['destinationFieldUid'],
@@ -888,9 +992,21 @@ final class RichTextConversions extends Component
             'sourcePreserved' => true,
             'lossy' => $writeLossy,
             'diagnosticCounts' => $writeDiagnosticCounts,
+            'summary' => [
+                'copied' => $write['copied'],
+                'alreadyCopied' => $write['alreadyCopied'],
+                'skippedExisting' => $write['skippedExisting'],
+                'skippedEmpty' => $write['skippedEmpty'],
+                'failures' => 0,
+            ],
+            'skippedSamples' => $skippedSamples,
+            'skippedSamplesTruncated' => $write['skippedExisting'] > count($skippedSamples),
             'write' => $write,
             'verification' => $verification,
         ];
+
+        $this->lastOutboundApplyResult = $result;
+        return $result;
     }
 
     /**
@@ -927,6 +1043,7 @@ final class RichTextConversions extends Component
         $this->_outboundTargetForField($targetField);
 
         $migrationPath = null;
+        $this->lastOutboundApplyResult = null;
 
         try {
             $placementMap = $analysis['scope']['placementMap'];
@@ -976,6 +1093,10 @@ final class RichTextConversions extends Component
                 $applyPlan,
             ));
             $contentMigrator->migrateUp($migrationName);
+
+            if ($this->lastOutboundApplyResult === null) {
+                throw new RuntimeException('The outbound copy completed without returning its verification summary.');
+            }
         } catch (Throwable $exception) {
             if ($migrationPath !== null && is_file($migrationPath)) {
                 FileHelper::unlink($migrationPath);
@@ -994,6 +1115,7 @@ final class RichTextConversions extends Component
             'destinationFieldHandle' => $targetField->handle,
             'strict' => $applyPlan['strict'],
             'sourcePreserved' => true,
+            'copy' => $this->lastOutboundApplyResult,
             'nextStep' => 'Verify the destination field while the original Vizy field remains unchanged. Commit the generated content migration, deploy the already-prepared field layout Project Config first, and cut over only after every environment has applied and verified the copy.',
         ];
     }
@@ -1064,7 +1186,7 @@ final class RichTextConversions extends Component
 
             if ($destinationPlacements === []) {
                 $skipped[] = $details + [
-                    'reason' => Craft::t('vizy', 'The destination field is not attached to this layout.'),
+                    'reason' => Craft::t('vizy', 'Entries using this layout will be skipped because the destination field has not been added to it.'),
                 ];
                 continue;
             }
@@ -1256,6 +1378,47 @@ final class RichTextConversions extends Component
             Vizy::$plugin->getDocuments()->normalizeValue($value, $owner, $field),
             $owner,
         ];
+    }
+
+    private function _outboundFeedbackSample(array $context, mixed $value, ElementInterface $owner): array
+    {
+        $site = Craft::$app->getSites()->getSiteById((int)$context['siteId']);
+        $sample = $this->_sample($context, $value);
+        $sample['elementLabel'] = method_exists($owner, 'getUiLabel') ? $owner->getUiLabel() : "Element {$context['elementId']}";
+        $sample['elementUrl'] = method_exists($owner, 'getCpEditUrl') ? $owner->getCpEditUrl() : null;
+        $sample['siteName'] = $site?->name;
+        $sample['variantLabel'] = $this->_occurrenceVariantLabel($context, $owner);
+        return $sample;
+    }
+
+    private function _inboundFeedbackSample(array $context, mixed $value): array
+    {
+        $owner = Craft::$app->getElements()->getElementById(
+            (int)$context['elementId'],
+            $context['elementType'],
+            (int)$context['siteId'],
+            ['trashed' => null],
+        );
+        $site = Craft::$app->getSites()->getSiteById((int)$context['siteId']);
+        $sample = $this->_sample($context, $value);
+        $sample['elementLabel'] = $owner && method_exists($owner, 'getUiLabel') ? $owner->getUiLabel() : "Element {$context['elementId']}";
+        $sample['elementUrl'] = $owner && method_exists($owner, 'getCpEditUrl') ? $owner->getCpEditUrl() : null;
+        $sample['siteName'] = $site?->name;
+        $sample['variantLabel'] = $owner ? $this->_occurrenceVariantLabel($context, $owner) : null;
+        return $sample;
+    }
+
+    private function _occurrenceVariantLabel(array $context, ElementInterface $owner): ?string
+    {
+        if (!empty($context['revisionId']) || (method_exists($owner, 'getIsRevision') && $owner->getIsRevision())) {
+            return Craft::t('vizy', 'Revision');
+        }
+
+        if (!empty($context['draftId']) || (method_exists($owner, 'getIsDraft') && $owner->getIsDraft())) {
+            return Craft::t('vizy', 'Draft');
+        }
+
+        return null;
     }
 
     private function _outboundAssessment(array $document, string $targetId): array
@@ -1528,6 +1691,14 @@ final class RichTextConversions extends Component
             'rootLayoutUid' => $context['rootLayoutUid'],
             'segments' => $segments,
         ];
+    }
+
+    private function _outboundOccurrenceKey(array $context): string
+    {
+        return hash('sha256', Json::encode([
+            'rowId' => (int)$context['rowId'],
+            'path' => $this->_schemaPath($context),
+        ]));
     }
 
     private function _sample(array $context, mixed $value): array

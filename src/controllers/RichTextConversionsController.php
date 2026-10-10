@@ -67,6 +67,8 @@ final class RichTextConversionsController extends Controller
                 error: $exception->getMessage(),
                 selectedField: $field,
                 selectedEditorConfig: $editorConfig,
+                wizardStep: 1,
+                openWizard: true,
             );
         }
 
@@ -74,6 +76,8 @@ final class RichTextConversionsController extends Controller
             analysis: $analysis,
             selectedField: $field,
             selectedEditorConfig: $editorConfig,
+            wizardStep: 2,
+            openWizard: true,
         );
     }
 
@@ -118,6 +122,8 @@ final class RichTextConversionsController extends Controller
                 error: $exception->getMessage(),
                 selectedField: $field,
                 selectedEditorConfig: $editorConfig,
+                wizardStep: $analysis ? 4 : 1,
+                openWizard: true,
             );
         }
 
@@ -126,6 +132,8 @@ final class RichTextConversionsController extends Controller
             result: $result,
             selectedField: $field,
             selectedEditorConfig: $editorConfig,
+            wizardStep: 4,
+            openWizard: true,
         );
     }
 
@@ -203,7 +211,7 @@ final class RichTextConversionsController extends Controller
                 error: $exception->getMessage(),
                 selectedField: $field,
                 selectedDestination: $destination,
-                wizardStep: $analysis ? 3 : 1,
+                wizardStep: $analysis ? 4 : 1,
                 openWizard: true,
             );
         }
@@ -228,7 +236,11 @@ final class RichTextConversionsController extends Controller
         ?string $error = null,
         ?string $selectedField = null,
         string $selectedEditorConfig = 'standard',
+        int $wizardStep = 1,
+        bool $openWizard = false,
     ): Response {
+        Craft::$app->getView()->registerAssetBundle(MigrationsAsset::class);
+
         return $this->renderTemplate('vizy/settings/migrations/to-vizy', [
             'sources' => Vizy::$plugin->getRichTextConversions()->getSources(),
             'editorConfigOptions' => Vizy::$plugin->getEditorConfigs()->getOptions(),
@@ -237,6 +249,8 @@ final class RichTextConversionsController extends Controller
             'error' => $error,
             'selectedField' => $selectedField,
             'selectedEditorConfig' => $selectedEditorConfig,
+            'wizardStep' => $wizardStep,
+            'openWizard' => $openWizard,
             'allowAdminChanges' => Craft::$app->getConfig()->getGeneral()->allowAdminChanges,
         ]);
     }

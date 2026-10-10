@@ -148,6 +148,11 @@ namespace {
             ->and($plan['content']['diagnosticCounts'])->not->toBeEmpty()
             ->and($plan['content']['samples'])->toHaveCount(1)
             ->and($plan['content']['samples'][0]['preview'])->toContain('Keep this text')
+            ->and($plan['content']['samples'][0]['sourcePreview'])->toContain('<marquee')
+            ->and($plan['content']['samples'][0]['destinationPreview'])->toContain('Keep this text')
+            ->and($plan['content']['samples'][0]['elementLabel'])->toBe('Untitled entry')
+            ->and($plan['content']['samples'][0]['elementUrl'])->toBeString()
+            ->and($plan['content']['samples'][0]['siteName'])->toBe('Plugin Tests')
             ->and($plan['content']['samples'][0]['lossless'])->toBeFalse();
     });
 
@@ -297,7 +302,12 @@ namespace {
                 'vizy-blocks-discarded',
             ])
             ->and($plan['content']['blockTypeCounts'])->toHaveCount(1)
-            ->and($plan['content']['blockTypeCounts'][0]['count'])->toBe(1);
+            ->and($plan['content']['blockTypeCounts'][0]['count'])->toBe(1)
+            ->and($plan['content']['samples'])->toHaveCount(1)
+            ->and($plan['content']['samples'][0]['lossless'])->toBeFalse()
+            ->and($plan['content']['samples'][0]['elementLabel'])->toBe('Untitled entry')
+            ->and($plan['content']['samples'][0]['elementUrl'])->toBeString()
+            ->and($plan['content']['samples'][0]['siteName'])->toBe('Plugin Tests');
     });
 
     it('includes soft-deleted owners in outbound analysis', function() {
@@ -312,7 +322,8 @@ namespace {
         expect($plan['status'])->toBe('ready')
             ->and($plan['content']['populated'])->toBe(1)
             ->and($plan['content']['failures'])->toBe(0)
-            ->and($plan['content']['samples'][0]['destinationPreview'])->toBe('Retained trashed content.');
+            ->and($plan['content']['samples'])->toBeEmpty()
+            ->and($plan['content']['samplesTruncated'])->toBeFalse();
     });
 
     it('copies Vizy content to a separate multiline Plain Text field and preserves the source', function() {
@@ -371,7 +382,62 @@ namespace {
             ->and($generated)->toContain($destinationField->uid)
             ->and($generated)->not->toContain('Hello world.')
             ->and($checkpoint)->toBeNull()
-            ->and($result['sourcePreserved'])->toBeTrue();
+            ->and($result['sourcePreserved'])->toBeTrue()
+            ->and($result['copy']['summary']['copied'])->toBe(1)
+            ->and($result['copy']['summary']['skippedExisting'])->toBe(0);
+    });
+
+    it('reports and skips divergent destination content during an outbound migration', function() {
+        $fixture = outboundVizyConversionFixture('<p>Original Vizy content.</p>');
+        $where = [
+            'elementId' => $fixture['owner']->id,
+            'siteId' => $fixture['owner']->siteId,
+        ];
+        $before = (new Query())->select('content')->from('{{%elements_sites}}')->where($where)->scalar();
+        $content = is_string($before) ? Json::decode($before) : (array)$before;
+        $content[$fixture['destinationPlacement']->uid] = 'Existing destination content';
+        Craft::$app->db->createCommand()->update('{{%elements_sites}}', [
+            'content' => new yii\db\JsonExpression($content),
+        ], $where)->execute();
+
+        $plan = Vizy::$plugin->getRichTextConversions()->analyzeFromVizy(
+            $fixture['field']->handle,
+            $fixture['destinationField']->handle,
+        );
+
+        expect($plan['safeToCopy'])->toBeTrue()
+            ->and($plan['content']['willCopy'])->toBe(0)
+            ->and($plan['content']['skippedExisting'])->toBe(1)
+            ->and($plan['content']['conflictSamples'])->toHaveCount(1)
+            ->and($plan['content']['conflictSamples'][0]['elementLabel'])->toBe('Untitled entry');
+
+        $migrator = Craft::$app->getContentMigrator();
+        $originalMigrationPath = $migrator->migrationPath;
+        $migrationPath = Craft::$app->getPath()->getTempPath() . DIRECTORY_SEPARATOR . 'vizy-outbound-skip-' . StringHelper::randomString(12);
+        FileHelper::createDirectory($migrationPath);
+        $migrator->migrationPath = $migrationPath;
+
+        try {
+            $result = Vizy::$plugin->getRichTextConversions()->convertFromVizy(
+                $fixture['field']->handle,
+                $fixture['destinationField']->handle,
+                25,
+                true,
+            );
+        } finally {
+            $migrator->migrationPath = $originalMigrationPath;
+            FileHelper::removeDirectory($migrationPath);
+        }
+
+        $after = (new Query())->select('content')->from('{{%elements_sites}}')->where($where)->scalar();
+        $after = is_string($after) ? Json::decode($after) : (array)$after;
+
+        expect($result['copy']['summary']['copied'])->toBe(0)
+            ->and($result['copy']['summary']['skippedExisting'])->toBe(1)
+            ->and($result['copy']['summary']['failures'])->toBe(0)
+            ->and($result['copy']['skippedSamples'])->toHaveCount(1)
+            ->and($after[$fixture['placement']->uid])->toBe(Json::encode($fixture['document']))
+            ->and($after[$fixture['destinationPlacement']->uid])->toBe('Existing destination content');
     });
 
     it('refuses to overwrite divergent destination content during an outbound copy', function() {
@@ -510,6 +576,7 @@ namespace {
         expect($plan['status'])->toBe('ready')
             ->and($plan['scope']['includedLayouts'])->toHaveCount(1)
             ->and($plan['scope']['skippedLayouts'])->not->toBeEmpty()
+            ->and($plan['scope']['skippedLayouts'][0]['reason'])->toBe('Entries using this layout will be skipped because the destination field has not been added to it.')
             ->and($plan['content']['occurrences'])->toBe(1);
     });
 }
