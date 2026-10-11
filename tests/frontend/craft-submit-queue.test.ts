@@ -32,7 +32,7 @@ const jquery = Object.assign((form: HTMLFormElement) => ({
 
 function form(vizy = true) {
     const element = document.createElement('form');
-    if (vizy) element.innerHTML = '<vizy-editor></vizy-editor><vizy-editor></vizy-editor>';
+    if (vizy) element.innerHTML = '<input name="action" value="elements/save"><vizy-editor></vizy-editor><vizy-editor></vizy-editor>';
     document.body.append(element);
     editors.set(element, { queue, failed: false });
     return element;
@@ -87,6 +87,18 @@ describe('Craft submission queue', () => {
         expect(special.submit.preDispatch.call(form(), makeEvent())).toBeUndefined();
         expect(jobs).toHaveLength(0);
         expect(previous).toHaveBeenCalledTimes(2);
+    });
+
+    it('lets Craft discard a provisional draft while its queue is running', () => {
+        const element = form();
+        const action = document.createElement('input');
+        action.name = 'action';
+        action.value = 'elements/delete-draft';
+        element.append(action);
+        const event = makeEvent();
+        expect(special.submit.preDispatch.call(element, event)).toBeUndefined();
+        expect(event.preventDefault).not.toHaveBeenCalled();
+        expect(jobs).toHaveLength(0);
     });
 
     it('honours an existing submit veto', () => {

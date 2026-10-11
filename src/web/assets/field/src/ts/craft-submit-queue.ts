@@ -1,4 +1,4 @@
-import { blockConflictedSubmit, submitFullPage } from './craft-conflicts';
+import { blockConflictedSubmit, saveAction, submitFullPage } from './craft-conflicts';
 
 interface SubmitEventLike {
     type: string;
@@ -52,6 +52,9 @@ export function installCraftSubmitQueue(): void {
     const defer = (form: HTMLFormElement, event: SubmitEventLike): boolean => {
         if (!form.querySelector('vizy-editor')) return false;
         if (blockConflictedSubmit(form, event)) return true;
+        // Destructive actions such as deleting a provisional draft already run
+        // inside Craft's queue. Deferring them onto that same queue deadlocks.
+        if (!saveAction(form, event)) return false;
         if (replaying.has(form)) return submitFullPage(form, event);
         const editor = $(form).data('elementEditor') as CraftQueuedEditor | undefined;
         const queue = editor?.queue;

@@ -29,9 +29,22 @@ function allowNavigation(form: HTMLFormElement): void {
 type Failure = { response?: { status?: number; data?: { message?: string; errorSummary?: unknown; vizy?: { conflict?: { code?: string; reviewUrl?: string | null } } } } };
 const conflicts = new WeakSet<HTMLFormElement>();
 const saving = new WeakSet<HTMLFormElement>();
+const saveActions = new Set(['elements/save', 'elements/save-draft', 'elements/apply-draft', 'elements/duplicate']);
 const t = (message: string) => window.Craft?.t?.('vizy', message) ?? message;
 const editorFor = (form: HTMLFormElement) => (window.$?.(form).data('elementEditor') as Editor | undefined);
 const stop = (event: CraftSubmitEvent) => { event.preventDefault(); event.stopImmediatePropagation(); };
+
+/** Resolve only actions that publish content through Vizy's guarded save path. */
+export function saveAction(form: HTMLFormElement, event: CraftSubmitEvent): string | null {
+    const customAction = typeof event.customTrigger?.data === 'function'
+        ? event.customTrigger.data('action')
+        : undefined;
+    // Craft.submitForm() appends action overrides, so the final input wins as it
+    // does in the request payload.
+    const actionInputs = form.querySelectorAll<HTMLInputElement>('input[name="action"]');
+    const action = customAction ?? actionInputs.item(actionInputs.length - 1)?.value;
+    return typeof action === 'string' && saveActions.has(action) ? action : null;
+}
 
 function notice(form: HTMLFormElement, heading: string, message: string) {
     let alert = form.querySelector<HTMLElementTagNameMap['pk-alert']>(':scope > [data-vizy-save-notice]');
@@ -151,8 +164,8 @@ export function blockConflictedSubmit(form: HTMLFormElement, event: CraftSubmitE
 export function submitFullPage(form: HTMLFormElement, event: CraftSubmitEvent): boolean {
     const editor = editorFor(form);
     if (!editor?.isFullPage || !window.Craft?.sendActionRequest) return false;
-    const action = event.customTrigger?.data('action') ?? form.querySelector<HTMLInputElement>('input[name="action"]')?.value;
-    if (!['elements/save', 'elements/save-draft', 'elements/apply-draft', 'elements/duplicate'].includes(typeof action === 'string' ? action : '')) return false;
+    const action = saveAction(form, event);
+    if (!action) return false;
     // Craft treats an ordinary Save on a named draft as autosave, without navigation.
     if (editor.settings.draftId && !editor.settings.isUnpublishedDraft && !editor.settings.isProvisionalDraft
         && event.autosave !== false && editor.enableAutosave
@@ -160,7 +173,7 @@ export function submitFullPage(form: HTMLFormElement, event: CraftSubmitEvent): 
     stop(event);
     if (saving.has(form)) return true;
     saving.add(form);
-    void save(form, editor, action as string);
+    void save(form, editor, action);
     return true;
 }
 

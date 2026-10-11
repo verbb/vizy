@@ -33,6 +33,7 @@
 - Fixed Undo getting stuck after opening the Block picker from a saved slash.
 - Fixed creating Blocks and retaining nested Matrix content when Vizy is placed inside Hyper 3 links.
 - Fixed an error when saving an entry while Vizy content was still being autosaved.
+- Fixed Craft's Discard action hanging when an entry had unsaved Vizy changes.
 - Fixed field conditions failing to refresh in newly added Matrix rows inside Vizy.
 - Fixed Vizy 3 upgrades failing when existing Matrix content was read before its anchor schema migration.
 - Fixed Block fields failing to load after Craft autosaved a newly created Matrix entry or while editing a provisional draft.
