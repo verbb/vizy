@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 4.0.0-beta.3 - 2026-10-11
 
 ### Added
 - Added native footnotes with paired references and editable definitions, automatic numbering, keyboard navigation, copy-safe identities, accessible frontend HTML, GraphQL fields, and migration from Verbb Footnotes markup. ([#303](https://github.com/verbb/vizy/issues/303))
