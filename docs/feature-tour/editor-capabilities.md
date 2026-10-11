@@ -1,6 +1,6 @@
 # Editor Capabilities
 
-An Editor Config separates what a Vizy document may contain from where its controls appear. **Capabilities** allow content such as headings, images, tables, and formatting marks. The toolbar and Bubble Menu then place controls for the allowed capabilities. This prevents a hidden toolbar button from becoming the only thing that protects the document schema.
+An Editor Config separates what a Vizy document may contain from where its controls appear. **Capabilities** allow content such as headings, images, tables, and formatting marks. Adding a control to the toolbar or Bubble Menu enables the capability it requires, while a capability can remain allowed without a control so pasted and existing content is preserved.
 
 Use the visual builder in **Settings → Vizy → Editor Configs** for normal configuration. The IDs on this page are useful when reviewing that setup or maintaining a JSON config under `config/vizy/`.
 
@@ -42,7 +42,7 @@ Inline capabilities apply formatting to selected text or insert an inline object
 | Footnote | `footnoteReference` | A numbered reference paired with an editable definition |
 | Link | `link` | A URL, email, telephone, SMS, Entry, Asset, or Category link |
 
-`textStyle` enables four independently placeable toolbar controls backed by TipTap's official TextStyle extensions: **Font family**, **Font size**, **Text colour**, and **Line height**. The Text colour menu includes both text and highlight palettes. Enable the capability first, then add whichever controls the editor needs to its toolbar.
+`textStyle` enables four independently placeable toolbar controls backed by TipTap's official TextStyle extensions: **Font family**, **Font size**, **Text colour**, and **Line height**. The Text colour menu includes both text and highlight palettes. Add whichever controls the editor needs to its toolbar.
 
 `rubyText` opens an annotation dialog for the selected text. Use it for readings and short pronunciation guides; the rendered output uses semantic `<ruby>`, `<rb>`, and `<rt>` elements.
 
@@ -99,16 +99,19 @@ The toolbar control is independent of `gutterInsert` and `slashInsert`. A config
 
 `undo`, `redo`, and `clearFormatting` are editor actions that do not require capabilities. `separator` adds a visual divider between toolbar controls and can be used more than once.
 
-## Behaviour Extensions
+## Editor Experience
 
-Behaviour extensions change how the editor works without adding a document type or toolbar button. Enable them under **Behaviour extensions** in the Editor Config's **Content Schema** section.
+The **Editor Experience** section controls interface and typing behaviour that does not change what the document may contain. These settings are separate from **Content Schema** and are not included in its content-type count.
 
-| Feature | Capability ID | Behaviour |
+| Setting | Configuration ID | Behaviour |
 | --- | --- | --- |
-| Character Count | `characterCount` | Shows live character and word totals below the editor. An optional character limit prevents further input once the limit is reached. |
-| Placeholder | `placeholder` | Shows configurable prompt text while the editor is empty. |
-| Typography | `typography` | Converts common typed patterns such as straight quotes, three dots, and double hyphens into typographic characters. |
-| Find and Replace | `findAndReplace` | Adds a toolbar control for searching the current editor, navigating matches, and replacing one or all matches. |
+| Show Character Count | `characterCount` | Shows live character and word totals below the editor. An optional character limit prevents further input once the limit is reached. |
+| Show Placeholder | `placeholder` | Shows configurable prompt text while the editor is empty. |
+| Smart Typography | `typography` | Converts common typed patterns such as straight quotes, three dots, and double hyphens into typographic characters. |
+
+Find and Replace is configured as a toolbar control rather than an Editor Experience switch. Add `findAndReplace` to the toolbar to enable its extension and give authors access to searching, match navigation, and replacing one or all matches.
+
+Behaviour-only extensions registered by plugins or modules appear under **Additional Behaviours**. Extensions that provide a toolbar or Bubble Menu control are enabled when that control is added instead of being listed twice.
 
 List Keymap is loaded automatically when an Editor Config permits lists. It provides the expected Backspace and Delete behaviour around list-item boundaries, so it is not a separate setting.
 

@@ -172,7 +172,7 @@ if (window.Craft?.Vizy?.registerModule) {
 }
 ```
 
-After loading the AssetBundle, enable **Focus** under **Behaviour extensions** on the relevant Editor Config and open an entry using that config. Focused nodes receive the configured class in the editor; the extension does not change saved Vizy content or frontend HTML.
+After loading the AssetBundle, enable **Focus** under **Editor Experience → Additional Behaviours** on the relevant Editor Config and open an entry using that config. Focused nodes receive the configured class in the editor; the extension does not change saved Vizy content or frontend HTML.
 
 ### Replacing or Customising Controls
 

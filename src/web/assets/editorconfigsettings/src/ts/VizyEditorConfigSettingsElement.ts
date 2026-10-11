@@ -45,7 +45,7 @@ type CatalogItem = {
      * it is text rather than markup.
      */
     abbr?: string | null;
-    capabilityKind?: string;
+    capabilityKind?: 'node' | 'mark' | 'extension';
     capabilityName?: string;
     /**
      * Which level a heading button applies. `capabilityName` covers the Heading capability but
@@ -132,6 +132,12 @@ type EditorConfigState = {
 
 type CapabilityOption = { label: string; value: string };
 
+type CapabilityRequirement = {
+    kind: 'nodes' | 'marks' | 'extensions';
+    name: string;
+    headingLevel?: number;
+};
+
 /** The slice of `pk-lightswitch` this screen reads. */
 type PkLightswitch = HTMLElement & { checked: boolean };
 
@@ -176,6 +182,9 @@ const HEADING_LEVELS = [1, 2, 3, 4, 5, 6];
 
 /** What a config starts with, and the fallback when a saved one names no levels. */
 const DEFAULT_HEADING_LEVELS = [2, 3, 4];
+
+/** Core behaviour extensions with purpose-built fields in Editor Experience. */
+const EDITOR_EXPERIENCE_EXTENSION_IDS = new Set(['characterCount', 'placeholder', 'typography']);
 
 function t(category: string, message: string, params: Record<string, string> = {}): string {
     const globals = window as typeof window & {
@@ -529,14 +538,7 @@ class VizyEditorConfigSettingsElement extends HTMLElement {
         return registered ? { ...registered, kind: 'group' } : undefined;
     }
 
-    /**
-     * Whether the config allows what a palette item stands for.
-     *
-     * This governs the palette only. It is not enforced on what is already in the toolbar:
-     * unticking Quote no longer reaches in and deletes the Quote button, it just stops the
-     * button rendering and marks it in the strip. The two lists are edited at different
-     * moments and pruning one from behind the author's back lost work they had done.
-     */
+    /** Whether the config currently allows what a control stands for. */
     #itemAllowed(item: CatalogItem): boolean {
         // A button that is not built yet is never gated on the capabilities, because the two
         // reasons a control might not render are separate answers to separate questions and
@@ -578,15 +580,103 @@ class VizyEditorConfigSettingsElement extends HTMLElement {
     }
 
     /**
+     * The schema capability a control needs in order to render.
+     *
+     * Catalog metadata is authoritative where a control ID differs from its capability name,
+     * such as Text colour → textStyle. The kind/id fallback keeps third-party definitions and
+     * older catalog payloads useful without making always-on prose controls author-selectable.
+     */
+    #itemRequirement(item: CatalogItem): CapabilityRequirement | null {
+        if (item.pending || item.id === 'paragraph' || item.id === 'hardBreak') return null;
+
+        const capabilityKind = item.capabilityKind ?? (
+            item.kind === 'node' || item.kind === 'mark' || item.kind === 'extension'
+                ? item.kind
+                : undefined
+        );
+        if (capabilityKind === undefined) return null;
+
+        return {
+            kind: capabilityKind === 'node'
+                ? 'nodes'
+                : capabilityKind === 'mark'
+                    ? 'marks'
+                    : 'extensions',
+            name: item.capabilityName ?? item.id,
+            ...(item.headingLevel === undefined ? {} : { headingLevel: item.headingLevel }),
+        };
+    }
+
+    /**
+     * Requirements implied by placing a control.
+     *
+     * A direct button has one. A dropdown only implies one when every member requires the same
+     * capability, which lets Table enable Table without making Formatting enable every format it
+     * could ever contain. Mixed and capability-free dropdowns remain presentation choices only.
+     */
+    #placementRequirements(item: CatalogItem): CapabilityRequirement[] {
+        const direct = this.#itemRequirement(item);
+        if (direct !== null) return [direct];
+        if (item.kind !== 'dropdown' || !item.members?.length) return [];
+
+        const requirements = item.members.map((member) => {
+            const memberItem = this.#catalogItem(member, this.#toolbarCatalog);
+            return memberItem === undefined ? null : this.#itemRequirement(memberItem);
+        });
+        if (requirements.some((requirement) => requirement === null)) return [];
+
+        const unique = new Map<string, CapabilityRequirement>();
+        requirements.forEach((requirement) => {
+            if (requirement === null) return;
+            unique.set(`${requirement.kind}:${requirement.name}:${requirement.headingLevel ?? ''}`, requirement);
+        });
+
+        return unique.size === 1 ? [...unique.values()] : [];
+    }
+
+    /**
+     * Make a newly placed control usable without exposing the schema relationship as a second
+     * task. Removing the control deliberately does not reverse this: the schema may still be
+     * preserving pasted or existing content that has no authoring button.
+     */
+    #enableForPlacement(item: CatalogItem): void {
+        this.#placementRequirements(item).forEach((requirement) => {
+            if (!this.#state.capabilities[requirement.kind].includes(requirement.name)) {
+                this.#state.capabilities[requirement.kind].push(requirement.name);
+            }
+            if (
+                requirement.headingLevel !== undefined
+                && !this.#state.headings.levels.includes(requirement.headingLevel)
+            ) {
+                this.#state.headings.levels.push(requirement.headingLevel);
+                this.#state.headings.levels.sort((a, b) => a - b);
+            }
+        });
+    }
+
+    #requirementAllowed(requirement: CapabilityRequirement): boolean {
+        return this.#state.capabilities[requirement.kind].includes(requirement.name)
+            && (
+                requirement.headingLevel === undefined
+                || this.#state.headings.levels.includes(requirement.headingLevel)
+            );
+    }
+
+    /**
      * Whether something already in the toolbar will actually render.
      *
-     * A dropdown always will, as far as this screen can tell. Its contents are its
-     * registration's business and are pruned against the capabilities where they are resolved,
-     * so the builder would have to reimplement that to say otherwise — and the answer would
-     * usually be "yes, minus one option", which is not what the unavailable marker means.
+     * Mixed dropdowns usually remain available with fewer members. A dropdown whose members all
+     * share one requirement, such as Table, can be judged as a whole and marked unavailable if an
+     * author later disables that capability explicitly.
      */
     #entryAvailable(entry: ToolbarEntry): boolean {
-        if (isDropdownKey(entry)) return true;
+        if (isDropdownKey(entry)) {
+            const item = this.#catalogItem(entry, this.#dropdownCatalog);
+            const requirements = item === undefined ? [] : this.#placementRequirements(item);
+            return requirements.length === 0 || requirements.every((requirement) => (
+                this.#requirementAllowed(requirement)
+            ));
+        }
 
         const item = this.#catalogItem(entry, this.#toolbarCatalog);
         if (!item || item.kind === 'presentation') return true;
@@ -612,7 +702,7 @@ class VizyEditorConfigSettingsElement extends HTMLElement {
      * belongs, and an author looking for heading control no longer has to know which shelf it is
      * filed under before they can look.
      *
-     * `memberOnly` is the interesting filter, and it is the whole of what used to be a rule here.
+     * `memberOnly` is the interesting filter, and it is the whole of the availability rule here.
      * A control a dropdown owns is not a button, so it is never offered as one — see
      * `MEMBER_ONLY_IDS`. What this did instead was offer every member as a button *and* subtract
      * the ones a placed dropdown currently held, which meant placing one chip made four vanish
@@ -632,7 +722,9 @@ class VizyEditorConfigSettingsElement extends HTMLElement {
                 // Repeatable items stay offered no matter how many are in use. A dropdown is not
                 // one: it is a single named thing, so it leaves the palette when placed.
                 if (active.has(item.id) && !this.#isRepeatable(item.id)) return false;
-                return this.#itemAllowed(item);
+                // Schema choices must not hide product features. Placing the item enables the
+                // capability it needs; see `#enableForPlacement`.
+                return true;
             })
             .sort((a, b) => (a.paletteRank ?? 0) - (b.paletteRank ?? 0))
             // Repeatable items last. The palette otherwise reads as a list of things you
@@ -646,7 +738,7 @@ class VizyEditorConfigSettingsElement extends HTMLElement {
         const active = new Set(this.#state.bubble.items);
         return this.#bubbleCatalog.filter((item) => {
             if (active.has(item.id)) return false;
-            return this.#itemAllowed(item);
+            return true;
         });
     }
 
@@ -809,12 +901,17 @@ class VizyEditorConfigSettingsElement extends HTMLElement {
     /**
      * Adds a button or a dropdown, both of which are IDs.
      *
-     * A dropdown is placed and nothing else happens. Its members are written only if an author
-     * goes on to trim or reorder them, so a config that simply uses Formatting says so in one
-     * token and keeps following the registration. See `EditorConfigState.dropdowns`.
+     * Its members are written only if an author goes on to trim or reorder them, so a config that
+     * simply uses Formatting says so in one token and keeps following the registration. A control
+     * with one unambiguous schema requirement is also made usable here.
      */
     #addToolbarItem(id: string, at?: number): void {
         if (!this.#isRepeatable(id) && this.#entryIndex(id) !== -1) return;
+        const item = this.#catalogItem(
+            id,
+            isDropdownKey(id) ? this.#dropdownCatalog : this.#toolbarCatalog,
+        );
+        if (item !== undefined) this.#enableForPlacement(item);
         if (at === undefined) this.#state.toolbar.push(id);
         else this.#state.toolbar.splice(at, 0, id);
 
@@ -960,6 +1057,8 @@ class VizyEditorConfigSettingsElement extends HTMLElement {
 
     #addBubbleItem(id: string, at?: number): void {
         if (this.#state.bubble.items.includes(id)) return;
+        const item = this.#catalogItem(id, this.#bubbleCatalog);
+        if (item !== undefined) this.#enableForPlacement(item);
         if (at === undefined) this.#state.bubble.items.push(id);
         else this.#state.bubble.items.splice(at, 0, id);
         this.render();
@@ -1193,12 +1292,10 @@ class VizyEditorConfigSettingsElement extends HTMLElement {
         const options = [
             ...this.#capabilityCatalog.nodes,
             ...this.#capabilityCatalog.marks,
-            ...this.#capabilityCatalog.extensions,
         ];
         const allowed = options.filter((option) => (
             this.#state.capabilities.nodes.includes(option.value)
             || this.#state.capabilities.marks.includes(option.value)
-            || this.#state.capabilities.extensions.includes(option.value)
         ));
 
         return `
@@ -1210,7 +1307,7 @@ class VizyEditorConfigSettingsElement extends HTMLElement {
                         total: String(options.length),
                     })}</span>
                 </summary>
-                <p class="instructions">${t('vizy', 'The nodes, marks, and behaviour extensions this editor understands. It governs pasted and imported content as well as the toolbar, so a content type can be allowed without being given a button — which is how existing formatting is preserved without authors being offered more of it.')}</p>
+                <p class="instructions">${t('vizy', 'The nodes and marks this editor understands. It governs pasted and imported content as well as the toolbar, so a content type can be allowed without being given a button — which is how existing formatting is preserved without authors being offered more of it.')}</p>
 
                 <div class="vizy-editor-config-subhead">${t('vizy', 'Blocks and objects')}</div>
                 ${this.#checkboxSelectHtml('nodes', this.#capabilityCatalog.nodes, this.#state.capabilities.nodes)}
@@ -1245,59 +1342,130 @@ class VizyEditorConfigSettingsElement extends HTMLElement {
 
                 <div class="vizy-editor-config-subhead">${t('vizy', 'Inline formatting')}</div>
                 ${this.#checkboxSelectHtml('marks', this.#capabilityCatalog.marks, this.#state.capabilities.marks)}
-
-                ${this.#capabilityCatalog.extensions.length > 0 ? `
-                    <div class="vizy-editor-config-subhead">${t('vizy', 'Behaviour extensions')}</div>
-                    <p class="instructions">${t('vizy', 'TipTap modules that change editing behaviour without adding a document type. Enable them here so their JavaScript loads with this config.')}</p>
-                    ${this.#checkboxSelectHtml('extensions', this.#capabilityCatalog.extensions, this.#state.capabilities.extensions)}
-                    ${this.#extensionOptionsHtml()}
-                ` : ''}
             </details>
         `;
     }
 
-    #extensionOptionsHtml(): string {
+    /** Whether an extension is enabled by placing one of its controls. */
+    #extensionHasControl(name: string): boolean {
+        return [...this.#toolbarCatalog, ...this.#bubbleCatalog].some((item) => (
+            item.capabilityKind === 'extension' && item.capabilityName === name
+        ));
+    }
+
+    /**
+     * Editor presentation and typing behaviour, kept separate from document schema.
+     *
+     * Toolbar-backed extensions are absent because placing their control enables them. Native
+     * behaviours with options get purpose-built fields, while third-party behaviour-only
+     * extensions retain a generic picker so integrations do not lose their configuration UI.
+     */
+    #editorExperienceHtml(): string {
+        const available = new Set(this.#capabilityCatalog.extensions.map((option) => option.value));
         const enabled = this.#state.capabilities.extensions;
-        const fields: string[] = [];
+        const additional = this.#capabilityCatalog.extensions.filter((option) => (
+            !EDITOR_EXPERIENCE_EXTENSION_IDS.has(option.value)
+            && !this.#extensionHasControl(option.value)
+        ));
+        const settings: string[] = [];
 
-        if (enabled.includes('characterCount')) {
-            fields.push(`
-                <pk-field
-                    label="${escapeHtml(t('vizy', 'Character limit'))}"
-                    instructions="${escapeHtml(t('vizy', 'Leave blank to show the character and word counts without setting a limit.'))}"
-                >
-                    <input
-                        type="number"
-                        class="text fullwidth"
-                        min="1"
-                        max="2000000"
-                        value="${this.#state.extensionOptions.characterCount.limit ?? ''}"
-                        data-character-count-limit
+        if (available.has('characterCount')) {
+            settings.push(`
+                <div class="vizy-editor-config-experience-setting">
+                    <pk-field
+                        class="vizy-editor-config-toggle"
+                        label="${escapeHtml(t('vizy', 'Show Character Count'))}"
+                        instructions="${escapeHtml(t('vizy', 'Show live character and word totals below the editor.'))}"
                     >
-                </pk-field>
+                        <pk-lightswitch
+                            data-editor-extension="characterCount"
+                            ${enabled.includes('characterCount') ? 'checked' : ''}
+                        ></pk-lightswitch>
+                    </pk-field>
+                    ${enabled.includes('characterCount') ? `
+                        <div class="vizy-editor-config-experience-options">
+                            <pk-field
+                                label="${escapeHtml(t('vizy', 'Character limit'))}"
+                                instructions="${escapeHtml(t('vizy', 'Leave blank to show the character and word counts without setting a limit.'))}"
+                            >
+                                <input
+                                    type="number"
+                                    class="text fullwidth"
+                                    min="1"
+                                    max="2000000"
+                                    value="${this.#state.extensionOptions.characterCount.limit ?? ''}"
+                                    data-character-count-limit
+                                >
+                            </pk-field>
+                        </div>
+                    ` : ''}
+                </div>
             `);
         }
 
-        if (enabled.includes('placeholder')) {
-            fields.push(`
-                <pk-field
-                    label="${escapeHtml(t('vizy', 'Placeholder text'))}"
-                    instructions="${escapeHtml(t('vizy', 'Shown in an empty editor to prompt content authors.'))}"
-                >
-                    <input
-                        type="text"
-                        class="text fullwidth"
-                        maxlength="250"
-                        value="${escapeHtml(this.#state.extensionOptions.placeholder.text)}"
-                        data-placeholder-text
+        if (available.has('placeholder')) {
+            settings.push(`
+                <div class="vizy-editor-config-experience-setting">
+                    <pk-field
+                        class="vizy-editor-config-toggle"
+                        label="${escapeHtml(t('vizy', 'Show Placeholder'))}"
+                        instructions="${escapeHtml(t('vizy', 'Show prompt text while the editor is empty.'))}"
                     >
-                </pk-field>
+                        <pk-lightswitch
+                            data-editor-extension="placeholder"
+                            ${enabled.includes('placeholder') ? 'checked' : ''}
+                        ></pk-lightswitch>
+                    </pk-field>
+                    ${enabled.includes('placeholder') ? `
+                        <div class="vizy-editor-config-experience-options">
+                            <pk-field label="${escapeHtml(t('vizy', 'Placeholder text'))}">
+                                <input
+                                    type="text"
+                                    class="text fullwidth"
+                                    maxlength="250"
+                                    value="${escapeHtml(this.#state.extensionOptions.placeholder.text)}"
+                                    data-placeholder-text
+                                >
+                            </pk-field>
+                        </div>
+                    ` : ''}
+                </div>
             `);
         }
 
-        return fields.length > 0
-            ? `<div class="vizy-editor-config-extension-options">${fields.join('')}</div>`
-            : '';
+        if (available.has('typography')) {
+            settings.push(`
+                <div class="vizy-editor-config-experience-setting">
+                    <pk-field
+                        class="vizy-editor-config-toggle"
+                        label="${escapeHtml(t('vizy', 'Smart Typography'))}"
+                        instructions="${escapeHtml(t('vizy', 'Replace straight quotes, three dots, and double hyphens with typographic characters as authors type.'))}"
+                    >
+                        <pk-lightswitch
+                            data-editor-extension="typography"
+                            ${enabled.includes('typography') ? 'checked' : ''}
+                        ></pk-lightswitch>
+                    </pk-field>
+                </div>
+            `);
+        }
+
+        if (additional.length > 0) {
+            settings.push(`
+                <div class="vizy-editor-config-experience-setting">
+                    <div class="vizy-editor-config-subhead">${t('vizy', 'Additional Behaviours')}</div>
+                    <p class="instructions">${t('vizy', 'Extensions that change editing behaviour without adding content or a toolbar control.')}</p>
+                    ${this.#checkboxSelectHtml('extensions', additional, enabled)}
+                </div>
+            `);
+        }
+
+        return settings.length > 0 ? `
+            <section class="vizy-editor-config-section" data-editor-experience>
+                <h3>${t('vizy', 'Editor Experience')}</h3>
+                <div class="vizy-editor-config-experience">${settings.join('')}</div>
+            </section>
+        ` : '';
     }
 
     /**
@@ -1448,7 +1616,7 @@ class VizyEditorConfigSettingsElement extends HTMLElement {
                     <span class="vizy-editor-config-disclosure-title">${t('vizy', 'Icons')}</span>
                     <span class="vizy-editor-config-disclosure-count">${escapeHtml(customCountLabel)}</span>
                 </summary>
-                <p class="instructions">${t('vizy', 'Choose a control to replace its icon everywhere this config uses it. Clear the icon to restore Vizy’s default.')}</p>
+                <p class="instructions">${t('vizy', 'Choose a control to replace its icon. Clear the icon to restore Vizy’s default.')}</p>
                 ${controls.length > 0 ? `
                     <div class="vizy-editor-config-icon-designer">
                         <div class="vizy-editor-config-icon-grid" role="group" aria-label="${escapeHtml(t('vizy', 'Controls'))}">
@@ -1875,7 +2043,7 @@ class VizyEditorConfigSettingsElement extends HTMLElement {
                                 that dragging already does, so the sentence is not the place; the
                                 docs are.
                             -->
-                            <p class="instructions">${t('vizy', 'Drag toolbar items into the editor.')}</p>
+                            <p class="instructions">${t('vizy', 'Drag or click toolbar items to add them to the editor.')}</p>
                             <div class="vizy-editor-config-builder" data-builder="toolbar">
                                 <!--
                                     Buttons and dropdowns in one row. A dropdown draws with a
@@ -2016,30 +2184,34 @@ class VizyEditorConfigSettingsElement extends HTMLElement {
                             ` : ''}
                         </section>
 
+                        ${this.#editorExperienceHtml()}
                         ${this.#schemaSectionHtml()}
                         ${this.#iconSettingsHtml()}
                     </div>
                 ` : `
                     <div class="vizy-editor-config-advanced">
-                        <span class="vizy-editor-config-strip-label">${t('vizy', 'Advanced configuration JSON')}</span>
-                        <!--
-                            The content is not set here. The value attribute maps to the
-                            component's defaultValue, which is the reset target rather
-                            than what is shown, so the JSON is assigned as a property once
-                            the element exists — see below. That also spares us escaping a
-                            multi-line JSON document into an attribute.
+                        <pk-field
+                            label="${escapeHtml(t('vizy', 'Configuration JSON'))}"
+                            instructions="${escapeHtml(t('vizy', 'Edit the Editor Config directly as JSON, or copy it into config/vizy/{id}.json to create a file-based config.'))}"
+                        >
+                            <!--
+                                The content is not set here. The value attribute maps to the
+                                component's defaultValue, which is the reset target rather
+                                than what is shown, so the JSON is assigned as a property once
+                                the element exists — see below. That also spares us escaping a
+                                multi-line JSON document into an attribute.
 
-                            Not wrapped in a label either: the editor is a CodeMirror
-                            surface, and a label's click-to-focus fights its own cursor
-                            placement.
-                        -->
-                        <pk-code-editor
-                            data-advanced-json
-                            language="json"
-                            rows="20"
-                            ${this.#advancedError ? 'invalid' : ''}
-                        ></pk-code-editor>
-                        ${this.#advancedError ? `<p class="vizy-editor-config-error">${this.#advancedError}</p>` : ''}
+                                The field shell supplies the normal label and instructions
+                                without wrapping the CodeMirror surface in a literal label.
+                            -->
+                            <pk-code-editor
+                                data-advanced-json
+                                language="json"
+                                rows="20"
+                                ${this.#advancedError ? 'invalid' : ''}
+                            ></pk-code-editor>
+                            ${this.#advancedError ? `<p class="vizy-editor-config-error">${this.#advancedError}</p>` : ''}
+                        </pk-field>
                     </div>
                 `}
             </div>
@@ -2127,6 +2299,14 @@ class VizyEditorConfigSettingsElement extends HTMLElement {
                         select.options.map((option) => option.value),
                     );
                 }
+            });
+        });
+
+        host.querySelectorAll<PkLightswitch>('[data-editor-extension]').forEach((lightswitch) => {
+            lightswitch.addEventListener('pk-change', () => {
+                const name = lightswitch.dataset.editorExtension;
+                if (!name) return;
+                this.#toggleCapability('extensions', name, lightswitch.checked);
             });
         });
 

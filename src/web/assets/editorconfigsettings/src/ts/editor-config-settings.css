@@ -829,15 +829,6 @@ pk-checkbox-select {
     background: rgba(96, 125, 159, 0.1);
 }
 
-.vizy-editor-config-strip-label {
-    font-size: 11px;
-    font-weight: 600;
-    letter-spacing: 0.04em;
-    text-transform: uppercase;
-    color: #596673;
-    margin-bottom: 8px;
-}
-
 /*
  * `pk-code-editor` brings its own monospace font, sizing and gutter, so all that is
  * needed here is for it to fill the width.
@@ -980,13 +971,18 @@ pk-checkbox-select + .vizy-editor-config-subhead {
     margin-top: 20px;
 }
 
-.vizy-editor-config-extension-options {
+.vizy-editor-config-experience {
+    display: grid;
+    gap: 20px;
+}
+
+.vizy-editor-config-experience-setting > .vizy-editor-config-toggle {
+    margin-bottom: 0;
+}
+
+.vizy-editor-config-experience-options {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
     gap: 16px;
-    margin-top: 16px;
-    padding: 16px;
-    border: 1px solid rgba(96, 125, 159, 0.2);
-    border-radius: var(--pk-input-border-radius, 3px);
-    background: var(--pk-input-bg, #fbfcfe);
+    margin-top: 12px;
 }

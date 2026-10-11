@@ -11,6 +11,7 @@ const initial = {
     toolbarCatalog: [
         { id: 'bold', label: 'Bold', kind: 'mark', group: 'formatting', icon: null },
         { id: 'italic', label: 'Italic', kind: 'mark', group: 'formatting', icon: null },
+        { id: 'emoji', label: 'Emoji', kind: 'node', group: 'extensions', icon: null, capabilityKind: 'node', capabilityName: 'emoji' },
         { id: 'separator', label: 'Separator', kind: 'presentation', group: 'layout', icon: null },
     ],
     dropdownCatalog: [], bubbleCatalog: [], capabilityCatalog: { nodes: [], marks: [], extensions: [], headingAvailable: false },
@@ -53,4 +54,20 @@ test('pointer reorder preserves the grabbed button geometry and posts exactly on
     await expect(page.locator(active)).toHaveCount(3);
     const posted = await page.locator('input[name="toolbarJson"]').inputValue();
     expect(JSON.parse(posted)).toEqual(['italic', 'bold', 'separator']);
+});
+
+test('dragging a schema-disabled control into the toolbar silently enables it', async ({ page }) => {
+    await mount(page);
+    const source = page.locator('[data-builder-list="toolbar-available"] [data-toolbar-item="emoji"]');
+    const target = page.locator('[data-builder-list="toolbar-active"]');
+    const sourceBox = (await source.boundingBox())!;
+    const targetBox = (await target.boundingBox())!;
+
+    await page.mouse.move(sourceBox.x + sourceBox.width / 2, sourceBox.y + sourceBox.height / 2);
+    await page.mouse.down();
+    await page.mouse.move(targetBox.x + targetBox.width - 4, targetBox.y + targetBox.height / 2, { steps: 20 });
+    await page.mouse.up();
+
+    await expect.poll(() => order(page)).toEqual(['bold', 'separator', 'italic', 'emoji']);
+    await expect(page.locator('input[name="capabilityNodes[]"][value="emoji"]')).toHaveCount(1);
 });

@@ -91,19 +91,20 @@ test('Editor Configs expose one visual shared icon override per configured contr
     await expect(page.locator('[data-builder-list="toolbar-active"] [data-toolbar-item="bold"] svg')).toBeVisible();
 });
 
-test('Editor Configs expose native behaviour extensions and their owned options', async ({ page }) => {
+test('Editor Configs separate editor experience from document capabilities', async ({ page }) => {
     await login(page);
     await page.goto('/index.php?p=admin/vizy/settings/editor-configs/standard');
 
     const schema = page.locator('[data-schema-details]');
     await schema.locator('summary').click();
-    const extensions = schema.locator('[data-capability-group="extensions"]');
+    const experience = page.locator('[data-editor-experience]');
     const nodes = schema.locator('[data-capability-group="nodes"]');
     const marks = schema.locator('[data-capability-group="marks"]');
-    await expect(extensions).toHaveAttribute('options', /characterCount/);
-    await expect(extensions).toHaveAttribute('options', /findAndReplace/);
-    await expect(extensions).toHaveAttribute('options', /placeholder/);
-    await expect(extensions).toHaveAttribute('options', /typography/);
+    await expect(schema.locator('[data-capability-group="extensions"]')).toHaveCount(0);
+    await expect(experience.locator('[data-editor-extension="characterCount"]')).toBeVisible();
+    await expect(experience.locator('[data-editor-extension="placeholder"]')).toBeVisible();
+    await expect(experience.locator('[data-editor-extension="typography"]')).toBeVisible();
+    await expect(page.locator('[data-builder-list="toolbar-available"] [data-toolbar-item="findAndReplace"]')).toBeVisible();
     await expect(nodes).toHaveAttribute('options', /emoji/);
     await expect(nodes).toHaveAttribute('options', /taskList/);
     await expect(nodes).toHaveAttribute('options', /details/);
@@ -123,16 +124,17 @@ test('Editor Configs expose native behaviour extensions and their owned options'
     }
     await expect(page.locator('[data-toolbar-item="textStyle"]')).toHaveCount(0);
 
-    await extensions.evaluate((select) => {
-        select.dispatchEvent(new CustomEvent('pk-change', {
-            detail: { value: ['characterCount', 'findAndReplace', 'placeholder', 'typography'] },
-            bubbles: true,
-            composed: true,
-        }));
-    });
+    for (const name of ['characterCount', 'placeholder', 'typography']) {
+        await experience.locator(`[data-editor-extension="${name}"]`).evaluate((control) => {
+            const lightswitch = control as HTMLElement & { checked: boolean };
+            lightswitch.checked = true;
+            lightswitch.dispatchEvent(new CustomEvent('pk-change', { bubbles: true, composed: true }));
+        });
+    }
+    await page.locator('[data-builder-list="toolbar-available"] [data-toolbar-item="findAndReplace"]').click();
 
-    const limit = schema.locator('[data-character-count-limit]');
-    const placeholder = schema.locator('[data-placeholder-text]');
+    const limit = experience.locator('[data-character-count-limit]');
+    const placeholder = experience.locator('[data-placeholder-text]');
     await expect(limit).toBeVisible();
     await expect(placeholder).toBeVisible();
     await limit.fill('900');
@@ -141,6 +143,9 @@ test('Editor Configs expose native behaviour extensions and their owned options'
         characterCount: { limit: 900 },
         placeholder: { text: 'Describe this page …' },
     }));
+    expect(await page.locator('input[name="capabilityExtensions[]"]').evaluateAll((inputs) => (
+        inputs.map((input) => (input as HTMLInputElement).value)
+    ))).toEqual(['characterCount', 'placeholder', 'typography', 'findAndReplace']);
 });
 
 async function setJsonValue(textarea: Locator, value: unknown) {

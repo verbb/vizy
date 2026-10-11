@@ -90,6 +90,7 @@ function initialData(overrides: Record<string, unknown> = {}): Initial {
             { id: 'paragraph', label: 'Paragraph', kind: 'node', group: 'blocks', icon: BOLD_SVG, preview: 'paragraph', memberOnly: true },
             { id: 'mediaEmbed', label: 'Media embed', kind: 'node', group: 'media', icon: BOLD_SVG, capabilityKind: 'node', capabilityName: 'mediaEmbed', preview: 'mediaEmbed' },
             { id: 'iframe', label: 'Iframe', kind: 'node', group: 'media', icon: BOLD_SVG, capabilityKind: 'node', capabilityName: 'iframe', preview: 'iframe' },
+            { id: 'emoji', label: 'Emoji', kind: 'node', group: 'extensions', icon: BOLD_SVG, capabilityKind: 'node', capabilityName: 'emoji', preview: 'emoji' },
             { id: 'fontFamily', label: 'Font family', kind: 'mark', group: 'formatting', icon: BOLD_SVG, capabilityKind: 'mark', capabilityName: 'textStyle', valuePreview: 'Default font', valuePreviewKind: 'text', iconCustomizable: false },
             { id: 'fontSize', label: 'Font size', kind: 'mark', group: 'formatting', icon: BOLD_SVG, capabilityKind: 'mark', capabilityName: 'textStyle', valuePreview: 'Default', valuePreviewKind: 'text', iconCustomizable: false },
             { id: 'textColor', label: 'Text colour', kind: 'mark', group: 'formatting', icon: BOLD_SVG, capabilityKind: 'mark', capabilityName: 'textStyle', valuePreview: 'A', valuePreviewKind: 'color', iconCustomizable: false },
@@ -144,8 +145,17 @@ const extensionOptionsState = (element: HTMLElement): Record<string, unknown> =>
     return JSON.parse(input?.value ?? '{}');
 };
 
-describe('behaviour extensions', () => {
-    it('reveals and serializes native extension options without exposing optionless extensions', () => {
+describe('editor experience', () => {
+    const toggleExtension = (element: HTMLElement, name: string, checked: boolean): void => {
+        const lightswitch = element.querySelector<HTMLElement & { checked: boolean }>(
+            `[data-editor-extension="${name}"]`,
+        );
+        if (!lightswitch) throw new Error(`Missing ${name} lightswitch`);
+        lightswitch.checked = checked;
+        lightswitch.dispatchEvent(new CustomEvent('pk-change'));
+    };
+
+    it('presents native editor settings outside Content Schema and serializes their options', () => {
         const element = mount({
             config: {
                 capabilities: { nodes: [], marks: ['bold'], extensions: ['typography'] },
@@ -168,16 +178,15 @@ describe('behaviour extensions', () => {
                 headingAvailable: false,
             },
         });
-        const select = element.querySelector<HTMLElement>('[data-capability-group="extensions"]');
 
+        expect(element.querySelector('[data-editor-experience]')).not.toBeNull();
+        expect(element.querySelector('[data-schema-details] [data-capability-group="extensions"]')).toBeNull();
         expect(element.querySelector('[data-character-count-limit]')).toBeNull();
         expect(element.querySelector('[data-placeholder-text]')).toBeNull();
-        expect(element.textContent).not.toContain('Typography options');
+        expect(element.querySelector('[data-editor-extension="typography"]')?.hasAttribute('checked')).toBe(true);
 
-        select?.dispatchEvent(new CustomEvent('pk-change', {
-            detail: { value: ['characterCount', 'placeholder', 'typography'] },
-            bubbles: true,
-        }));
+        toggleExtension(element, 'characterCount', true);
+        toggleExtension(element, 'placeholder', true);
 
         const limit = element.querySelector<HTMLInputElement>('[data-character-count-limit]');
         const placeholder = element.querySelector<HTMLInputElement>('[data-placeholder-text]');
@@ -194,14 +203,57 @@ describe('behaviour extensions', () => {
         }
 
         expect(hidden(element, 'capabilityExtensions[]')).toEqual([
+            'typography',
             'characterCount',
             'placeholder',
-            'typography',
         ]);
         expect(extensionOptionsState(element)).toEqual({
             characterCount: { limit: 750 },
             placeholder: { text: 'Describe the page …' },
         });
+    });
+
+    it('keeps toolbar-backed extensions in the toolbar and offers other extensions as behaviours', () => {
+        const element = mount({
+            config: {
+                capabilities: { nodes: [], marks: [], extensions: [] },
+                headings: { levels: [] },
+                toolbar: [],
+                bubble: { enabled: false, items: [] },
+            },
+            toolbarCatalog: [{
+                id: 'findAndReplace',
+                label: 'Find and replace',
+                kind: 'extension',
+                group: 'Tools',
+                icon: BOLD_SVG,
+                capabilityKind: 'extension',
+                capabilityName: 'findAndReplace',
+            }],
+            bubbleCatalog: [],
+            capabilityCatalog: {
+                nodes: [],
+                marks: [],
+                extensions: [
+                    { label: 'Find and replace', value: 'findAndReplace' },
+                    { label: 'Focus', value: 'focus' },
+                ],
+                headingAvailable: false,
+            },
+        });
+        const behaviours = element.querySelector<HTMLElement>('[data-capability-group="extensions"]');
+
+        expect(behaviours?.getAttribute('options')).toContain('focus');
+        expect(behaviours?.getAttribute('options')).not.toContain('findAndReplace');
+        expect(ids(element, 'toolbar-available')).toContain('findAndReplace');
+
+        press(items(element, 'toolbar-available').find((item) => item.dataset.toolbarItem === 'findAndReplace'));
+        expect(hidden(element, 'capabilityExtensions[]')).toEqual(['findAndReplace']);
+
+        element.querySelector<HTMLElement>('[data-capability-group="extensions"]')?.dispatchEvent(new CustomEvent('pk-change', {
+            detail: { value: ['focus'] },
+        }));
+        expect(hidden(element, 'capabilityExtensions[]')).toEqual(['findAndReplace', 'focus']);
     });
 });
 
@@ -354,6 +406,105 @@ describe('the palette', () => {
         expect(drawn('dropdown:formatting')).toContain('has-menu');
         expect(drawn('addBlock')).toContain('has-menu');
         expect(drawn('bulletList')).not.toContain('has-menu');
+    });
+
+    it('offers schema-disabled controls and enables their capability when they are added', () => {
+        const element = mount({
+            config: {
+                capabilities: { nodes: [], marks: [] },
+                headings: { levels: [] },
+                toolbar: [],
+                bubble: { enabled: false, items: [] },
+            },
+        });
+
+        expect(ids(element, 'toolbar-available')).toContain('emoji');
+        add(element, 'toolbar-available', 'emoji');
+
+        expect(toolbarState(element)).toEqual(['emoji']);
+        expect(hidden(element, 'capabilityNodes[]')).toContain('emoji');
+        expect(items(element, 'toolbar-active')[0]?.classList.contains('is-unavailable')).toBe(false);
+
+        items(element, 'toolbar-active')[0]?.dispatchEvent(new KeyboardEvent('keydown', {
+            key: 'Delete',
+            bubbles: true,
+        }));
+        expect(toolbarState(element)).toEqual([]);
+        expect(hidden(element, 'capabilityNodes[]')).toContain('emoji');
+    });
+
+    it('offers Bubble Menu controls and enables their capability when they are added', () => {
+        const element = mount({
+            config: {
+                capabilities: { nodes: [], marks: [] },
+                headings: { levels: [] },
+                toolbar: [],
+                bubble: { enabled: true, items: [] },
+            },
+        });
+
+        expect(ids(element, 'bubble-available')).toContain('bold');
+        add(element, 'bubble-available', 'bold');
+
+        const bubble = JSON.parse(hidden(element, 'bubbleJson')[0] ?? '{}');
+        expect(bubble.items).toEqual(['bold']);
+        expect(hidden(element, 'capabilityMarks[]')).toEqual(['bold']);
+    });
+
+    it('enables the shared capability behind a value control', () => {
+        const element = mount({
+            config: {
+                capabilities: { nodes: [], marks: [] },
+                headings: { levels: [] },
+                toolbar: [],
+                bubble: { enabled: false, items: [] },
+            },
+        });
+
+        add(element, 'toolbar-available', 'textColor');
+
+        expect(toolbarState(element)).toEqual(['textColor']);
+        expect(hidden(element, 'capabilityMarks[]')).toEqual(['textStyle']);
+    });
+
+    it('enables a dropdown capability only when every member shares it', () => {
+        const element = mount({
+            config: {
+                capabilities: { nodes: [], marks: [] },
+                headings: { levels: [] },
+                toolbar: [],
+                bubble: { enabled: false, items: [] },
+            },
+            toolbarCatalog: [
+                { id: 'table', label: 'Insert table', kind: 'node', group: 'table', icon: BOLD_SVG, capabilityKind: 'node', capabilityName: 'table' },
+                { id: 'tableAddRowAfter', label: 'Insert row below', kind: 'action', group: 'table', icon: BOLD_SVG, capabilityKind: 'node', capabilityName: 'table', memberOnly: true },
+            ],
+            dropdownCatalog: [{
+                id: 'dropdown:table',
+                label: 'Table',
+                kind: 'dropdown',
+                group: 'Dropdowns',
+                icon: null,
+                members: ['table', 'tableAddRowAfter'],
+            }],
+        });
+
+        add(element, 'toolbar-available', 'dropdown:table');
+
+        expect(toolbarState(element)).toEqual(['dropdown:table']);
+        expect(hidden(element, 'capabilityNodes[]')).toEqual(['table']);
+
+        const formatting = mount({
+            config: {
+                capabilities: { nodes: [], marks: [] },
+                headings: { levels: [] },
+                toolbar: [],
+                bubble: { enabled: false, items: [] },
+            },
+        });
+        add(formatting, 'toolbar-available', 'dropdown:formatting');
+
+        expect(hidden(formatting, 'capabilityNodes[]')).toEqual([]);
     });
 
     it('previews TextStyle controls as the neutral value selectors used by the live toolbar', () => {
@@ -1081,7 +1232,7 @@ describe('editor config toolbar builder', () => {
         // its contents, and why its contents are fixed — which is a paragraph of rules above a
         // panel whose whole argument is that it can be experimented with. Dragging is the one thing
         // nothing on screen hints at, so it is the one thing said.
-        expect(instructions).toBe('Drag toolbar items into the editor.');
+        expect(instructions).toBe('Drag or click toolbar items to add them to the editor.');
 
         // Said once, and not again inside the builder.
         expect(element.querySelectorAll('.vizy-editor-config-builder .instructions')).toHaveLength(0);
@@ -1716,6 +1867,7 @@ describe('editor config toolbar builder', () => {
                     { label: 'Bold', value: 'bold' },
                     { label: 'Italic', value: 'italic' },
                 ],
+                extensions: [{ label: 'Typography', value: 'typography' }],
                 headingAvailable: true,
             },
         };
@@ -1744,7 +1896,8 @@ describe('editor config toolbar builder', () => {
             const details = element.querySelector<HTMLDetailsElement>('[data-schema-details]');
 
             // Closed on arrival and immediately above the still rarer icon overrides: these are
-            // the two advanced disclosures at the bottom of the visual screen.
+            // the two advanced disclosures at the bottom of the visual screen. Editor Experience
+            // is a normal section above them rather than part of this count.
             expect(details).not.toBeNull();
             expect(details?.open).toBe(false);
             const sections = [...element.querySelectorAll('.vizy-editor-config-section')];
@@ -1752,7 +1905,8 @@ describe('editor config toolbar builder', () => {
 
             // The count is why this is a fold rather than another tab: a narrowed schema says
             // so without being opened, so "why is that button not offered" is answerable from
-            // the closed state. Two nodes and two marks on offer here, `bold` and `italic` on.
+            // the closed state. Two nodes and two marks on offer here, `bold` and `italic` on;
+            // Typography is an editor behaviour and therefore does not make this "2 of 5".
             expect(details?.querySelector('summary')?.textContent).toContain('2 of 4');
 
             // Ticking a box re-renders the whole panel, which would otherwise close the
@@ -2038,6 +2192,10 @@ describe('editor config toolbar builder', () => {
             const code = editor(element);
             expect(code.tagName).toBe('PK-CODE-EDITOR');
             expect(code.getAttribute('language')).toBe('json');
+            const field = code.closest('pk-field');
+            expect(field?.getAttribute('label')).toBe('Configuration JSON');
+            expect(field?.getAttribute('instructions')).toBe('Edit the Editor Config directly as JSON, or copy it into config/vizy/{id}.json to create a file-based config.');
+            expect(element.querySelector('.vizy-editor-config-strip-label')).toBeNull();
 
             // Assigned rather than rendered: the `value` attribute is the component's
             // reset target, so writing the config there would show nothing.

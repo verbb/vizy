@@ -188,7 +188,7 @@
     ]
   },
   "editorconfigsettings/src/ts/editor-config-settings.ts": {
-    "file": "assets/editor-config-settings-CVfochI-.js",
+    "file": "assets/editor-config-settings-B1-BtWQK.js",
     "name": "editor-config-settings",
     "src": "editorconfigsettings/src/ts/editor-config-settings.ts",
     "isEntry": true,
@@ -206,7 +206,7 @@
       "../../../../../../plugin-kit/plugin-kit/plugin-kit-web/dist/components/code-editor.js"
     ],
     "css": [
-      "assets/editor-config-settings-Dk9jjSmd.css",
+      "assets/editor-config-settings-CLBGlSMA.css",
       "assets/tokens-ekR-Z1gs.css"
     ]
   },
