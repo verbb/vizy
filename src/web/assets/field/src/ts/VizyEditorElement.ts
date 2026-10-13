@@ -48,6 +48,7 @@ import './semantic/url-node-dialog';
 import { NodeSelection } from '@tiptap/pm/state';
 import { DOMParser as ProseMirrorDOMParser } from '@tiptap/pm/model';
 import { refreshCraftSerializedVizyToken, rewriteCraftSerializedForm, submissionContentKey } from './serialize-form-capture';
+import { registerVizyFormSerializer } from './craft-form-serializer';
 import {
     EDITOR_FIELD_HAS_FOCUS_ATTR,
     installEditorSelectionGuard,
@@ -1046,6 +1047,7 @@ export class VizyEditorElement extends HTMLElement {
         form: HTMLFormElement,
         serialize: (event: { data: { serialized: string } }) => void,
         adoptBaseline: (serialized: string) => string,
+        detachFormSerializer: () => void,
     ): void {
         let frame = 0;
         const deadline = performance.now() + ELEMENT_EDITOR_TIMEOUT_MS;
@@ -1067,6 +1069,7 @@ export class VizyEditorElement extends HTMLElement {
                 return;
             }
 
+            detachFormSerializer();
             editor.on('serializeForm', serialize);
             this.#disposals.push(() => editor.off?.('serializeForm', serialize));
             const afterSave = () => {
@@ -1519,6 +1522,21 @@ export class VizyEditorElement extends HTMLElement {
         // Capture the loaded value before authors can interact with this editor.
         // Use it for baseline adoption even if ElementEditor itself attaches later.
         const initialCanonical = this.#input.value;
+        const detachFormSerializer = registerVizyFormSerializer(form, {
+            fieldName,
+            initialCanonical,
+            serialize: () => {
+                try {
+                    const canonical = this.flush('serialize');
+                    this.#clearCaptureFailure();
+                    return canonical;
+                } catch (error) {
+                    this.#reportCaptureFailure(error);
+                    throw error;
+                }
+            },
+        });
+        this.#disposals.push(detachFormSerializer);
         const initialMetadata = this.#prepareSubmission('autosave', initialCanonical);
         this.#attachElementEditor(form, serialize, (serialized) => rewriteCraftSerializedForm(serialized, {
             fieldName,
@@ -1527,7 +1545,7 @@ export class VizyEditorElement extends HTMLElement {
             metadata: Object.fromEntries(
                 Object.entries(initialMetadata).map(([key, value]) => [key, String(value)]),
             ),
-        }));
+        }), detachFormSerializer);
 
         const response = (event: Event) => {
             const payload = (event as CustomEvent<unknown>).detail;

@@ -1,5 +1,10 @@
 # Changelog
 
+## Unreleased
+
+### Fixed
+- Fixed untouched Global Sets with Vizy fields incorrectly warning about unsaved changes.
+
 ## 4.0.0-beta.3 - 2026-10-11
 
 ### Added
