@@ -48,7 +48,8 @@
         }
     },
     "scripts": {
-        "test": "phpunit"
+        "test": "phpunit",
+        "test:class-resolution-regressions": "@php tests/regression/class-resolution.php"
     },
     "extra": {
         "name": "Vizy",
