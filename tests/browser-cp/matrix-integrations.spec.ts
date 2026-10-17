@@ -108,9 +108,7 @@ for (const name of ['links', 'neo', 'super-table']) {
         const errorPath = test.info().outputPath('browser-errors.json');
         fs.writeFileSync(errorPath, JSON.stringify(errors, null, 2));
         await test.info().attach('browser-errors', { path: errorPath, contentType: 'application/json' });
-        // Craft can report this during overlapping submissions even when every
-        // value saves correctly; keep the diagnostic and reject other errors.
-        expect(errors.filter((message) => message !== 'Form already being submitted.')).toEqual([]);
+        expect(errors).toEqual([]);
     });
 }
 

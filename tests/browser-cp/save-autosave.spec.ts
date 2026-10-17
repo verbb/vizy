@@ -42,6 +42,12 @@ for (const shortcut of [false, true]) {
         try {
             if (shortcut) {
                 await page.keyboard.type(later);
+                // A second native check must already be waiting behind the held
+                // autosave. Publication must not release it while still saving.
+                await expect.poll(() => page.locator('vizy-editor').first().evaluate((field) => {
+                    const editor = (window as any).$(field.closest('form')).data('elementEditor');
+                    return editor.queue.jobs.length;
+                })).toBeGreaterThan(0);
                 await page.keyboard.press('ControlOrMeta+s');
             } else {
                 await page.getByRole('button', { name: 'Save', exact: true }).click({ noWaitAfter: true });

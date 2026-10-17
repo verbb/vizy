@@ -1,5 +1,6 @@
 import '@verbb/plugin-kit-web/components/alert';
 import '@verbb/plugin-kit-web/components/button/pk-button.js';
+import { pauseMatrixObservers } from './craft-matrix-observers';
 
 export interface CraftSubmitEvent {
     customTrigger?: { data(name: string): unknown };
@@ -10,6 +11,7 @@ export interface CraftSubmitEvent {
 }
 
 interface Editor {
+    queue?: { pause(): void };
     isFullPage?: boolean;
     enableAutosave?: boolean;
     submittingForm?: boolean;
@@ -31,6 +33,7 @@ function allowNavigation(form: HTMLFormElement): void {
 type Failure = { response?: { status?: number; data?: { message?: string; errorSummary?: unknown; draftElementIds?: Record<string, number>; draftElementUids?: Record<string, string>; vizy?: { results?: unknown[]; conflict?: { code?: string; reviewUrl?: string | null } } } } };
 const conflicts = new WeakSet<HTMLFormElement>();
 const saving = new WeakSet<HTMLFormElement>();
+const pendingSaves = new WeakMap<HTMLFormElement, Promise<void>>();
 const saveActions = new Set(['elements/save', 'elements/save-draft', 'elements/apply-draft', 'elements/duplicate']);
 const t = (message: string) => window.Craft?.t?.('vizy', message) ?? message;
 const editorFor = (form: HTMLFormElement) => (window.$?.(form).data('elementEditor') as Editor | undefined);
@@ -190,14 +193,22 @@ export function submitFullPage(form: HTMLFormElement, event: CraftSubmitEvent): 
     stop(event);
     if (saving.has(form)) return true;
     saving.add(form);
-    void save(form, editor, action);
+    const operation = save(form, editor, action);
+    pendingSaves.set(form, operation);
+    void operation.finally(() => pendingSaves.delete(form));
     return true;
+}
+
+/** Keep Craft's queue job alive while a recoverable full-page save is pending. */
+export function pendingFullPageSave(form: HTMLFormElement): Promise<void> | undefined {
+    return pendingSaves.get(form);
 }
 
 async function save(form: HTMLFormElement, editor: Editor, action: string): Promise<void> {
     const wasInert = form.inert;
     editor.submittingForm = true;
     editor.stopListeningForChanges();
+    const resumeMatrixObservers = pauseMatrixObservers(form);
     let navigated = false;
     try {
         editor.trigger('beforeSubmit');
@@ -215,6 +226,9 @@ async function save(form: HTMLFormElement, editor: Editor, action: string): Prom
         // Craft's normal full-page submission removes its unload guard too.
         allowNavigation(form);
         window.location.assign(redirect);
+        // Navigation is asynchronous. Pending form checks must not start in the
+        // gap after publication, when this editor still has submittingForm set.
+        editor.queue?.pause();
         navigated = true;
     } catch (error) {
         if (!form.isConnected) return;
@@ -253,7 +267,10 @@ async function save(form: HTMLFormElement, editor: Editor, action: string): Prom
             form.inert = wasInert;
             editor.submittingForm = false;
             editor.trigger('afterSubmit');
-            if (!conflicts.has(form)) editor.listenForChanges();
+            if (!conflicts.has(form)) {
+                editor.listenForChanges();
+                resumeMatrixObservers();
+            }
             form.querySelector<HTMLElement>('[data-vizy-save-notice]')?.focus();
         }
     }

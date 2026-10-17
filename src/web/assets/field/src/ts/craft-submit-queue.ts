@@ -1,4 +1,4 @@
-import { blockConflictedSubmit, saveAction, submitFullPage } from './craft-conflicts';
+import { blockConflictedSubmit, pendingFullPageSave, saveAction, submitFullPage } from './craft-conflicts';
 
 interface SubmitEventLike {
     type: string;
@@ -11,6 +11,7 @@ interface SubmitEventLike {
 }
 
 interface CraftQueuedEditor {
+    isFullPage?: boolean;
     queue?: {
         running: boolean;
         unshift(job: () => Promise<void>): Promise<void>;
@@ -58,11 +59,14 @@ export function installCraftSubmitQueue(): void {
         if (replaying.has(form)) return submitFullPage(form, event);
         const editor = $(form).data('elementEditor') as CraftQueuedEditor | undefined;
         const queue = editor?.queue;
-        if (!queue?.running && !pending.has(form)) return submitFullPage(form, event);
+        // Full-page saves also own a queue job when initially idle, so a late
+        // native form check cannot overlap their recoverable AJAX publication.
+        if (!queue || (!editor?.isFullPage && !queue.running && !pending.has(form))) return submitFullPage(form, event);
         event.preventDefault();
         event.stopImmediatePropagation();
         if (pending.has(form) || !queue) return true;
         pending.add(form);
+        const waitingForAutosave = queue.running;
         // Preserve Craft's action/shortcut flags. Reusing the cancelled event would
         // also reuse its stopped-propagation state and skip Craft's submit handler.
         const resume = $.Event('submit', {
@@ -73,9 +77,15 @@ export function installCraftSubmitQueue(): void {
         });
         void queue.unshift(async () => {
             try {
-                if (!form.isConnected || editor?.failed) return;
+                // A failure in the autosave we waited for vetoes this attempt.
+                // An explicit later Save from an idle failed editor is a retry.
+                if (!form.isConnected || (waitingForAutosave && editor?.failed)) return;
                 replaying.add(form);
                 $(form).trigger(resume);
+                // jQuery trigger() does not await async submit handlers. Keep
+                // queued checks behind publication; failures restore the form
+                // before releasing this job, and success pauses for navigation.
+                await pendingFullPageSave(form);
             } finally {
                 replaying.delete(form);
                 pending.delete(form);

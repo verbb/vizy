@@ -42,7 +42,5 @@ test('first JSON block and blocks inside newly created Matrix rows initialize an
     const json = await rootBlock.locator('textarea[name$="[structuredJson]"]').inputValue();
     expect(JSON.parse(json)).toEqual({ cold: true, stops: ['Coast', 'Forest'] });
     await test.info().attach('browser-errors', { body: JSON.stringify(errors, null, 2), contentType: 'application/json' });
-    // Keep Craft's existing submission diagnostic visible, as in the Matrix
-    // integration cases; content, dependency and field-mount failures still fail.
-    expect(errors.filter((message) => message !== 'Form already being submitted.')).toEqual([]);
+    expect(errors).toEqual([]);
 });

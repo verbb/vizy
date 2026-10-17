@@ -130,6 +130,23 @@ describe('recoverable Craft conflicts', () => {
         submitFullPage(f, event());
         await vi.waitFor(() => expect(window.Craft!.sendActionRequest).toHaveBeenCalledWith('POST', 'elements/duplicate', expect.anything()));
     });
+    it('pauses queued checks after a successful publication starts navigation', async () => {
+        const { form: f, editor } = form();
+        const queue = { pause: vi.fn() };
+        Object.assign(editor, { queue });
+        const navigate = vi.spyOn(window.location, 'assign').mockImplementation(() => {});
+        window.Craft!.sendActionRequest = vi.fn().mockResolvedValue({ data: { redirect: '/admin/entries' } });
+        try {
+            submitFullPage(f, event());
+            await vi.waitFor(() => expect(navigate).toHaveBeenCalledWith('/admin/entries'));
+            expect(queue.pause).toHaveBeenCalledOnce();
+            expect(editor.submittingForm).toBe(true);
+            expect(f.inert).toBe(true);
+            expect(editor.listenForChanges).not.toHaveBeenCalled();
+        } finally {
+            navigate.mockRestore();
+        }
+    });
     it('leaves slideout submission and non-save actions with Craft', () => {
         const { form: f, editor } = form();
         editor.isFullPage = false;

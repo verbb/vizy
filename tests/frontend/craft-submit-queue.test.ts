@@ -11,7 +11,7 @@ const makeEvent = (properties: Record<string, unknown> = {}) => ({
 const previous = vi.fn();
 const special = { submit: { preDispatch: previous as (this: HTMLFormElement, event: TestEvent) => unknown } };
 const replayed = vi.fn();
-const editors = new WeakMap<HTMLFormElement, { queue: typeof queue; failed: boolean }>();
+const editors = new WeakMap<HTMLFormElement, { queue: typeof queue; failed: boolean; isFullPage?: boolean }>();
 let jobs: Array<() => Promise<void>> = [];
 const queue = {
     running: true,
@@ -49,6 +49,7 @@ beforeEach(() => {
     document.body.replaceChildren();
     jobs = [];
     queue.running = true;
+    delete window.Craft!.sendActionRequest;
     vi.clearAllMocks();
 });
 
@@ -126,4 +127,33 @@ describe('Craft submission queue', () => {
         await jobs.shift()!();
         expect(replayed).not.toHaveBeenCalled();
     });
+
+    for (const running of [false, true]) {
+        it(`holds the ${running ? 'busy' : 'idle'} queue until a failed publication restores the form`, async () => {
+            const element = form();
+            queue.running = running;
+            const editor = Object.assign(editors.get(element)!, {
+                isFullPage: true, settings: {}, submittingForm: false,
+                failed: !running,
+                stopListeningForChanges: vi.fn(), listenForChanges: vi.fn(), trigger: vi.fn(),
+                serializeForm: () => 'action=elements%2Fsave&title=Changed', prepareData: (data: string) => data,
+            });
+            let rejectSave!: (error: unknown) => void;
+            window.Craft!.sendActionRequest = vi.fn(() => new Promise<never>((_, reject) => { rejectSave = reject; }));
+            expect(special.submit.preDispatch.call(element, makeEvent())).toBe(false);
+            const completed = vi.fn();
+            const job = jobs.shift()!().then(completed);
+            await vi.waitFor(() => expect(editor.submittingForm).toBe(true));
+            expect(completed).not.toHaveBeenCalled();
+            expect(replayed).not.toHaveBeenCalled();
+            rejectSave({ response: { status: 400, data: { message: 'Title is required.' } } });
+            await job;
+            expect(editor.submittingForm).toBe(false);
+            expect(editor.listenForChanges).toHaveBeenCalledOnce();
+            expect(element.inert).toBeFalsy();
+            // A failed save releases the pending guard as well as the queue job.
+            special.submit.preDispatch.call(element, makeEvent());
+            expect(jobs).toHaveLength(1);
+        });
+    }
 });
