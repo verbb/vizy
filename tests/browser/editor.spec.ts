@@ -445,7 +445,10 @@ test('applies Enabled Link Settings Site to semantic and fallback element links'
 for (const updating of [false, true]) for (const control of ['size', 'transform']) {
     test(`applies image ${updating ? 'Update' : 'Insert'} after choosing ${control}`, async ({ page }) => {
         const attrs = { assetUid: '33333333-3333-4333-8333-333333333333', siteMode: 'current', altMode: 'custom', alt: 'Before', size: 'default', link: null };
-        await mount(page, { type: 'doc', attrs: { schemaVersion: 2 }, content: updating ? [{ type: 'image', attrs }] : [{ type: 'paragraph' }] }, {
+        await mount(page, { type: 'doc', attrs: { schemaVersion: 2 }, content: updating ? [{ type: 'image', attrs }] : [
+            { type: 'paragraph' },
+            { type: 'paragraph', content: [{ type: 'text', text: 'Keep the existing story.' }] },
+        ] }, {
             manifest: { ...editorManifest, enabledNodes: [...editorManifest.enabledNodes, 'image'], modules: [...editorManifest.modules, 'vizy/core/node/image'] },
         });
         await page.evaluate(async ({ updating, attrs }) => {
@@ -453,7 +456,8 @@ for (const updating of [false, true]) for (const control of ['size', 'transform'
             (window as any).Craft.sendActionRequest = () => Promise.resolve({ data: { url: preview } });
             const editor = (document.querySelector('vizy-editor') as any).editor;
             if (updating) editor.commands.setNodeSelection(0);
-            else editor.commands.setTextSelection(1);
+            // Insert from a cold editor, before the author places a caret. Its
+            // bootstrap selection must not replace the whole existing document.
             const dialog = document.createElement('vizy-image-dialog') as any;
             document.body.append(dialog);
             await dialog.openForEditor(editor, {
@@ -474,6 +478,7 @@ for (const updating of [false, true]) for (const control of ['size', 'transform'
             return result;
         });
         expect(images).toHaveLength(1);
+        if (!updating) await expect(page.locator('.ProseMirror')).toContainText('Keep the existing story.');
         expect(images[0]).toMatchObject({ assetUid: attrs.assetUid, alt: 'Changed alt', size: control === 'size' ? 'small' : 'default' });
     });
 }

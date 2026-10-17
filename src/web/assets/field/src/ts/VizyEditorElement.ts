@@ -45,7 +45,7 @@ import { hydrateImagePreviews } from './semantic/image-preview-cache';
 import { setEditorLinkSettings } from './semantic/link-dialog';
 import './semantic/image-dialog';
 import './semantic/url-node-dialog';
-import { NodeSelection } from '@tiptap/pm/state';
+import { NodeSelection, Selection } from '@tiptap/pm/state';
 import { DOMParser as ProseMirrorDOMParser } from '@tiptap/pm/model';
 import { refreshCraftSerializedVizyToken, rewriteCraftSerializedForm, submissionContentKey } from './serialize-form-capture';
 import { registerVizyFormSerializer } from './craft-form-serializer';
@@ -961,7 +961,7 @@ export class VizyEditorElement extends HTMLElement {
         );
         // Preview URLs are session-only — hydrate before NodeViews paint.
         hydrateImagePreviews(this.#bootstrap.imagePreviews);
-        this.#setAcceptedCanonical(this.#adaptForEditor(this.#bootstrap.document, manifest));
+        this.#setAcceptedCanonical(this.#adaptForEditor(this.#bootstrap.document, manifest), true);
         this.#syncCharacterCount();
         this.#syncToolbarBlockAvailability();
         this.#syncUnsupportedNotice();
@@ -1413,13 +1413,17 @@ export class VizyEditorElement extends HTMLElement {
         }
     }
 
-    #setAcceptedCanonical(adapted: CanonicalNode): void {
+    #setAcceptedCanonical(adapted: CanonicalNode, initializing = false): void {
         if (!this.#editor) return;
         const parsed = this.#editor.schema.nodeFromJSON(adapted);
         const transaction = reconcileDocument(this.#editor.state.tr, parsed)
             .setMeta(ACCEPTED_CANONICAL_TRANSACTION_META, true)
             .setMeta('addToHistory', false);
-        if (transaction.docChanged) this.#editor.view.dispatch(transaction);
+        // The temporary empty document starts with AllSelection. Mapping it into
+        // loaded content would make a cold toolbar insertion replace everything.
+        // Only initialization resets it; acknowledgements preserve author selection.
+        if (initializing) transaction.setSelection(Selection.atStart(transaction.doc));
+        if (transaction.docChanged || transaction.selectionSet) this.#editor.view.dispatch(transaction);
     }
 
     /** Tell authors that opaque nodes are safe without exposing their raw payload. */
