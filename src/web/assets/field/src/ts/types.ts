@@ -333,6 +333,7 @@ export interface EditorBootstrap {
     elementSiteId?: number;
     /** Asset picker volumes / transforms for Image authoring. */
     imageAuthoring?: {
+        showUnpermittedFiles?: boolean;
         volumes: string[];
         transforms: Array<{ handle: string; name: string }>;
         defaultTransform: string;

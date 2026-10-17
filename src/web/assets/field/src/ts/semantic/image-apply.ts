@@ -159,21 +159,22 @@ export function normalizeImageDialogAttrs(raw: Record<string, unknown>): Semanti
 export function generateTransformUrl(
     assetId: number,
     handle: string,
+    editorContextToken?: string,
 ): Promise<string | null> {
     if (!assetId) return Promise.resolve(null);
     const craft = window.Craft;
     if (typeof craft?.sendActionRequest !== 'function') return Promise.resolve(null);
     return craft.sendActionRequest<{ url?: string }>('POST', handle ? 'assets/generate-transform' : 'vizy/assets/info', {
-        data: { assetId, handle },
+        data: { assetId, handle, editorContextToken },
     }).then((response) => response.data.url ?? null).catch(() => null);
 }
 
 
 /** Obtain a fresh provider URL before refreshing an image edited in Craft. */
-export async function refreshImagePreview(assetUid: string): Promise<string | null> {
+export async function refreshImagePreview(assetUid: string, editorContextToken?: string): Promise<string | null> {
     const preview = getImagePreview(assetUid);
     if (!preview) return null;
-    const url = await generateTransformUrl(preview.assetId, preview.transform);
+    const url = await generateTransformUrl(preview.assetId, preview.transform, editorContextToken);
     // Another editor may have refreshed this asset while the request was pending.
     if (!url || getImagePreview(assetUid) !== preview) return null;
     rememberImagePreview(assetUid, { ...preview, url });

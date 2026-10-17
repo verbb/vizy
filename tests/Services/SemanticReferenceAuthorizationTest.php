@@ -344,3 +344,61 @@ it('preserves trusted console imports while enforcing configured volumes', funct
     $field->validateBlocks($owner);
     expect($owner->getErrors($field->handle))->not->toBe([]);
 });
+
+it('resolves peer asset metadata only through a currently authorized field context', function() {
+    [$asset, $volume] = semanticReferenceAsset('peer-picker.txt');
+    $owner = \Tests\Support\Fixtures\VizyFixtureFactory::entry('Peer picker owner');
+    $field = \Tests\Support\Fixtures\VizyFixtureFactory::vizyField();
+    $original = $field->getSettings();
+    $section = $owner->getSection();
+    $actor = semanticReferenceActor(["viewEntries:$section->uid", "saveEntries:$section->uid", "viewAssets:$volume->uid"]);
+    $owner->setAuthorIds([$actor->id]);
+    expect(Craft::$app->getElements()->saveElement($owner))->toBeTrue();
+    $field->availableVolumes = [$volume->uid];
+    $field->showUnpermittedFiles = true;
+    expect(Craft::$app->getFields()->saveField($field))->toBeTrue();
+    Craft::$app->getUser()->setIdentity($actor);
+    $token = \verbb\vizy\Vizy::$plugin->getEditorContexts()->issue($owner, $field)['token'];
+    $request = static function(?string $context) use ($asset, $owner, $field) {
+        // Console tests retain layout-held field clones between simulated requests.
+        foreach ($owner->getFieldLayout()->getCustomFieldElements() as $placement) {
+            if ($placement->getField()->uid === $field->uid) $placement->setField($field);
+        }
+        return \Tests\Support\WebControllerHarness::withWebRequest([
+            'assetId' => $asset->id, 'siteId' => $asset->siteId, 'editorContextToken' => $context,
+        ], 'vizy/assets/info', static function() {
+            $controller = new \verbb\vizy\controllers\AssetsController('assets', \verbb\vizy\Vizy::$plugin);
+            return $controller->actionInfo()->data;
+        }, ensureAdmin: false);
+    };
+    try {
+        expect(Craft::$app->getElements()->canView($asset))->toBeFalse();
+        expect(fn() => $request(null))->toThrow(\yii\web\ForbiddenHttpException::class);
+        expect(fn() => $request($token . 'tampered'))->toThrow(\yii\web\ForbiddenHttpException::class);
+        expect($request($token)['uid'])->toBe($asset->uid);
+        $options = \verbb\vizy\helpers\FieldImageOptions::forField($field);
+        expect($options['showUnpermittedFiles'])->toBeTrue();
+        $links = \verbb\vizy\helpers\FieldLinkOptions::forField($field, $owner);
+        $assetOption = array_values(array_filter($links, static fn($option) => $option['refHandle'] === 'asset'))[0];
+        expect($assetOption['criteria'])->toHaveKey('uploaderId', null);
+        $document = ['content' => [['type' => 'image', 'attrs' => ['assetUid' => $asset->uid]]]];
+        expect(\verbb\vizy\helpers\FieldImagePreviews::forDocument($document, (int)$asset->siteId, $field))->toHaveKey($asset->uid);
+        $field->showUnpermittedFiles = false;
+        expect(Craft::$app->getFields()->saveField($field))->toBeTrue();
+        expect(fn() => $request($token))->toThrow(\yii\web\ForbiddenHttpException::class);
+        expect(\verbb\vizy\helpers\FieldImagePreviews::forDocument($document, (int)$asset->siteId, $field))->toBe([]);
+        $field->showUnpermittedFiles = true;
+        $field->availableVolumes = [];
+        expect(Craft::$app->getFields()->saveField($field))->toBeTrue();
+        expect(fn() => $request($token))->toThrow(\yii\web\ForbiddenHttpException::class);
+        $field->availableVolumes = [$volume->uid];
+        expect(Craft::$app->getFields()->saveField($field))->toBeTrue();
+        Craft::$app->getUserPermissions()->saveUserPermissions($actor->id, ['accessCp', "viewEntries:$section->uid", "viewAssets:$volume->uid"]);
+        Craft::$app->getUserPermissions()->reset();
+        expect(fn() => $request($token))->toThrow(\yii\web\ForbiddenHttpException::class);
+    } finally {
+        AssetSpikeFixture::ensureAdminUser();
+        $field->setAttributes($original, false);
+        Craft::$app->getFields()->saveField($field);
+    }
+});

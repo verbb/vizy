@@ -46,6 +46,7 @@ export class VizyImageDialogElement extends LitElement {
     #seed: ImageDialogSeed | null = null;
     #previewRequest = 0;
     #focus = true;
+    #editorContextToken: string | undefined;
     #id = Math.random().toString(36).slice(2, 9);
 
     @query('pk-dialog') accessor dialog: PkDialogEl | null = null;
@@ -115,12 +116,14 @@ export class VizyImageDialogElement extends LitElement {
         options?: {
             focus?: boolean;
             transforms?: Array<{ handle: string; name: string }>;
+            editorContextToken?: string;
         },
     ): Promise<void> {
         await ensurePkDialog();
         this.#editor = editor;
         this.#seed = { ...seed };
         this.#focus = options?.focus ?? true;
+        this.#editorContextToken = options?.editorContextToken;
         if (options?.transforms) this.transforms = options.transforms;
         this.dialogTitle = seed.updating ? 'Edit Image' : 'Insert Image';
         this.submitLabel = seed.updating ? 'Update' : 'Insert';
@@ -224,7 +227,7 @@ export class VizyImageDialogElement extends LitElement {
         const handle = this.transformSelect.value;
         const request = ++this.#previewRequest;
         seed.transform = handle;
-        void generateTransformUrl(seed.assetId, handle).then((url) => {
+        void generateTransformUrl(seed.assetId, handle, this.#editorContextToken).then((url) => {
             // The dialog is shared across images; only its latest request may paint.
             if (!url || !this.isConnected || this.#seed !== seed || request !== this.#previewRequest) return;
             seed.previewUrl = url;
@@ -290,6 +293,7 @@ export async function openVizyImageDialog(
     options?: {
         focus?: boolean;
         transforms?: Array<{ handle: string; name: string }>;
+        editorContextToken?: string;
     },
 ): Promise<void> {
     await ensurePkDialog();

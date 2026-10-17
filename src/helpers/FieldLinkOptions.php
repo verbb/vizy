@@ -71,7 +71,10 @@ final class FieldLinkOptions
                 'elementType' => Asset::class,
                 'refHandle' => Asset::refHandle(),
                 'sources' => $assetSources,
-                'criteria' => ['volumeId' => $assetVolumeIds],
+                'criteria' => [
+                    'volumeId' => $assetVolumeIds,
+                    ...($field->showUnpermittedFiles ? ['uploaderId' => null] : []),
+                ],
             ];
         }
 

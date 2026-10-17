@@ -5,6 +5,8 @@ import { seedImageDialogFromSelection, type ImageDialogSeed } from './image-appl
 import { rememberImagePreview } from './image-preview-cache';
 
 export type VizyImageAuthoringConfig = {
+    showUnpermittedFiles?: boolean;
+    editorContextToken?: string;
     volumes?: string[];
     /** Craft AssetSelectorModal expects `{ handle, name }[]`, not bare handles. */
     transforms?: Array<{ handle: string; name: string }>;
@@ -41,6 +43,7 @@ export function activateImageControl(
             void openVizyImageDialog(editor, seed, {
                 focus: options?.focus,
                 transforms: config.transforms ?? [],
+                editorContextToken: config.editorContextToken,
             });
             return;
         }
@@ -70,6 +73,7 @@ export function openImageAssetSelector(
         criteria: {
             siteId: config.elementSiteId,
             kind: 'image',
+            ...(config.showUnpermittedFiles ? { uploaderId: null } : {}),
         },
         // Non-empty → Craft.AssetSelectorModal shows “Select transform” in the footer.
         transforms,
@@ -101,7 +105,7 @@ async function handleAssetSelect(
     let title = asset.label || '';
 
     if (!uid || !isUuid(uid)) {
-        const resolved = await resolveAssetInfo(asset.id, asset.siteId ?? config.elementSiteId);
+        const resolved = await resolveAssetInfo(asset.id, asset.siteId ?? config.elementSiteId, config.editorContextToken);
         if (!resolved?.uid || !isUuid(resolved.uid)) {
             console.warn('[vizy] Image select: could not resolve asset uid', asset.id);
             return;
@@ -146,6 +150,7 @@ async function handleAssetSelect(
     await openVizyImageDialog(editor, seed, {
         focus: options?.focus,
         transforms: config.transforms ?? [],
+        editorContextToken: config.editorContextToken,
     });
 }
 
@@ -161,6 +166,7 @@ function craftAssetUid(element: CraftAssetElement): string | null {
 async function resolveAssetInfo(
     assetId: number,
     siteId?: number,
+    editorContextToken?: string,
 ): Promise<{ uid: string; url: string | null; title: string; alt: string } | null> {
     const craft = window.Craft;
     if (typeof craft?.sendActionRequest !== 'function') return null;
@@ -171,7 +177,7 @@ async function resolveAssetInfo(
             title?: string;
             alt?: string;
         }>('POST', 'vizy/assets/info', {
-            data: { assetId, siteId },
+            data: { assetId, siteId, editorContextToken },
         });
         if (!response.data?.uid) return null;
         return {

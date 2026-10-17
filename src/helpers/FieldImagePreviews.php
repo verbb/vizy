@@ -1,6 +1,7 @@
 <?php
 namespace verbb\vizy\helpers;
 
+use verbb\vizy\Vizy;
 use verbb\vizy\fields\VizyField;
 
 use Craft;
@@ -38,7 +39,7 @@ final class FieldImagePreviews
         $defaultTransform = $field ? FieldImageOptions::defaultTransformHandle($field) : '';
 
         foreach ($assets as $asset) {
-            if (!$elements->canView($asset)) {
+            if (!$elements->canView($asset) && (!$field || !Vizy::$plugin->getSemanticReferences()->canSelectAsset($asset, $field, Craft::$app->getUser()->getIdentity()))) {
                 continue;
             }
 

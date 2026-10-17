@@ -11,6 +11,21 @@ import {
 const ASSET_UID = 'bda97141-65e6-48f6-84df-bf39f66034da';
 
 describe('image authoring apply', () => {
+    it.each([false, true])('applies peer-file visibility only when configured: %s', (showUnpermittedFiles) => {
+        const previous = window.Craft;
+        const createElementSelectorModal = vi.fn();
+        window.Craft = { ...previous, createElementSelectorModal };
+        try {
+            openImageAssetSelector({} as Editor, { showUnpermittedFiles });
+            const criteria = createElementSelectorModal.mock.calls[0]![1].criteria;
+            expect(criteria.kind).toBe('image');
+            if (showUnpermittedFiles) expect(criteria).toHaveProperty('uploaderId', null);
+            else expect(criteria).not.toHaveProperty('uploaderId');
+        } finally {
+            window.Craft = previous;
+        }
+    });
+
     it.each([
         { label: 'empty', volumes: [] },
         { label: 'restricted', volumes: ['volume:allowed'] },

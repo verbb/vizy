@@ -595,6 +595,8 @@ export class VizyEditorElement extends HTMLElement {
             linkSelectorStorageKeyPrefix: `VizyInput.LinkTo.${manifest.field.fieldUid || 'field'}`,
         };
         this.#toolbar.imageAuthoring = {
+            showUnpermittedFiles: this.#bootstrap.imageAuthoring?.showUnpermittedFiles ?? false,
+            editorContextToken: this.#bootstrap.editorContextToken,
             volumes: this.#bootstrap.imageAuthoring?.volumes ?? [],
             transforms: this.#bootstrap.imageAuthoring?.transforms ?? [],
             defaultTransform: this.#bootstrap.imageAuthoring?.defaultTransform ?? '',

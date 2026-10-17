@@ -68,6 +68,30 @@ final class SemanticReferences extends Component
     }
 
 
+    /** Shared field policy for persistence, picker metadata and editor previews. */
+    public function canSelectAsset(Asset $asset, VizyField $field, ?User $actor): bool
+    {
+        if (!$field->availableVolumes) {
+            return false;
+        }
+        $volume = $asset->getVolume();
+
+        if (is_array($field->availableVolumes) && !in_array($volume->uid, $field->availableVolumes, true)) {
+            return false;
+        }
+
+        if (!$actor) {
+            return true;
+        }
+
+        if (!$field->showUnpermittedVolumes && !$actor->can("viewAssets:$volume->uid")) {
+            return false;
+        }
+
+        return $field->showUnpermittedFiles || Craft::$app->getElements()->canView($asset, $actor);
+    }
+
+
     // Private Methods
     // =========================================================================
 
@@ -277,7 +301,7 @@ final class SemanticReferences extends Component
             }
 
             if ($element instanceof Asset) {
-                return $this->_allowsAsset($element, $reference['field'], $this->_actor());
+                return $this->canSelectAsset($element, $reference['field'], $this->_actor());
             }
 
             $actor = $this->_actor();
@@ -311,28 +335,6 @@ final class SemanticReferences extends Component
             $reference['elementType'],
             $reference['siteId'],
         );
-    }
-
-    private function _allowsAsset(Asset $asset, VizyField $field, ?User $actor): bool
-    {
-        if (!$field->availableVolumes) {
-            return false;
-        }
-        $volume = $asset->getVolume();
-
-        if (is_array($field->availableVolumes) && !in_array($volume->uid, $field->availableVolumes, true)) {
-            return false;
-        }
-
-        if (!$actor) {
-            return true;
-        }
-
-        if (!$field->showUnpermittedVolumes && !$actor->can("viewAssets:$volume->uid")) {
-            return false;
-        }
-
-        return $field->showUnpermittedFiles || Craft::$app->getElements()->canView($asset, $actor);
     }
 
     private function _actor(): ?User

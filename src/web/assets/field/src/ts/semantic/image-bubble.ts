@@ -229,6 +229,7 @@ export class VizyImageBubbleElement extends LitElement {
         void openVizyImageDialog(editor, seed, {
             focus: true,
             transforms: this.imageAuthoring.transforms ?? [],
+            editorContextToken: this.imageAuthoring.editorContextToken,
         });
     };
 
@@ -256,7 +257,7 @@ export class VizyImageBubbleElement extends LitElement {
             allowDegreeFractions: Craft.isImagick,
             onSave: async () => {
                 if (!assetUid) return;
-                await refreshImagePreview(assetUid);
+                await refreshImagePreview(assetUid, this.imageAuthoring.editorContextToken);
             },
         });
         this.hide({ clearAnchor: true });

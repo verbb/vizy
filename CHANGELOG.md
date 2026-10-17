@@ -3,6 +3,7 @@
 ## Unreleased
 
 ### Fixed
+- Fixed “Show unpermitted files” not allowing other users’ assets to be selected and previewed in Vizy image and asset-link controls.
 - Fixed inserting an image before focusing a loaded editor replacing its existing content.
 - Fixed autosaves and nested Matrix field checks running during publication and reporting submission errors when saving Vizy content.
 - Fixed repeated autosaves reporting a content conflict for Vizy fields inside Super Table drafts.

@@ -34,6 +34,7 @@ final class FieldImageOptions
             'transforms' => self::transforms($field),
             'defaultTransform' => self::defaultTransformHandle($field),
             'defaultSource' => $field->defaultUploadLocationSource,
+            'showUnpermittedFiles' => $field->showUnpermittedFiles,
         ];
     }
 

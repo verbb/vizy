@@ -1,6 +1,8 @@
 <?php
 namespace verbb\vizy\controllers;
 
+use verbb\vizy\Vizy;
+
 use Craft;
 use craft\elements\Asset;
 use craft\web\Controller;
@@ -8,6 +10,8 @@ use craft\web\Controller;
 use yii\web\BadRequestHttpException;
 use yii\web\ForbiddenHttpException;
 use yii\web\Response;
+
+use Throwable;
 
 /**
  * Asset metadata for Image authoring (UID + preview URL).
@@ -47,7 +51,7 @@ class AssetsController extends Controller
             throw new BadRequestHttpException('Asset not found.');
         }
 
-        if (!Craft::$app->getElements()->canView($asset)) {
+        if (!Craft::$app->getElements()->canView($asset) && !$this->_canSelectForField($asset, $siteId)) {
             throw new ForbiddenHttpException('User cannot view this asset.');
         }
 
@@ -60,5 +64,32 @@ class AssetsController extends Controller
             'url' => $asset->getUrl() ?: null,
             'filename' => (string)$asset->filename,
         ]);
+    }
+
+
+    // Private Methods
+    // =========================================================================
+
+    private function _canSelectForField(Asset $asset, int $siteId): bool
+    {
+        // Field settings may deliberately expose peer files. Accept that policy
+        // only through a signed placement whose owner is still editable by this user.
+        $token = $this->request->getBodyParam('editorContextToken');
+
+        if (!is_string($token) || $token === '') {
+            return false;
+        }
+
+        try {
+            $resolved = (new FieldLayoutController('field-layout', $this->module))->resolveEditorContext($token);
+
+            if (!$resolved || (int)$resolved[0]['siteId'] !== $siteId) {
+                return false;
+            }
+
+            return Vizy::$plugin->getSemanticReferences()->canSelectAsset($asset, $resolved[2], static::currentUser());
+        } catch (Throwable) {
+            return false;
+        }
     }
 }
