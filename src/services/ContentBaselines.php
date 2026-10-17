@@ -125,6 +125,13 @@ final class ContentBaselines extends Component
      */
     private function _persistedBaselineOwner(ElementInterface $owner): ?ElementInterface
     {
+        // Craft assigns a revision ID and element ID before serializing its
+        // content. That new row has no snapshot yet; use the persisted source
+        // being copied so automatic revisions preserve historical references.
+        if ($owner->getIsRevision() && $owner->duplicateOf instanceof ElementInterface) {
+            return $this->_persistedBaselineOwner($owner->duplicateOf);
+        }
+
         if ($owner->getIsDraft()) {
             $canonicalId = $owner->getCanonicalId();
 

@@ -402,3 +402,37 @@ it('resolves peer asset metadata only through a currently authorized field conte
         Craft::$app->getFields()->saveField($field);
     }
 });
+
+
+it('preserves restricted historical images during revision creation without trusting new copies', function() {
+    [$asset, $volume] = semanticReferenceAsset('revision-history.txt');
+    $field = VizyFixtureFactory::vizyField();
+    $originalVolumes = $field->availableVolumes;
+    $image = ['type' => 'image', 'attrs' => ['assetUid' => $asset->uid]];
+
+    try {
+        $field->availableVolumes = [$volume->uid];
+        expect(Craft::$app->getFields()->saveField($field))->toBeTrue();
+        $document = json_decode(VizyFixtureFactory::paragraphDocument('Historical image'), true);
+        $document['content'][] = $image;
+        $owner = VizyFixtureFactory::entry('Restricted revision image', json_encode($document));
+        $actor = semanticReferenceActor();
+        Craft::$app->getUser()->setIdentity($actor);
+        \verbb\vizy\Vizy::$plugin->getContentBaselines()->clear();
+
+        $revisionId = Craft::$app->getRevisions()->createRevision($owner, $actor->id, force: true);
+        $stored = Entry::find()->id($revisionId)->siteId($owner->siteId)->revisions()->status(null)->one();
+        expect($stored->getFieldValue($field->handle)->toArray()['content'])
+            ->toContain($image);
+
+        $document['content'][] = $image;
+        $owner->setFieldValue($field->handle, $document);
+        \verbb\vizy\Vizy::$plugin->getContentBaselines()->clear();
+        expect(fn() => Craft::$app->getRevisions()->createRevision($owner, $actor->id, force: true))
+            ->toThrow(InvalidDocumentException::class);
+    } finally {
+        AssetSpikeFixture::ensureAdminUser();
+        $field->availableVolumes = $originalVolumes;
+        Craft::$app->getFields()->saveField($field);
+    }
+});
