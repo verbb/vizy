@@ -12,6 +12,7 @@ use craft\helpers\StringHelper;
 use craft\base\FieldLayoutElement;
 use craft\helpers\ArrayHelper;
 use craft\fieldlayoutelements\BaseField;
+use craft\fieldlayoutelements\CustomField;
 
 use DateTime;
 
@@ -42,6 +43,7 @@ class Fields
             // Any extra tabs?
             if (!empty($tabs)) {
                 $elements = $tab->getElements();
+
                 foreach ($tabs as $extraTab) {
                     array_push($elements, ...$extraTab->getElements());
                 }
@@ -98,6 +100,7 @@ JS;
             'uid' => $fieldLayout->uid,
             'tabs' => array_map(function(FieldLayoutTab $tab) {
                 $config = $tab->getConfig();
+
                 foreach ($config['elements'] as &$elementConfig) {
                     if (!isset($elementConfig['dateAdded'])) {
                         // Default `dateAdded` to a minute ago, so there’s no chance that an element that predated 5.3 would get
