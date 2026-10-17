@@ -5,6 +5,7 @@
 ### Fixed
 - Fixed autosaves and nested Matrix field checks running during publication and reporting submission errors when saving Vizy content.
 - Fixed repeated autosaves reporting a content conflict for Vizy fields inside Super Table drafts.
+- Fixed toolbar and block controls not responding to touch in Safari.
 - Fixed false content conflicts when correcting validation errors after creating an entry or applying a draft, including Vizy fields inside Neo and Hyper.
 - Fixed nested widgets retaining outdated draft identities after validation errors, preventing new Neo blocks from being added.
 - Fixed Vizy block fields failing to load inside newly created Neo blocks on drafts.

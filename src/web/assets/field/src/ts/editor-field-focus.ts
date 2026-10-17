@@ -19,8 +19,8 @@ import type { Editor } from '@tiptap/core';
  * Chromium (and friends) select the whole contenteditable when it is focused
  * during `pointerdown`/`mousedown`. Authoring UI lives inside or beside
  * that surface, so **one capture-phase listener** on `.vizy-editor-body`
- * (`installEditorSelectionGuard`) preventDefaults every control press. New
- * controls must not re-learn this — the guard is the policy.
+ * (`installEditorSelectionGuard`) prevents mouse control presses. Touch presses
+ * must remain uncancelled so WebKit can deliver their activation click.
  *
  * Rules callers must still follow:
  *
@@ -106,6 +106,10 @@ function pathElements(event: Event): HTMLElement[] {
  */
 export function shouldPreserveEditorSelection(event: Event): boolean {
     if (!isPrimaryButton(event)) return false;
+    // Cancelling touch pointerdown suppresses WebKit's compatibility click,
+    // making toolbar and block buttons inert. Their later mousedown handlers
+    // still preserve the caret without cancelling touch activation or scrolling.
+    if (event instanceof PointerEvent && event.pointerType === 'touch') return false;
 
     const path = pathElements(event);
     if (!path.some((node) => node.matches(EDITOR_BODY_SELECTOR))) return false;
@@ -145,6 +149,7 @@ export function shouldPreserveEditorSelection(event: Event): boolean {
  * the same `preventDefault` for call sites that want to be explicit.
  */
 export function preserveEditorSelection(event: Event): void {
+    if (event instanceof PointerEvent && event.pointerType === 'touch') return;
     event.preventDefault();
 }
 

@@ -78,7 +78,10 @@ async function mount(page: import('@playwright/test').Page, document: unknown) {
     await page.goto(origin);
     await page.evaluate(() => {
         (window as any).__layoutRequests = 0;
-        (window as any).Craft = { sendActionRequest: () => Promise.reject(new Error('unexpected')) };
+        (window as any).Craft = { sendActionRequest: () => {
+            (window as any).__layoutRequests++;
+            return Promise.reject(new Error('unexpected'));
+        } };
     });
     await page.addScriptTag({ url: `${origin}assets/${path.basename(bundle)}`, type: 'module' });
     await expect.poll(() => page.evaluate(() => Boolean(customElements.get('vizy-editor')))).toBe(true);
@@ -91,6 +94,33 @@ async function mount(page: import('@playwright/test').Page, document: unknown) {
     }, { document, manifest: editorManifest });
     await expect(page.locator('.ProseMirror')).toBeVisible();
 }
+
+test.describe('touch authoring', () => {
+    test.use({ hasTouch: true, viewport: { width: 390, height: 664 } });
+
+    test('touch activates toolbar and block controls without dropping content', async ({ page, browserName }) => {
+        test.skip(browserName === 'firefox', 'Mobile touch qualification uses Chromium and WebKit; Firefox is covered by the desktop cases.');
+        await mount(page, {
+            type: 'doc', attrs: { schemaVersion: 2 },
+            content: [{ type: 'paragraph', content: [{ type: 'text', text: 'Touch story' }] }, leafBlock('touch-block')],
+        });
+        const prose = page.locator('.ProseMirror');
+        await prose.getByText('Touch story', { exact: true }).tap();
+        await page.keyboard.press('End');
+        await page.getByRole('button', { name: 'Bold', exact: true }).tap();
+        await page.keyboard.type(' bold');
+        await expect(prose.locator('strong')).toHaveText(' bold');
+        const block = page.locator('vizy-block');
+        await expect(block).toHaveCount(1);
+        const requests = await page.evaluate(() => (window as any).__layoutRequests);
+        await block.getByRole('button', { name: 'Retry', exact: true }).tap();
+        await expect.poll(() => page.evaluate(() => (window as any).__layoutRequests)).toBeGreaterThan(requests);
+        await block.getByRole('button', { name: 'Block actions', exact: true }).tap();
+        await page.getByRole('menuitem', { name: 'Collapse', exact: true }).tap();
+        await expect(block).toHaveAttribute('collapsed');
+        await expect(prose).toContainText('Touch story bold');
+    });
+});
 
 test('renders toolbar', async ({ page }) => {
     await mount(page, {

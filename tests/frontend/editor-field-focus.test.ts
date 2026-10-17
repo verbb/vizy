@@ -166,6 +166,26 @@ describe('editor field focus hold', () => {
 });
 
 describe('editor selection guard (permanent select-all policy)', () => {
+    it('allows touch activation through the field guard', () => {
+        const body = document.createElement('div');
+        body.className = 'vizy-editor-body';
+        const toolbar = document.createElement('vizy-toolbar');
+        const button = document.createElement('button');
+        toolbar.append(button);
+        body.append(toolbar);
+        document.body.append(body);
+        const dispose = installEditorSelectionGuard(body);
+        const event = new PointerEvent('pointerdown', {
+            pointerType: 'touch', button: 0, bubbles: true, cancelable: true, composed: true,
+        });
+        button.dispatchEvent(event);
+        expect(event.defaultPrevented).toBe(false);
+        preserveEditorSelection(event);
+        expect(event.defaultPrevented).toBe(false);
+        dispose();
+        body.remove();
+    });
+
     it('preserves selection for contenteditable=false controls inside the field', () => {
         const body = document.createElement('div');
         body.className = 'vizy-editor-body';
