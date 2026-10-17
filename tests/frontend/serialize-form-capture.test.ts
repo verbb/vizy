@@ -124,6 +124,20 @@ describe('rewriteCraftSerializedForm', () => {
 
 describe('acknowledged transport', () => {
     const doc = (token: string, text = 'Saved') => ({ type: 'doc', attrs: { schemaVersion: 2, _editorId: 'inner', _storageToken: token }, content: [{ type: 'text', text }] });
+    it('refreshes an untouched Hyper child after validation without replacing siblings or author edits', () => {
+        const sibling = { ...doc('sibling-token'), attrs: { _editorId: 'sibling', _storageToken: 'sibling-token' } };
+        const stored = [{ fields: { body: JSON.stringify(doc('before', 'New author edit')) } }, { fields: { body: JSON.stringify(sibling) } }];
+        const rewritten = rewriteCraftSerializedForm(`title=Keep%20this&${encodeCraftQueryPair('fields[links]', JSON.stringify(stored))}`, {
+            fieldName: 'fields[hyperData][123][fields][body]', canonical: JSON.stringify(doc('acknowledged')),
+            editorId: 'inner', metadata: { generation: '2' },
+        });
+        const params = new URLSearchParams(rewritten);
+        const links = JSON.parse(params.get('fields[links]')!);
+        expect(JSON.parse(links[0].fields.body)).toEqual(doc('acknowledged', 'New author edit'));
+        expect(JSON.parse(links[1].fields.body)).toEqual(sibling);
+        expect(params.has('fields[hyperData][123][fields][body]')).toBe(false);
+        expect(rewritten).toContain('title=Keep%20this');
+    });
     it('does not mint another submission for token rotation, including stringified nested documents', () => {
         const wrap = (token: string, text = 'Saved') => JSON.stringify({ type: 'doc', content: [{ fields: { nested: JSON.stringify(doc(token, text)) } }] });
         expect(submissionContentKey(wrap('before'))).toBe(submissionContentKey(wrap('after')));

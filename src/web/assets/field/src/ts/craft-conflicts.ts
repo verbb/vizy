@@ -13,6 +13,8 @@ interface Editor {
     isFullPage?: boolean;
     enableAutosave?: boolean;
     submittingForm?: boolean;
+    draftElementIds?: Record<string, number>;
+    draftElementUids?: Record<string, string>;
     settings: { draftId?: number; isUnpublishedDraft?: boolean; isProvisionalDraft?: boolean };
     serializeForm(removeActionParams: boolean): string;
     prepareData(data: string): string;
@@ -26,7 +28,7 @@ function allowNavigation(form: HTMLFormElement): void {
     const cp = (window.Craft as typeof window.Craft & { cp?: { $confirmUnloadForms?: UnloadForms } })?.cp;
     if (cp?.$confirmUnloadForms) cp.$confirmUnloadForms = cp.$confirmUnloadForms.not(form);
 }
-type Failure = { response?: { status?: number; data?: { message?: string; errorSummary?: unknown; vizy?: { conflict?: { code?: string; reviewUrl?: string | null } } } } };
+type Failure = { response?: { status?: number; data?: { message?: string; errorSummary?: unknown; draftElementIds?: Record<string, number>; draftElementUids?: Record<string, string>; vizy?: { results?: unknown[]; conflict?: { code?: string; reviewUrl?: string | null } } } } };
 const conflicts = new WeakSet<HTMLFormElement>();
 const saving = new WeakSet<HTMLFormElement>();
 const saveActions = new Set(['elements/save', 'elements/save-draft', 'elements/apply-draft', 'elements/duplicate']);
@@ -142,8 +144,23 @@ function requestForms(data: unknown): Set<HTMLFormElement> {
     return forms;
 }
 
-export function observeConflict(error: unknown, data: unknown): void {
+export function observeSaveFailure(error: unknown, data: unknown): void {
     if (isContentConflict(error)) requestForms(data).forEach((form) => markConflict(form, (error as Failure).response?.data?.vizy?.conflict?.reviewUrl));
+    const response = (error as Failure | null)?.response;
+    // A rejected publish can still have committed the draft. Route only the
+    // server's explicit persisted results through the normal generation guard,
+    // while leaving the request rejected so Craft keeps its validation errors.
+    if (response?.status === 400 && Array.isArray(response.data?.vizy?.results)) {
+        requestForms(data).forEach((form) => {
+            const editor = editorFor(form);
+            if (!editor) return;
+            // Native Matrix/Neo controls resolve copied draft identities through
+            // Craft's editor, even when publication keeps this form open.
+            editor.draftElementIds = { ...editor.draftElementIds, ...response.data?.draftElementIds };
+            editor.draftElementUids = { ...editor.draftElementUids, ...response.data?.draftElementUids };
+        });
+        document.dispatchEvent(new CustomEvent('vizy:server-response', { detail: response.data }));
+    }
 }
 
 export function preventConflictedRequest(data: unknown): void {

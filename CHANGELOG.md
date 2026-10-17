@@ -3,6 +3,10 @@
 ## Unreleased
 
 ### Fixed
+- Fixed repeated autosaves reporting a content conflict for Vizy fields inside Super Table drafts.
+- Fixed false content conflicts when correcting validation errors after creating an entry or applying a draft, including Vizy fields inside Neo and Hyper.
+- Fixed nested widgets retaining outdated draft identities after validation errors, preventing new Neo blocks from being added.
+- Fixed Vizy block fields failing to load inside newly created Neo blocks on drafts.
 - Fixed entry validation errors displaying HTML markup instead of readable messages when saving Vizy content.
 - Fixed untouched Global Sets with Vizy fields incorrectly warning about unsaved changes.
 

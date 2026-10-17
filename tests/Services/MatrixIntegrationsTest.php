@@ -5,6 +5,10 @@ declare(strict_types=1);
 use craft\fieldlayoutelements\CustomField;
 use craft\helpers\StringHelper;
 use Tests\Support\Fixtures\MatrixSupportFixture;
+use Tests\Support\Fixtures\AssetSpikeFixture;
+use Tests\Support\Fixtures\VizyFixtureFactory;
+use Tests\Support\WebControllerHarness;
+use verbb\vizy\Vizy;
 
 function installMatrixIntegrationPlugins(): void
 {
@@ -16,6 +20,111 @@ function installMatrixIntegrationPlugins(): void
         if (!Craft::$app->getPlugins()->isPluginInstalled($handle)) Craft::$app->getPlugins()->installPlugin($handle);
     }
 }
+
+it('acknowledges committed Neo content only when its containing owner is a draft', function(bool $draftOwner, bool $rollback) {
+    installMatrixIntegrationPlugins();
+    $admin = AssetSpikeFixture::ensureAdminUser();
+    Vizy::$plugin->getEditorAcknowledgements()->resetRequestStateForTesting();
+    $field = VizyFixtureFactory::vizyField();
+    $type = new \benf\neo\models\BlockType(['name' => 'Acknowledged story', 'handle' => 'ackStory']);
+    $layout = new \craft\models\FieldLayout(['type' => \benf\neo\elements\Block::class]);
+    $layout->setTabs([new \craft\models\FieldLayoutTab(['name' => 'Content', 'layout' => $layout, 'elements' => [new CustomField($field)]])]);
+    $type->setFieldLayout($layout);
+    $neo = new \benf\neo\Field(['name' => 'Acknowledged Neo', 'handle' => 'ackNeo' . StringHelper::randomString(8)]);
+    $neo->setBlockTypes([$type]);
+    expect(Craft::$app->getFields()->saveField($neo))->toBeTrue();
+    $type->id = \craft\helpers\Db::idByUid('{{%neoblocktypes}}', $type->uid);
+    $owner = VizyFixtureFactory::entry('Neo validation acknowledgement');
+    $ownerLayout = $owner->getFieldLayout();
+    $tab = $ownerLayout->getTabs()[0];
+    $tab->setElements([...$tab->getElements(), new CustomField($neo)]);
+    expect(Craft::$app->getFields()->saveLayout($ownerLayout))->toBeTrue();
+    if ($draftOwner) $owner = Craft::$app->getDrafts()->createDraft($owner, $admin->id, 'Neo recovery');
+    $owner->setFieldValue($neo->handle, ['new1' => ['type' => $type->handle, 'enabled' => true, 'level' => 1, 'fields' => [
+        $field->handle => VizyFixtureFactory::paragraphDocument('Original Neo story'),
+    ]]]);
+    expect(Craft::$app->getElements()->saveElement($owner, false))->toBeTrue(json_encode($owner->getErrors()));
+    $block = $owner->getFieldValue($neo->handle)->one();
+    expect($block->getIsDraft())->toBeFalse();
+    $context = Vizy::$plugin->getEditorContexts()->issue($block, $field);
+    $oldToken = Vizy::$plugin->getContentVersions()->issue($block, $field);
+    $result = WebControllerHarness::withWebRequest([
+        'vizyTransport' => WebControllerHarness::transportMetadata('neo-validation-editor', $field->uid, $context['token'], 1, 2, 'save'),
+    ], 'elements/apply-draft', function() use ($block, $field, $rollback) {
+        $transaction = Craft::$app->getDb()->beginTransaction();
+        try {
+            $block->setFieldValue($field->handle, VizyFixtureFactory::paragraphDocument('Changed Neo story'));
+            expect(Craft::$app->getElements()->saveElement($block, false))->toBeTrue();
+            if ($rollback) $transaction->rollBack();
+            else $transaction->commit();
+            $response = new \craft\web\Response();
+            $response->setStatusCode(400);
+            $response->data = ['message' => 'Containing entry cannot be published.'];
+            Vizy::$plugin->getEditorAcknowledgements()->augmentResponse(new \yii\base\Event(['sender' => $response]));
+            return $response->data;
+        } finally {
+            if ($transaction->getIsActive()) $transaction->rollBack();
+        }
+    });
+    if (!$draftOwner || $rollback) {
+        expect($result)->not->toHaveKey('vizy');
+        return;
+    }
+    $ack = $result['vizy']['results'][0];
+    expect($ack['editorId'])->toBe('neo-validation-editor')
+        ->and($ack['canonicalDocument']['content'][0]['content'][0]['text'])->toBe('Changed Neo story')
+        ->and($ack['storageToken'])->not->toBe($oldToken);
+    $transaction = Craft::$app->getDb()->beginTransaction();
+    try {
+        Vizy::$plugin->getContentVersions()->check($block, $field, $ack['storageToken']);
+    } finally {
+        $transaction->rollBack();
+    }
+})->with(['committed draft' => [true, false], 'rolled-back draft' => [true, true], 'canonical owner' => [false, false]])->group('matrix-integrations');
+
+it('acknowledges consecutive saves of a copied Super Table row using its canonical editor context', function() {
+    Craft::$app->getPlugins()->installPlugin('super-table');
+    $admin = AssetSpikeFixture::ensureAdminUser();
+    $field = VizyFixtureFactory::vizyField();
+    $type = new \craft\models\EntryType(['name' => 'Acknowledged row', 'handle' => 'ackRow' . StringHelper::randomString(8)]);
+    $layout = new \craft\models\FieldLayout(['type' => \craft\elements\Entry::class]);
+    $layout->setTabs([new \craft\models\FieldLayoutTab(['name' => 'Content', 'layout' => $layout, 'elements' => [new CustomField($field)]])]);
+    $type->setFieldLayout($layout);
+    expect(Craft::$app->getEntries()->saveEntryType($type))->toBeTrue();
+    $table = new \verbb\supertable\fields\SuperTableField(['name' => 'Acknowledged rows', 'handle' => 'ackRows' . StringHelper::randomString(8)]);
+    $table->setEntryTypes([$type]);
+    expect(Craft::$app->getFields()->saveField($table))->toBeTrue();
+    $owner = VizyFixtureFactory::entry('Super Table acknowledgements');
+    $ownerLayout = $owner->getFieldLayout();
+    $tab = $ownerLayout->getTabs()[0];
+    $tab->setElements([...$tab->getElements(), new CustomField($table)]);
+    expect(Craft::$app->getFields()->saveLayout($ownerLayout))->toBeTrue();
+    $owner->setFieldValue($table->handle, ['entries' => ['new1' => ['type' => $type->handle, 'fields' => [
+        $field->handle => VizyFixtureFactory::paragraphDocument('Canonical row'),
+    ]]], 'sortOrder' => ['new1']]);
+    expect(Craft::$app->getElements()->saveElement($owner, false))->toBeTrue();
+    $canonical = $owner->getFieldValue($table->handle)->one();
+    $context = Vizy::$plugin->getEditorContexts()->issue($canonical, $field);
+    $draft = Craft::$app->getDrafts()->createDraft($owner, $admin->id, 'Row edits');
+    $row = Craft::$app->getElements()->duplicateElement($canonical, ['canonicalId' => $canonical->id, 'primaryOwnerId' => $draft->id, 'ownerId' => $draft->id]);
+    expect($row->getIsDraft())->toBeFalse()
+        ->and($row->getOwner()->getIsDraft())->toBeTrue();
+    foreach (['First edit', 'Second edit'] as $text) {
+        Vizy::$plugin->getEditorAcknowledgements()->resetRequestStateForTesting();
+        $result = WebControllerHarness::withWebRequest([
+            'vizyTransport' => WebControllerHarness::transportMetadata('copied-row', $field->uid, $context['token'], 1, 2, 'autosave'),
+        ], 'elements/save-draft', function() use ($row, $field, $text) {
+            $row->setFieldValue($field->handle, VizyFixtureFactory::paragraphDocument($text));
+            expect(Craft::$app->getElements()->saveElement($row, false))->toBeTrue();
+            $response = new \craft\web\Response();
+            $response->data = ['success' => true];
+            Vizy::$plugin->getEditorAcknowledgements()->augmentResponse(new \yii\base\Event(['sender' => $response]));
+            return $response->data;
+        });
+        expect($result['vizy']['results'][0]['editorId'] ?? null)->toBe('copied-row')
+            ->and($result['vizy']['results'][0]['canonicalDocument']['content'][0]['content'][0]['text'])->toBe($text);
+    }
+})->group('matrix-integrations');
 
 it('retains Hyper and Typed Link values with Matrix through owner copies and drafts', function(bool $beside) {
     installMatrixIntegrationPlugins();
@@ -61,6 +170,39 @@ it('retains Hyper and Typed Link values with Matrix through owner copies and dra
     }
     expect(array_unique($ids))->toHaveCount(3);
 })->with(['inside Matrix rows' => [false], 'beside Matrix in a Vizy block' => [true]])->group('matrix-integrations');
+
+it('renders Vizy fields immediately in a fresh Neo block owned by an entry draft', function() {
+    installMatrixIntegrationPlugins();
+    $admin = AssetSpikeFixture::ensureAdminUser();
+    $f = new MatrixSupportFixture();
+    $type = new \benf\neo\models\BlockType(['name' => 'Fresh story', 'handle' => 'freshStory']);
+    $layout = new \craft\models\FieldLayout(['type' => \benf\neo\elements\Block::class]);
+    $layout->setTabs([new \craft\models\FieldLayoutTab(['name' => 'Content', 'layout' => $layout, 'elements' => [new CustomField($f->field)]])]);
+    $type->setFieldLayout($layout);
+    $neo = new \benf\neo\Field(['name' => 'Fresh Neo', 'handle' => 'freshNeo' . StringHelper::randomString(8)]);
+    $neo->setBlockTypes([$type]);
+    expect(Craft::$app->getFields()->saveField($neo))->toBeTrue();
+    $type->id = \craft\helpers\Db::idByUid('{{%neoblocktypes}}', $type->uid);
+    $ownerLayout = $f->owner->getFieldLayout();
+    $tab = $ownerLayout->getTabs()[0];
+    $tab->setElements([...$tab->getElements(), new CustomField($neo)]);
+    expect(Craft::$app->getFields()->saveLayout($ownerLayout))->toBeTrue();
+    $draft = Craft::$app->getDrafts()->createDraft($f->owner, $admin->id, 'New Neo block');
+    $neoBlock = new \benf\neo\elements\Block(['fieldId' => $neo->id, 'typeId' => $type->id, 'siteId' => $draft->siteId, 'level' => 1]);
+    $neoBlock->setOwner($draft);
+    expect(Craft::$app->getDrafts()->saveElementAsDraft($neoBlock, $admin->id, markAsSaved: false))->toBeTrue();
+    $context = Vizy::$plugin->getEditorContexts()->issue($neoBlock, $f->field);
+    $block = $f->block(StringHelper::UUID(), $f->payload(['Immediate row']));
+    $response = WebControllerHarness::renderFieldLayout([
+        'editorContextToken' => $context['token'], 'requestId' => StringHelper::UUID(),
+        'documentRevision' => 1, 'blockHash' => WebControllerHarness::stableBlockHash($block),
+        'block' => $block, 'destination' => ['kind' => 'root'],
+    ]);
+    expect($response->getStatusCode())->toBe(200)
+        ->and($response->data['html'])->toContain('Immediate row');
+    // Resolving the editor must not apply its standalone draft as a side effect.
+    expect(\benf\neo\elements\Block::find()->id($neoBlock->id)->draftId($neoBlock->draftId)->status(null)->exists())->toBeTrue();
+})->group('matrix-integrations');
 
 it('preserves Matrix inside Vizy on a real Neo owner through copies drafts removal and backfill', function() {
     installMatrixIntegrationPlugins();

@@ -28,6 +28,7 @@ use craft\fieldlayoutelements\CustomField;
 use craft\helpers\UrlHelper;
 use craft\models\FieldLayout;
 use craft\services\Elements;
+use craft\services\Drafts;
 use craft\services\Fields;
 use craft\services\Gql;
 use craft\services\ProjectConfig;
@@ -145,8 +146,11 @@ class Vizy extends Plugin
         Event::on(Fields::class, Fields::EVENT_AFTER_SAVE_FIELD_LAYOUT, [$this->getBlockTypes(), 'handleAfterSaveFieldLayout']);
         Event::on(Elements::class, Elements::EVENT_AFTER_SAVE_ELEMENT, [$this->getAssetUploads(), 'handleAfterSave']);
         Event::on(Response::class, Response::EVENT_BEFORE_SEND, [$this->getEditorAcknowledgements(), 'augmentResponse']);
+        Event::on(Drafts::class, Drafts::EVENT_AFTER_CREATE_DRAFT, [$this->getEditorAcknowledgements(), 'collectDraftIdentity']);
         Event::on(Response::class, Response::EVENT_BEFORE_SEND, [\verbb\vizy\helpers\ConflictResponse::class, 'beforeSend']);
         $db = Craft::$app->getDb();
+        $db->on(Connection::EVENT_COMMIT_TRANSACTION, [$this->getEditorAcknowledgements(), 'handleTransactionCommit']);
+        $db->on(Connection::EVENT_ROLLBACK_TRANSACTION, [$this->getEditorAcknowledgements(), 'handleTransactionRollback']);
         $db->on(Connection::EVENT_COMMIT_TRANSACTION, [$this->getAssetUploads(), 'handleTransactionCommit']);
         $db->on(Connection::EVENT_ROLLBACK_TRANSACTION, [$this->getAssetUploads(), 'handleTransactionRollback']);
 

@@ -76,17 +76,22 @@ for (const name of ['links', 'neo', 'super-table']) {
         expect(draft.hyper).toEqual(before.hyper);
         expect(draft.typed).toEqual(before.typed);
         expect(Number(draft.drafts)).toBeGreaterThan(0);
-        if (name === 'links') {
+        {
             const title = page.locator('#title');
             const originalTitle = await title.inputValue();
             await title.fill('');
-            await Promise.all([page.waitForEvent('framenavigated', { predicate: (frame) => frame === page.mainFrame() }), page.keyboard.press('ControlOrMeta+S')]);
-            await expect(page.getByRole('link', { name: 'Title cannot be blank.', exact: true })).toBeVisible();
+            await page.keyboard.press('ControlOrMeta+S');
+            await expect(page.locator('[data-vizy-save-notice]')).toHaveJSProperty('textContent', 'Title cannot be blank.');
             await expect(label).toHaveValue(`Edited ${name}`);
-            await expect(block.locator('input[value="https://example.test/hyper-edited"]:visible')).toHaveCount(2);
+            const retainedUrls = block.locator('[data-hyper-portal] input[name$="[linkValue]"]:visible');
+            await expect(retainedUrls).toHaveCount(2);
+            await expect(retainedUrls.first()).toHaveValue('https://example.test/hyper-edited');
+            await expect(retainedUrls.last()).toHaveValue('https://example.test/hyper-edited');
             expect(state().hyper).toEqual(before.hyper);
             expect(state().labels).toEqual(before.labels);
+            const corrected = page.waitForResponse((response) => decodeURIComponent(response.url()).includes('elements/save-draft'));
             await title.fill(originalTitle);
+            expect((await corrected).status()).toBe(200);
         }
         await Promise.all([page.waitForEvent('framenavigated', { predicate: (frame) => frame === page.mainFrame() }), page.keyboard.press('ControlOrMeta+S')]);
         const saved = state();

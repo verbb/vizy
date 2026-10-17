@@ -72,7 +72,14 @@ export function rewriteCraftSerializedForm(
         }
     }
 
-    return kept.join('&');
+    const rewritten = kept.join('&');
+    if (isPortalField && editorId) {
+        // Enclosing fields may reuse untouched child JSON. Carry this editor's
+        // acknowledged version into that payload without changing its content.
+        const token = (JSON.parse(canonical) as { attrs?: { _storageToken?: unknown } }).attrs?._storageToken;
+        if (typeof token === 'string') return refreshCraftSerializedVizyToken(rewritten, editorId, token);
+    }
+    return rewritten;
 }
 
 /** Visit documents even when an enclosing field stores their JSON as a string. */

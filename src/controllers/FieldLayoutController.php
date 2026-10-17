@@ -228,7 +228,9 @@ final class FieldLayoutController extends Controller
         if (!is_string($class) || !is_subclass_of($class, ElementInterface::class)) {
             throw new \RuntimeException('invalidOwnerClass');
         }
-        $query = $class::find()->siteId((int)$context['siteId'])->status(null);
+        // Scope the derivative lookup to its signed identity too. Nested-owner
+        // queries such as Neo otherwise hide children of draft owners.
+        $query = $class::find()->id($context['ownerId'] ?? null)->siteId((int)$context['siteId'])->status(null);
         $owner = null;
 
         if ($context['revisionId'] ?? null) {

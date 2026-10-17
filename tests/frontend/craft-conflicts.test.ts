@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { blockConflictedSubmit, isContentConflict, markConflict, observeConflict, preventConflictedRequest, submitFullPage, unsavedContent } from '../../src/web/assets/field/src/ts/craft-conflicts';
+import { blockConflictedSubmit, isContentConflict, markConflict, observeSaveFailure, preventConflictedRequest, submitFullPage, unsavedContent } from '../../src/web/assets/field/src/ts/craft-conflicts';
 
 const editors = new Map<string, any>();
 const conflict = { response: { status: 409, data: { vizy: { conflict: { code: 'contentChanged' } } } } };
@@ -30,11 +30,35 @@ describe('recoverable Craft conflicts', () => {
         expect(isContentConflict({ response: { status: 409, data: { message: 'Changed' } } })).toBe(false);
         expect(isContentConflict({ response: { status: 500, data: conflict.response.data } })).toBe(false);
     });
+    it('routes committed draft results from validation errors without pausing the form', () => {
+        const { form: f, editor } = form();
+        const other = form();
+        Object.assign(editor, { draftElementIds: { 10: 20 }, draftElementUids: { original: 'existing-draft' } });
+        const data = new URLSearchParams({ 'vizyTransport[test][editorId]': f.querySelector('vizy-editor')!.id }).toString();
+        const response = { message: 'Heading cannot be blank.', draftElementIds: { 30: 40 }, draftElementUids: { neo: 'neo-draft' }, vizy: { results: [{ success: true, storageToken: 'committed-draft' }] } };
+        const received = vi.fn();
+        document.addEventListener('vizy:server-response', received);
+        try {
+            for (const status of [409, 500]) observeSaveFailure({ response: { status, data: response } }, data);
+            observeSaveFailure({ response: { status: 400, data: { message: 'Rejected without persistence' } } }, data);
+            expect(received).not.toHaveBeenCalled();
+            observeSaveFailure({ response: { status: 400, data: response } }, data);
+            expect(received).toHaveBeenCalledTimes(1);
+            expect((received.mock.calls[0][0] as CustomEvent).detail).toBe(response);
+            expect(editor.enableAutosave).toBe(true);
+            expect((editor as any).draftElementIds).toEqual({ 10: 20, 30: 40 });
+            expect((editor as any).draftElementUids).toEqual({ original: 'existing-draft', neo: 'neo-draft' });
+            expect((other.editor as any).draftElementIds).toBeUndefined();
+            expect(blockConflictedSubmit(f, event())).toBe(false);
+        } finally {
+            document.removeEventListener('vizy:server-response', received);
+        }
+    });
     it('pauses only the submitting form and blocks repeated Save and queued autosaves', () => {
         const a = form(); const b = form();
         const data = new URLSearchParams({ [`vizyTransport[abc][editorId]`]: a.form.querySelector('vizy-editor')!.id }).toString();
-        observeConflict(conflict, data);
-        observeConflict(conflict, data);
+        observeSaveFailure(conflict, data);
+        observeSaveFailure(conflict, data);
         expect(a.editor.enableAutosave).toBe(false);
         expect(b.editor.enableAutosave).toBe(true);
         expect(a.form.querySelectorAll('[data-vizy-save-notice]')).toHaveLength(1);

@@ -556,3 +556,106 @@ it('does not acknowledge fields from a failed owner save and drains staged resul
         expect($response->data)->not->toHaveKey('vizy');
     });
 })->with([400, 409, 500]);
+
+it('acknowledges the committed draft on failed publication and preserves real conflict detection', function() {
+    $admin = AssetSpikeFixture::ensureAdminUser();
+    $field = VizyFixtureFactory::vizyField();
+    $owner = VizyFixtureFactory::entry('Draft validation acknowledgement');
+    $draft = Craft::$app->getDrafts()->createDraft($owner, $admin->id, 'Validation recovery');
+    $context = Vizy::$plugin->getEditorContexts()->issue($draft, $field);
+    $oldToken = Vizy::$plugin->getContentVersions()->issue($draft, $field);
+    $responseData = WebControllerHarness::withWebRequest([
+        'vizyTransport' => WebControllerHarness::transportMetadata('validation-editor', $field->uid, $context['token'], 4, 8, 'save'),
+    ], 'elements/apply-draft', function() use ($draft, $field) {
+        $draft->setFieldValue($field->handle, VizyFixtureFactory::paragraphDocument('Saved invalid draft content'));
+        expect(Craft::$app->getElements()->saveElement($draft, false))->toBeTrue();
+        $response = new WebResponse();
+        $response->setStatusCode(400);
+        $response->data = ['message' => 'Heading cannot be blank.'];
+        Vizy::$plugin->getEditorAcknowledgements()->augmentResponse(new Event(['sender' => $response]));
+        expect($response->getStatusCode())->toBe(400);
+        return $response->data;
+    });
+    $result = $responseData['vizy']['results'][0];
+    expect($result['success'])->toBeTrue()
+        ->and($result['canonicalDocument']['content'][0]['content'][0]['text'])->toBe('Saved invalid draft content')
+        ->and($result['storageToken'])->not->toBe($oldToken);
+    $transaction = Craft::$app->getDb()->beginTransaction();
+    try {
+        Vizy::$plugin->getContentVersions()->check($draft, $field, $result['storageToken']);
+    } finally {
+        $transaction->rollBack();
+    }
+    // A later writer must still invalidate the acknowledged version.
+    $draft->setFieldValue($field->handle, VizyFixtureFactory::paragraphDocument('Another writer'));
+    expect(Craft::$app->getElements()->saveElement($draft, false))->toBeTrue();
+    $transaction = Craft::$app->getDb()->beginTransaction();
+    try {
+        expect(fn() => Vizy::$plugin->getContentVersions()->check($draft, $field, $result['storageToken']))
+            ->toThrow(\verbb\vizy\exceptions\ContentConflictException::class);
+    } finally {
+        $transaction->rollBack();
+    }
+});
+
+it('does not acknowledge an uncommitted or rolled-back draft on validation failure', function(bool $rollback) {
+    $admin = AssetSpikeFixture::ensureAdminUser();
+    $field = VizyFixtureFactory::vizyField();
+    $owner = VizyFixtureFactory::entry('Draft rollback acknowledgement');
+    $draft = Craft::$app->getDrafts()->createDraft($owner, $admin->id, 'Rollback');
+    $context = Vizy::$plugin->getEditorContexts()->issue($draft, $field);
+    WebControllerHarness::withWebRequest([
+        'vizyTransport' => WebControllerHarness::transportMetadata('rollback-editor', $field->uid, $context['token'], 1, 1, 'save'),
+    ], 'elements/apply-draft', function() use ($draft, $field, $rollback) {
+        $transaction = Craft::$app->getDb()->beginTransaction();
+        try {
+            $draft->setFieldValue($field->handle, VizyFixtureFactory::paragraphDocument('Must not be acknowledged'));
+            expect(Craft::$app->getElements()->saveElement($draft, false))->toBeTrue();
+            if ($rollback) $transaction->rollBack();
+            $response = new WebResponse();
+            $response->setStatusCode(400);
+            $response->data = ['message' => 'Invalid draft'];
+            Vizy::$plugin->getEditorAcknowledgements()->augmentResponse(new Event(['sender' => $response]));
+            expect($response->data)->not->toHaveKey('vizy');
+        } finally {
+            if ($transaction->getIsActive()) $transaction->rollBack();
+        }
+    });
+})->with([false, true]);
+
+it('returns only committed native draft identity mappings on failed publication', function(bool $rollback) {
+    $admin = AssetSpikeFixture::ensureAdminUser();
+    $field = VizyFixtureFactory::vizyField();
+    $owner = VizyFixtureFactory::entry('Native identity recovery');
+    $context = Vizy::$plugin->getEditorContexts()->issue($owner, $field);
+    WebControllerHarness::withWebRequest([
+        'vizyTransport' => WebControllerHarness::transportMetadata('native-draft-editor', $field->uid, $context['token'], 1, 2, 'save'),
+    ], 'elements/apply-draft', function() use ($owner, $field, $admin, $rollback) {
+        $transaction = Craft::$app->getDb()->beginTransaction();
+        try {
+            $draft = Craft::$app->getDrafts()->createDraft($owner, $admin->id, 'Identity recovery');
+            $draft->setFieldValue($field->handle, VizyFixtureFactory::paragraphDocument('Persisted draft'));
+            expect(Craft::$app->getElements()->saveElement($draft, false))->toBeTrue();
+            if ($rollback) $transaction->rollBack();
+            else $transaction->commit();
+            $response = new WebResponse();
+            $response->setStatusCode(400);
+            $response->data = ['message' => 'Publication rejected'];
+            Vizy::$plugin->getEditorAcknowledgements()->augmentResponse(new Event(['sender' => $response]));
+            if ($rollback) {
+                expect($response->data)->not->toHaveKeys(['vizy', 'draftElementIds', 'draftElementUids']);
+            } else {
+                expect($response->data['draftElementIds'])->toBe([$owner->id => $draft->id])
+                    ->and($response->data['draftElementUids'])->toBe([$owner->uid => $draft->uid]);
+            }
+            // A later response cannot reuse this request's mappings.
+            $next = new WebResponse();
+            $next->setStatusCode(400);
+            $next->data = [];
+            Vizy::$plugin->getEditorAcknowledgements()->augmentResponse(new Event(['sender' => $next]));
+            expect($next->data)->toBe([]);
+        } finally {
+            if ($transaction->getIsActive()) $transaction->rollBack();
+        }
+    });
+})->with([false, true]);

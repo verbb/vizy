@@ -1,5 +1,5 @@
 import '@verbb/plugin-kit-web/plugin-kit.css';
-import { observeConflict, preventConflictedRequest } from './craft-conflicts';
+import { observeSaveFailure, preventConflictedRequest } from './craft-conflicts';
 import '@verbb/plugin-kit-web/components/tooltip';
 import '@verbb/plugin-kit-web/components/dropdown-menu';
 import '@verbb/plugin-kit-web/components/popup';
@@ -130,7 +130,7 @@ if (craft?.sendActionRequest && !craft.__vizyRequestBridge) {
             }
             return response;
         } catch (error) {
-            observeConflict(error, args[2]?.data);
+            observeSaveFailure(error, args[2]?.data);
             throw error;
         }
     }) as typeof craft.sendActionRequest;

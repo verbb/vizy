@@ -10,6 +10,8 @@ use verbb\vizy\records\AssetUploadBatch;
 use Craft;
 use craft\base\Component;
 use craft\base\ElementInterface;
+use craft\base\NestedElementInterface;
+use craft\events\DraftEvent;
 use craft\helpers\Json;
 
 use yii\base\Event;
@@ -37,6 +39,10 @@ final class EditorAcknowledgements extends Component
 
     private array $accepted = [];
     private array $embedded = [];
+    private array $pendingDraftIds = [];
+    private array $pendingDraftUids = [];
+    private array $committedDraftIds = [];
+    private array $committedDraftUids = [];
 
 
     // Public Methods
@@ -46,6 +52,8 @@ final class EditorAcknowledgements extends Component
     {
         $this->accepted = [];
         $this->embedded = [];
+        $this->pendingDraftIds = $this->pendingDraftUids = [];
+        $this->committedDraftIds = $this->committedDraftUids = [];
     }
 
     public function initialFinalization(VizyDocument $document, string $editorId): array
@@ -127,6 +135,10 @@ final class EditorAcknowledgements extends Component
     public function augmentResponse(Event $event): void
     {
         $this->embedded = [];
+        $draftIds = $this->committedDraftIds;
+        $draftUids = $this->committedDraftUids;
+        $this->pendingDraftIds = $this->pendingDraftUids = [];
+        $this->committedDraftIds = $this->committedDraftUids = [];
 
         if ($this->accepted === []) {
             return;
@@ -140,13 +152,25 @@ final class EditorAcknowledgements extends Component
         $route = (string)(Craft::$app->requestedRoute ?? '');
         $response = $event->sender;
 
-        if (!$response instanceof Response || !$response->getIsSuccessful() || !str_starts_with($route, 'elements/') || !is_array($response->data)) {
+        if (!$response instanceof Response || !str_starts_with($route, 'elements/') || !is_array($response->data)) {
+            return;
+        }
+
+        // Craft deliberately commits an invalid draft before returning its
+        // publish validation error. Only that committed snapshot may advance
+        // the editor's version; other failures must never acknowledge a save.
+        $draftValidation = $route === 'elements/apply-draft' && $response->getStatusCode() === 400;
+
+        if (!$response->getIsSuccessful() && !$draftValidation) {
             return;
         }
 
         $results = [];
 
         foreach ($accepted as $item) {
+            if ($draftValidation && !isset($item['committedDraft'])) {
+                continue;
+            }
             $metadata = $item['metadata'];
             $assetResult = Vizy::$plugin->getAssetUploads()->resultForOwner($item['owner'], $item['field'])
                 ?? ['status' => 'complete', 'batchId' => null, 'errors' => [], 'deferredReason' => null];
@@ -155,13 +179,62 @@ final class EditorAcknowledgements extends Component
                 'generation' => $metadata['generation'],
                 'requestKind' => $metadata['requestKind'],
                 'submittedClientRevision' => $metadata['clientRevision'],
-                'canonicalDocument' => Json::decode(Vizy::$plugin->getDocuments()->serializeValue($item['document'])),
-                'storageToken' => Vizy::$plugin->getContentVersions()->issue($item['owner'], $item['field']),
+                'canonicalDocument' => $draftValidation ? $item['committedDraft']['canonicalDocument'] : Json::decode(Vizy::$plugin->getDocuments()->serializeValue($item['document'])),
+                'storageToken' => $draftValidation ? $item['committedDraft']['storageToken'] : Vizy::$plugin->getContentVersions()->issue($item['owner'], $item['field']),
                 'success' => true,
                 ...$this->_finalization($assetResult, $metadata),
             ];
         }
-        $response->data['vizy'] = ['results' => $results];
+
+        if ($results !== []) {
+            $response->data['vizy'] = ['results' => $results];
+
+            if ($draftValidation) {
+                // The retained native widgets need the identities created by
+                // Craft's failed publish, just as after a normal draft save.
+                $response->data['draftElementIds'] = $draftIds;
+                $response->data['draftElementUids'] = $draftUids;
+            }
+        }
+    }
+
+    public function collectDraftIdentity(DraftEvent $event): void
+    {
+        if (Craft::$app->requestedRoute === 'elements/apply-draft') {
+            $this->pendingDraftIds[$event->canonical->id] = $event->draft->id;
+            $this->pendingDraftUids[$event->canonical->uid] = $event->draft->uid;
+        }
+    }
+
+    public function handleTransactionCommit(Event $event): void
+    {
+        if (Craft::$app->requestedRoute !== 'elements/apply-draft') {
+            return;
+        }
+        $this->committedDraftIds = array_replace($this->committedDraftIds, $this->pendingDraftIds);
+        $this->committedDraftUids = array_replace($this->committedDraftUids, $this->pendingDraftUids);
+        $this->pendingDraftIds = $this->pendingDraftUids = [];
+
+        foreach ($this->accepted as &$item) {
+            $root = \verbb\vizy\helpers\EmbeddedOwners::scope($item['owner'])['owner'] ?? $item['owner'];
+
+            if (isset($item['committedDraft']) || !$this->_isDraftOwner($root)) {
+                continue;
+            }
+            // Capture at the outer commit, not at response time: another writer
+            // must not supply the version for this request's saved document.
+            $item['committedDraft'] = [
+                'canonicalDocument' => Json::decode(Vizy::$plugin->getDocuments()->serializeValue($item['document'])),
+                'storageToken' => Vizy::$plugin->getContentVersions()->issue($item['owner'], $item['field']),
+            ];
+        }
+    }
+
+    public function handleTransactionRollback(Event $event): void
+    {
+        $this->accepted = array_filter($this->accepted, static fn(array $item): bool => isset($item['committedDraft']));
+        $this->embedded = [];
+        $this->pendingDraftIds = $this->pendingDraftUids = [];
     }
 
     public function verifyRetryToken(string $token): array
@@ -194,6 +267,27 @@ final class EditorAcknowledgements extends Component
 
     // Private Methods
     // =========================================================================
+
+    private function _isDraftOwner(ElementInterface $owner): bool
+    {
+        // Neo and other nested elements can persist their own content without
+        // being drafts themselves. Their containing entry owns publication.
+        $seen = [];
+
+        while (!isset($seen[spl_object_id($owner)])) {
+            $seen[spl_object_id($owner)] = true;
+
+            if ($owner->getIsDraft()) {
+                return true;
+            }
+
+            if (!$owner instanceof NestedElementInterface || !($parent = $owner->getOwner())) {
+                return false;
+            }
+            $owner = $parent;
+        }
+        return false;
+    }
 
     private function _finalization(array $result, array $metadata): array
     {
@@ -262,14 +356,15 @@ final class EditorAcknowledgements extends Component
             && (
                 ((int)($context['ownerId'] ?? 0) > 0 && (int)$context['ownerId'] === (int)$owner->id)
                 || (($context['ownerUid'] ?? null) && $context['ownerUid'] === $owner->uid)
-                // Craft creates a provisional draft on the first autosave,
-                // while the open editor retains its canonical owner's context.
+                // Craft also copies nested rows into a provisional draft without
+                // marking the rows themselves as drafts. Their open editors
+                // retain the canonical owner's context on subsequent autosaves.
                 // The save controller authorizes the derivative; this only
                 // associates its result with the original editor request.
                 || (
                     empty($context['draftId'])
                     && empty($context['revisionId'])
-                    && $owner->getIsDraft()
+                    && $this->_isDraftOwner($owner)
                     && (int)($context['ownerId'] ?? 0) > 0
                     && (int)$context['ownerId'] === (int)$owner->getCanonicalId()
                 )
