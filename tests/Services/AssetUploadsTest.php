@@ -41,6 +41,7 @@ function assetUploadTestContext(string $label): array
     $field = VizyFixtureFactory::vizyField();
     // Shared fixture field layouts may cache an older Field instance; keep both
     // the service field and any layout-held copies aligned before validation.
+    $field->richTextOnly = false;
     $field->blockTypePickerGroups = [['name' => 'Assets', 'blockTypeUids' => [$type->uid]]];
     expect(Craft::$app->getFields()->saveField($field, false))->toBeTrue();
     Craft::$app->getFields()->refreshFields();
@@ -65,6 +66,7 @@ function syncVizyPickerGroupsOnOwner(\craft\elements\Entry $owner, \verbb\vizy\f
     foreach ($owner->getFieldLayout()?->getCustomFieldElements() ?? [] as $placement) {
         $layoutField = $placement->getField();
         if ($layoutField instanceof \verbb\vizy\fields\VizyField && $layoutField->uid === $field->uid) {
+            $layoutField->richTextOnly = $field->richTextOnly;
             $layoutField->blockTypePickerGroups = $field->blockTypePickerGroups;
         }
     }
@@ -97,7 +99,7 @@ it('recovers a legacy upload batch only when its field has one unambiguous place
     $uploads->setMoveAssetHandlerForTesting(static fn(): bool => false);
     try {
         \Tests\Support\WebControllerHarness::withWebRequest([], 'elements/save', function() use ($context) {
-            expect(Craft::$app->getElements()->saveElement($context['owner'], true, false))->toBeTrue();
+            expect(Craft::$app->getElements()->saveElement($context['owner'], true, false))->toBeTrue(json_encode($context['owner']->getErrors()));
         });
         $result = $uploads->resultForOwner($context['owner'], $context['field']);
         $batch = \verbb\vizy\records\AssetUploadBatch::findOne($result['batchId']);

@@ -9,7 +9,6 @@ declare(strict_types=1);
  * without fake Block Element IDs and without serialize-time afterElementSave.
  */
 
-use Craft;
 use craft\elements\Asset;
 use craft\fieldlayoutelements\CustomField;
 use craft\models\FieldLayout;

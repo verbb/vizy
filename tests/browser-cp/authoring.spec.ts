@@ -57,20 +57,15 @@ test('field settings expose one Block picker display policy and one shared searc
     const blockRow = page.locator('vizy-field-settings [data-block-row]').first();
     const blockTypeUid = await blockRow.getAttribute('data-block-row');
     expect(blockTypeUid).toBeTruthy();
-    await blockRow.locator('pk-dropdown-menu').evaluate((menu) => {
-        menu.dispatchEvent(new CustomEvent('pk-select', {
-            detail: { value: 'availability' },
-            bubbles: true,
-            composed: true,
-        }));
-    });
+    await blockRow.getByRole('button', { name: 'Block type actions', exact: true }).click();
+    await blockRow.getByRole('menuitem', { name: 'Availability conditions', exact: true }).click();
 
     const availability = page.locator(`[data-vizy-block-availability-panel="${blockTypeUid}"]`);
-    await expect(availability).toBeVisible();
+    await expect(availability.getByRole('dialog')).toBeVisible();
     await expect(availability.getByText('Current User Condition', { exact: true })).toBeVisible();
     await expect(availability.getByText('Entry Condition', { exact: true })).toBeVisible();
     await availability.getByRole('button', { name: 'Done', exact: true }).click();
-    await expect(availability).toBeHidden();
+    await expect(availability.getByRole('dialog')).toBeHidden();
 });
 
 test('Editor Configs expose one visual shared icon override per configured control', async ({ page }) => {
@@ -425,10 +420,14 @@ test('Matrix row edits survive the real widget flush and reopen with their ident
     await expect(label).toHaveValue('Matrix before');
     await label.fill('Matrix after');
     await save(page, before.document.content[0].content[0].text);
-    await expect.poll(() => persisted().matrixRows).toEqual([{ id: fixture.matrix.rowId, label: 'Matrix after' }]);
+    expect(before.matrixRows).toHaveLength(1);
+    await expect.poll(() => persisted().matrixRows).toEqual([{ id: before.matrixRows[0].id, label: 'Matrix after' }]);
     const block = persisted().document.content.find((node: any) => node.attrs?.blockUid === fixture.matrix.blockUid);
     expect(block.attrs.matrixAnchorUid).toBe(fixture.matrix.anchorUid);
-    expect(Object.keys(block.attrs.fieldSlots)).toEqual([]);
+    // The integration profile adds link fields beside Matrix. Their slots stay
+    // unchanged; Matrix rows continue to live exclusively on the native anchor.
+    const beforeBlock = before.document.content.find((node: any) => node.attrs?.blockUid === fixture.matrix.blockUid);
+    expect(block.attrs.fieldSlots).toEqual(beforeBlock.attrs.fieldSlots);
     await openOwner(page);
     await expect(label).toHaveValue('Matrix after');
 });

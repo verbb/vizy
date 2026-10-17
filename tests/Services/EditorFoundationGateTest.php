@@ -6,7 +6,6 @@ use craft\elements\Entry;
 use craft\helpers\FileHelper;
 use craft\helpers\Json;
 use craft\helpers\StringHelper;
-use RuntimeException;
 use verbb\vizy\document\DocumentParser;
 use verbb\vizy\elements\Block;
 use verbb\vizy\events\ModifyEditorConfigEvent;

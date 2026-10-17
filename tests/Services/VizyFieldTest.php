@@ -604,14 +604,14 @@ it('offers private volumes in image and file picker settings', function() {
 
     $html = $field->getSettingsHtml();
 
-    // The source is always present once in Default Upload Location. It must
-    // also be present in Available Volumes so authors can browse existing
-    // private assets through Craft's permission-aware element selector.
-    expect(substr_count($html, (string)$volume->uid))->toBeGreaterThanOrEqual(2)
-        ->and(substr_count(
-            $html,
-            htmlspecialchars($volume->name, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8'),
-        ))->toBeGreaterThanOrEqual(2)
+    // Check the picker itself: Craft memoizes upload-location sources before
+    // this test creates its volume when the whole file runs in one process.
+    $dom = new DOMDocument();
+    $dom->loadHTML($html, LIBXML_NOERROR | LIBXML_NOWARNING);
+    $xpath = new DOMXPath($dom);
+    $options = $xpath->query('//fieldset[@id="availableVolumes"]//input[@name="availableVolumes[]" and @value="' . $volume->uid . '"]');
+    expect($options->length)->toBe(1)
+        ->and($options->item(0)->parentNode->textContent)->toContain($volume->name)
         ->and(FieldImageOptions::volumes(new VizyField([
             'availableVolumes' => [$volume->uid],
         ])))->toBe(['volume:' . $volume->uid]);

@@ -50,6 +50,7 @@ function matrixAnchorLifecycleFixture(bool $categoryOwner = false): array
     // Grandfather a layout that was already present before the V3 upgrade.
     Craft::$app->getProjectConfig()->set(BlockTypes::PROJECT_CONFIG_PATH . '.' . $type->uid, ProjectConfig::packAssociativeArrays($type->toConfig()));
     $field = VizyFixtureFactory::vizyField();
+    $field->richTextOnly = false;
     $field->blockTypePickerGroups = [['name' => 'Content', 'blockTypeUids' => [$type->uid]]];
     expect(Craft::$app->getFields()->saveField($field))->toBeTrue();
     Craft::$app->getFields()->refreshFields();
@@ -68,12 +69,13 @@ function matrixAnchorLifecycleFixture(bool $categoryOwner = false): array
         ));
         expect(Craft::$app->getCategories()->saveGroup($group))->toBeTrue();
         $owner = new Category(['groupId' => $group->id, 'title' => 'Anchor lifecycle ' . $suffix]);
-        expect(Craft::$app->getElements()->saveElement($owner))->toBeTrue();
+        expect(Craft::$app->getElements()->saveElement($owner))->toBeTrue(json_encode($owner->getErrors()));
     } else {
         $owner = VizyFixtureFactory::entry('Anchor lifecycle ' . $suffix);
     }
     foreach ($owner->getFieldLayout()->getCustomFieldElements() as $element) {
         if ($element->getField()->uid === $field->uid) {
+            $element->getField()->richTextOnly = $field->richTextOnly;
             $element->getField()->blockTypePickerGroups = $field->blockTypePickerGroups;
         }
     }
@@ -91,7 +93,7 @@ function matrixAnchorLifecycleFixture(bool $categoryOwner = false): array
             ],
         ]],
     ]);
-    expect(Craft::$app->getElements()->saveElement($owner))->toBeTrue();
+    expect(Craft::$app->getElements()->saveElement($owner))->toBeTrue(json_encode($owner->getErrors()));
     return compact('owner', 'field', 'blockUid', 'anchor', 'row', 'plain', 'matrix', 'layout');
 }
 

@@ -10,7 +10,6 @@ declare(strict_types=1);
  * they do not freeze Vizy 3's rand()/MatrixAnchor ID behaviour.
  */
 
-use Craft;
 use craft\base\Element;
 use craft\elements\Entry;
 use craft\fieldlayoutelements\CustomField;

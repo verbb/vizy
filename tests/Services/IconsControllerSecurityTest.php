@@ -2,7 +2,6 @@
 
 declare(strict_types=1);
 
-use Craft;
 use Tests\Support\Fixtures\AssetSpikeFixture;
 use Tests\Support\WebControllerHarness;
 use verbb\vizy\controllers\IconsController;

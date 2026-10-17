@@ -9,7 +9,6 @@ declare(strict_types=1);
  * id = null and a real FieldLayout, without a Vizy-native conditions engine.
  */
 
-use Craft;
 use craft\elements\Entry;
 use craft\elements\conditions\TitleConditionRule;
 use craft\elements\conditions\entries\SectionConditionRule;
@@ -64,15 +63,6 @@ it('evaluates sibling FieldLayout element conditions on an ephemeral Block', fun
     $detailsElement = new CustomField();
     $detailsElement->setFieldUid($details->uid);
 
-    // Show Details when the sibling lightswitch is on.
-    // Craft only applies conditions to layout elements that have UIDs
-    // (FieldLayout::createForm — $isConditional = isset($tab->uid, $layoutElement->uid)).
-    $condition = VizyBlockElement::createCondition();
-    $rule = new LightswitchFieldConditionRule();
-    $rule->setFieldUid($toggle->uid);
-    $rule->value = true;
-    $condition->setConditionRules([$rule]);
-    $detailsElement->setElementCondition($condition);
 
     $layout->setTabs([
         new FieldLayoutTab([
@@ -87,6 +77,17 @@ it('evaluates sibling FieldLayout element conditions on an ephemeral Block', fun
             ],
         ]),
     ]);
+    // Show Details when the sibling lightswitch is on.
+    // Craft only applies conditions to layout elements that have UIDs
+    // (FieldLayout::createForm — $isConditional = isset($tab->uid, $layoutElement->uid)).
+    $condition = VizyBlockElement::createCondition();
+    $rule = new LightswitchFieldConditionRule();
+    $rule->setFieldUid($toggle->uid);
+    $rule->value = true;
+    $condition->setFieldLayouts([$layout]);
+    $condition->setConditionRules([$rule]);
+    $detailsElement->setElementCondition($condition);
+
     expect(Craft::$app->getFields()->saveLayout($layout))->toBeTrue();
 
     $layout = Craft::$app->getFields()->getLayoutById($layout->id);

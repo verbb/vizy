@@ -83,6 +83,7 @@ function fieldLayoutSecurityFixture(string $label, bool $withRelations = false):
     $type = Vizy::$plugin->getBlockTypes()->getBlockTypeByUid($type->uid);
 
     $field = VizyFixtureFactory::vizyField();
+    $field->richTextOnly = false;
     $field->blockTypePickerGroups = [['name' => 'Root', 'blockTypeUids' => [$type->uid]]];
     expect(Craft::$app->getFields()->saveField($field))->toBeTrue();
     Craft::$app->getFields()->refreshFields();
@@ -92,6 +93,7 @@ function fieldLayoutSecurityFixture(string $label, bool $withRelations = false):
     foreach ($owner->getFieldLayout()?->getCustomFieldElements() ?? [] as $placement) {
         $layoutField = $placement->getField();
         if ($layoutField instanceof \verbb\vizy\fields\VizyField && $layoutField->uid === $field->uid) {
+            $layoutField->richTextOnly = false;
             $layoutField->blockTypePickerGroups = $field->blockTypePickerGroups;
         }
     }
@@ -380,7 +382,7 @@ it('does not validate a required Block field while its Craft condition is hidden
     $fixture['owner']->setScenario(Entry::SCENARIO_LIVE);
     $fixture['owner']->setFieldValue($fixture['field']->handle, $document);
     $fixture['field']->validateBlocks($fixture['owner']);
-    expect($fixture['owner']->getErrors())->toBe([]);
+    expect($fixture['owner']->getErrors())->toBe([], Json::encode($fixture['owner']->getErrors()));
 
     $document['content'][0]['attrs']['fieldSlots'][$lightPlacement->uid] = true;
     $fixture['owner']->clearErrors();
@@ -1067,7 +1069,7 @@ it('renders structured rich text at the supported five-level Hosted depth', func
 
     $document = ['type' => 'doc', 'attrs' => ['schemaVersion' => 2], 'content' => [$fixture['block']]];
     $fixture['owner']->setFieldValue($fixture['field']->handle, $document);
-    expect(Craft::$app->getElements()->saveElement($fixture['owner']))->toBeTrue();
+    expect(Craft::$app->getElements()->saveElement($fixture['owner']))->toBeTrue(Json::encode($fixture['owner']->getErrors()));
     $owner = Entry::find()->id($fixture['owner']->id)->status(null)->one();
     $saved = $owner->getFieldValue($fixture['field']->handle)->toArray();
     $initial = Vizy::$plugin->getFieldLayoutForms()->renderInitial(

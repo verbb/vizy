@@ -75,16 +75,20 @@ it('filters and orders saved Blocks by layout field values through the template 
     ]];
     $field = VizyFixtureFactory::vizyField();
     $previousGroups = $field->blockTypePickerGroups;
+    $previousRichTextOnly = $field->richTextOnly;
+    $field->richTextOnly = false;
     $field->blockTypePickerGroups = [['name' => 'Query', 'blockTypeUids' => [$type->uid, $otherType->uid]]];
     expect(Craft::$app->getFields()->saveField($field))->toBeTrue();
     $owner = VizyFixtureFactory::entry('Query owner');
     // Earlier integration fixtures may have cached a layout-local field instance.
     $placedField = $owner->getFieldLayout()->getFieldByHandle($field->handle);
     $previousPlacedGroups = $placedField->blockTypePickerGroups;
+    $previousPlacedRichTextOnly = $placedField->richTextOnly;
+    $placedField->richTextOnly = false;
     $placedField->blockTypePickerGroups = $field->blockTypePickerGroups;
     try {
         $owner->setFieldValue($field->handle, json_encode($data));
-        expect(Craft::$app->getElements()->saveElement($owner))->toBeTrue();
+        expect(Craft::$app->getElements()->saveElement($owner))->toBeTrue(json_encode($owner->getErrors()));
         $saved = Entry::find()->id($owner->id)->status(null)->one();
         $document = $saved->getFieldValue(VizyFixtureFactory::vizyField()->handle);
         $result = $document->query()->where(['handle' => $type->handle])
@@ -92,7 +96,9 @@ it('filters and orders saved Blocks by layout field values through the template 
             ->orderBy([$label->handle => SORT_ASC])->all();
         expect(array_map(fn($block) => $block->uid, $result))->toBe([$uids[2], $uids[0]]);
     } finally {
+        $placedField->richTextOnly = $previousPlacedRichTextOnly;
         $placedField->blockTypePickerGroups = $previousPlacedGroups;
+        $field->richTextOnly = $previousRichTextOnly;
         $field->blockTypePickerGroups = $previousGroups;
         expect(Craft::$app->getFields()->saveField($field))->toBeTrue();
     }
