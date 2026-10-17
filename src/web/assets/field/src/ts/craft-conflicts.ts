@@ -207,7 +207,23 @@ async function save(form: HTMLFormElement, editor: Editor, action: string): Prom
             const failure = (error as Failure)?.response?.data;
             const messages: string[] = [];
             const collect = (value: unknown): void => {
-                if (typeof value === 'string') messages.push(value);
+                if (typeof value === 'string') {
+                    // Craft returns a rendered error summary on full-page saves.
+                    // Parse it inertly and keep only message text; response markup
+                    // must never become live DOM inside the notice.
+                    const template = document.createElement('template');
+                    template.innerHTML = value;
+                    const summary = template.content.querySelector('.error-summary');
+                    if (summary) {
+                        summary.querySelectorAll('script, style, template').forEach((node) => node.remove());
+                        summary.querySelectorAll('ul.errors > li').forEach((item) => {
+                            const message = item.textContent?.trim();
+                            if (message) messages.push(message);
+                        });
+                    } else {
+                        messages.push(value);
+                    }
+                }
                 else if (value && typeof value === 'object') Object.values(value).forEach(collect);
             };
             collect(failure?.errorSummary);

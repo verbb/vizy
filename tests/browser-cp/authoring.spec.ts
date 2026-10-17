@@ -378,12 +378,8 @@ test('a required hosted field blocks saving without discarding edits or changing
     const rootText = page.locator('vizy-editor').first().locator('.ProseMirror').first().locator(':scope > p').first();
     await heading.fill('');
     await rootText.fill('Unsaved validation edit');
-    await Promise.all([
-        page.waitForEvent('framenavigated', { predicate: (frame) => frame === page.mainFrame() }),
-        page.keyboard.press('ControlOrMeta+S'),
-    ]);
-    await page.waitForLoadState('domcontentloaded');
-    await expect(page.getByRole('link', { name: 'Card heading cannot be blank.', exact: true })).toBeVisible();
+    await page.keyboard.press('ControlOrMeta+S');
+    await expect(page.locator('[data-vizy-save-notice]')).toHaveJSProperty('textContent', 'Card heading cannot be blank.');
     await expect(heading).toHaveValue('');
     await expect(rootText).toHaveText('Unsaved validation edit');
     expect(persisted().document).toEqual(before);
@@ -446,12 +442,8 @@ test('failed owner validation retains pending Matrix edits and leaves saved rows
     const originalHeading = await heading.inputValue();
     await label.fill('Matrix validation recovery');
     await heading.fill('');
-    await Promise.all([
-        page.waitForEvent('framenavigated', { predicate: (frame) => frame === page.mainFrame() }),
-        page.keyboard.press('ControlOrMeta+S'),
-    ]);
-    await page.waitForLoadState('domcontentloaded');
-    await expect(page.getByRole('link', { name: 'Card heading cannot be blank.', exact: true })).toBeVisible();
+    await page.keyboard.press('ControlOrMeta+S');
+    await expect(page.locator('[data-vizy-save-notice]')).toHaveJSProperty('textContent', 'Card heading cannot be blank.');
     await expect(label).toHaveValue('Matrix validation recovery');
     expect(persisted().matrixRows).toEqual(before.matrixRows);
     await heading.fill(originalHeading);

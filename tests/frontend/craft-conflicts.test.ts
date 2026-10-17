@@ -65,6 +65,27 @@ describe('recoverable Craft conflicts', () => {
         expect(blockConflictedSubmit(f, event())).toBe(false);
         expect(editor.enableAutosave).toBe(true);
     });
+    it('shows readable messages from Craft HTML summaries without inserting response markup', async () => {
+        const summary = '<div class="error-summary" tabindex="-1"><div><h2>Found 2 errors</h2></div><ul class="errors"><li><a href="#" data-field-error-key="title"><em>Title</em> cannot be blank.</a></li><li><a href="#">Use &lt;draft&gt; &amp; review.<img src="invalid" onerror="alert(1)"></a></li></ul></div>';
+        window.Craft!.sendActionRequest = vi.fn().mockRejectedValue({ response: { status: 400, data: { errorSummary: summary } } });
+        const { form: f, editor } = form();
+        submitFullPage(f, event());
+        await vi.waitFor(() => expect(editor.listenForChanges).toHaveBeenCalled());
+        const alert = f.querySelector('[data-vizy-save-notice]')!;
+        expect(alert.textContent).toBe('Title cannot be blank. Use <draft> & review.');
+        expect(alert.querySelector('a, img, em, .error-summary')).toBeNull();
+        expect(f.inert).toBeFalsy();
+        expect(blockConflictedSubmit(f, event())).toBe(false);
+        submitFullPage(f, event());
+        await vi.waitFor(() => expect(window.Craft!.sendActionRequest).toHaveBeenCalledTimes(2));
+    });
+    it('falls back to the response message for an empty HTML summary', async () => {
+        window.Craft!.sendActionRequest = vi.fn().mockRejectedValue({ response: { status: 400, data: { errorSummary: '<div class="error-summary"><ul class="errors"></ul></div>', message: 'Entry could not be saved.' } } });
+        const { form: f, editor } = form();
+        submitFullPage(f, event());
+        await vi.waitFor(() => expect(editor.listenForChanges).toHaveBeenCalled());
+        expect(f.querySelector('[data-vizy-save-notice]')!.textContent).toBe('Entry could not be saved.');
+    });
     it('exports current nested field values without signed transport or CSRF data', () => {
         const { form: f, editor } = form();
         editor.serializeForm.mockReturnValue(new URLSearchParams({

@@ -101,7 +101,7 @@ test('normal saves, validation recovery and duplication retain Craft action rout
     await page.keyboard.type(' Retain this after validation.');
     await title.fill('');
     await page.getByRole('button', { name: 'Save', exact: true }).click();
-    await expect(page.locator('[data-vizy-save-notice]')).toContainText('Title');
+    await expect(page.locator('[data-vizy-save-notice]')).toHaveJSProperty('textContent', 'Title cannot be blank.');
     await expect(prose).toContainText('Retain this after validation.');
     await title.fill('Normal save checks');
     const continued = page.waitForEvent('framenavigated', { predicate: (f) => f === page.mainFrame() });
