@@ -3,6 +3,7 @@
 ## Unreleased
 
 ### Fixed
+- Fixed images without a public asset or transform URL rendering as broken images on the front end.
 - Fixed “Show unpermitted files” not allowing other users’ assets to be selected and previewed in Vizy image and asset-link controls.
 - Fixed saving content with previously allowed assets failing when Craft creates a revision after asset access changes.
 - Fixed inserting an image before focusing a loaded editor replacing its existing content.

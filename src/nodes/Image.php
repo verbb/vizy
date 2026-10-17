@@ -113,6 +113,13 @@ class Image extends Node
 
     public static function renderOccurrenceHtml(string $children, array $resolvedAttrs, RenderContext $ctx): ?string
     {
+        // Private or missing assets may have no usable URL, even after applying
+        // the field transform. Keep their document reference without emitting a
+        // broken image or an empty link on the published page.
+        if (!empty($resolvedAttrs['assetUid']) && empty($resolvedAttrs['src']) && empty($resolvedAttrs['srcset'])) {
+            return '';
+        }
+
         // Legacy V3 link fields + canonical attrs.link (semantic link object).
         $legacyUrl = $resolvedAttrs['url'] ?? null;
         $target = $resolvedAttrs['target'] ?? '';

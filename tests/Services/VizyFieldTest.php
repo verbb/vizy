@@ -662,6 +662,7 @@ it('uses UID-backed default transforms for private asset previews and output', f
 
         expect($options['defaultTransform'])->toBe($transform->handle)
             ->and($resolved['src'])->toBe('https://transforms.example.test/private-preview.png')
+            ->and(Image::renderOccurrenceHtml('', $resolved, $context))->toContain('src="https://transforms.example.test/private-preview.png"')
             ->and($previews[$asset->uid]['url'])->toBe('https://transforms.example.test/private-preview.png')
             ->and($previews[$asset->uid]['transform'])->toBe($transform->handle)
             ->and($seenTransforms)->toBe([$transform->handle, $transform->handle]);
@@ -704,4 +705,37 @@ it('warns in asset settings when volume and transform pickers have no options', 
         ->and($html)->toContain('id="defaultTransform-warning"')
         ->and($html)->toContain(Craft::t('app', 'No volumes exist yet.'))
         ->and($html)->toContain(Craft::t('app', 'No image transforms exist yet.'));
+});
+
+
+it('retains private image references without emitting broken images or empty links', function() {
+    AssetSpikeFixture::ensureAdminUser();
+    $asset = AssetSpikeFixture::createTempAsset('no-public-url.txt', 'private');
+    $field = new VizyField(['name' => 'Private output', 'handle' => 'privateOutput']);
+    $owner = new Entry(['title' => 'Private image', 'siteId' => $asset->siteId]);
+    $document = $field->normalizeValue([
+        'type' => 'doc',
+        'attrs' => ['schemaVersion' => VizyDocument::CURRENT_SCHEMA_VERSION],
+        'content' => [[
+            'type' => 'image',
+            'attrs' => [
+                'assetUid' => $asset->uid,
+                'alt' => 'Private original',
+                'link' => ['type' => 'url', 'value' => 'https://example.test'],
+            ],
+        ]],
+    ], $owner);
+    $before = $document->toArray();
+    $handler = static function($event): void {
+        $event->url = null;
+        $event->handled = true;
+    };
+    Event::on(Asset::class, Asset::EVENT_BEFORE_DEFINE_URL, $handler);
+
+    try {
+        expect((string)$document->render())->toBe('')
+            ->and($document->toArray())->toBe($before);
+    } finally {
+        Event::off(Asset::class, Asset::EVENT_BEFORE_DEFINE_URL, $handler);
+    }
 });
