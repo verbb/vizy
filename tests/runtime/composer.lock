@@ -10363,16 +10363,16 @@
         },
         {
             "name": "verbb/base",
-            "version": "3.0.19",
+            "version": "3.0.20",
             "source": {
                 "type": "git",
                 "url": "https://github.com/verbb/verbb-base.git",
-                "reference": "36addde3aee74adaa2b7c13ec0724f2d27b39ef5"
+                "reference": "0b60c166a79e2762aa968e062dc84ca6c0a9406e"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/verbb/verbb-base/zipball/36addde3aee74adaa2b7c13ec0724f2d27b39ef5",
-                "reference": "36addde3aee74adaa2b7c13ec0724f2d27b39ef5",
+                "url": "https://api.github.com/repos/verbb/verbb-base/zipball/0b60c166a79e2762aa968e062dc84ca6c0a9406e",
+                "reference": "0b60c166a79e2762aa968e062dc84ca6c0a9406e",
                 "shasum": ""
             },
             "require": {
@@ -10409,21 +10409,21 @@
                     "type": "github"
                 }
             ],
-            "time": "2026-10-02T04:48:53+00:00"
+            "time": "2026-10-04T21:22:12+00:00"
         },
         {
             "name": "verbb/vizy",
-            "version": "4.0.0-beta.2",
+            "version": "4.0.0-beta.3",
             "dist": {
                 "type": "path",
                 "url": "../../..",
-                "reference": "0f59912ddb768f9c04852d15756f92c40f0530a5"
+                "reference": "ee2226d9839a4dddbe1f8933bc944defc9edc986"
             },
             "require": {
                 "craftcms/cms": "^5.9.0",
                 "nystudio107/craft-plugin-vite": "^5.0.0",
                 "php": "^8.2",
-                "verbb/base": "^3.0.0",
+                "verbb/base": "^3.0.20",
                 "yii2mod/yii2-array-query": "^1.4"
             },
             "require-dev": {

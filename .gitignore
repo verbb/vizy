@@ -45,3 +45,4 @@
 
 /test-results/
 /playwright-report/
+/.ddev/config.zz-ci.yaml

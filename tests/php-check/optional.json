@@ -1,0 +1,9 @@
+{
+    "Cake\\Utility\\Hash": "cakephp/utility (optional Feed Me dependency)",
+    "craft\\feedme\\Plugin": "craftcms/feed-me (optional import integration)",
+    "craft\\feedme\\base\\Field": "craftcms/feed-me (optional import integration)",
+    "craft\\feedme\\base\\FieldInterface": "craftcms/feed-me (optional import integration)",
+    "craft\\feedme\\events\\RegisterFeedMeFieldsEvent": "craftcms/feed-me (optional import integration)",
+    "craft\\feedme\\services\\Fields": "craftcms/feed-me (optional import integration)",
+    "verbb\\hyper\\services\\EmbeddedFields": "verbb/hyper (optional embedded field integration)"
+}
