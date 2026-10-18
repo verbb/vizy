@@ -122,6 +122,33 @@ describe('footnotes', () => {
         expect(json.content?.[2]?.content?.[0]?.attrs?.footnoteUid).toBe(referenceUid);
     });
 
+    it('keeps definition numbers paired after reference moves across separate lists and deletion', () => {
+        const editor = makeEditor();
+        const a = '11111111-1111-4111-8111-111111111111';
+        const b = '22222222-2222-4222-8222-222222222222';
+        const reference = (uid: string) => ({ type: 'paragraph', content: [{ type: 'footnoteReference', attrs: { footnoteUid: uid } }] });
+        const list = (uid: string, text: string) => ({ type: 'footnoteList', content: [{
+            type: 'footnoteItem', attrs: { footnoteUid: uid }, content: [{ type: 'paragraph', content: [{ type: 'text', text }] }],
+        }] });
+        editor.commands.setContent({ type: 'doc', content: [reference(a), list(a, 'Alpha'), reference(b), list(b, 'Beta')] });
+        const order = () => [...editor.view.dom.querySelectorAll('li')].map((item) => [item.textContent, item.getAttribute('value')]);
+        expect(order()).toEqual([['Alpha', '1'], ['Beta', '2']]);
+        expect(editor.getJSON().content?.filter((node) => node.type === 'footnoteList')).toHaveLength(1);
+        const second = editor.state.doc.child(2);
+        editor.commands.goToFootnoteDefinition(a);
+        editor.commands.insertContent('Edited ');
+        const caretOffset = editor.state.selection.$anchor.parentOffset;
+        const movedPosition = editor.state.doc.child(0).nodeSize + editor.state.doc.child(1).nodeSize;
+        editor.view.dispatch(editor.state.tr.delete(movedPosition, movedPosition + second.nodeSize).insert(0, second));
+        expect(order()).toEqual([['Beta', '1'], ['Edited Alpha', '2']]);
+        expect(editor.state.selection.$anchor.parent.textContent).toBe('Edited Alpha');
+        expect(editor.state.selection.$anchor.parentOffset).toBe(caretOffset);
+        expect([...editor.view.dom.querySelectorAll('sup')].map((ref) => ref.textContent)).toEqual(['1', '2']);
+        editor.view.dispatch(editor.state.tr.delete(0, second.nodeSize));
+        expect(order()).toEqual([['Edited Alpha', '1']]);
+        expect(editor.getText()).not.toContain('Beta');
+    });
+
     it('remaps the shared pair identity together when copied', () => {
         const sourceUid = '12345678-1234-4234-8234-123456789012';
         const input: CanonicalNode = {
@@ -142,5 +169,21 @@ describe('footnotes', () => {
         const copied = recursiveRegenerateAuthoredUids(input, () => 'copy-uid');
         expect(copied.content?.[0]?.content?.[0]?.attrs?.footnoteUid).toBe('copy-uid');
         expect(copied.content?.[1]?.content?.[0]?.attrs?.footnoteUid).toBe('copy-uid');
+    });
+
+    it('keeps paragraph boundaries when restoring a definition from a copied reference', () => {
+        const editor = makeEditor();
+        editor.commands.insertFootnote();
+        editor.commands.insertContent('<p>First paragraph.</p><p>Second paragraph.</p>');
+        const json = editor.getJSON() as CanonicalNode;
+        const reference = json.content?.[0]?.content?.find((node) => node.type === 'footnoteReference');
+        expect(reference?.attrs?.fallbackText).toBe('First paragraph.\n\nSecond paragraph.');
+
+        const copy = makeEditor();
+        copy.commands.insertContent(reference!);
+        const list = copy.getJSON().content?.find((node) => node.type === 'footnoteList');
+        expect(list?.content?.[0]).toMatchObject({
+            content: [{ type: 'paragraph', content: [{ type: 'text', text: 'First paragraph.\n\nSecond paragraph.' }] }],
+        });
     });
 });

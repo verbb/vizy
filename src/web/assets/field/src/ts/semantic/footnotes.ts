@@ -39,7 +39,9 @@ function textContentForDefinition(document: ProseMirrorNode, footnoteUid: string
     let text = '';
     document.descendants((node) => {
         if (node.type.name !== 'footnoteItem' || node.attrs.footnoteUid !== footnoteUid) return true;
-        text = node.textContent.trim().slice(0, 5000);
+        // A reference copied without its definition carries this text. Preserve
+        // paragraph and hard-break boundaries instead of joining adjacent words.
+        text = node.textBetween(0, node.content.size, '\n\n', '\n').trim().slice(0, 5000);
         return false;
     });
     return text;
@@ -88,6 +90,7 @@ export const FootnoteItem = Node.create({
                 'data-footnote-uid': String(attributes.footnoteUid ?? ''),
             }),
         },
+        number: { default: null, rendered: false },
     }),
 
     parseHTML: () => [{ tag: 'li[data-type="footnoteItem"]' }],
@@ -97,6 +100,7 @@ export const FootnoteItem = Node.create({
             'data-type': 'footnoteItem',
             id: `fn-${String(node.attrs.footnoteUid ?? '')}`,
             role: 'doc-endnote',
+            value: node.attrs.number,
         }),
         0,
     ],
@@ -229,10 +233,14 @@ export const FootnoteReference = Node.create({
         };
     },
 
+    onCreate() {
+        this.editor.view.dispatch(this.editor.state.tr.setMeta('vizyFootnotes', true));
+    },
+
     addProseMirrorPlugins() {
         return [new Plugin({
             appendTransaction: (transactions, _oldState, newState) => {
-                if (!transactions.some((transaction) => transaction.docChanged)) return null;
+                if (!transactions.some((transaction) => transaction.docChanged || transaction.getMeta('vizyFootnotes'))) return null;
                 const references: Array<{ node: ProseMirrorNode; position: number; uid: string }> = [];
                 const items = new Map<string, { node: ProseMirrorNode; position: number }>();
                 const lists: Array<{ node: ProseMirrorNode; position: number }> = [];
@@ -273,8 +281,9 @@ export const FootnoteReference = Node.create({
                     }
                 }
 
-                references.forEach(({ node, position, uid }, index) => {
-                    const expectedNumber = index + 1;
+                const numbers = new Map([...referenced].map((uid, index) => [uid, index + 1]));
+                references.forEach(({ node, position, uid }) => {
+                    const expectedNumber = numbers.get(uid)!;
                     const fallbackText = items.has(uid)
                         ? textContentForDefinition(newState.doc, uid)
                         : String(node.attrs.fallbackText ?? '').trim().slice(0, 5000);
@@ -287,6 +296,16 @@ export const FootnoteReference = Node.create({
                     }
                 });
 
+                // Keep list markers paired even before canonical list consolidation.
+                for (const [uid, { node, position }] of items) {
+                    const number = numbers.get(uid);
+                    if (number !== undefined && node.attrs.number !== number) {
+                        transaction = transaction.setNodeMarkup(transaction.mapping.map(position), undefined, {
+                            ...node.attrs, number,
+                        });
+                    }
+                }
+
                 // Copying just a reference still produces an independent, editable note.
                 for (const { node, uid } of references) {
                     if (items.has(uid)) continue;
@@ -296,11 +315,54 @@ export const FootnoteReference = Node.create({
                     if (!itemType || !listType || !paragraphType) continue;
                     const text = String(node.attrs.fallbackText ?? '').trim().slice(0, 5000);
                     const paragraph = paragraphType.create(null, text ? newState.schema.text(text) : undefined);
-                    const item = itemType.create({ footnoteUid: uid }, paragraph);
+                    const item = itemType.create({ footnoteUid: uid, number: numbers.get(uid) }, paragraph);
                     const list = findFootnoteList(transaction.doc);
                     transaction = list
                         ? transaction.insert(list.position + list.node.nodeSize - 1, item)
                         : transaction.insert(transaction.doc.content.size, listType.create(null, item));
+                }
+
+                // Separate pastes can introduce multiple lists, but canonical documents
+                // require one. Retain complete definitions and order them by reference.
+                const currentLists: Array<{ node: ProseMirrorNode; position: number }> = [];
+                const currentItems = new Map<string, ProseMirrorNode>();
+                transaction.doc.descendants((node, position) => {
+                    if (node.type.name === 'footnoteList') currentLists.push({ node, position });
+                    if (node.type.name === 'footnoteItem') currentItems.set(String(node.attrs.footnoteUid), node);
+                    return true;
+                });
+                const orderedItems = [...referenced].map((uid) => currentItems.get(uid)).filter((item): item is ProseMirrorNode => Boolean(item));
+                const firstList = currentLists[0];
+                if (firstList && orderedItems.length) {
+                    const replacement = firstList.node.type.create(firstList.node.attrs, orderedItems);
+                    if (currentLists.length > 1 || !firstList.node.eq(replacement)) {
+                        // Replacing/moving a definition otherwise maps its caret to the
+                        // list boundary. Restore endpoints by pair identity and offset.
+                        const endpoint = (position: number) => {
+                            for (const [uid, item] of items) {
+                                if (position > item.position && position < item.position + item.node.nodeSize) {
+                                    return { uid, offset: position - item.position };
+                                }
+                            }
+                            return null;
+                        };
+                        const anchor = endpoint(newState.selection.anchor);
+                        const head = endpoint(newState.selection.head);
+                        for (const list of currentLists.slice(1).reverse()) {
+                            transaction = transaction.delete(list.position, list.position + list.node.nodeSize);
+                        }
+                        transaction = transaction.replaceWith(firstList.position, firstList.position + firstList.node.nodeSize, replacement);
+                        const restore = (saved: ReturnType<typeof endpoint>, position: number) => {
+                            const definition = saved ? definitionPosition(transaction.doc, saved.uid) : null;
+                            return definition !== null && saved ? definition + saved.offset : transaction.mapping.map(position);
+                        };
+                        if (anchor || head) {
+                            const anchorPosition = restore(anchor, newState.selection.anchor);
+                            transaction = transaction.setSelection(newState.selection instanceof NodeSelection
+                                ? NodeSelection.create(transaction.doc, anchorPosition)
+                                : TextSelection.create(transaction.doc, anchorPosition, restore(head, newState.selection.head)));
+                        }
+                    }
                 }
 
                 return transaction.docChanged ? transaction : null;

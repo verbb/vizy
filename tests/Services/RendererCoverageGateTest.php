@@ -118,6 +118,34 @@ it('renders paired footnotes with accessible reference and backlink semantics', 
     );
 });
 
+it('numbers existing definitions by reference order even when their stored order differs', function() {
+    $a = StringHelper::UUID();
+    $b = StringHelper::UUID();
+    $reference = fn($uid) => ['type' => 'paragraph', 'content' => [
+        ['type' => 'footnoteReference', 'attrs' => ['footnoteUid' => $uid]],
+    ]];
+    $list = fn($uid, $text) => ['type' => 'footnoteList', 'content' => [[
+        'type' => 'footnoteItem',
+        'attrs' => ['footnoteUid' => $uid, 'number' => 99],
+        'content' => [['type' => 'paragraph', 'content' => [['type' => 'text', 'text' => $text]]]],
+    ]]];
+    $document = (new DocumentParser())->parse([
+        'type' => 'doc',
+        'attrs' => ['schemaVersion' => VizyDocument::CURRENT_SCHEMA_VERSION],
+        'content' => [$reference($b), $reference($a), [
+            'type' => 'footnoteList',
+            'content' => [...$list($a, 'Alpha')['content'], ...$list($b, 'Beta')['content']],
+        ]],
+    ]);
+    $dom = new DOMDocument();
+    $dom->loadHTML((string)$document->render(), LIBXML_NOERROR | LIBXML_NOWARNING);
+    $items = $dom->getElementsByTagName('li');
+    expect($items->item(0)->getAttribute('value'))->toBe('2')
+        ->and($items->item(0)->getAttribute('id'))->toBe('fn-' . $a)
+        ->and($items->item(1)->getAttribute('value'))->toBe('1')
+        ->and($items->item(1)->getAttribute('id'))->toBe('fn-' . $b);
+});
+
 it('resolves convention and per-render Twig templates for nodes and marks', function() {
     Vizy::$plugin->getExtensions()->reset();
 

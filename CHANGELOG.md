@@ -3,6 +3,8 @@
 ## Unreleased
 
 ### Fixed
+- Fixed separately pasted footnote lists preventing entries from saving, and definitions not following reordered references.
+- Fixed copying a footnote reference joining paragraphs in its restored definition.
 - Fixed pasted Word or Google Docs formatting preventing saved content from reopening when its style attributes normalize to empty values.
 - Fixed the writing direction of translated Vizy fields not following the selected site’s language.
 - Fixed editing a ruby annotation with the caret inside its base text not updating the existing annotation.

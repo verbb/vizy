@@ -63,6 +63,7 @@ class FootnoteItem extends Node
             'data-type' => 'footnoteItem',
             'data-footnote-uid' => $uid,
             'role' => 'doc-endnote',
+            'value' => $number,
         ]);
     }
 
