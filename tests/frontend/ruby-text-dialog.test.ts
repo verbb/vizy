@@ -67,3 +67,44 @@ it('removes a ruby annotation without changing the text', async () => {
     expect(editor.isActive('rubyText')).toBe(false);
     expect(editor.getText()).toBe('東京');
 });
+
+it('updates the existing annotation when opened from a caret inside its base text', async () => {
+    const editor = makeEditor();
+    editor.commands.setRubyText({ rt: 'Tokyo' });
+    editor.commands.setTextSelection(2);
+    const element = await mountDialog(editor);
+    expect(element.annotationInput!.value).toBe('Tokyo');
+    element.annotationInput!.value = 'とうきょう';
+    (element.shadowRoot!.querySelector('pk-button[variant="primary"]') as HTMLElement).click();
+
+    expect(editor.getJSON().content?.[0]?.content).toEqual([
+        { type: 'text', text: '東京', marks: [{ type: 'rubyText', attrs: { rt: 'とうきょう' } }] },
+    ]);
+});
+
+it('keeps an explicit partial selection when changing an existing annotation', async () => {
+    const editor = makeEditor();
+    editor.commands.setRubyText({ rt: 'とうきょう' });
+    editor.commands.setTextSelection({ from: 1, to: 2 });
+    const element = await mountDialog(editor);
+    element.annotationInput!.value = 'ひがし';
+    (element.shadowRoot!.querySelector('pk-button[variant="primary"]') as HTMLElement).click();
+
+    expect(editor.getJSON().content?.[0]?.content).toEqual([
+        { type: 'text', text: '東', marks: [{ type: 'rubyText', attrs: { rt: 'ひがし' } }] },
+        { type: 'text', text: '京', marks: [{ type: 'rubyText', attrs: { rt: 'とうきょう' } }] },
+    ]);
+});
+
+it.each([{ isComposing: true }, { keyCode: 229 }])('does not apply the annotation when Enter confirms an IME composition: %j', async (composition) => {
+    const editor = makeEditor();
+    const element = await mountDialog(editor);
+    element.annotationInput!.value = 'とうきょう';
+    element.annotationInput!.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', ...composition, bubbles: true, composed: true }));
+    expect(editor.isActive('rubyText')).toBe(false);
+    expect(element.dialog!.hide).not.toHaveBeenCalled();
+
+    element.annotationInput!.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, composed: true }));
+    expect(editor.getAttributes('rubyText').rt).toBe('とうきょう');
+    expect(element.dialog!.hide).toHaveBeenCalledWith('submit');
+});

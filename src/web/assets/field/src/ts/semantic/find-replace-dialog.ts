@@ -128,7 +128,8 @@ export class VizyFindReplaceDialogElement extends LitElement {
     };
 
     #onFindKeydown = (event: KeyboardEvent): void => {
-        if (event.key !== 'Enter' || event.isComposing) return;
+        // Some IMEs report the confirming key only as keyCode 229.
+        if (event.key !== 'Enter' || event.isComposing || event.keyCode === 229) return;
         event.preventDefault();
         if (event.shiftKey) this.#previous();
         else this.#next();

@@ -52,6 +52,9 @@ export class VizyRubyTextDialogElement extends LitElement {
         if (!editor) return;
         const annotation = this.annotationInput?.value.trim() ?? '';
         const chain = this.#focus ? editor.chain().focus() : editor.chain();
+        // Editing an existing annotation from a caret must update its base text,
+        // rather than only setting the mark for text typed after the dialog closes.
+        if (editor.state.selection.empty && editor.isActive('rubyText')) chain.extendMarkRange('rubyText');
         if (annotation) chain.setRubyText({ rt: annotation }).run();
         else chain.unsetRubyText().run();
         void this.dialog?.hide('submit');
@@ -66,7 +69,8 @@ export class VizyRubyTextDialogElement extends LitElement {
     };
 
     #onKeydown = (event: KeyboardEvent): void => {
-        if (event.key !== 'Enter' || event.isComposing) return;
+        // Some IMEs report the confirming key only as keyCode 229.
+        if (event.key !== 'Enter' || event.isComposing || event.keyCode === 229) return;
         event.preventDefault();
         this.#apply();
     };

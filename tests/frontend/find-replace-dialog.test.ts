@@ -67,3 +67,15 @@ it('supports case-sensitive searches and clears highlights when closed', async (
     element.dialog!.dispatchEvent(new CustomEvent('pk-after-hide', { bubbles: true, composed: true }));
     expect(editor.storage.findAndReplace.searchTerm).toBe('');
 });
+
+it.each([{ isComposing: true }, { keyCode: 229 }])('does not navigate results when Enter confirms an IME composition: %j', async (composition) => {
+    const { editor, element } = await mountDialog('東京 東京');
+    element.findInput!.value = '東京';
+    element.findInput!.dispatchEvent(new Event('input', { bubbles: true, composed: true }));
+    expect(editor.storage.findAndReplace.currentIndex).toBe(0);
+    element.findInput!.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', ...composition, bubbles: true, composed: true }));
+    expect(editor.storage.findAndReplace.currentIndex).toBe(0);
+
+    element.findInput!.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, composed: true }));
+    expect(editor.storage.findAndReplace.currentIndex).toBe(1);
+});
