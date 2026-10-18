@@ -3,6 +3,7 @@
 ## Unreleased
 
 ### Fixed
+- Fixed image controls appearing for unfocused Vizy fields and overlapping Craft’s image editor, and not reopening when selecting an image from another field in Firefox.
 - Fixed image transform previews retaining an outdated image when a private original has no URL or a transform request fails.
 - Fixed private images without public URLs losing image editing and transform controls after reloading an entry.
 - Fixed images without a public asset or transform URL rendering as broken images on the front end.

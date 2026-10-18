@@ -442,6 +442,38 @@ test('applies Enabled Link Settings Site to semantic and fallback element links'
     }
 });
 
+test('shows image actions only while their editor owns focus', async ({ page }) => {
+    await mount(page, {
+        type: 'doc', attrs: { schemaVersion: 2 }, content: [
+            { type: 'image', attrs: { assetUid: '33333333-3333-4333-8333-333333333333' } },
+            { type: 'paragraph', content: [{ type: 'text', text: 'Keep this story.' }] },
+        ],
+    }, {
+        manifest: { ...editorManifest, enabledNodes: [...editorManifest.enabledNodes, 'image'], modules: [...editorManifest.modules, 'vizy/core/node/image'] },
+    });
+    await page.evaluate(() => {
+        const editor = (document.querySelector('vizy-editor') as any).editor;
+        editor.commands.setTextSelection(2);
+        editor.commands.setNodeSelection(0);
+    });
+    await page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
+    // A loaded image selection is not user focus and must not leave controls
+    // floating over another field or Craft's native full-screen image editor.
+    await expect(page.locator('vizy-image-bubble[visible]')).toHaveCount(0);
+    await page.locator('.vizy-image').getByRole('img').click();
+    await expect(page.getByRole('toolbar', { name: 'Image actions' })).toBeVisible();
+    await page.evaluate(() => {
+        const input = document.createElement('input');
+        input.setAttribute('aria-label', 'Other field');
+        document.body.append(input);
+    });
+    await page.getByRole('textbox', { name: 'Other field' }).click();
+    await expect(page.locator('vizy-image-bubble[visible]')).toHaveCount(0);
+    await page.locator('.vizy-image').getByRole('img').click();
+    await expect(page.getByRole('toolbar', { name: 'Image actions' })).toBeVisible();
+    await expect(page.locator('.ProseMirror')).toContainText('Keep this story.');
+});
+
 for (const updating of [false, true]) for (const control of ['size', 'transform']) {
     test(`applies image ${updating ? 'Update' : 'Insert'} after choosing ${control}`, async ({ page }) => {
         const attrs = { assetUid: '33333333-3333-4333-8333-333333333333', siteMode: 'current', altMode: 'custom', alt: 'Before', size: 'default', link: null };

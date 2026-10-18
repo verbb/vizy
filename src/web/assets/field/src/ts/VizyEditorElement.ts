@@ -896,6 +896,8 @@ export class VizyEditorElement extends HTMLElement {
         editor.on('focus', () => {
             this.#toolbarInsertionWarm = true;
             this.#syncToolbarBlockAvailability();
+            // Refocusing an existing image selection need not change selection.
+            if (isImageNodeSelected(editor)) this.#imageBubble?.syncToImage();
         });
         editor.on('blur', () => {
             // Chromium often blurs the CE on mouseup when selecting a non-editable

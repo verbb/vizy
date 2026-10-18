@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it } from 'vitest';
-import '../../src/web/assets/field/src/ts/VizyEditorElement';
+import '../../src/web/assets/field/src/ts/editor-runtime';
 import {
     assignBootstrap,
     bootstrapEditorWhenReady,

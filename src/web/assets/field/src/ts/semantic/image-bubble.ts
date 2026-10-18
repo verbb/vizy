@@ -4,6 +4,8 @@ import type { Editor } from '@tiptap/core';
 import { NodeSelection } from '@tiptap/pm/state';
 import '@verbb/plugin-kit-web/components/popup';
 import {
+    EDITOR_FIELD_HAS_FOCUS_ATTR,
+    editorViewHasFocus,
     holdEditorFieldFocusForPointerGesture,
     resolveEditorBody,
     restoreEditorFocus,
@@ -129,6 +131,13 @@ export class VizyImageBubbleElement extends LitElement {
         const editor = this.editor;
         if (!editor) return;
         this.#bindEditorDom();
+        // Bootstrap and save acknowledgements can select an image in a cold
+        // field. Only the active authoring surface may display its controls.
+        const body = resolveEditorBody(editor.view.dom);
+        if (!editorViewHasFocus(editor) && !body?.hasAttribute(EDITOR_FIELD_HAS_FOCUS_ATTR)) {
+            this.hide({ clearAnchor: true });
+            return;
+        }
 
         const pos = selectedImagePos(editor);
         if (pos !== this.#selectedPos) {
@@ -305,7 +314,13 @@ export class VizyImageBubbleElement extends LitElement {
         const editor = this.editor;
         const body = resolveEditorBody(editor?.view.dom ?? null);
         holdEditorFieldFocusForPointerGesture(body, () => {
-            if (editor && !editor.isDestroyed) restoreEditorFocus(editor);
+            if (!editor || editor.isDestroyed || !figure.isConnected) return;
+            // Firefox can leave a gap cursor beside an atom after a click from
+            // another input. The completed image gesture owns this selection.
+            const pos = editor.view.posAtDOM(figure, 0);
+            if (editor.state.doc.nodeAt(pos)?.type.name !== 'image') return;
+            editor.commands.setNodeSelection(pos);
+            restoreEditorFocus(editor, { force: true });
         });
 
         // After PM processes this gesture (mousedown selects the atom). Covers
