@@ -30,6 +30,7 @@ type PkInputEl = HTMLElement & { value: string; invalid: boolean; focus: () => v
 type PkCheckboxEl = HTMLElement & { checked: boolean };
 type PkSelectEl = HTMLElement & { value: string };
 
+const t = (message: string) => window.Craft?.t?.('vizy', message) ?? message;
 let sharedDialog: VizyImageDialogElement | null = null;
 
 /**
@@ -41,6 +42,8 @@ export class VizyImageDialogElement extends LitElement {
     @property() accessor dialogTitle = 'Insert Image';
     @property() accessor submitLabel = 'Insert';
     @state() accessor urlError: string | null = null;
+    @state() accessor previewLoading = false;
+    @state() accessor previewError = false;
 
     #editor: Editor | null = null;
     #seed: ImageDialogSeed | null = null;
@@ -122,6 +125,8 @@ export class VizyImageDialogElement extends LitElement {
         await ensurePkDialog();
         this.#editor = editor;
         this.#seed = { ...seed };
+        this.previewLoading = false;
+        this.previewError = false;
         this.#focus = options?.focus ?? true;
         this.#editorContextToken = options?.editorContextToken;
         if (options?.transforms) this.transforms = options.transforms;
@@ -144,9 +149,13 @@ export class VizyImageDialogElement extends LitElement {
             >
                 <div class="body">
                     <div class="preview">
-                        ${this.#seed?.previewUrl
-                            ? html`<img class="image-dialog__preview-img" src=${this.#seed.previewUrl} alt="">`
-                            : html`<p class="preview-empty">No preview</p>`}
+                        ${this.previewLoading
+                            ? html`<p class="preview-empty" role="status">${t('Loading preview…')}</p>`
+                            : this.previewError
+                                ? html`<p class="preview-empty" role="status">${t('Couldn’t load image preview.')}</p>`
+                                : this.#seed?.previewUrl
+                                    ? html`<img class="image-dialog__preview-img" src=${this.#seed.previewUrl} alt="">`
+                                    : html`<p class="preview-empty">${t('No preview')}</p>`}
                     </div>
                     <div class="fields">
                         <pk-field label="Alt Text" .for=${`vizy-img-alt-${this.#id}`}>
@@ -201,6 +210,7 @@ export class VizyImageDialogElement extends LitElement {
                 <pk-button
                     slot="footer"
                     variant="primary"
+                    ?disabled=${this.previewLoading}
                     @click=${this.#onSubmit}
                 >${this.submitLabel}</pk-button>
             </pk-dialog>
@@ -227,11 +237,17 @@ export class VizyImageDialogElement extends LitElement {
         const handle = this.transformSelect.value;
         const request = ++this.#previewRequest;
         seed.transform = handle;
+        // Never label an old preview as the newly selected transform, including
+        // private originals without URLs and failed remote storage requests.
+        seed.previewUrl = '';
+        this.previewLoading = true;
+        this.previewError = false;
         void generateTransformUrl(seed.assetId, handle, this.#editorContextToken).then((url) => {
             // The dialog is shared across images; only its latest request may paint.
-            if (!url || !this.isConnected || this.#seed !== seed || request !== this.#previewRequest) return;
-            seed.previewUrl = url;
-            if (this.previewImg) this.previewImg.src = url;
+            if (!this.isConnected || this.#seed !== seed || request !== this.#previewRequest) return;
+            seed.previewUrl = url ?? '';
+            this.previewLoading = false;
+            this.previewError = url === null;
             this.requestUpdate();
         });
     };
@@ -245,7 +261,7 @@ export class VizyImageDialogElement extends LitElement {
     #onSubmit = (): void => {
         const editor = this.#editor;
         const seed = this.#seed;
-        if (!editor || !seed) return;
+        if (!editor || !seed || this.previewLoading) return;
 
         const linkUrl = this.urlInput?.value ?? '';
         this.urlError = urlDialogValidationError(linkUrl);

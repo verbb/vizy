@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 import type { Editor } from '@tiptap/core';
 import { openImageAssetSelector } from '../../src/web/assets/field/src/ts/semantic/image-ui';
-import { attrsFromImageDialog, IMAGE_SIZE_OPTIONS } from '../../src/web/assets/field/src/ts/semantic/image-apply';
+import { attrsFromImageDialog, IMAGE_SIZE_OPTIONS, seedImageDialogFromSelection } from '../../src/web/assets/field/src/ts/semantic/image-apply';
 import {
     rememberImagePreview,
     getImagePreview,
@@ -97,4 +97,18 @@ describe('image authoring apply', () => {
             transform: '',
         });
     });
+
+    it('retains private asset metadata when bootstrap has no public preview URL', () => {
+        const uid = 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb';
+        hydrateImagePreviews({ [uid]: { assetId: 43, url: '', label: 'Private image' } });
+        const editor = {
+            isActive: () => true,
+            getAttributes: () => ({ assetUid: uid }),
+        } as unknown as Editor;
+        expect(seedImageDialogFromSelection(editor)).toMatchObject({
+            assetId: 43, previewUrl: '', transform: '',
+        });
+        expect(getImagePreview(uid)?.label).toBe('Private image');
+    });
+
 });

@@ -51,7 +51,8 @@ export function hydrateImagePreviews(
 ): void {
     if (!map) return;
     for (const [assetUid, record] of Object.entries(map)) {
-        if (!assetUid || !record?.url) continue;
+        // URL-less private originals still need their asset id for editing and transforms.
+        if (!assetUid || !record) continue;
         rememberImagePreview(assetUid, {
             assetId: Number(record.assetId) || 0,
             url: record.url,

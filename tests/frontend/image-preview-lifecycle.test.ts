@@ -102,3 +102,36 @@ it('rejects an unsafe image link before changing the editor document', async () 
     expect(element.urlInput!.invalid).toBe(true);
     expect(element.urlError).toBe('Enter a safe URL or email address.');
 });
+
+
+it.each([null, ''])('clears the previous transform when the original has no URL: %s', async (url) => {
+    vi.stubGlobal('Craft', { sendActionRequest: vi.fn().mockResolvedValue({ data: { url } }) });
+    const element = await mountDialog();
+    selectTransform(element, '');
+    await vi.waitFor(() => expect(element.previewImg).toBeNull());
+    await vi.waitFor(() => expect(element.shadowRoot!.textContent).toContain('No preview'));
+});
+
+it('clears a failed transform preview and allows another selection to recover', async () => {
+    const request = vi.fn().mockRejectedValueOnce(new Error('Storage unavailable'))
+        .mockResolvedValueOnce({ data: { url: 'https://example.test/recovered.jpg' } });
+    vi.stubGlobal('Craft', { sendActionRequest: request });
+    const element = await mountDialog();
+    selectTransform(element, 'large');
+    await vi.waitFor(() => expect(element.previewImg).toBeNull());
+    await vi.waitFor(() => expect(element.shadowRoot!.textContent).toContain('Couldn’t load image preview.'));
+    selectTransform(element, 'small');
+    await vi.waitFor(() => expect(element.previewImg?.src).toBe('https://example.test/recovered.jpg'));
+    expect(element.shadowRoot!.textContent).not.toContain('Couldn’t load image preview.');
+});
+
+it('waits for the selected transform before allowing insertion', async () => {
+    const pending = requestQueue();
+    const element = await mountDialog();
+    selectTransform(element, 'small');
+    await element.updateComplete;
+    const submit = element.shadowRoot!.querySelectorAll('pk-button')[1] as HTMLElement & { disabled: boolean };
+    expect(submit.disabled).toBe(true);
+    pending[0]({ data: { url: 'https://example.test/small.jpg' } });
+    await vi.waitFor(() => expect(submit.disabled).toBe(false));
+});

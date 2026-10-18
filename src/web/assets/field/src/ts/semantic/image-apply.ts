@@ -164,9 +164,10 @@ export function generateTransformUrl(
     if (!assetId) return Promise.resolve(null);
     const craft = window.Craft;
     if (typeof craft?.sendActionRequest !== 'function') return Promise.resolve(null);
-    return craft.sendActionRequest<{ url?: string }>('POST', handle ? 'assets/generate-transform' : 'vizy/assets/info', {
+    // An empty URL is a valid private original; null means the request failed.
+    return craft.sendActionRequest<{ url?: string | null }>('POST', handle ? 'assets/generate-transform' : 'vizy/assets/info', {
         data: { assetId, handle, editorContextToken },
-    }).then((response) => response.data.url ?? null).catch(() => null);
+    }).then((response) => response.data.url ?? '').catch(() => null);
 }
 
 
