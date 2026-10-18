@@ -2,6 +2,8 @@ import { Extension } from '@tiptap/core';
 import type { Fragment } from '@tiptap/pm/model';
 import { Plugin } from '@tiptap/pm/state';
 import type { EditorManifest } from './types';
+import { isUuid } from './semantic/attrs';
+import { OPAQUE_CLIPBOARD_MIME } from './transport/opaque';
 
 type ListKind = 'ol' | 'ul';
 
@@ -36,6 +38,79 @@ function unwrap(element: Element): void {
     element.replaceWith(...element.childNodes);
 }
 
+function officeElementKind(element: Element): string | undefined {
+    return /(?:^|;)\s*mso-element\s*:\s*([\w-]+)/i.exec(element.getAttribute('style') ?? '')?.[1].toLowerCase();
+}
+
+function normalizeOfficeReviewMarkup(root: DocumentFragment): void {
+    // Word's HTML includes deleted revisions and comment bodies alongside final
+    // author content. Never publish those review artifacts as ordinary text.
+    for (const element of [...root.querySelectorAll('*')]) {
+        const classes = [...element.classList].map((name) => name.toLowerCase());
+        if (classes.some((name) => ['msodel', 'msocommentreference', 'msocomanchor', 'msocomtxt'].includes(name))
+            || ['comment', 'comment-list'].includes(officeElementKind(element) ?? '')
+            || /(?:^|;)\s*mso-table-deleted\s*:/i.test(element.getAttribute('style') ?? '')) {
+            element.remove();
+        } else if (classes.includes('msoins')) {
+            for (const insertion of element.querySelectorAll('ins')) unwrap(insertion);
+            unwrap(element);
+        }
+    }
+}
+
+function normalizeOfficeFootnotes(root: DocumentFragment, enabled: boolean): void {
+    const definitions = [...root.querySelectorAll('[style]')]
+        .filter((element) => ['footnote', 'endnote'].includes(officeElementKind(element) ?? ''));
+    const list = document.createElement('section');
+    list.dataset.type = 'footnoteList';
+    const anchors = [...root.querySelectorAll('a[name][href]')];
+
+    // Word groups footnote definitions before endnotes regardless of where their
+    // references occur. Vizy uses one numbered list, so follow reference order.
+    const referenceIndex = (definition: Element) => anchors.findIndex((anchor) =>
+        /^_(?:ftn|edn)ref\d+$/i.test(anchor.getAttribute('name') ?? '')
+        && anchor.getAttribute('href') === `#_${definition.id}`);
+    definitions.sort((a, b) => referenceIndex(a) - referenceIndex(b));
+
+    for (const definition of enabled ? definitions : []) {
+        const references = anchors.filter((anchor) => /^_(?:ftn|edn)ref\d+$/i.test(anchor.getAttribute('name') ?? '')
+            && anchor.getAttribute('href') === `#_${definition.id}`);
+        if (!references.length) continue;
+        const uid = crypto.randomUUID();
+        const item = document.createElement('li');
+        item.dataset.type = 'footnoteItem';
+        item.dataset.footnoteUid = uid;
+        for (const backlink of definition.querySelectorAll('a[name]')) {
+            if (backlink.getAttribute('name') === `_${definition.id}`) backlink.remove();
+        }
+        item.append(...definition.childNodes);
+        list.append(item);
+        definition.remove();
+        for (const reference of references) {
+            const sup = document.createElement('sup');
+            sup.dataset.type = 'footnoteReference';
+            sup.dataset.footnoteUid = uid;
+            sup.dataset.footnoteText = readableCellText(item);
+            reference.replaceWith(sup);
+        }
+    }
+
+    // Source fragment IDs are not retained by the editor. Keep readable labels
+    // for disabled or unpaired notes without leaving links to missing targets.
+    for (const anchor of anchors) {
+        if (/^_(?:ftn|edn)(?:ref)?\d+$/i.test(anchor.getAttribute('name') ?? '') && root.contains(anchor)) {
+            unwrap(anchor);
+        }
+    }
+    if (!list.childElementCount) return;
+    for (const wrapper of [...root.querySelectorAll('[style]')]) {
+        if (['footnote-list', 'endnote-list'].includes(officeElementKind(wrapper) ?? '') && !wrapper.textContent?.trim()) {
+            wrapper.remove();
+        }
+    }
+    root.append(list);
+}
+
 function removeSourceScaffolding(root: DocumentFragment): void {
     removeComments(root);
 
@@ -63,7 +138,8 @@ function removeSourceScaffolding(root: DocumentFragment): void {
         if (element.id.startsWith('docs-internal-guid-')) {
             element.removeAttribute('id');
         }
-        if (tag === 'a' && !element.hasAttribute('href') && /^_/.test(element.getAttribute('name') ?? '')) {
+        if (tag === 'a' && ((!element.hasAttribute('href') && /^_/.test(element.getAttribute('name') ?? ''))
+            || /^#_Ref\d+$/i.test(element.getAttribute('href') ?? ''))) {
             unwrap(element);
         }
     }
@@ -196,10 +272,68 @@ function normalizeOfficeLists(root: DocumentFragment): void {
 }
 
 function readableCellText(cell: Element): string {
-    return (cell.textContent ?? '')
+    const copy = cell.cloneNode(true) as Element;
+    // Docs emits adjacent blocks without whitespace between their tags. Keep
+    // those boundaries while leaving inline spans within a word untouched.
+    for (const element of copy.querySelectorAll('br, p, div, li, ul, ol, blockquote, h1, h2, h3, h4, h5, h6, pre')) {
+        element.before(' ');
+        element.after(' ');
+    }
+    return (copy.textContent ?? '')
         .replace(/\u00a0/g, ' ')
         .replace(/\s+/g, ' ')
         .trim();
+}
+
+function hasExternalImages(clipboard: DataTransfer | null): boolean {
+    if (!clipboard || clipboard.getData(OPAQUE_CLIPBOARD_MIME)) return false;
+    const template = document.createElement('template');
+    const html = clipboard.getData('text/html');
+    template.innerHTML = html;
+    const images = [...template.content.querySelectorAll('img')];
+    if (images.length) {
+        return images.some((image) => !isUuid(image.getAttribute('data-asset-uid') ?? ''));
+    }
+    // Word also supplies a bitmap of the whole selection. It is an alternative
+    // representation, not an omitted image in otherwise image-free HTML.
+    const wordDocument = [...template.content.querySelectorAll('meta')].some((meta) =>
+        meta.name.toLowerCase() === 'progid' && meta.content.toLowerCase() === 'word.document');
+    if (wordDocument && !/<(?:img|v:imagedata)\b/i.test(html)) return false;
+    return [...clipboard.files].some((file) => file.type.startsWith('image/'));
+}
+
+function googleDocsPasteWarnings(clipboard: DataTransfer | null): string[] {
+    const raw = clipboard?.getData('application/x-vnd.google-docs-document-slice-clip+wrapped');
+    if (!raw || raw.length > 2_000_000) return [];
+    try {
+        // Docs omits footnotes and revision semantics from its HTML/plain text.
+        // Its private metadata is only a loss signal, never an import format.
+        const wrapped: unknown = JSON.parse(raw);
+        if (!isRecord(wrapped) || typeof wrapped.data !== 'string') return [];
+        const data: unknown = JSON.parse(wrapped.data);
+        if (!isRecord(data) || !isRecord(data.resolved)) return [];
+        const resolved = data.resolved;
+        const warnings: string[] = [];
+        const hasSuggestions = ['dsl_suggestedinsertions', 'dsl_suggesteddeletions'].some((key) => {
+            const suggestions = resolved[key];
+            const ranges = isRecord(suggestions) ? suggestions.sgsl_sugg : null;
+            return Array.isArray(ranges) && ranges.some((range) => Array.isArray(range) && range.length > 0);
+        });
+        if (hasSuggestions) warnings.push('googleDocsSuggestions');
+        const styles = resolved.dsl_styleslices;
+        if (Array.isArray(styles) && styles.some((style) => isRecord(style) && style.stsl_type === 'footnote'
+            && ((isRecord(style.stsl_trailing) && typeof style.stsl_trailing.fs_id === 'string')
+                || (Array.isArray(style.stsl_styles) && style.stsl_styles.some((value: unknown) => isRecord(value) && typeof value.fs_id === 'string'))))) {
+            warnings.push('googleDocsFootnotes');
+        }
+        return warnings;
+    } catch {
+        return [];
+    }
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+    return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
 
 function flattenUnsupportedTables(root: DocumentFragment): void {
@@ -231,11 +365,15 @@ function flattenUnsupportedTables(root: DocumentFragment): void {
  */
 export function normalizePastedHtml(html: string, manifest: Pick<EditorManifest, 'enabledNodes'>): string {
     const template = document.createElement('template');
-    template.innerHTML = html;
+    // Word exports an invisible grid-sizing row outside its visible table rows.
+    // Its conditional wrapper is lost during HTML parsing, making the row visible.
+    template.innerHTML = html.replace(/<!\[if !supportMisalignedColumns\]>[\s\S]*?<!\[endif\]>/gi, '');
 
+    normalizeOfficeReviewMarkup(template.content);
     removeSourceScaffolding(template.content);
     normalizeAriaHeadings(template.content);
     normalizeOfficeLists(template.content);
+    normalizeOfficeFootnotes(template.content, manifest.enabledNodes.includes('footnoteReference'));
     if (!manifest.enabledNodes.includes('table')) {
         flattenUnsupportedTables(template.content);
     }
@@ -279,6 +417,46 @@ export function createPasteNormalizer(manifest: EditorManifest): Extension {
             return [new Plugin({
                 props: {
                     handlePaste(view, event, slice) {
+                        const clipboard = event.clipboardData;
+                        const privateSlice = clipboard?.getData(OPAQUE_CLIPBOARD_MIME);
+                        const html = clipboard?.getData('text/html') ?? '';
+                        if (manifest.field.pasteAsPlainText && !privateSlice && html) {
+                            const template = document.createElement('template');
+                            template.innerHTML = html;
+                            const hasRevisions = [...template.content.querySelectorAll('[class], [style]')].some((element) =>
+                                [...element.classList].some((name) => ['msodel', 'msoins', 'msomovefrom', 'msomoveto'].includes(name.toLowerCase()))
+                                || /(?:^|;)\s*mso-table-(?:deleted|inserted)\s*:/i.test(element.getAttribute('style') ?? ''));
+                            // Word's plain text may contain both deleted and inserted
+                            // revisions. Do not publish ambiguous review text or replace
+                            // it with lossy HTML (which can omit equations entirely).
+                            if (hasRevisions) {
+                                event.preventDefault();
+                                view.dom.dispatchEvent(new CustomEvent('vizy-clipboard-rejected', {
+                                    bubbles: true,
+                                    detail: { code: 'wordRevisionsPlainText', operation: 'paste' },
+                                }));
+                                return true;
+                            }
+                        }
+                        const warnings = privateSlice
+                            ? [] : googleDocsPasteWarnings(event.clipboardData);
+                        if (!privateSlice && !manifest.field.pasteAsPlainText
+                            && /(?:<!--\[if[^\]]*\bmsEquation\b|<m:oMath(?:Para)?[\s>])/i.test(html)) {
+                            warnings.push('wordEquations');
+                        }
+                        if (!privateSlice && (/<!--\[if\s+supportFields\]>[\s\S]*?\b(?:REF|PAGEREF|NOTEREF)\s+[^<\s]+[\s\S]*?<!\[endif\]-->/i.test(html)
+                            || /href\s*=\s*["']?#_Ref\d+/i.test(html))) {
+                            warnings.push('wordCrossReferences');
+                        }
+                        if (!manifest.field.pasteAsPlainText && hasExternalImages(event.clipboardData)) {
+                            warnings.push('externalImagesOmitted');
+                        }
+                        if (warnings.length) {
+                            view.dom.dispatchEvent(new CustomEvent('vizy-clipboard-warning', {
+                                bubbles: true,
+                                detail: { codes: warnings },
+                            }));
+                        }
                         if (hasMeaningfulContent(slice.content)) return false;
                         const text = event.clipboardData?.getData('text/plain') ?? '';
                         if (!text.trim()) return false;

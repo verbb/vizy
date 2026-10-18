@@ -3,8 +3,19 @@
 ## Unreleased
 
 ### Fixed
+- Fixed image-free Word pastes reporting omitted images because the clipboard included a snapshot of the selection.
+- Fixed tracked Word table deletions and hidden sizing rows leaving extra cells in pasted tables.
 - Fixed separately pasted footnote lists preventing entries from saving, and definitions not following reordered references.
+- Fixed Word cross-references becoming static text without a warning or retaining links to discarded bookmarks.
+- Fixed plain-text Word pastes publishing unresolved revision text; these pastes now ask authors to resolve tracked changes first.
+- Fixed mixed Word footnotes and endnotes being listed in a different order from their references.
 - Fixed copying a footnote reference joining paragraphs in its restored definition.
+- Fixed pasted Word equations losing their structure without an equation-specific warning.
+- Fixed Word pastes including deleted revision text and reviewer comments in published content.
+- Fixed pasted Word footnotes losing their reference and definition relationship, or leaving broken links when footnotes are disabled.
+- Fixed Google Docs pastes not warning when detected suggestions lose their review state or footnotes are omitted.
+- Fixed paragraphs, lists and line breaks in pasted table cells running together when tables are disabled.
+- Fixed external images being silently omitted from rich-text pastes without notifying the author.
 - Fixed pasted Word or Google Docs formatting preventing saved content from reopening when its style attributes normalize to empty values.
 - Fixed the writing direction of translated Vizy fields not following the selected site’s language.
 - Fixed editing a ruby annotation with the caret inside its base text not updating the existing annotation.

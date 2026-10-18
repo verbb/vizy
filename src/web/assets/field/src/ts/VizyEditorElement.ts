@@ -682,6 +682,8 @@ export class VizyEditorElement extends HTMLElement {
         };
         const onClipboardRejected = ((event: CustomEvent<{ code?: string; operation?: string }>) => {
             if (!this.#clipboardNotice) return;
+            this.#clipboardNotice.variant = 'error';
+            this.#clipboardNotice.announce = 'assertive';
             event.stopPropagation();
             const code = event.detail?.code ?? 'invalidPrivateSlice';
             const operation = event.detail?.operation ?? 'paste';
@@ -696,6 +698,7 @@ export class VizyEditorElement extends HTMLElement {
                 opaqueClipboardUnsupported: 'This preserved content cannot be copied or cut because this editor does not understand its original type. It will remain unchanged when you save.',
                 policyRejected: 'This content cannot be inserted or removed because it would break this field’s Block limits.',
                 invalidPrivateSlice: 'Vizy could not paste this content because its private clipboard data is invalid or incompatible.',
+                wordRevisionsPlainText: 'Resolve tracked changes in Word before pasting into a plain-text field. Word’s plain text can include deleted revisions.',
             };
             const fallback = operation === 'paste'
                 ? 'Vizy could not paste this content.'
@@ -705,15 +708,34 @@ export class VizyEditorElement extends HTMLElement {
                 ?? fallback;
             this.#clipboardNotice.hidden = false;
         }) as EventListener;
+        const onClipboardWarning = ((event: CustomEvent<{ codes?: string[] }>) => {
+            if (!this.#clipboardNotice) return;
+            const messages: Record<string, string> = {
+                externalImagesOmitted: 'Images in this paste were omitted. Add them separately using an image-enabled field.',
+                googleDocsSuggestions: 'This paste includes unresolved Google Docs suggestions. Resolve them in Google Docs before copying the final text.',
+                googleDocsFootnotes: 'Google Docs footnotes were omitted from this paste. Add them separately.',
+                wordCrossReferences: 'Word cross-references were pasted as static text. Check their wording and recreate any links in Vizy.',
+                wordEquations: 'Word equations may be omitted or lose their structure in this paste. Check them against the source.',
+            };
+            const warnings = (event.detail?.codes ?? []).map((code) => messages[code]).filter(Boolean);
+            if (!warnings.length) return;
+            event.stopPropagation();
+            this.#clipboardNotice.textContent = warnings.map((message) => window.Craft?.t?.('vizy', message) ?? message).join(' ');
+            this.#clipboardNotice.variant = 'warning';
+            this.#clipboardNotice.announce = 'polite';
+            this.#clipboardNotice.hidden = false;
+        }) as EventListener;
         this.addEventListener('copy', clearClipboardNotice, true);
         this.addEventListener('cut', clearClipboardNotice, true);
         this.addEventListener('paste', clearClipboardNotice, true);
         this.addEventListener('vizy-clipboard-rejected', onClipboardRejected);
+        this.addEventListener('vizy-clipboard-warning', onClipboardWarning);
         this.#disposals.push(() => {
             this.removeEventListener('copy', clearClipboardNotice, true);
             this.removeEventListener('cut', clearClipboardNotice, true);
             this.removeEventListener('paste', clearClipboardNotice, true);
             this.removeEventListener('vizy-clipboard-rejected', onClipboardRejected);
+            this.removeEventListener('vizy-clipboard-warning', onClipboardWarning);
         });
         this.#acceptFinalization(this.#bootstrap.finalization ?? { finalizationStatus: 'complete' });
         let editor!: Editor;

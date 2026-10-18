@@ -44,6 +44,12 @@ class VizyAsset extends AssetBundle
             $view->registerTranslations('vizy', [
                 'Link to the current site',
                 'Uploads completed.',
+                'Images in this paste were omitted. Add them separately using an image-enabled field.',
+                'This paste includes unresolved Google Docs suggestions. Resolve them in Google Docs before copying the final text.',
+                'Google Docs footnotes were omitted from this paste. Add them separately.',
+                'Resolve tracked changes in Word before pasting into a plain-text field. Word’s plain text can include deleted revisions.',
+                'Word cross-references were pasted as static text. Check their wording and recreate any links in Vizy.',
+                'Word equations may be omitted or lose their structure in this paste. Check them against the source.',
                 'Some files could not be uploaded. Your content is saved. Retry the uploads or contact your administrator.',
                 'Files will finish uploading when you publish this draft.',
                 'Your content is saved, but file uploads are still pending.',

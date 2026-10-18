@@ -1,6 +1,12 @@
 <?php
 
 return [
+  'Word cross-references were pasted as static text. Check their wording and recreate any links in Vizy.' => 'Word cross-references were pasted as static text. Check their wording and recreate any links in Vizy.',
+  'Resolve tracked changes in Word before pasting into a plain-text field. Word’s plain text can include deleted revisions.' => 'Resolve tracked changes in Word before pasting into a plain-text field. Word’s plain text can include deleted revisions.',
+  'Word equations may be omitted or lose their structure in this paste. Check them against the source.' => 'Word equations may be omitted or lose their structure in this paste. Check them against the source.',
+  'This paste includes unresolved Google Docs suggestions. Resolve them in Google Docs before copying the final text.' => 'This paste includes unresolved Google Docs suggestions. Resolve them in Google Docs before copying the final text.',
+  'Google Docs footnotes were omitted from this paste. Add them separately.' => 'Google Docs footnotes were omitted from this paste. Add them separately.',
+  'Images in this paste were omitted. Add them separately using an image-enabled field.' => 'Images in this paste were omitted. Add them separately using an image-enabled field.',
   '“{name}” ({type}) can’t be used on Vizy Block Types.' => '“{name}” ({type}) can’t be used on Vizy Block Types.',
   '“{name}” ({type}) can’t be used on Vizy Block Types because it stores nested Craft elements. Nest content with a Hosted Vizy field instead, or keep {type} on the Entry.' => '“{name}” ({type}) can’t be used on Vizy Block Types because it stores nested Craft elements. Nest content with a Hosted Vizy field instead, or keep {type} on the Entry.',
   'This Block could not render “{name}” ({type}). That field cannot run inside Vizy Blocks (nested Craft elements or missing field).' => 'This Block could not render “{name}” ({type}). That field cannot run inside Vizy Blocks (nested Craft elements or missing field).',
