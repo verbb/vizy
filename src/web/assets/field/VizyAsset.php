@@ -77,6 +77,7 @@ class VizyAsset extends AssetBundle
                 'Regular expression',
                 '{current} of {total}',
                 'No matches.',
+                'This replacement exceeds the field’s character limit. Use shorter replacement text.',
                 'Previous',
                 'Next',
                 'Replace',

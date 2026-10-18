@@ -28,6 +28,7 @@ export class VizyFindReplaceDialogElement extends LitElement {
     #transactionHandler = (): void => this.requestUpdate();
 
     @state() accessor hasSearch = false;
+    @state() accessor replacementError = '';
     @query('pk-dialog') accessor dialog: PkDialogEl | null = null;
     @query('[data-find]') accessor findInput: PkInputEl | null = null;
     @query('[data-replace]') accessor replaceInput: PkInputEl | null = null;
@@ -40,6 +41,7 @@ export class VizyFindReplaceDialogElement extends LitElement {
         .find-fields { display: grid; gap: 0.8rem; }
         .find-options { display: flex; flex-wrap: wrap; gap: 0.5rem 1rem; }
         .find-status { color: var(--gray-500, #6b7280); min-height: 1.4rem; }
+        .find-error { color: var(--error-color, #cf1124); }
         .find-actions { display: flex; flex-wrap: wrap; gap: 0.5rem; }
     `;
 
@@ -49,6 +51,7 @@ export class VizyFindReplaceDialogElement extends LitElement {
         this.#editor = editor;
         this.#editor.on('transaction', this.#transactionHandler);
         this.hasSearch = false;
+        this.replacementError = '';
         await this.updateComplete;
         if (this.findInput) this.findInput.value = '';
         if (this.replaceInput) this.replaceInput.value = '';
@@ -84,6 +87,7 @@ export class VizyFindReplaceDialogElement extends LitElement {
                     <div class="find-status" aria-live="polite">
                         ${this.hasSearch ? (total ? t('{current} of {total}').replace('{current}', String(current)).replace('{total}', String(total)) : t('No matches.')) : ''}
                     </div>
+                    ${this.replacementError ? html`<div class="find-error" role="alert">${this.replacementError}</div>` : null}
                     <div class="find-actions">
                         <pk-button ?disabled=${!total} @click=${this.#previous}>${t('Previous')}</pk-button>
                         <pk-button ?disabled=${!total} @click=${this.#next}>${t('Next')}</pk-button>
@@ -109,6 +113,7 @@ export class VizyFindReplaceDialogElement extends LitElement {
     }
 
     #onFind = (event: Event): void => {
+        this.replacementError = '';
         const value = (event.target as PkInputEl).value;
         this.hasSearch = value !== '';
         this.#editor?.commands.setSearchTerm(value);
@@ -116,10 +121,12 @@ export class VizyFindReplaceDialogElement extends LitElement {
     };
 
     #onReplace = (event: Event): void => {
+        this.replacementError = '';
         this.#editor?.commands.setReplaceTerm((event.target as PkInputEl).value);
     };
 
     #onOptions = (): void => {
+        this.replacementError = '';
         const editor = this.#editor;
         if (!editor) return;
         editor.commands.setCaseSensitive(!!this.caseCheckbox?.checked);
@@ -137,8 +144,29 @@ export class VizyFindReplaceDialogElement extends LitElement {
 
     #previous = (): void => { this.#editor?.commands.goToPreviousResult(); };
     #next = (): void => { this.#editor?.commands.goToNextResult(); };
-    #replace = (): void => { this.#editor?.commands.replace(); };
-    #replaceAll = (): void => { this.#editor?.commands.replaceAll(); };
+    #replace = (): void => { this.#applyReplacement(false); };
+    #replaceAll = (): void => { this.#applyReplacement(true); };
+
+    #applyReplacement(all: boolean): void {
+        const editor = this.#editor;
+        if (!editor) return;
+        const before = editor.state.doc;
+        const limit = editor.extensionManager.extensions.find((extension) => extension.name === 'characterCount')?.options.limit;
+        let exceedsLimit = false;
+        const chain = editor.chain();
+
+        // Commands report success before transaction filters enforce the limit.
+        // Inspect the proposed document, then confirm it was actually rejected.
+        (all ? chain.replaceAll() : chain.replace()).command(({ tr }) => {
+            exceedsLimit = typeof limit === 'number' && limit > 0 && !tr.doc.eq(before)
+                && editor.storage.characterCount.characters({ node: tr.doc }) > limit;
+            return true;
+        }).run();
+
+        this.replacementError = exceedsLimit && editor.state.doc.eq(before)
+            ? t('This replacement exceeds the field’s character limit. Use shorter replacement text.')
+            : '';
+    }
 
     #onAfterHide = (event: Event): void => {
         if (event.target === this.dialog) this.#detachEditor();

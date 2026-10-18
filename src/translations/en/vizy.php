@@ -472,6 +472,7 @@ return [
   'Regular expression' => 'Regular expression',
   '{current} of {total}' => '{current} of {total}',
   'No matches.' => 'No matches.',
+  'This replacement exceeds the field’s character limit. Use shorter replacement text.' => 'This replacement exceeds the field’s character limit. Use shorter replacement text.',
   'Previous' => 'Previous',
   'Next' => 'Next',
   'Replace' => 'Replace',

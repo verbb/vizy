@@ -4,6 +4,7 @@ import Document from '@tiptap/extension-document';
 import FindAndReplace from '@tiptap/extension-find-and-replace';
 import Paragraph from '@tiptap/extension-paragraph';
 import Text from '@tiptap/extension-text';
+import { createVizyCharacterCount } from '../../src/web/assets/field/src/ts/semantic/character-count';
 import { ensurePkDialog } from '../../src/web/assets/field/src/ts/pk-dialog';
 import { VizyFindReplaceDialogElement } from '../../src/web/assets/field/src/ts/semantic/find-replace-dialog';
 import { installAnimationsShim, installElementInternalsShim } from './support/element-internals';
@@ -20,11 +21,11 @@ afterEach(() => {
     vi.restoreAllMocks();
 });
 
-async function mountDialog(text = 'alpha beta alpha'): Promise<{ editor: Editor; element: VizyFindReplaceDialogElement }> {
+async function mountDialog(text = 'alpha beta alpha', limit: number | null = null): Promise<{ editor: Editor; element: VizyFindReplaceDialogElement }> {
     await ensurePkDialog();
     const editor = new Editor({
         element: document.createElement('div'),
-        extensions: [Document, Paragraph, Text, FindAndReplace.configure({ injectCSS: false, searchDebounceMs: 0 })],
+        extensions: [Document, Paragraph, Text, FindAndReplace.configure({ injectCSS: false, searchDebounceMs: 0 }), createVizyCharacterCount({ limit, autoTrim: false })],
         content: `<p>${text}</p>`,
     });
     editors.push(editor);
@@ -78,4 +79,68 @@ it.each([{ isComposing: true }, { keyCode: 229 }])('does not navigate results wh
 
     element.findInput!.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, composed: true }));
     expect(editor.storage.findAndReplace.currentIndex).toBe(1);
+});
+
+it.each(['Replace', 'Replace all'])('explains character-limit rejection for %s and allows correction', async (action) => {
+    const { editor, element } = await mountDialog('cat cat', 9);
+    element.findInput!.value = 'cat';
+    element.findInput!.dispatchEvent(new Event('input', { bubbles: true, composed: true }));
+    element.replaceInput!.value = 'kitten';
+    element.replaceInput!.dispatchEvent(new Event('input', { bubbles: true, composed: true }));
+    await element.updateComplete;
+    const button = [...element.shadowRoot!.querySelectorAll('pk-button')].find((item) => item.textContent?.trim() === action) as HTMLElement;
+    button.click();
+    await element.updateComplete;
+
+    expect(editor.getText()).toBe('cat cat');
+    expect(editor.storage.findAndReplace.results).toHaveLength(2);
+    expect(element.shadowRoot!.querySelector('[role="alert"]')?.textContent).toContain('character limit');
+
+    element.replaceInput!.value = 'dog';
+    element.replaceInput!.dispatchEvent(new Event('input', { bubbles: true, composed: true }));
+    await element.updateComplete;
+    expect(element.shadowRoot!.querySelector('[role="alert"]')).toBeNull();
+    button.click();
+    await element.updateComplete;
+    expect(editor.getText()).toBe(action === 'Replace' ? 'dog cat' : 'dog dog');
+    expect(element.shadowRoot!.querySelector('[role="alert"]')).toBeNull();
+});
+
+it('allows replacements that reduce existing over-limit content and does not report unchanged text as rejected', async () => {
+    const { editor, element } = await mountDialog('kitten kitten', 5);
+    element.findInput!.value = 'kitten';
+    element.findInput!.dispatchEvent(new Event('input', { bubbles: true, composed: true }));
+    element.replaceInput!.value = 'kitten';
+    element.replaceInput!.dispatchEvent(new Event('input', { bubbles: true, composed: true }));
+    await element.updateComplete;
+    const button = [...element.shadowRoot!.querySelectorAll('pk-button')].find((item) => item.textContent?.trim() === 'Replace all') as HTMLElement;
+    button.click();
+    await element.updateComplete;
+    expect(element.shadowRoot!.querySelector('[role="alert"]')).toBeNull();
+
+    element.replaceInput!.value = 'cat';
+    element.replaceInput!.dispatchEvent(new Event('input', { bubbles: true, composed: true }));
+    button.click();
+    await element.updateComplete;
+    expect(editor.getText()).toBe('cat cat');
+    expect(element.shadowRoot!.querySelector('[role="alert"]')).toBeNull();
+});
+
+it('checks the combined size for Replace all while allowing a single replacement at the limit', async () => {
+    const { editor, element } = await mountDialog('cat cat', 8);
+    element.findInput!.value = 'cat';
+    element.findInput!.dispatchEvent(new Event('input', { bubbles: true, composed: true }));
+    element.replaceInput!.value = 'dogs';
+    element.replaceInput!.dispatchEvent(new Event('input', { bubbles: true, composed: true }));
+    await element.updateComplete;
+    const buttons = [...element.shadowRoot!.querySelectorAll('pk-button')];
+    (buttons.find((button) => button.textContent?.trim() === 'Replace all') as HTMLElement).click();
+    await element.updateComplete;
+    expect(editor.getText()).toBe('cat cat');
+    expect(element.shadowRoot!.querySelector('[role="alert"]')).not.toBeNull();
+
+    (buttons.find((button) => button.textContent?.trim() === 'Replace') as HTMLElement).click();
+    await element.updateComplete;
+    expect(editor.getText()).toBe('dogs cat');
+    expect(element.shadowRoot!.querySelector('[role="alert"]')).toBeNull();
 });

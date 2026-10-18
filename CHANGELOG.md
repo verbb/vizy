@@ -5,6 +5,7 @@
 ### Fixed
 - Fixed editing a ruby annotation with the caret inside its base text not updating the existing annotation.
 - Fixed some IME confirmation keystrokes submitting ruby annotations or moving Find and Replace results before composition finished.
+- Fixed Find and Replace silently rejecting replacements that exceed the field’s character limit.
 - Fixed image controls appearing for unfocused Vizy fields and overlapping Craft’s image editor, and not reopening when selecting an image from another field in Firefox.
 - Fixed image transform previews retaining an outdated image when a private original has no URL or a transform request fails.
 - Fixed private images without public URLs losing image editing and transform controls after reloading an entry.
