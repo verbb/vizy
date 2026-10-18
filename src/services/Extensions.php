@@ -330,12 +330,15 @@ final class Extensions extends Component
 
                 if (is_string($class) && is_a($class, NodeInterface::class, true)) {
                     // Don't invent an attrs key when TipTap omitted it (e.g. text nodes).
-                    $hadAttrs = array_key_exists('attrs', $node);
                     $attrs = is_array($node['attrs'] ?? null) ? $node['attrs'] : [];
                     $normalized = $class::normalizeAttrs($attrs, $ctx);
 
-                    if ($hadAttrs || $normalized !== []) {
+                    if ($normalized !== []) {
                         $node['attrs'] = $normalized;
+                    } else {
+                        // Empty PHP arrays encode as JSON lists, but editor attrs
+                        // must be objects. Omit empty attrs, including stored ones.
+                        unset($node['attrs']);
                     }
                 }
             }
@@ -354,12 +357,13 @@ final class Extensions extends Component
                     $class = $definition['render']['class'] ?? null;
 
                     if (is_string($class) && is_a($class, MarkInterface::class, true)) {
-                        $hadAttrs = array_key_exists('attrs', $mark);
                         $attrs = is_array($mark['attrs'] ?? null) ? $mark['attrs'] : [];
                         $normalized = $class::normalizeAttrs($attrs, $ctx);
 
-                        if ($hadAttrs || $normalized !== []) {
+                        if ($normalized !== []) {
                             $mark['attrs'] = $normalized;
+                        } else {
+                            unset($mark['attrs']);
                         }
                         $node['marks'][$markIndex] = $mark;
                     }
