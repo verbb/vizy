@@ -3,6 +3,7 @@
 ## Unreleased
 
 ### Fixed
+- Fixed the writing direction of translated Vizy fields not following the selected site’s language.
 - Fixed editing a ruby annotation with the caret inside its base text not updating the existing annotation.
 - Fixed some IME confirmation keystrokes submitting ruby annotations or moving Find and Replace results before composition finished.
 - Fixed Find and Replace silently rejecting replacements that exceed the field’s character limit.

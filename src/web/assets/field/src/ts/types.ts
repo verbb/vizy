@@ -331,6 +331,7 @@ export interface EditorBootstrap {
     linkOptions?: VizyBootstrapLinkOption[];
     /** Owner element site id for Craft element selector defaultSiteId. */
     elementSiteId?: number;
+    contentDirection?: 'ltr' | 'rtl';
     /** Asset picker volumes / transforms for Image authoring. */
     imageAuthoring?: {
         showUnpermittedFiles?: boolean;

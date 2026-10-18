@@ -95,6 +95,7 @@ async function mount(
         initialFieldLayouts?: unknown[];
         finalization?: unknown;
         manifest?: typeof editorManifest;
+        contentDirection?: 'ltr' | 'rtl';
     } = {},
 ) {
     const layoutSuccess = options.layoutSuccess !== false;
@@ -171,19 +172,21 @@ async function mount(
     // `vizy.ts` publishes the queue before its failure-isolated editor-runtime
     // import resolves. Wait for the real custom element, not just the queue API.
     await expect.poll(() => page.evaluate(() => Boolean(customElements.get('vizy-editor')))).toBe(true);
-    await page.evaluate(({ document, manifest, initialFieldLayouts, finalization }) => {
+    await page.evaluate(({ document, manifest, initialFieldLayouts, finalization, contentDirection }) => {
         (window as any).Craft.Vizy.bootstrapEditor('editor', {
             document,
             manifest,
             editorContextToken: 'test',
             initialFieldLayouts,
             finalization,
+            contentDirection,
         });
     }, {
         document,
         manifest: options.manifest ?? editorManifest,
         initialFieldLayouts: options.initialFieldLayouts,
         finalization: options.finalization,
+        contentDirection: options.contentDirection,
     });
     await expect(page.locator('.ProseMirror')).toBeVisible();
 }
@@ -512,6 +515,21 @@ for (const updating of [false, true]) for (const control of ['size', 'transform'
         expect(images).toHaveLength(1);
         if (!updating) await expect(page.locator('.ProseMirror')).toContainText('Keep the existing story.');
         expect(images[0]).toMatchObject({ assetUid: attrs.assetUid, alt: 'Changed alt', size: control === 'size' ? 'small' : 'default' });
+    });
+}
+
+for (const contentDirection of ['ltr', 'rtl'] as const) {
+    test(`uses ${contentDirection} field orientation independently of the CP shell`, async ({ page }) => {
+        await mount(page, { type: 'doc', attrs: { schemaVersion: 2 }, content: [] }, { contentDirection });
+        const shellDirection = contentDirection === 'rtl' ? 'ltr' : 'rtl';
+        await page.evaluate((direction) => { document.documentElement.dir = direction; }, shellDirection);
+        for (const css of manifest['field/src/ts/vizy.ts'].css ?? []) {
+            await page.addStyleTag({ url: `${HARNESS_URL}${css}` });
+        }
+        await expect(page.locator('.ProseMirror')).toHaveCSS('direction', contentDirection);
+        await expect(page.locator('vizy-toolbar')).toHaveCSS('direction', shellDirection);
+        await page.locator('.ProseMirror').fill('العربية مرحبًا — עברית שלום — QA 123');
+        await expect(page.locator('.ProseMirror')).toHaveText('العربية مرحبًا — עברית שלום — QA 123');
     });
 }
 

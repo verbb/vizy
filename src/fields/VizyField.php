@@ -1293,6 +1293,7 @@ class VizyField extends Field implements PreviewableFieldInterface
             // Per-owner Craft element link pickers — not cached with the manifest.
             'linkOptions' => FieldLinkOptions::forField($this, $element),
             'elementSiteId' => (int)$element->siteId,
+            'contentDirection' => $this->getOrientation($element),
             // Image asset picker (volumes / transforms) — same owner scope.
             'imageAuthoring' => FieldImageOptions::forField($this),
             // Session thumbs for Image nodes (canonical never stores src).
@@ -1393,6 +1394,7 @@ class VizyField extends Field implements PreviewableFieldInterface
             ),
             'linkOptions' => FieldLinkOptions::forField($this, $owner),
             'elementSiteId' => (int)$owner->siteId,
+            'contentDirection' => $this->getOrientation($owner),
             'imageAuthoring' => FieldImageOptions::forField($this),
             'imagePreviews' => FieldImagePreviews::forDocument($document, (int)$owner->siteId, $this),
         ];

@@ -617,6 +617,9 @@ export class VizyEditorElement extends HTMLElement {
         this.#embedBubble = document.createElement('vizy-embed-bubble');
         const surface = document.createElement('div');
         surface.className = 'vizy-editor-surface';
+        // Field content follows Craft's site/translation orientation, independently
+        // of the CP language used by the toolbar and other editor controls.
+        if (this.#bootstrap.contentDirection) surface.dir = this.#bootstrap.contentDirection;
         const initialRows = manifest.field.initialRows;
         surface.style.setProperty('--vizy-initial-rows', String(
             typeof initialRows === 'number' && Number.isFinite(initialRows)

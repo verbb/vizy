@@ -139,7 +139,7 @@ pk-alert.vizy-field-boot-failure {
 }
 
 .vizy-editor-surface .ProseMirror p.is-editor-empty:first-child::before {
-    float: left;
+    float: inline-start;
     height: 0;
     color: var(--vizy-text-muted, #7b8793);
     content: attr(data-placeholder);
