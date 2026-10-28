@@ -1,200 +1,75 @@
 # Changelog
 
-## Unreleased
-
-### Fixed
-- Fixed image-free Word pastes reporting omitted images because the clipboard included a snapshot of the selection.
-- Fixed tracked Word table deletions and hidden sizing rows leaving extra cells in pasted tables.
-- Fixed separately pasted footnote lists preventing entries from saving, and definitions not following reordered references.
-- Fixed Word cross-references becoming static text without a warning or retaining links to discarded bookmarks.
-- Fixed plain-text Word pastes publishing unresolved revision text; these pastes now ask authors to resolve tracked changes first.
-- Fixed mixed Word footnotes and endnotes being listed in a different order from their references.
-- Fixed copying a footnote reference joining paragraphs in its restored definition.
-- Fixed pasted Word equations losing their structure without an equation-specific warning.
-- Fixed Word pastes including deleted revision text and reviewer comments in published content.
-- Fixed pasted Word footnotes losing their reference and definition relationship, or leaving broken links when footnotes are disabled.
-- Fixed Google Docs pastes not warning when detected suggestions lose their review state or footnotes are omitted.
-- Fixed paragraphs, lists and line breaks in pasted table cells running together when tables are disabled.
-- Fixed external images being silently omitted from rich-text pastes without notifying the author.
-- Fixed pasted Word or Google Docs formatting preventing saved content from reopening when its style attributes normalize to empty values.
-- Fixed the writing direction of translated Vizy fields not following the selected site’s language.
-- Fixed editing a ruby annotation with the caret inside its base text not updating the existing annotation.
-- Fixed some IME confirmation keystrokes submitting ruby annotations or moving Find and Replace results before composition finished.
-- Fixed Find and Replace silently rejecting replacements that exceed the field’s character limit.
-- Fixed image controls appearing for unfocused Vizy fields and overlapping Craft’s image editor, and not reopening when selecting an image from another field in Firefox.
-- Fixed image transform previews retaining an outdated image when a private original has no URL or a transform request fails.
-- Fixed private images without public URLs losing image editing and transform controls after reloading an entry.
-- Fixed images without a public asset or transform URL rendering as broken images on the front end.
-- Fixed “Show unpermitted files” not allowing other users’ assets to be selected and previewed in Vizy image and asset-link controls.
-- Fixed saving content with previously allowed assets failing when Craft creates a revision after asset access changes.
-- Fixed inserting an image before focusing a loaded editor replacing its existing content.
-- Fixed autosaves and nested Matrix field checks running during publication and reporting submission errors when saving Vizy content.
-- Fixed repeated autosaves reporting a content conflict for Vizy fields inside Super Table drafts.
-- Fixed toolbar and block controls not responding to touch in Safari.
-- Fixed false content conflicts when correcting validation errors after creating an entry or applying a draft, including Vizy fields inside Neo and Hyper.
-- Fixed nested widgets retaining outdated draft identities after validation errors, preventing new Neo blocks from being added.
-- Fixed Vizy block fields failing to load inside newly created Neo blocks on drafts.
-- Fixed entry validation errors displaying HTML markup instead of readable messages when saving Vizy content.
-- Fixed untouched Global Sets with Vizy fields incorrectly warning about unsaved changes.
-
-## 4.0.0-beta.3 - 2026-10-11
-
-### Added
-- Added native footnotes with paired references and editable definitions, automatic numbering, keyboard navigation, copy-safe identities, accessible frontend HTML, GraphQL fields, and migration from Verbb Footnotes markup. ([#303](https://github.com/verbb/vizy/issues/303))
-- Added native Emoji and Find and Replace controls backed by TipTap’s official extensions. Emoji uses a compact searchable toolbar dropdown for quick inline insertion. ([#204](https://github.com/verbb/vizy/discussions/204))
-- Added native Ruby text, task lists, collapsible details, and syntax highlighting for code blocks. ([#204](https://github.com/verbb/vizy/discussions/204))
-- Added native Font family, Font size, Text colour, and Line height controls backed by TipTap's official TextStyle extensions. The Text colour menu includes both text and highlight palettes, and Editor Config previews use the same current-value selector faces as the live toolbar. ([#201](https://github.com/verbb/vizy/discussions/201))
-- Added native Character Count, Placeholder, and Typography behaviour extensions, plus automatic list-boundary keyboard handling. ([#204](https://github.com/verbb/vizy/discussions/204))
-- Added schema-safe boolean Link attributes that modules can register into the existing Link dialog, with optional safe `rel`, `class`, or `data-*` output mappings. ([#257](https://github.com/verbb/vizy/issues/257))
-- Added a schema-aware HTML importer API with complete loss diagnostics, strict conversion, caller-owned Asset resolution, and extension rules for custom nodes and marks. ([#142](https://github.com/verbb/vizy/issues/142))
-- Added explicit Feed Me mappings that turn matched HTML elements into custom Vizy Blocks, populate UID-addressed field placements through their Feed Me adapters, and support matching or creating Assets from image attributes. ([#251](https://github.com/verbb/vizy/issues/251))
-- Added convention-based and per-render Twig template partials for built-in and custom node and mark types, including schema-safe frontend markup customisation without relying on editor HTML. ([#29](https://github.com/verbb/vizy/issues/29), [#212](https://github.com/verbb/vizy/issues/212), [#291](https://github.com/verbb/vizy/issues/291), [#298](https://github.com/verbb/vizy/issues/298))
-- Added inline, Ajax-driven control-panel wizards and console commands for conversion between Vizy and CKEditor, Redactor, or Plain Text fields. To Vizy reviews rendered conversion changes before replacing a field in place, preserves recovery data, and summarises the result. From Vizy copies into an existing destination wherever both fields share a layout, preserves the complete source, skips unpaired layouts and existing destination content, previews rendered results, reports copied, current, skipped, and failed values, and generates a verified deployment migration for a staged cutover. See [Migrating Rich-Text Fields](https://verbb.io/craft-plugins/vizy/docs/v4/user-guides/migrating-rich-text-fields). ([#288](https://github.com/verbb/vizy/issues/288))
-
-### Changed
-- Editor Config toolbar and Bubble Menu builders now show every available control and automatically enable its required content capability when it is added. Interface and typing behaviours now live under Editor Experience instead of Content Schema, and the Advanced JSON editor uses standard field presentation.
-- Clarified field-local Asset and Link authoring settings and moved per-field Block Type availability conditions into a focused modal.
-- Standardised control-panel failure, warning, completion, and empty states on Plugin Kit alerts and state panels, including editor boot, Block field loading, upload finalisation, clipboard, save capture, field settings, Block browsing, and migration workflows.
-- Clarified that the Render Templates Path setting is relative to Craft’s `templates/` directory.
-- Require Verbb Base 3.0.20 or later so shared control-panel layouts use the current asset bundle namespace. ([verbb-base#3](https://github.com/verbb/verbb-base/issues/3))
-- Feed Me HTML mappings now use Vizy’s field and Editor Config-aware importer, record conversion-loss diagnostics, and can require lossless conversion before accepting a mapped value. See [Importing with Feed Me](https://verbb.io/craft-plugins/vizy/docs/v4/user-guides/importing-with-feed-me). ([#289](https://github.com/verbb/vizy/issues/289))
-
-### Fixed
-- Fixed a medium-severity content authorization vulnerability.
-- Fixed a low-severity content disclosure vulnerability.
-- Fixed unrelated content containing a Matrix anchor identifier being treated as a live cross-owner reference.
-- Fixed arbitrary legacy Block identifiers being interpolated into control-panel input namespaces.
-- Fixed a medium-severity remote code execution vulnerability.
-- Fixed generic field transport accepting prototype mutation paths and bounded plain-email detection for pasted links.
-- Fixed late-loading editors hiding early changes, nested Hyper fields appearing unsaved without edits, and unnecessary autosaves after server acknowledgements.
-- Fixed conflicting edits opening an error page when saving. The editor now retains unsaved changes, pauses further saves, and offers saved-version review and an unsaved-content download.
-- Fixed Undo getting stuck after opening the Block picker from a saved slash.
-- Fixed creating Blocks and retaining nested Matrix content when Vizy is placed inside Hyper 3 links.
-- Fixed an error when saving an entry while Vizy content was still being autosaved.
-- Fixed Craft's Discard action hanging when an entry had unsaved Vizy changes.
-- Fixed field conditions failing to refresh in newly added Matrix rows inside Vizy.
-- Fixed Vizy 3 upgrades failing when existing Matrix content was read before its anchor schema migration.
-- Fixed Block fields failing to load after Craft autosaved a newly created Matrix entry or while editing a provisional draft.
-- Fixed fields such as JSON failing to initialize when their script dependencies were first loaded by an inserted Block.
-- Fixed the field-settings separator appearing directly against the Plain Text Paste control.
-- Fixed Task List checkboxes rendering separately from or misaligned with their text in the editor.
-- Avoid Verbb Base deprecation warnings by using its current control-panel asset bundle namespace. ([verbb-base#3](https://github.com/verbb/verbb-base/issues/3))
-- Fixed empty Task List items and Details content becoming preserved, unsupported content after Craft autosaves.
-- Fixed consecutive empty paragraphs being removed from the editor after Craft autosaves.
-- Fixed existing content appearing empty when it exceeded an Editor Config’s Character Count limit.
-
-## 4.0.0-beta.2 - 2026-10-02
-
-### Added
-- Added Craft-native Entry and current-user conditions for field-local Block Type availability, plus Entry-aware field and tab conditions inside Vizy Blocks. ([#178](https://github.com/verbb/vizy/issues/178))
-- Added native Craft element-card previews for Vizy field content. ([#332](https://github.com/verbb/vizy/issues/332))
-- Added automatic collapsed Block summaries from Hosted Vizy field content. ([#140](https://github.com/verbb/vizy/issues/140))
-- Added a visual Editor Config icon designer for overriding toolbar, dropdown, and Bubble Menu controls. ([#342](https://github.com/verbb/vizy/issues/342))
-- Added field settings for choosing the available Block picker displays, their default, and whether search is shown. ([#341](https://github.com/verbb/vizy/issues/341))
-- Added durable Vizy content recovery records and commands to restore a field’s saved document, nested Matrix values, ownership, order, enabled states, and relations across sites. See [Content Recovery](https://verbb.io/craft-plugins/vizy/docs/v4/developers/content-recovery).
-- Added `block.owner` to Block Type templates for direct access to the durable Craft element containing the Vizy field. ([#285](https://github.com/verbb/vizy/issues/285))
-
-### Changed
-- Removed an obsolete Matrix eager-loading interception hook that no longer had a runtime producer.
-- Reorganised the Feature Tour around the editor, Vizy blocks, field configuration, editor capabilities, Block Types, nested content, and content-planning guidance.
-- Expanded the custom mark and node guides with complete, CLI-safe Craft module setup, AssetBundle loading, Editor Config steps, end-to-end verification, and troubleshooting. ([#269](https://github.com/verbb/vizy/issues/269))
-- Clarified that complete Vizy documents must be round-tripped as JSON rather than HTML, which cannot represent Craft field values inside Blocks. ([#357](https://github.com/verbb/vizy/issues/357))
-- Documented Media Embed provider support, safe fallback behaviour, and rendered-output customisation. ([#230](https://github.com/verbb/vizy/issues/230))
-- Pasting from Word and other rich-text sources now normalizes lists and unsupported structures according to the field’s Editor Config capabilities, preserving readable text when source HTML cannot be represented. ([#134](https://github.com/verbb/vizy/issues/134))
-- Opening block forms and creating Matrix rows now keep changes in the editor until the owner is saved.
-- Upgrade verification now compares nested content before committing each owner conversion.
-
-### Fixed
-- Fixed a medium-severity authorization vulnerability.
-- Fixed nested Craft Entry fields inside Vizy Blocks and Matrix anchors rendering as static, read-only fields.
-- Simplified the Block Type and Editor Config settings copy.
-- Fixed direct Vizy 2/Craft 4 to Vizy 4/Craft 5 upgrades missing legacy field schema that Craft 4 did not retain in its internal Project Config store.
-- Fixed Vizy 3 upgrades failing when historical Block Type layout identities are array-wrapped, and added actionable diagnostics for ambiguous layout identity data. ([#353](https://github.com/verbb/vizy/issues/353))
-- Fixed custom Entry sources being omitted from link pickers and restricted custom, Single, or Category sources being shown, including on Craft 5.9. ([#226](https://github.com/verbb/vizy/issues/226))
-- Fixed private Asset volumes being omitted from Vizy’s available-volume settings and asset picker, including default-transform previews and output for private originals. ([#256](https://github.com/verbb/vizy/issues/256))
-- Fixed link insertion at an empty caret and schemeless `www.` URLs, added authoring validation for unsafe URL schemes, and added coverage confirming mixed-format links render once in native Vizy output. ([#262](https://github.com/verbb/vizy/issues/262), [#290](https://github.com/verbb/vizy/issues/290))
-- Fixed plain email addresses entered or pasted as links being stored as ordinary URLs instead of semantic `mailto:` links. ([#238](https://github.com/verbb/vizy/issues/238))
-- Fixed Craft field and tab conditions inside Vizy Blocks not updating as sibling field values change, including hidden required fields and retained hidden values. ([#64](https://github.com/verbb/vizy/issues/64), [#233](https://github.com/verbb/vizy/issues/233))
-- Fixed GraphQL queries for resolver-backed fields in Vizy Blocks, including Matrix rows containing Assets, and ensured full schema dumps include concrete Vizy node types. ([#214](https://github.com/verbb/vizy/issues/214), [#268](https://github.com/verbb/vizy/issues/268))
-- Fixed legacy, numerous, or large unsupported TipTap nodes blanking the editor or appearing to lose content. Vizy now repairs Vizy 1 `list_item` nodes and visibly preserves other unsupported content without exposing its payload. ([#231](https://github.com/verbb/vizy/issues/231))
-- Fixed JSON fields inside Vizy Blocks failing to load or persist, and JSON-looking Plain Text values being decoded as arrays. ([#352](https://github.com/verbb/vizy/issues/352))
-- Fixed Entry fields inside Vizy Blocks resolving relations against the wrong site in multi-site installs. ([#319](https://github.com/verbb/vizy/issues/319))
-- Fixed custom-field conditions on Matrix entry queries inside Vizy Blocks. ([#309](https://github.com/verbb/vizy/issues/309))
-- Fixed Craft field merges leaving Vizy Block Type layouts pointed at the deleted outgoing field, which could remove embedded values on a later entry save. ([#346](https://github.com/verbb/vizy/issues/346))
-- Fixed empty link options, volume selections, and transform selections reverting to defaults after saving field settings.
-- Fixed unresolved anchors and incomplete Matrix submissions being treated as replacement or empty content.
-- Fixed historical shared anchors being modified or cleaned up while another owner or draft still references them.
-- Fixed repeated placements of the same Vizy field sharing Matrix content when their documents contained the same Block UID, including Hosted Vizy placement paths and legacy anchor upgrades.
-- Fixed the Matrix anchor placement migration failing on MySQL when its legacy unique index was required by the parent-owner foreign key.
-- Fixed stale editor submissions overwriting newer saved Vizy content.
-- Fixed Block Type availability inside deeply Hosted Vizy fields being evaluated against the immediate Block instead of the containing Entry.
-- Fixed native Matrix row duplication inside Vizy creating an empty row, accepting an unrelated source row, and then continuing into Craft’s incompatible persisted-owner action.
-- Fixed image dialogs accepting unsafe link schemes that the frontend renderer later discarded.
-- Fixed slow Block FieldLayout prefetches inserting at a stale document position after intervening edits.
-- Fixed the Block picker grid retaining closed dialogs, reopening after an asynchronous close, or losing open-state semantics during view switches, and added arrow-key navigation between its options.
-- Fixed recovery restores failing for Matrix content on PostgreSQL or when recreating hard-deleted nested draft and revision records.
-- Fixed automatic recovery records growing without bounds, large recovery snapshots exceeding MySQL storage limits, repeated field placements sharing one retention pool, and same-owner Block UID collisions pulling another Vizy field into a snapshot.
-- Fixed Block limit controls offering or accepting add, duplicate, delete, and move operations after the document reached its configured minimum or maximum.
-- Fixed root Block limits incorrectly disabling duplicate and delete actions for Blocks nested in Layout columns.
-- Fixed rejected private Vizy clipboard operations failing silently, and removed a pointer-only Block drag grip from the keyboard tab order.
-- Fixed the control-panel browser test runner reporting success when its Craft provisioning process failed during cleanup.
-
-## 4.0.0-beta.1 - 2026-09-22
+## 4.0.0 - 2026-10-28
 
 > {warning} Before upgrading to Vizy 4, review the [Upgrading from v3](https://verbb.io/craft-plugins/vizy/docs/v4/get-started/upgrading-from-v3) guide for breaking changes and required migration steps.
 
 ### Added
-- Added a new TipTap 3 editor with configurable formatting, tables, links, images, embeds, undo and redo, accessible toolbar controls, Bubble Menus, and structured Blocks in one editing surface.
-- Added named Editor Configs, managed in the control panel or as JSON files in `config/vizy/`, with visual builders for capabilities, toolbars, dropdowns, Bubble Menus, and insertion controls. ([#183](https://github.com/verbb/vizy/issues/183))
-- Added `EditorManifests::EVENT_MODIFY_EDITOR_CONFIG` for field-scoped runtime changes that participate in config normalization, manifest caching, and server-side validation.
-- Added shared Project Config-backed Block Types with reusable Craft field layouts, icons, colours, preview images, summaries, grouping, per-field availability, and list or grid insertion. ([#60](https://github.com/verbb/vizy/issues/60), [#222](https://github.com/verbb/vizy/issues/222), [#261](https://github.com/verbb/vizy/issues/261), [#271](https://github.com/verbb/vizy/issues/271))
-- Added toolbar, gutter, and slash insertion for Blocks. ([#296](https://github.com/verbb/vizy/issues/296), [#330](https://github.com/verbb/vizy/issues/330), [#360](https://github.com/verbb/vizy/issues/360))
+- Added named Editor Configs, managed in the control panel or as JSON files in `config/vizy/`, with visual builders for content capabilities, toolbars, dropdowns, Bubble Menus, and insertion controls. ([#183](https://github.com/verbb/vizy/issues/183))
+- Added shared Project Config-backed Block Types with reusable Craft field layouts, icons, colours, preview images, summaries, grouping, and per-field availability. ([#60](https://github.com/verbb/vizy/issues/60), [#222](https://github.com/verbb/vizy/issues/222), [#261](https://github.com/verbb/vizy/issues/261), [#271](https://github.com/verbb/vizy/issues/271))
+- Added toolbar, gutter, and slash insertion for Blocks, with configurable list and grid pickers, a default display, and optional search. ([#296](https://github.com/verbb/vizy/issues/296), [#330](https://github.com/verbb/vizy/issues/330), [#360](https://github.com/verbb/vizy/issues/360), [#341](https://github.com/verbb/vizy/issues/341))
 - Added responsive Layout and Column nodes with configurable presets, wrapping, resizing, reordering, and GraphQL support. ([#72](https://github.com/verbb/vizy/issues/72))
-- Added Hosted Vizy Editors, allowing Vizy fields to be nested on Block Type field layouts with their own Editor Config and a maximum nesting depth of five. ([#45](https://github.com/verbb/vizy/issues/45), [#125](https://github.com/verbb/vizy/issues/125))
-- Added a structural GraphQL API for documents, nodes, marks, layouts, Blocks, and generated Block Type fields, including filtering, ordering, limits, rendered HTML, and raw escape hatches. ([#52](https://github.com/verbb/vizy/issues/52), [#124](https://github.com/verbb/vizy/issues/124), [#129](https://github.com/verbb/vizy/issues/129))
+- Added Hosted Vizy Editors with independent Editor Configs and support for up to five levels of nested Vizy fields on Block Type layouts. ([#45](https://github.com/verbb/vizy/issues/45), [#125](https://github.com/verbb/vizy/issues/125))
+- Added native footnotes with editable definitions, automatic numbering, keyboard navigation, accessible frontend HTML, GraphQL support, and migration from Verbb Footnotes markup. ([#303](https://github.com/verbb/vizy/issues/303))
+- Added native Emoji, Find and Replace, Ruby text, task lists, collapsible details, and syntax highlighting for code blocks. ([#204](https://github.com/verbb/vizy/discussions/204))
+- Added Font family, Font size, Text colour, highlight colour, and Line height controls. ([#201](https://github.com/verbb/vizy/discussions/201))
+- Added Character Count, Placeholder, and Typography behaviour extensions, plus automatic list-boundary keyboard handling. ([#204](https://github.com/verbb/vizy/discussions/204))
+- Added Craft Entry and current-user conditions for field-local Block Type availability, plus Entry-aware field and tab conditions inside Blocks. ([#178](https://github.com/verbb/vizy/issues/178))
+- Added native Craft element-card previews and automatic collapsed Block summaries from nested Vizy content. ([#332](https://github.com/verbb/vizy/issues/332), [#140](https://github.com/verbb/vizy/issues/140))
+- Added a visual icon designer for Editor Config toolbar, dropdown, and Bubble Menu controls. ([#342](https://github.com/verbb/vizy/issues/342))
+- Added control-panel wizards and console commands for converting between Vizy and CKEditor, Redactor, or Plain Text fields, with conversion previews, recovery data, and generated deployment migrations. See [Migrating Rich-Text Fields](https://verbb.io/craft-plugins/vizy/docs/v4/user-guides/migrating-rich-text-fields). ([#288](https://github.com/verbb/vizy/issues/288))
+- Added content recovery records and commands to restore saved documents and their nested Matrix content across sites. See [Content Recovery](https://verbb.io/craft-plugins/vizy/docs/v4/developers/content-recovery).
+- Added concurrent-edit conflict handling that preserves unsaved changes and offers saved-version review and an unsaved-content download.
+- Added a structural GraphQL API for documents, nodes, marks, layouts, Blocks, and generated Block Type fields, with filtering, ordering, limits, rendered HTML, and raw data access. ([#52](https://github.com/verbb/vizy/issues/52), [#124](https://github.com/verbb/vizy/issues/124), [#129](https://github.com/verbb/vizy/issues/129))
 - Added PHP and JavaScript extension APIs for registering TipTap nodes, marks, behaviour modules, toolbar controls, dropdowns, and rendering behaviour. ([#93](https://github.com/verbb/vizy/issues/93), [#137](https://github.com/verbb/vizy/issues/137))
-- Added an automatic, resumable Vizy 3 upgrade to Craft’s plugin migrations, with durable checkpoints, verification, and advanced diagnostic and recovery commands.
-- Added a raw content API for inspecting and migrating embedded field values using captured placement identities, explicit changes, dry runs, and caller-owned transactions. ([#313](https://github.com/verbb/vizy/issues/313), [#371](https://github.com/verbb/vizy/issues/371))
-- Added canonical Vizy document support to Feed Me.
-- Added search indexing for document text, image details, link values, Block fields, and nested Hosted Vizy content.
+- Added `EditorManifests::EVENT_MODIFY_EDITOR_CONFIG` for field-scoped runtime configuration changes.
+- Added custom boolean Link attributes that modules can register in the Link dialog, with optional `rel`, `class`, or `data-*` output mappings. ([#257](https://github.com/verbb/vizy/issues/257))
+- Added Twig template partials for built-in and custom node and mark types, configured by convention or per render. ([#29](https://github.com/verbb/vizy/issues/29), [#212](https://github.com/verbb/vizy/issues/212), [#291](https://github.com/verbb/vizy/issues/291), [#298](https://github.com/verbb/vizy/issues/298))
+- Added `block.owner` to Block Type templates for access to the Craft element containing the Vizy field. ([#285](https://github.com/verbb/vizy/issues/285))
+- Added a raw content API for inspecting and migrating embedded field values, with placement identities, explicit changes, dry runs, and caller-owned transactions. ([#313](https://github.com/verbb/vizy/issues/313), [#371](https://github.com/verbb/vizy/issues/371))
+- Added an HTML importer API that respects the field’s content schema, reports conversion losses, and supports strict conversion, asset resolution, and custom nodes and marks. ([#142](https://github.com/verbb/vizy/issues/142))
+- Added Feed Me support for canonical Vizy documents and mappings from HTML elements to custom Blocks, including nested field values and matching or creating assets from image attributes. ([#251](https://github.com/verbb/vizy/issues/251))
 
 ### Changed
 - Vizy now requires Craft CMS 5.9 or later.
+- Rebuilt the editor on TipTap 3 and Plugin Kit, with accessible toolbar controls and Bubble Menus. Integrations that mounted Vue components or targeted the legacy editor DOM must migrate to the Extensions APIs.
 - Vizy field values are now immutable `VizyDocument` objects backed by versioned canonical JSON. Render fields explicitly with `render()`; use `query()`, `all()`, `blocks()`, `content()`, or `traverse()` for structured access.
-- Block definitions are now global Block Types referenced by UID instead of field-owned definitions, while Block values remain embedded in the Vizy document rather than loading as separate Craft elements.
-- Block query filters now preserve the existing enabled-only default. Request `enabled: false` for disabled Blocks or `enabled: null` for both states.
-- Matrix fields remain supported on existing and new Block Type layouts. Nested Vizy is recommended for new nested content to avoid Matrix’s additional storage and processing overhead. ([#314](https://github.com/verbb/vizy/issues/314))
-- Matrix fields use Inline Blocks inside Vizy so edits follow the containing entry’s save and draft workflow. Cards, card grids, and element indexes retain their configured appearance outside Vizy.
+- Block definitions are now global Block Types referenced by UID instead of field-owned definitions. Craft’s plugin migrations convert existing field configuration and content through a resumable, verified upgrade.
+- Block Type templates now receive field values through the `block` variable.
 - The GraphQL contract now uses structural `VizyDocument`, `Vizy*` node and mark types, and UID-qualified generated Block types. Existing Vizy 3 fragments and JSON-encoded `where` arguments must be updated.
-- The control-panel editor has moved from Vue 3 to Web Components built with Plugin Kit. Integrations that mounted Vue components or targeted the legacy editor DOM must migrate to the supported Extensions APIs.
-- Editor integrations now use named Editor Configs and the Extensions registry instead of per-field inline config, `Craft.Vizy.Config`, or Vizy 3 plugin registration hooks.
-- Block Type templates now receive field values through the `block` variable, and automatic field string rendering has been replaced by explicit document rendering.
-- Asset uploads and nested field values are finalized with the owning element save, with recoverable status for deferred or failed uploads.
-- Documentation has been rewritten for Vizy 4 field setup, authoring, rendering, querying, GraphQL, extensions, limitations, and Vizy 3 upgrades. ([#283](https://github.com/verbb/vizy/issues/283))
+- Editor integrations now use named Editor Configs and the Extensions registry instead of per-field inline configuration or Vizy 3 plugin registration hooks.
+- Matrix fields inside Vizy now use Inline Blocks so edits follow the containing entry’s save and draft workflow. Other Matrix display modes retain their configured appearance outside Vizy.
+- Asset uploads and nested field values are finalised with the owning element save, with recoverable status for deferred or failed uploads.
+- Improved Word and Google Docs pasting to preserve supported formatting, lists, tables, and footnotes according to the field’s Editor Config, with warnings when content or formatting cannot be retained. ([#134](https://github.com/verbb/vizy/issues/134))
+- Feed Me HTML mappings now use the field’s Editor Config, report conversion losses, and can require lossless conversion. See [Importing with Feed Me](https://verbb.io/craft-plugins/vizy/docs/v4/user-guides/importing-with-feed-me). ([#289](https://github.com/verbb/vizy/issues/289))
+- Search indexing now includes document text, image details, link values, Block fields, and nested Vizy content.
+- Rewrote the documentation for field setup, authoring, rendering, querying, GraphQL, extensions, and upgrading from Vizy 3. ([#283](https://github.com/verbb/vizy/issues/283))
 
 ### Fixed
-- Fixed Hyper 3 fields preventing Matrix content inside Vizy from loading or saving. ([#377](https://github.com/verbb/vizy/issues/377))
-- Fixed new and historical duplicated entries sharing or losing Matrix content inside Vizy blocks, and repaired surviving shared references into independent anchors. ([#376](https://github.com/verbb/vizy/issues/376))
-- Fixed Matrix validation checking saved rows instead of submitted changes, and preserved pending Matrix edits when an entry fails validation.
-- Fixed duplicate Matrix rows and changing row identities when saving legacy content, including temporary row identifiers on PostgreSQL; saving or backfilling also repairs duplicate stored row UIDs.
-- Fixed Matrix anchors failing when a site row was missing or a new site was enabled, and limited anchor propagation to the owner’s supported sites. ([#373](https://github.com/verbb/vizy/issues/373))
-- Fixed Matrix saves failing when Craft reused a cached field manager from outside the block layout.
-- Reduced repeated Matrix owner lookups when reading and resaving Vizy content.
-- Fixed competing standalone Matrix anchor creation attempts failing to resolve the winning anchor after a database collision.
-- Fixed Matrix backfill missing nested Vizy, global sets, and non-primary sites, and restored dry-run, site selection, draft opt-in, and timestamp-preserving saves. ([#364](https://github.com/verbb/vizy/issues/364))
-- Fixed removed Vizy blocks leaving their Matrix content active, including site-specific rows. Restoring a removed block restores its owned content.
 - Fixed a moderate-severity cross-site scripting vulnerability in Tiptap ([GHSA-cp6q-959q-f8rh](https://github.com/advisories/GHSA-cp6q-959q-f8rh)).
+- Fixed duplicated entries and repeated field placements sharing or losing Matrix content inside Vizy Blocks. ([#376](https://github.com/verbb/vizy/issues/376))
+- Fixed Matrix validation checking saved rows instead of submitted changes, and preserved pending Matrix edits when an entry fails validation.
+- Fixed removed Vizy Blocks leaving their Matrix content active. Restoring a removed Block restores its owned content.
+- Fixed Craft field merges leaving Block Type layouts pointed at deleted fields, which could remove embedded values on a later save. ([#346](https://github.com/verbb/vizy/issues/346))
+- Fixed Craft field and tab conditions inside Blocks not updating as sibling field values change. ([#64](https://github.com/verbb/vizy/issues/64), [#233](https://github.com/verbb/vizy/issues/233))
+- Fixed Entry fields inside Blocks resolving relations against the wrong site in multi-site installs. ([#319](https://github.com/verbb/vizy/issues/319))
+- Fixed custom-field conditions on Matrix entry queries inside Blocks. ([#309](https://github.com/verbb/vizy/issues/309))
+- Fixed JSON fields inside Blocks failing to load or persist, and JSON-looking Plain Text values being decoded as arrays. ([#352](https://github.com/verbb/vizy/issues/352))
+- Fixed unsupported TipTap nodes blanking the editor or appearing to lose content. Legacy `list_item` nodes are repaired and other unsupported content is visibly preserved. ([#231](https://github.com/verbb/vizy/issues/231))
+- Fixed private asset volumes being omitted from field settings and asset pickers, including support for image editing and transform previews when originals have no public URL. ([#256](https://github.com/verbb/vizy/issues/256))
+- Fixed custom Entry sources being omitted from link pickers and restricted sources being shown. ([#226](https://github.com/verbb/vizy/issues/226))
+- Fixed link insertion at an empty caret, schemeless `www.` URLs, and plain email addresses being stored without `mailto:`. ([#262](https://github.com/verbb/vizy/issues/262), [#290](https://github.com/verbb/vizy/issues/290), [#238](https://github.com/verbb/vizy/issues/238))
 
 ### Deprecated
 - Deprecated `VizyDocument::getField()`, `getRawNodes()`, `renderHtml()`, and `renderStaticHtml()`; use `field()`, `content().nodes()`, and `render()`.
 - Deprecated the GraphQL `rawNodes` and `renderHtml` aliases; use `raw` or node `raw`, and `renderedHtml`.
 - Deprecated legacy editor toolbar tokens that can be converted to Vizy 4 Editor Config controls.
-- Deprecated `EVENT_DEFINE_VIZY_CONFIG`, `EVENT_MODIFY_PURIFIER_CONFIG`, `registerPlugin()`, and the `Craft.Vizy.Config` JavaScript API. These compatibility surfaces no longer configure the Vizy 4 editor; use named Editor Configs, `EditorManifests::EVENT_MODIFY_EDITOR_CONFIG`, and the Extensions APIs.
+- Deprecated `EVENT_DEFINE_VIZY_CONFIG`, `EVENT_MODIFY_PURIFIER_CONFIG`, `registerPlugin()`, and the `Craft.Vizy.Config` JavaScript API. These compatibility surfaces no longer configure the editor; use named Editor Configs, `EditorManifests::EVENT_MODIFY_EDITOR_CONFIG`, and the Extensions APIs.
 
 ### Removed
 - Removed the Vizy 3 `NodeCollection` field-value contract, string-cast rendering, typed GraphQL tree, and field-local Block Type ownership.
 - Removed `Content::modifyFieldContent()`; integrations should use `captureFieldLocations()` and `modifyFieldValues()` from the raw content API.
-- Removed non-empty attribute-map configuration from `renderHtml()` and `renderStaticHtml()`; use node render events or Block templates to customize output.
+- Removed non-empty attribute-map configuration from `renderHtml()` and `renderStaticHtml()`; use node render events or Block templates to customise output.
 - Removed the unused `recursiveFieldCount` setting and the ability for a Vizy field save to modify global Block Type schema as a side effect.
 
 ## 3.2.9 - 2026-09-20
