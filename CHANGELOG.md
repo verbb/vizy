@@ -1,5 +1,10 @@
 # Changelog
 
+## Unreleased
+
+### Fixed
+- Fixed Vizy 3 upgrades failing when fields selected JSON editor config files, including when retrying a failed upgrade.
+
 ## 4.0.0 - 2026-10-28
 
 > {warning} Before upgrading to Vizy 4, review the [Upgrading from v3](https://verbb.io/craft-plugins/vizy/docs/v4/get-started/upgrading-from-v3) guide for breaking changes and required migration steps.

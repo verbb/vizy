@@ -84,9 +84,11 @@ final class Vizy3PromotionOrchestrator extends Component
                 }
             }
         }
+
         $blockTypes = $this->_unpackMap($projectConfig->get(BlockTypes::PROJECT_CONFIG_PATH) ?? []);
         $plan = (new Vizy3SchemaPromotion())->analyze($fields, $blockTypes, $targetHandles);
         $plan['planHash'] = $this->_hash($this->_stable($plan));
+
         return $plan;
     }
 
@@ -94,6 +96,7 @@ final class Vizy3PromotionOrchestrator extends Component
     {
         $this->_assertPlan($plan);
         $this->_preflight($plan);
+
         return [
             'status' => 'ready',
             'dryRun' => true,
@@ -119,6 +122,7 @@ final class Vizy3PromotionOrchestrator extends Component
             if (Json::decode((string)$existing->ownerScopeJson) !== $ownerScope) {
                 throw new RuntimeException('This immutable upgrade plan is already bound to a different owner scope.');
             }
+
             return $this->_run($existing);
         }
 
@@ -131,6 +135,7 @@ final class Vizy3PromotionOrchestrator extends Component
             'status' => 'pending',
         ]);
         $this->_save($record);
+
         return $this->_run($record);
     }
 
@@ -141,6 +146,7 @@ final class Vizy3PromotionOrchestrator extends Component
         if (!$record) {
             throw new RuntimeException("Unknown Vizy 3 upgrade {$runUid}.");
         }
+
         return $this->_run($record);
     }
 
@@ -151,6 +157,7 @@ final class Vizy3PromotionOrchestrator extends Component
         if ($runUid !== null) {
             $query->andWhere(['runUid' => $runUid]);
         }
+
         return array_map(fn(SchemaPromotion $record) => $this->_result($record), $query->all());
     }
 
@@ -170,6 +177,17 @@ final class Vizy3PromotionOrchestrator extends Component
 
         if (!hash_equals((string)$record->planHash, (string)$plan['planHash'])) {
             throw new RuntimeException('Persisted upgrade plan hash is stale or corrupt.');
+        }
+
+        // Failed 4.0.0 runs retain filename references in their immutable plans.
+        // Normalize only the verified execution copy so every remaining stage uses
+        // the canonical ID without rewriting the persisted plan or its hash.
+        foreach ($plan['fields'] as $fieldUid => $fieldPlan) {
+            $id = $fieldPlan['canonicalFieldSettings']['editorConfig'] ?? null;
+
+            if (is_string($id)) {
+                $plan['fields'][$fieldUid]['canonicalFieldSettings']['editorConfig'] = ManualEditorConfigMigrator::normalizeConfigId($id);
+            }
         }
 
         $record->status = 'running';
@@ -194,6 +212,7 @@ final class Vizy3PromotionOrchestrator extends Component
                 $record->stage = $stage;
                 $this->_save($record);
             }
+
             $record->status = 'complete';
             $this->_save($record);
         } catch (Throwable $exception) {
@@ -201,6 +220,7 @@ final class Vizy3PromotionOrchestrator extends Component
             $record->lastError = $exception->getMessage();
             $this->_save($record);
         }
+
         return $this->_result($record);
     }
 
@@ -213,6 +233,7 @@ final class Vizy3PromotionOrchestrator extends Component
         if ($this->stageProbe) {
             ($this->stageProbe)($stage);
         }
+
         match ($stage) {
             'globalSchema' => $this->_applyGlobalSchema($plan),
             'provenance' => $this->_applyProvenance($plan),
@@ -255,9 +276,11 @@ final class Vizy3PromotionOrchestrator extends Component
                 if (isset($candidate[$uid]) && $this->_normalizedBlockTypeConfig($uid, $candidate[$uid]) !== $this->_normalizedBlockTypeConfig($uid, $target['config'])) {
                     throw new RuntimeException("Target Block Type {$uid} changed outside this upgrade plan.");
                 }
+
                 $candidate[$uid] = $packed;
             }
         }
+
         // Complete graph validation happens before the first handler/DB write.
         // Matrix-in-Block is grandfathered on first import (empty global baseline).
         Vizy::$plugin->getBlockTypes()->preflightExternalSchema($candidate, allowMatrixGrandfatherImport: true);
@@ -283,6 +306,7 @@ final class Vizy3PromotionOrchestrator extends Component
                 if ($this->_normalizedBlockTypeConfig($uid, $current) !== $expected) {
                     throw new RuntimeException("Global Block Type {$uid} did not round-trip through Project Config.");
                 }
+
                 $record = BlockTypeRecord::findOne(['uid' => $uid]);
 
                 if (!$record || !$record->fieldLayoutId || !Craft::$app->getFields()->getLayoutById((int)$record->fieldLayoutId)) {
@@ -319,6 +343,7 @@ final class Vizy3PromotionOrchestrator extends Component
             if (!is_array($config) || ($config['type'] ?? null) !== VizyField::class) {
                 throw new RuntimeException("Vizy field {$fieldUid} is no longer available for canonical reference update.");
             }
+
             $settings = is_array($config['settings'] ?? null) ? $config['settings'] : [];
             // Keep fieldData as migration input; VizyField::getSettings() remains
             // canonical and never treats it as live Vizy 4 schema.
@@ -329,6 +354,7 @@ final class Vizy3PromotionOrchestrator extends Component
             if (!array_key_exists('fieldData', $config['settings'])) {
                 $config['settings']['fieldData'] = [];
             }
+
             $projectConfig->set($path, $config);
 
             $reloaded = ProjectConfigHelper::unpackAssociativeArrays($projectConfig->get($path));
@@ -343,6 +369,7 @@ final class Vizy3PromotionOrchestrator extends Component
                     );
                 }
             }
+
             $reloadedFieldData = array_key_exists('fieldData', $reloaded['settings'] ?? [])
                 ? $reloaded['settings']['fieldData']
                 : [];
@@ -352,6 +379,7 @@ final class Vizy3PromotionOrchestrator extends Component
                 throw new RuntimeException("Canonical Vizy field {$fieldUid} lost its retained legacy migration input.");
             }
         }
+
         Craft::$app->getFields()->refreshFields();
     }
 
@@ -364,6 +392,7 @@ final class Vizy3PromotionOrchestrator extends Component
         if (($expected === [] || $expected === null) && ($actual === [] || $actual === null)) {
             return true;
         }
+
         return false;
     }
 
@@ -379,6 +408,7 @@ final class Vizy3PromotionOrchestrator extends Component
             if (!is_string($fieldUid) || !isset($plan['fields'][$fieldUid])) {
                 throw new RuntimeException("Owner job {$index} references a field outside the immutable plan.");
             }
+
             $owner = Craft::$app->getElements()->getElementById(
                 (int)($job['elementId'] ?? 0),
                 (string)($job['elementType'] ?? ''),
@@ -389,6 +419,7 @@ final class Vizy3PromotionOrchestrator extends Component
             if (!$owner || !$field instanceof VizyField || !is_array($job['mapping'] ?? null)) {
                 throw new RuntimeException("Owner job {$index} cannot resolve its exact owner, field, or mapping.");
             }
+
             $jobRunUid = (new \verbb\vizy\document\DeterministicUidFactory("promotion:{$runUid}"))
                 ->uid('owner-job:' . $index);
             $result = Vizy::$plugin->getOwnerContentMigrator()->migrateOwner(
@@ -472,6 +503,7 @@ final class Vizy3PromotionOrchestrator extends Component
                 $result[$uid] = ProjectConfigHelper::unpackAssociativeArrays($config);
             }
         }
+
         return $result;
     }
 
@@ -501,6 +533,7 @@ final class Vizy3PromotionOrchestrator extends Component
             if (!is_string($field->uid) || !isset($rows[$field->uid])) {
                 continue;
             }
+
             $config = ProjectConfigHelper::unpackAssociativeArrays(
                 $fieldsService->createFieldConfig($field),
             );
@@ -509,6 +542,7 @@ final class Vizy3PromotionOrchestrator extends Component
             if (is_array($settings)) {
                 $config['settings'] = $settings;
             }
+
             $database[$field->uid] = $config;
         }
 
@@ -535,12 +569,14 @@ final class Vizy3PromotionOrchestrator extends Component
         foreach ($value as $key => $child) {
             $value[$key] = $this->_stable($child);
         }
+
         return $value;
     }
 
     private function _normalizedBlockTypeConfig(string $uid, array $config): array
     {
         $model = BlockType::fromConfig($uid, ProjectConfigHelper::unpackAssociativeArrays($config));
+
         return $this->_stable($model->toConfig());
     }
 }

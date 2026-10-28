@@ -14,11 +14,21 @@ use Throwable;
 /**
  * Mints Project Config Editor Configs from Vizy 3 inline “Enter a custom config” JSON.
  *
- * File-backed `config/vizy/*.json` refs are left alone. Dedupes by normalized
+ * File-backed `config/vizy/*.json` refs become filename-stem IDs. Dedupes by normalized
  * authorable fingerprint so identical pastes share one config.
  */
 final class ManualEditorConfigMigrator
 {
+    // Static Methods
+    // =========================================================================
+
+    public static function normalizeConfigId(string $id): string
+    {
+        // Vizy 3 stored the filename; Vizy 4 indexes file configs by its stem.
+        return str_ends_with($id, '.json') ? substr($id, 0, -5) : $id;
+    }
+
+
     // Public Methods
     // =========================================================================
 
@@ -37,8 +47,9 @@ final class ManualEditorConfigMigrator
     {
         if (($settings['configSelectionMode'] ?? 'choose') !== 'manual') {
             $id = is_string($settings['vizyConfig'] ?? null) ? $settings['vizyConfig'] : '';
+
             return [
-                'editorConfig' => $id,
+                'editorConfig' => self::normalizeConfigId($id),
                 'mint' => null,
                 'fingerprint' => null,
                 'diagnostics' => [],
@@ -85,6 +96,7 @@ final class ManualEditorConfigMigrator
             }
 
             $id = $this->_mintId($fingerprint);
+
             return [
                 'editorConfig' => $id,
                 'mint' => ['id' => $id, 'config' => $authorable],
@@ -109,17 +121,21 @@ final class ManualEditorConfigMigrator
             if (!is_array($mint) || !is_string($mint['id'] ?? null) || !is_array($mint['config'] ?? null)) {
                 continue;
             }
+
             $id = $mint['id'];
 
             if (isset($written[$id])) {
                 continue;
             }
+
             $configs = Vizy::$plugin->getEditorConfigs();
 
             if ($configs->getConfig($id) !== null) {
                 $written[$id] = true;
+
                 continue;
             }
+
             $configs->saveConfig($id, $mint['config']);
             $written[$id] = true;
         }
@@ -144,6 +160,7 @@ final class ManualEditorConfigMigrator
             if (isset($legacy['dropdowns']) && is_array($legacy['dropdowns']) && !array_is_list($legacy['dropdowns'])) {
                 $payload['dropdowns'] = $legacy['dropdowns'];
             }
+
             return $payload;
         }
 
@@ -164,6 +181,7 @@ final class ManualEditorConfigMigrator
             if (!is_string($button) || $button === '') {
                 continue;
             }
+
             $id = VizyToolbarTokenDeprecations::canonicalize($button, "manual Editor Config {$context}");
 
             if (in_array($id, EditorConfigPresentation::RETIRED_TOOLBAR_IDS, true)) {
@@ -173,11 +191,13 @@ final class ManualEditorConfigMigrator
             if (preg_match('/^heading([1-6])$/', $id, $m)) {
                 $needsFormatting = true;
                 $headingLevels[] = (int)$m[1];
+
                 continue;
             }
 
             if ($id === 'paragraph') {
                 $needsFormatting = true;
+
                 continue;
             }
 
@@ -188,16 +208,19 @@ final class ManualEditorConfigMigrator
                 if (!in_array($id, $formattingMembersFromButtons, true)) {
                     $formattingMembersFromButtons[] = $id;
                 }
+
                 continue;
             }
 
             if (in_array($id, ['alignLeft', 'alignCenter', 'alignRight', 'alignJustify'], true)) {
                 $needsAlignment = true;
+
                 continue;
             }
 
             if ($id === 'table' || str_starts_with($id, 'table')) {
                 $needsTable = true;
+
                 continue;
             }
 
@@ -216,6 +239,7 @@ final class ManualEditorConfigMigrator
             if (!in_array('dropdown:formatting', $toolbar, true)) {
                 array_unshift($toolbar, 'dropdown:formatting');
             }
+
             $members = $formatting !== null
                 ? VizyToolbarTokenDeprecations::canonicalizeList(
                     array_values(array_filter($formatting, 'is_string')),
@@ -269,6 +293,7 @@ final class ManualEditorConfigMigrator
                 }
             }
         }
+
         $headingLevels = array_values(array_unique($headingLevels ?: [2, 3, 4]));
         sort($headingLevels);
 
@@ -329,6 +354,7 @@ final class ManualEditorConfigMigrator
                 return $id;
             }
         }
+
         return null;
     }
 
@@ -339,6 +365,7 @@ final class ManualEditorConfigMigrator
         if (Vizy::$plugin->getEditorConfigs()->getConfig($id) !== null) {
             $id = 'imported-' . substr($fingerprint, 0, 8) . '-' . strtolower(StringHelper::randomString(4));
         }
+
         return $id;
     }
 
@@ -354,6 +381,7 @@ final class ManualEditorConfigMigrator
         if ($headingLevels !== [] || isset($dropdowns['formatting']) || in_array('dropdown:formatting', $toolbar, true)) {
             $add('heading');
         }
+
         $formattingMembers = $dropdowns['formatting'] ?? [];
 
         foreach (['bulletList', 'orderedList', 'blockquote', 'codeBlock', 'horizontalRule', 'image', 'table', 'iframe', 'mediaEmbed', 'layout'] as $node) {
@@ -366,6 +394,7 @@ final class ManualEditorConfigMigrator
         if (in_array('dropdown:table', $toolbar, true)) {
             $add('table');
         }
+
         return $nodes;
     }
 
@@ -378,6 +407,7 @@ final class ManualEditorConfigMigrator
                 $marks[] = $mark;
             }
         }
+
         return $marks !== [] ? $marks : ['bold', 'italic', 'link'];
     }
 }

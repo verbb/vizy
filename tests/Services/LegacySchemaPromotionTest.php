@@ -6,6 +6,7 @@ use craft\elements\Entry;
 use craft\fieldlayoutelements\CustomField;
 use craft\fields\Matrix;
 use craft\fields\PlainText;
+use craft\helpers\FileHelper;
 use craft\helpers\StringHelper;
 use craft\helpers\Json;
 use craft\helpers\ProjectConfig as ProjectConfigHelper;
@@ -15,6 +16,7 @@ use verbb\vizy\legacy\Vizy3DocumentAdapter;
 use verbb\vizy\legacy\Vizy3SchemaPromotion;
 use verbb\vizy\migrations\m260921_000000_vizy3_upgrade;
 use verbb\vizy\records\SchemaPromotion;
+use verbb\vizy\services\EditorConfigs;
 use verbb\vizy\Vizy;
 use yii\console\ExitCode;
 
@@ -481,6 +483,97 @@ it('applies global schema provenance and canonical field references through resu
         ->and(Vizy::$plugin->getLegacySchemaMaps()->getProvenance($fixture['fieldUid'])['sourceFingerprint'])
         ->toBe($plan['fields'][$fixture['fieldUid']]['sourceFingerprint']);
 });
+
+it('upgrades selected JSON editor configs through fresh and resumed automatic migrations', function(bool $resume, bool $missing) {
+    $fixture = legacyPromotionFixture('fileConfig' . StringHelper::randomString(5));
+    $fieldUid = $fixture['fieldUid'];
+    $id = 'extended-' . strtolower(StringHelper::randomString(6));
+    $fixture['fields'][$fieldUid]['settings']['vizyConfig'] = $id . '.json';
+    $projectConfig = Craft::$app->getProjectConfig();
+    $configs = Vizy::$plugin->getEditorConfigs();
+    $orchestrator = Vizy::$plugin->getPromotionOrchestrator();
+    $dir = Craft::$app->getPath()->getConfigPath() . '/vizy';
+    FileHelper::createDirectory($dir);
+    $path = $dir . '/' . $id . '.json';
+    $json = Json::encode(['buttons' => ['bold', 'italic', 'link']]);
+    if (!$missing) {
+        file_put_contents($path, $json);
+    }
+
+    try {
+        $configs->invalidate();
+        foreach ($fixture['fields'] as $uid => $config) {
+            $projectConfig->set("fields.{$uid}", $config);
+        }
+        Craft::$app->getFields()->refreshFields();
+        $plan = $orchestrator->analyze();
+        expect($plan['status'])->toBe('ready');
+
+        if ($resume) {
+            // Recreate an immutable plan saved by 4.0.0 with the legacy filename.
+            $plan['fields'][$fieldUid]['canonicalFieldSettings']['editorConfig'] = $id . '.json';
+            unset($plan['planHash']);
+            $sort = static function(array $value) use (&$sort): array {
+                if (!array_is_list($value)) {
+                    ksort($value);
+                }
+                foreach ($value as $key => $child) {
+                    if (is_array($child)) {
+                        $value[$key] = $sort($child);
+                    }
+                }
+                return $value;
+            };
+            $plan['planHash'] = hash('sha256', Json::encode($sort($plan)));
+            $orchestrator->setStageProbeForTesting(static function(string $stage): void {
+                if ($stage === 'editorConfigs') {
+                    throw new RuntimeException('Legacy filename lookup failed');
+                }
+            });
+            $failed = $orchestrator->apply($plan, ['complete' => true, 'jobs' => []]);
+            $orchestrator->setStageProbeForTesting(null);
+            expect($failed['status'])->toBe('failed')
+                ->and($failed['stage'])->toBe('provenance');
+            $record = SchemaPromotion::findOne(['runUid' => $failed['runUid']]);
+            $storedPlan = $record->planJson;
+        } else {
+            expect($plan['fields'][$fieldUid]['canonicalFieldSettings']['editorConfig'])->toBe($id);
+        }
+
+        if ($missing) {
+            $failed = $orchestrator->apply($plan, ['complete' => true, 'jobs' => []]);
+            expect($failed['status'])->toBe('failed')
+                ->and($failed['stage'])->toBe('provenance')
+                ->and($failed['lastError'])->toContain("Upgraded Editor Config {$id} for field {$fieldUid} is missing")
+                ->and($projectConfig->get("fields.{$fieldUid}.settings.editorConfig"))->toBeNull();
+            // A genuinely missing file must still block, then recover once restored.
+            file_put_contents($path, $json);
+            $configs->invalidate();
+        }
+
+        expect((new m260921_000000_vizy3_upgrade())->up(true))->toBeTrue();
+        expect($projectConfig->get("fields.{$fieldUid}.settings.editorConfig"))->toBe($id)
+            ->and($configs->getConfig($id)['source'])->toBe(EditorConfigs::SOURCE_FILE)
+            ->and(file_get_contents($path))->toBe($json);
+
+        if ($resume) {
+            $record->refresh();
+            expect($record->status)->toBe('complete')
+                ->and($record->planHash)->toBe($plan['planHash'])
+                ->and($record->planJson)->toBe($storedPlan);
+        }
+    } finally {
+        $orchestrator->setStageProbeForTesting(null);
+        if (is_file($path)) {
+            unlink($path);
+        }
+        $configs->invalidate();
+    }
+})->with([
+    'fresh' => [false, false],
+    'resume 4.0.0 plan' => [true, false],
+    'missing file restored' => [false, true],
+]);
 
 it('rejects stale promotion plans before any new stage is recorded', function() {
     $fixture = legacyPromotionFixture('staleApply' . StringHelper::randomString(5));

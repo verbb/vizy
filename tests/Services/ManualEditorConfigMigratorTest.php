@@ -7,6 +7,22 @@ use craft\helpers\StringHelper;
 use verbb\vizy\legacy\ManualEditorConfigMigrator;
 use verbb\vizy\Vizy;
 
+it('maps selected Vizy 3 config filenames to editor config IDs', function(string $selected, string $expected) {
+    $plan = (new ManualEditorConfigMigrator())->plan([
+        'configSelectionMode' => 'choose',
+        'vizyConfig' => $selected,
+    ], StringHelper::UUID());
+
+    expect($plan['editorConfig'])->toBe($expected)
+        ->and($plan['mint'])->toBeNull()
+        ->and($plan['diagnostics'])->toBe([]);
+})->with([
+    'JSON filename' => ['extended.json', 'extended'],
+    'canonical ID' => ['extended', 'extended'],
+    'default selection' => ['', ''],
+    'JSON within an ID' => ['json-editor', 'json-editor'],
+]);
+
 it('preserves the Vizy 3 strikethrough button and mark capability when importing an editor config', function() {
     $payload = (new ManualEditorConfigMigrator())->toAuthorablePayload([
         'buttons' => ['bold', 'strikethrough', 'strike', 'italic'],
