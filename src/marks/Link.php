@@ -50,6 +50,7 @@ class Link extends Mark
             if (!is_array($attribute)) {
                 throw new RuntimeException("Link attribute at index {$index} must be an array.");
             }
+
             $name = $attribute['name'] ?? null;
 
             if (!is_string($name) || !preg_match('/^[A-Za-z][A-Za-z0-9]*$/', $name)) {
@@ -63,22 +64,26 @@ class Link extends Mark
             if (isset($registered[$name])) {
                 throw new RuntimeException("Duplicate Link attribute {$name}.");
             }
+
             $label = $attribute['label'] ?? null;
 
             if (!is_string($label) || trim($label) === '') {
                 throw new RuntimeException("Link attribute {$name} must have a label.");
             }
+
             $label = trim($label);
             $type = $attribute['type'] ?? 'boolean';
 
             if ($type !== 'boolean') {
                 throw new RuntimeException("Link attribute {$name} must use the boolean type.");
             }
+
             $default = $attribute['default'] ?? false;
 
             if (!is_bool($default)) {
                 throw new RuntimeException("Link attribute {$name} default must be boolean.");
             }
+
             $htmlAttribute = $attribute['htmlAttribute'] ?? null;
             $htmlValue = $attribute['htmlValue'] ?? null;
 
@@ -90,6 +95,7 @@ class Link extends Mark
                 if (!is_string($htmlValue) || trim($htmlValue) === '' || preg_match('/[\x00-\x1F\x7F]/', $htmlValue)) {
                     throw new RuntimeException("Link attribute {$name} requires a safe non-empty HTML value.");
                 }
+
                 $htmlValue = trim($htmlValue);
 
                 if (in_array($htmlAttribute, ['class', 'rel'], true)) {
@@ -150,12 +156,14 @@ class Link extends Mark
         if (is_string($attrs['ariaLabel'] ?? null) && $attrs['ariaLabel'] !== '') {
             $htmlAttrs['aria-label'] = $attrs['ariaLabel'];
         }
+
         $rel = self::_tokens($attrs['rel'] ?? []);
 
         foreach (self::registeredAttributes() as $attribute) {
             if (($attrs[$attribute['name']] ?? $attribute['default']) !== true) {
                 continue;
             }
+
             $htmlAttribute = $attribute['htmlAttribute'];
 
             if (!is_string($htmlAttribute) || !is_string($attribute['htmlValue'])) {
@@ -319,6 +327,11 @@ class Link extends Mark
     public function init(): void
     {
         parent::init();
+
+        if (!is_string($this->attrs['href'] ?? '')) {
+            // Preserve linked text while rejecting malformed imported or stored targets.
+            $this->attrs['href'] = null;
+        }
 
         // Preserve authoring href for getLinkElement() (ref tags before resolveAttrs).
         $this->_originalHref = $this->attrs['href'] ?? '';

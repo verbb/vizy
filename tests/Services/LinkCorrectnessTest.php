@@ -6,7 +6,20 @@ use verbb\vizy\document\DocumentParser;
 use verbb\vizy\document\DocumentSerializer;
 use verbb\vizy\document\VizyDocument;
 use verbb\vizy\gql\GqlNode;
+use verbb\vizy\helpers\Nodes;
 use verbb\vizy\marks\Link;
+
+it('rejects malformed legacy link targets at each resolution boundary', function() {
+    foreach ([['bad'], (object)['bad' => true], 42, true] as $href) {
+        $link = new Link(['attrs' => ['href' => $href]]);
+
+        expect($link->attrs['href'])->toBeNull()
+            ->and($link->getLinkElement())->toBeNull()
+            ->and(Link::resolveHref(['href' => $href]))->toBeNull()
+            ->and(Nodes::parseRefTags($href, null))->toBeNull();
+    }
+
+});
 
 it('normalizes historic schemeless www links at every resolved output boundary', function() {
     $attrs = [

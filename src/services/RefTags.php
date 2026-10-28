@@ -23,7 +23,11 @@ final class RefTags extends Component
      */
     public function parse(mixed $value, ?int $siteId): array|string|null
     {
-        if (!is_string($value) || $value === '') {
+        if (!is_string($value)) {
+            return null;
+        }
+
+        if ($value === '') {
             return $value;
         }
 

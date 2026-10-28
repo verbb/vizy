@@ -194,6 +194,7 @@ class VizyField extends Field implements PreviewableFieldInterface
                 $config[$setting] = [];
             }
         }
+
         // Remove unused settings
         unset($config['columnType']);
         // Transient field-settings POST payload for global Block Types; not a field attribute.
@@ -215,6 +216,7 @@ class VizyField extends Field implements PreviewableFieldInterface
                 $settings[$setting] = '';
             }
         }
+
         return $settings;
     }
 
@@ -285,6 +287,7 @@ class VizyField extends Field implements PreviewableFieldInterface
                 }
             }
         }
+
         $editorConfigOptions = Vizy::$plugin->getEditorConfigs()->getOptions();
 
         if ($this->editorConfig !== '' && !in_array($this->editorConfig, array_column($editorConfigOptions, 'value'), true)) {
@@ -448,6 +451,7 @@ class VizyField extends Field implements PreviewableFieldInterface
             // After-save acknowledgements and upload finalization must observe
             // the exact snapshot written to the content row, including anchor UIDs.
             $element->setFieldValue($this->handle, Vizy::$plugin->getDocuments()->normalizeValue($serialized, $element, $this));
+
             return $serialized;
         }
 
@@ -483,6 +487,7 @@ class VizyField extends Field implements PreviewableFieldInterface
         // Derivative copies must not inherit this editor's submission token.
         // Keep the containing link and its validation scenario intact.
         $owner->setFieldValue($this->handle, $this->normalizeValue($serialized, $owner));
+
         return $serialized;
     }
 
@@ -538,6 +543,7 @@ class VizyField extends Field implements PreviewableFieldInterface
         if (!parent::beforeSave($isNew)) {
             return false;
         }
+
         // Canonical fields only store UID references. Global Block Type schema is
         // saved exclusively through services\BlockTypes via the CP screen, so a
         // field save can never mutate global schema as a side effect.
@@ -563,6 +569,7 @@ class VizyField extends Field implements PreviewableFieldInterface
                 ];
             }
         }
+
         $this->blockTypePickerGroups = $groups;
 
         $allowed = array_fill_keys($this->getAllowedBlockTypeUids(), true);
@@ -587,6 +594,7 @@ class VizyField extends Field implements PreviewableFieldInterface
                 $conditions[$uid] = $normalized;
             }
         }
+
         $this->blockTypeAvailabilityConditions = $conditions;
 
         return true;
@@ -651,6 +659,7 @@ class VizyField extends Field implements PreviewableFieldInterface
                 if ($field->id === $this->id && $field->handle === $this->handle) {
                     Vizy::$plugin->getAnchors()->gcOrphans($element);
                 }
+
                 break;
             }
         }
@@ -676,6 +685,7 @@ class VizyField extends Field implements PreviewableFieldInterface
             } elseif ($to->getIsRevision()) {
                 $criteria['revisionId'] = $to->revisionId;
             }
+
             $targetOwner = Craft::$app->getElements()->getElementById(
                 (int)$to->id,
                 $to::class,
@@ -737,6 +747,7 @@ class VizyField extends Field implements PreviewableFieldInterface
                 $uids[] = (string)$uid;
             }
         }
+
         return $uids;
     }
 
@@ -793,6 +804,7 @@ class VizyField extends Field implements PreviewableFieldInterface
             if (!$owner instanceof Entry) {
                 return false;
             }
+
             $condition = $this->_availabilityCondition($config['elementCondition']);
 
             if (!$condition || !$condition->matchElement($owner)) {
@@ -821,6 +833,7 @@ class VizyField extends Field implements PreviewableFieldInterface
                 $uids[] = (string)$uid;
             }
         }
+
         return $uids;
     }
 
@@ -833,6 +846,7 @@ class VizyField extends Field implements PreviewableFieldInterface
                 $types[] = $type;
             }
         }
+
         return $types;
     }
 
@@ -850,6 +864,7 @@ class VizyField extends Field implements PreviewableFieldInterface
                 $diagnostics[] = ['code' => 'missingAllowedBlockType', 'uid' => $uid];
             }
         }
+
         return $diagnostics;
     }
 
@@ -921,6 +936,7 @@ class VizyField extends Field implements PreviewableFieldInterface
             foreach ($value->content()->nodes() as $node) {
                 if (($node['type'] ?? null) !== 'vizyBlock') {
                     $element->addError($this->handle, 'This Vizy field only permits Blocks at its root.');
+
                     break;
                 }
             }
@@ -932,6 +948,7 @@ class VizyField extends Field implements PreviewableFieldInterface
             if (isset($seen[$block->uid()])) {
                 $element->addError($this->handle, "Duplicate Vizy Block UID: {$block->uid()}.");
             }
+
             $seen[$block->uid()] = true;
         }
 
@@ -955,6 +972,7 @@ class VizyField extends Field implements PreviewableFieldInterface
             $baselineTypes[$block->uid()] = $block->blockTypeUid();
             $baselineBlocks[$block->uid()] = $block;
         }
+
         $insertableBlockTypeUids = $this->getInsertableBlockTypeUids($element);
 
         foreach ($allBlocks as $block) {
@@ -1128,8 +1146,10 @@ class VizyField extends Field implements PreviewableFieldInterface
                     } elseif (isset($seen[$uid])) {
                         $this->addError('blockTypePickerGroups', "Block Type UID {$uid} appears more than once.");
                     }
+
                     $seen[$uid] = true;
                 }
+
                 $membership = array_map('strval', $group['blockTypeUids'] ?? []);
 
                 foreach ($group['disabledBlockTypeUids'] ?? [] as $uid) {
@@ -1145,14 +1165,17 @@ class VizyField extends Field implements PreviewableFieldInterface
             foreach ($this->blockTypeAvailabilityConditions as $uid => $config) {
                 if (!is_array($config)) {
                     $this->addError('blockTypeAvailabilityConditions', "Availability conditions for Block Type {$uid} are invalid.");
+
                     continue;
                 }
+
                 $hasRules = false;
 
                 foreach (['userCondition', 'elementCondition'] as $key) {
                     if (!isset($config[$key])) {
                         continue;
                     }
+
                     $condition = $this->_availabilityCondition($config[$key]);
 
                     if (!$condition) {
@@ -1446,6 +1469,7 @@ class VizyField extends Field implements PreviewableFieldInterface
                 if (!is_array($mark) || ($mark['type'] ?? null) !== 'link') {
                     continue;
                 }
+
                 $attrs = is_array($mark['attrs'] ?? null) ? $mark['attrs'] : [];
                 $kind = $attrs['type'] ?? null;
                 $value = $attrs['value'] ?? null;
@@ -1462,6 +1486,7 @@ class VizyField extends Field implements PreviewableFieldInterface
                 if (is_string($alt) && $alt !== '') {
                     $parts[] = $alt;
                 }
+
                 $assetUid = $attrs['assetUid'] ?? null;
 
                 if (is_string($assetUid) && $assetUid !== '') {

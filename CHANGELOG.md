@@ -72,6 +72,48 @@
 - Removed non-empty attribute-map configuration from `renderHtml()` and `renderStaticHtml()`; use node render events or Block templates to customise output.
 - Removed the unused `recursiveFieldCount` setting and the ability for a Vizy field save to modify global Block Type schema as a side effect.
 
+## 3.2.16 - 2026-10-17
+
+### Fixed
+- Fixed custom fields being incorrectly identified in the field layout designer.
+
+## 3.2.15 - 2026-10-09
+
+### Fixed
+- Fixed a high-severity input validation vulnerability. ([GHSA-4595-7fjw-r3jh](https://github.com/advisories/GHSA-4595-7fjw-r3jh))
+
+## 3.2.14 - 2026-10-07
+
+### Changed
+- Require Verbb Base 3.0.20 or later so shared control-panel layouts use the current asset bundle namespace. ([verbb-base#3](https://github.com/verbb/verbb-base/issues/3))
+
+## 3.2.13 - 2026-10-05
+
+### Fixed
+- Avoid Verbb Base deprecation warnings by using its current control-panel asset bundle namespace. ([verbb-base#3](https://github.com/verbb/verbb-base/issues/3))
+- Fix saves failing when another nested-element provider has not yet persisted an owner revision during Matrix recovery traversal. ([#378](https://github.com/verbb/vizy/issues/378))
+
+## 3.2.12 - 2026-10-02
+
+### Changed
+- Updated the required version of `verbb/base` to 3.0.19.
+
+## 3.2.11 - 2026-09-30
+
+### Changed
+- Route plugin settings through the plugin’s authorized settings controller.
+
+## 3.2.10 - 2026-09-23
+
+### Added
+- Add durable Matrix content recovery snapshots and console commands to inspect and restore individual snapshots.
+
+### Fixed
+- Preserve Matrix content before changes and deletions, retain detached anchors, and roll back writes when recovery snapshots cannot be recorded.
+- Keep draft Matrix content independent until publication, avoid anchor writes during rendering, and preserve anchor ownership through trash and restore.
+- Fix historical duplicated entries losing access to Matrix-in-Vizy content; recover surviving shared references on save/backfill into independent anchors, preserve source blocks during duplication, and roll back failed copies. ([#376](https://github.com/verbb/vizy/issues/376))
+- Fix saves failing with an invalid field handle error when required Matrix fields inside Vizy blocks propagate across sites.
+
 ## 3.2.9 - 2026-09-20
 
 ### Fixed

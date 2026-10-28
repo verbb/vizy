@@ -137,6 +137,7 @@ class MatrixAnchor extends Element
         if (!$owner) {
             return [$this->siteId ?? Craft::$app->getSites()->getPrimarySite()->id];
         }
+
         // Custom propagation can expose supported sites before the owner's
         // site rows exist. Its anchor must be ready for those first saves.
         return array_map(static fn(array $site): int => (int)$site['siteId'], ElementHelper::supportedSitesForElement($owner, true));

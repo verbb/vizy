@@ -121,6 +121,7 @@ class Anchors extends Component
             if (!$candidate?->id) {
                 continue;
             }
+
             $condition = [
                 'parentOwnerId' => (int)$candidate->id,
                 'vizyFieldId' => $vizyField->id,
@@ -134,16 +135,20 @@ class Anchors extends Component
             if (!$record) {
                 continue;
             }
+
             $anchor = Craft::$app->getElements()->getElementById($record->id, MatrixAnchor::class, $parentOwner->siteId);
 
             if (!$anchor instanceof MatrixAnchor || ($anchorUid && $anchor->uid !== $anchorUid)) {
                 continue;
             }
+
             // Only Craft's explicit source relationship can authorize a shared
             // historical reference; arbitrary UID lookup is never sufficient.
             $anchor->setParentOwner($candidate);
+
             return $anchor;
         }
+
         return null;
     }
 
@@ -254,6 +259,7 @@ class Anchors extends Component
                             if (!Craft::$app->getElements()->restoreElement($existing)) {
                                 throw new RuntimeException('Unable to restore the Vizy Matrix anchor.');
                             }
+
                             $this->_restoreMatrixFields($existing);
                         }
 
@@ -267,16 +273,20 @@ class Anchors extends Component
                             if (!Craft::$app->getElements()->saveElement($existing, false, true, false)) {
                                 throw new RuntimeException('Unable to localize the Vizy Matrix anchor.');
                             }
+
                             $existing = $this->getAnchor($parentOwner, $vizyField, $blockInstanceId, null, $documentKey);
 
                             if (!$existing) {
                                 throw new RuntimeException('The Vizy Matrix anchor is missing its requested site.');
                             }
                         }
+
                         $transaction->commit();
+
                         return $this->_applyFieldLayout($existing, $fieldLayout);
                     }
                 }
+
                 $creatingAnchor = true;
                 $anchor = $this->_createAnchor($parentOwner, $vizyField, $blockInstanceId, $fieldLayout, $anchorUid, $documentKey);
                 $creatingAnchor = false;
@@ -307,7 +317,9 @@ class Anchors extends Component
                         }
                     }
                 }
+
                 $transaction->commit();
+
                 return $anchor;
             } catch (\Throwable $e) {
                 $transaction->rollBack();
@@ -323,6 +335,7 @@ class Anchors extends Component
                         return $this->_applyFieldLayout($existing, $fieldLayout);
                     }
                 }
+
                 throw $e;
             }
         } finally {
@@ -345,6 +358,7 @@ class Anchors extends Component
             if ($stored === $submitted) {
                 return;
             }
+
             throw new RuntimeException('This Matrix content is still referenced by another owner or historical draft. Run vizy/anchors/backfill --drafts --revisions --trashed to give derivatives independent content before editing it. No content has been replaced.');
         }
 
@@ -385,6 +399,7 @@ class Anchors extends Component
         if ($this->hasExternalReferences($anchor)) {
             throw new RuntimeException('Cannot delete Matrix content while another owner or historical draft still references it. Run vizy/anchors/backfill --drafts --revisions --trashed first.');
         }
+
         $anchor->hardDelete = $hardDelete;
         // Loaded anchors have no persisted FieldLayout. Discover the fields from
         // their actual children so cleanup also works after schema removal.
@@ -445,11 +460,13 @@ class Anchors extends Component
                 if (!$field instanceof VizyField) {
                     continue;
                 }
+
                 $document = $owner->getFieldValue($field->handle);
 
                 if (!$document instanceof VizyDocument) {
                     continue;
                 }
+
                 $rawAnchorUids += $this->_referencedAnchorUids($document->content()->nodes());
 
                 foreach (DocumentWalk::blocks($document) as $block) {
@@ -510,6 +527,7 @@ class Anchors extends Component
                 throw new RuntimeException('Cannot delete this owner while its Matrix content is referenced by another owner or historical draft. Run vizy/anchors/backfill --drafts --revisions --trashed first.');
             }
         }
+
         $handler = [$this, 'handleOwnerDeleted'];
         $owner->off(Element::EVENT_AFTER_DELETE, $handler);
 
@@ -527,6 +545,7 @@ class Anchors extends Component
             if (!$owner->hardDelete && $anchor->trashed) {
                 continue;
             }
+
             $anchor->deletedWithOwner = true;
             $this->deleteAnchor($anchor, $owner->hardDelete);
         }
@@ -548,6 +567,7 @@ class Anchors extends Component
             if (!Craft::$app->getElements()->restoreElement($anchor)) {
                 throw new RuntimeException('Unable to restore the Vizy Matrix anchor.');
             }
+
             $this->_restoreMatrixFields($anchor);
         }
     }
@@ -688,11 +708,13 @@ class Anchors extends Component
         if (!$uid) {
             return null;
         }
+
         $anchor = $this->getStoredReferencedAnchor($owner, $field, $blockUid, $uid, $documentKey);
 
         if ($anchor) {
             return $anchor;
         }
+
         throw new RuntimeException("Matrix content for block {$blockUid} could not be resolved (anchor {$uid}). The stored reference and submitted content have been retained. Restore the missing content before saving.");
     }
 
@@ -703,6 +725,7 @@ class Anchors extends Component
         if (!$placementField instanceof VizyField || $placementField->id !== $vizyField->id) {
             return false;
         }
+
         $value = $element->getFieldValue($vizyField->handle);
 
         if (!$value instanceof VizyDocument) {
@@ -754,6 +777,7 @@ class Anchors extends Component
                 }
             }
         }
+
         return false;
     }
 
@@ -787,6 +811,7 @@ class Anchors extends Component
 
         $currentUser = Craft::$app->getUser()->getIdentity();
         $sourceOwner = $anchor->getParentOwner();
+
         return $currentUser && $sourceOwner && Craft::$app->getElements()->canView($sourceOwner, $currentUser);
     }
 
@@ -798,6 +823,7 @@ class Anchors extends Component
         string $anchorUid,
     ): bool {
         $key = $this->_migrationTrustKey($owner, $field);
+
         return $key !== null
             && ($this->trustedMigrationReferences[$key][$blockUid][$anchorUid] ?? null) === (int)$anchor->id;
     }
@@ -867,6 +893,7 @@ class Anchors extends Component
                 $uids += $this->_referencedAnchorUids($node['content']);
             }
         }
+
         return $uids;
     }
 
@@ -901,6 +928,7 @@ class Anchors extends Component
                 $fields[] = $field;
             }
         }
+
         return $fields;
     }
 
@@ -980,6 +1008,7 @@ class Anchors extends Component
             } catch (\Throwable) {
                 return false;
             }
+
             return is_array($decoded)
                 && $this->_containsStoredAnchorReference($decoded, $blockUid, $anchorUid, $depth + 1);
         }
@@ -1010,6 +1039,7 @@ class Anchors extends Component
                 return true;
             }
         }
+
         return false;
     }
 
@@ -1021,6 +1051,7 @@ class Anchors extends Component
         if (!$owner->id) {
             return 0;
         }
+
         $storedValues = (new Query())
             ->select('content')
             ->from(Table::ELEMENTS_SITES)
@@ -1067,6 +1098,7 @@ class Anchors extends Component
         foreach ($value as $child) {
             $count += $this->_countStoredAnchorReferences($child, $blockUid, $anchorUid, $depth + 1);
         }
+
         return $count;
     }
 

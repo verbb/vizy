@@ -160,11 +160,13 @@ class Vizy extends Plugin
 
             if ($element instanceof BlockElement) {
                 $event->static = false;
+
                 return;
             }
 
             if ($element instanceof MatrixAnchor) {
                 $event->static = false;
+
                 return;
             }
 
@@ -199,11 +201,14 @@ class Vizy extends Plugin
                         if (!$element instanceof CustomField) {
                             return true;
                         }
+
                         $field = $element->getField();
+
                         return $field !== null && $lifecycle->permitsNewPlacement($field);
                     },
                 ));
             }
+
             unset($fields);
         });
 
@@ -251,6 +256,7 @@ class Vizy extends Plugin
             if ($event->sender->id !== 'elements' || $event->action->id !== 'update-field-layout') {
                 return;
             }
+
             $namespace = (string)$event->sender->request->getHeaders()->get('X-Craft-Namespace');
 
             if (preg_match('/^vizyHost\[[A-Za-z0-9_-]+\]\[[^\]]+\]\[fields\]\[fields\]\[[^\]]+\]\[entries\]\[uid:[^\]]+\]$/D', $namespace)) {

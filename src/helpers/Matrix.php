@@ -89,6 +89,7 @@ class Matrix
                     throw new RuntimeException('A Matrix row could not be resolved. No rows have been discarded.');
                 }
             }
+
             return self::ensureSortOrder($content);
         }
 
@@ -111,6 +112,7 @@ class Matrix
             $block['uid'] = $key;
             $entries['uid:' . $key] = $block;
         }
+
         return ['entries' => $entries, 'sortOrder' => array_map(static fn(string $key) => substr($key, 4), array_keys($entries))];
     }
 
@@ -138,6 +140,7 @@ class Matrix
             if (!is_string($identity) && !is_int($identity)) {
                 throw new RuntimeException('A Matrix row has an invalid ordering identity. No rows have been discarded.');
             }
+
             $key = preg_replace('/^uid:/', '', (string)$identity);
 
             if (!isset($seen[$key])) {
@@ -188,17 +191,20 @@ class Matrix
                 if (!is_array($entry)) {
                     continue;
                 }
+
                 $newUid = StringHelper::UUID();
                 $uidMap[(string)$entryKey] = $newUid;
 
                 if (str_starts_with((string)$entryKey, 'uid:')) {
                     $uidMap[substr((string)$entryKey, 4)] = $newUid;
                 }
+
                 unset($entry['id'], $entry['ownerId'], $entry['canonicalId']);
                 $entry['uid'] = $newUid;
                 // Craft request keys prefer bare UIDs; keep values id-less for create.
                 $nextEntries[$newUid] = $entry;
             }
+
             $sortOrder = [];
 
             foreach (is_array($content['sortOrder'] ?? null) ? $content['sortOrder'] : [] as $item) {
@@ -222,6 +228,7 @@ class Matrix
             if (!is_array($block)) {
                 continue;
             }
+
             $newUid = StringHelper::UUID();
             unset($block['id'], $block['ownerId']);
             $block['uid'] = $newUid;
@@ -278,6 +285,7 @@ class Matrix
                 if ($uid !== '') {
                     $positions[$uid] = count($result);
                 }
+
                 $result[] = $entry;
             } else {
                 $previous = $result[$positions[$uid]];
@@ -295,6 +303,7 @@ class Matrix
                 }
             }
         }
+
         return $result;
     }
 

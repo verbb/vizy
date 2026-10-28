@@ -287,6 +287,7 @@ class FieldController extends Controller
             if (!$tab->getUid()) {
                 continue;
             }
+
             $elements = [];
 
             foreach ($tab->elements as [$layoutElement, $conditional, $html, $static]) {
@@ -294,8 +295,10 @@ class FieldController extends Controller
                     $elements[] = ['uid' => $layoutElement->uid, 'html' => $html, 'static' => $static];
                 }
             }
+
             $missingElements[] = ['uid' => $tab->getUid(), 'id' => $tab->getId(), 'elements' => $elements];
         }
+
         $tabs = $form->getTabMenu();
         $selected = $this->request->getBodyParam('selectedTab');
         $tabHtml = count($tabs) > 1 ? $view->namespaceInputs(fn() => $view->renderTemplate('_includes/tabs.twig', [
@@ -349,17 +352,20 @@ class FieldController extends Controller
             if (!$resolved) {
                 throw new BadRequestHttpException('The Vizy Matrix placement has changed. Reload the editor.');
             }
+
             [$context, $parentOwner, $vizyField] = $resolved;
 
             if ((int)$context['siteId'] !== (int)$siteId) {
                 throw new BadRequestHttpException('Vizy Matrix site does not match its editor.');
             }
+
             $blockInstanceId = $context['matrixBlockUid'] ?? '';
             $blockType = Vizy::$plugin->getBlockTypes()->getBlockTypeByUid($context['matrixBlockTypeUid'] ?? '');
 
             if (!$blockType || !in_array($blockType->uid, $vizyField->getAllowedBlockTypeUids(), true)) {
                 throw new BadRequestHttpException('Vizy Matrix block type is no longer available.');
             }
+
             $matrixAnchorUid = $context['matrixAnchorUid'] ?? null;
         } else {
             // Older open editors can still resolve an existing anchor, but
@@ -373,8 +379,10 @@ class FieldController extends Controller
             if (!$parentOwner || !$elementsService->canSave($parentOwner, $user)) {
                 throw new ForbiddenHttpException('User not authorized to create this element.');
             }
+
             $blockType = $this->_resolveBlockType($vizyField, $blockInstanceId, $parentOwner);
         }
+
         $field = $blockType?->getFieldLayout()?->getFieldById($fieldId);
 
         if (!$field instanceof Matrix) {
@@ -389,14 +397,17 @@ class FieldController extends Controller
             if ($matrixAnchorUid) {
                 throw new BadRequestHttpException('An embedded Matrix field cannot reference another owner’s stored rows.');
             }
+
             $projection = new \verbb\vizy\elements\Block();
             $projection->setOwner($parentOwner);
             $projection->setField($vizyField);
             $projection->setType($blockType);
             $projection->setBlockUid($blockInstanceId);
             $projection->setFieldLayout($blockType->getFieldLayout());
+
             return [$field, $entryType, $projection, $blockInstanceId];
         }
+
         $documentKey = isset($context) && is_array($context)
             ? AnchorDocuments::keyFromEditorContext($context)
             : null;
@@ -416,6 +427,7 @@ class FieldController extends Controller
             ]);
             $anchor->setParentOwner($parentOwner);
         }
+
         $anchor->setFieldLayout($blockType->getFieldLayout());
 
         return [$field, $entryType, $anchor, $blockInstanceId];
@@ -443,6 +455,7 @@ class FieldController extends Controller
             ) {
                 throw new BadRequestHttpException('Vizy Matrix context does not match its owner.');
             }
+
             $vizyFieldId = $vizyFieldId ?: $anchor->vizyFieldId;
             $blockInstanceId = $blockInstanceId ?: $anchor->blockInstanceId;
             $matrixAnchorUid = $matrixAnchorUid ?: $anchor->uid;
@@ -488,6 +501,7 @@ class FieldController extends Controller
 
         if ($value instanceof \verbb\vizy\document\VizyDocument) {
             $block = $value->findBlock($blockInstanceId);
+
             return $block?->blockType();
         }
 

@@ -47,6 +47,7 @@ class Fields
                 foreach ($tabs as $extraTab) {
                     array_push($elements, ...$extraTab->getElements());
                 }
+
                 $tab->setElements($elements);
             }
 
@@ -149,6 +150,7 @@ JS;
         foreach ($availableCustomFields as $groupFields) {
             self::_setLayoutOnElements($groupFields, $fieldLayout);
         }
+
         self::_setLayoutOnElements($availableNativeFields, $fieldLayout);
         self::_setLayoutOnElements($availableUiElements, $fieldLayout);
 
@@ -166,6 +168,7 @@ JS;
                         $elementConfig['dateAdded'] = DateTimeHelper::toIso8601((new DateTime())->modify('-1 minute'));
                     }
                 }
+
                 return $config;
             }, $tabs),
         ];
@@ -311,6 +314,7 @@ JS;
                 if ($field instanceof CustomField) {
                     return $field->getField()->uid === $uid;
                 }
+
                 return $field->attribute() === $attribute;
             })
         );

@@ -88,6 +88,7 @@ class AnchorsController extends Controller
                 if ($this->limit !== null && $position >= $this->limit) {
                     break 2;
                 }
+
                 $position++;
 
                 try {
@@ -96,21 +97,26 @@ class AnchorsController extends Controller
                     foreach ($element->getFieldLayout()?->getCustomFields() ?? [] as $field) {
                         if ($field instanceof VizyField && $anchors->elementNeedsMatrixAnchorBackfill($element, $field)) {
                             $needsBackfill = true;
+
                             break;
                         }
                     }
 
                     if (!$needsBackfill) {
                         $skipped++;
+
                         continue;
                     }
+
                     $this->stdout("  {$elementType} #{$element->id}, site {$element->siteId}: ");
 
                     if ($this->dryRun) {
                         $saved++;
                         $this->stdout("would save\n");
+
                         continue;
                     }
+
                     // Each locale is processed independently. Resave semantics
                     // preserve editorial dates and avoid search-index work.
                     $element->resaving = true;
@@ -118,6 +124,7 @@ class AnchorsController extends Controller
                     if (!$elementsService->saveElement($element, true, false, false)) {
                         throw new \RuntimeException(implode(', ', $element->getErrorSummary(true)));
                     }
+
                     $saved++;
                     $this->stdout("done\n", Console::FG_GREEN);
                 } catch (Throwable $e) {

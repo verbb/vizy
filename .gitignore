@@ -5,6 +5,8 @@
 
 # COMPOSER
 /vendor
+/composer.lock
+.phpunit.cache
 
 # TESTS
 .env.testing
