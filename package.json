@@ -16,7 +16,7 @@
     "devDependencies": {
         "@playwright/test": "1.62.1",
         "@tiptap/starter-kit": "3.30.5",
-        "happy-dom": "20.11.6",
+        "happy-dom": "21.0.4",
         "typescript": "6.0.3",
         "vite": "8.3.5",
         "vitest": "4.1.11"
