@@ -1,7 +1,7 @@
 name: Tests
 on:
   push:
-    branches: [beta]
+    branches: [craft-5, beta]
   pull_request:
   workflow_dispatch:
 permissions:

@@ -127,26 +127,34 @@ class Anchors extends Component
                 'vizyFieldId' => $vizyField->id,
                 'blockInstanceId' => $blockInstanceId,
             ];
-            $record = $documentKey !== null
-                ? MatrixAnchorRecord::findOne([...$condition, 'documentKey' => $documentKey])
-                    ?? MatrixAnchorRecord::findOne([...$condition, 'documentKey' => ''])
-                : MatrixAnchorRecord::findOne($condition);
+            $keys = $documentKey !== null ? array_unique([$documentKey, '']) : [null];
 
-            if (!$record) {
-                continue;
+            foreach ($keys as $key) {
+                $record = MatrixAnchorRecord::findOne($key !== null ? [...$condition, 'documentKey' => $key] : $condition);
+
+                if (!$record) {
+                    continue;
+                }
+
+                $anchor = Craft::$app->getElements()->getElementById($record->id, MatrixAnchor::class, $parentOwner->siteId);
+
+                // A revision can copy a legacy reference before that source
+                // anchor has been propagated to every site. Only Craft's explicit
+                // source relationship authorizes selecting another localization.
+                if (!$anchor && $anchorUid && $candidate->id !== $parentOwner->id) {
+                    $anchor = MatrixAnchor::find()->id($record->id)->site('*')->status(null)->one();
+                }
+
+                if (!$anchor instanceof MatrixAnchor || ($anchorUid && $anchor->uid !== $anchorUid)) {
+                    continue;
+                }
+
+                // The exact placement may already have a replacement anchor.
+                // Historical snapshots can still name the legacy ownership row.
+                $anchor->setParentOwner($candidate);
+
+                return $anchor;
             }
-
-            $anchor = Craft::$app->getElements()->getElementById($record->id, MatrixAnchor::class, $parentOwner->siteId);
-
-            if (!$anchor instanceof MatrixAnchor || ($anchorUid && $anchor->uid !== $anchorUid)) {
-                continue;
-            }
-
-            // Only Craft's explicit source relationship can authorize a shared
-            // historical reference; arbitrary UID lookup is never sufficient.
-            $anchor->setParentOwner($candidate);
-
-            return $anchor;
         }
 
         return null;

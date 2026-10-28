@@ -59,7 +59,7 @@ function legacyPromotionFixture(
                 'instructions' => null,
                 'settings' => [
                     'editorMode' => $mode,
-                    'vizyConfig' => 'standard',
+                    'vizyConfig' => '',
                     'minBlocks' => 1,
                     'maxBlocks' => 5,
                     'fieldData' => [[
@@ -436,7 +436,7 @@ it('refuses production legacy reads when field provenance is absent', function()
     ))->toThrow(\verbb\vizy\document\InvalidDocumentException::class, 'has not been upgraded to Vizy 4 yet');
 });
 
-it('applies global schema provenance and canonical field references through resumable verified stages', function() {
+it('applies global schema provenance and canonical field references through resumable verified stages', function(string $stopAt, string $checkpoint) {
     $fixture = legacyPromotionFixture('orderedApply' . StringHelper::randomString(5));
     // A real template path exercises slash encoding in analyze/apply fingerprints.
     $fixture['fields'][$fixture['fieldUid']]['settings']['fieldData'][0]['blockTypes'][0]['template'] = '_blocks/cards/feature';
@@ -452,8 +452,8 @@ it('applies global schema provenance and canonical field references through resu
     $targetUid = $plan['fields'][$fixture['fieldUid']]['schemaMap'][$fixture['legacyTypeId']]['blockTypeUid'];
 
     $interrupted = false;
-    $orchestrator->setStageProbeForTesting(function(string $stage) use (&$interrupted): void {
-        if ($stage === 'canonicalFields' && !$interrupted) {
+    $orchestrator->setStageProbeForTesting(function(string $stage) use (&$interrupted, $stopAt): void {
+        if ($stage === $stopAt && !$interrupted) {
             $interrupted = true;
             throw new RuntimeException('injected promotion interruption');
         }
@@ -465,10 +465,8 @@ it('applies global schema provenance and canonical field references through resu
     $orchestrator->setStageProbeForTesting(null);
 
     expect($failed['status'])->toBe('failed')
-        ->and($failed['stage'])->toBe('editorConfigs', json_encode($failed))
-        ->and($failed['lastError'])->toContain('injected promotion interruption')
-        ->and(Craft::$app->getProjectConfig()->get("plugins.vizy.blockTypes.{$targetUid}"))->toBeArray()
-        ->and(\verbb\vizy\records\BlockType::findOne(['uid' => $targetUid])->fieldLayoutId)->toBeGreaterThan(0);
+        ->and($failed['stage'])->toBe($checkpoint, json_encode($failed))
+        ->and($failed['lastError'])->toContain('injected promotion interruption');
 
     expect((new m260921_000000_vizy3_upgrade())->up(true))->toBeTrue();
     $complete = $orchestrator->status($failed['runUid'])[0];
@@ -476,18 +474,28 @@ it('applies global schema provenance and canonical field references through resu
         Craft::$app->getProjectConfig()->get("fields.{$fixture['fieldUid']}")
     );
     expect($complete['status'])->toBe('complete', json_encode($complete))
+        ->and(Craft::$app->getProjectConfig()->get("plugins.vizy.blockTypes.{$targetUid}"))->toBeArray()
+        ->and(\verbb\vizy\records\BlockType::findOne(['uid' => $targetUid])->fieldLayoutId)->toBeGreaterThan(0)
         ->and($complete['stage'])->toBe('verified')
         ->and($complete['sourceDeletionAuthorized'])->toBeFalse()
         ->and($fieldConfig['settings']['blockTypePickerGroups'])->not->toBeEmpty()
         ->and($fieldConfig['settings']['fieldData'])->not->toBeEmpty()
         ->and(Vizy::$plugin->getLegacySchemaMaps()->getProvenance($fixture['fieldUid'])['sourceFingerprint'])
         ->toBe($plan['fields'][$fixture['fieldUid']]['sourceFingerprint']);
-});
+})->with([
+    'before schema' => ['globalSchema', 'planned'],
+    'after schema' => ['provenance', 'globalSchema'],
+    'before editor configs' => ['editorConfigs', 'provenance'],
+    'before canonical fields' => ['canonicalFields', 'editorConfigs'],
+    'after canonical fields' => ['owners', 'canonicalFields'],
+    'before final verification' => ['verified', 'owners'],
+]);
 
-it('upgrades selected JSON editor configs through fresh and resumed automatic migrations', function(bool $resume, bool $missing) {
+it('upgrades selected JSON editor configs through fresh and resumed automatic migrations', function(bool $resume, bool $missing, bool $invalid = false, string $filename = '', bool $stemPlan = false) {
     $fixture = legacyPromotionFixture('fileConfig' . StringHelper::randomString(5));
     $fieldUid = $fixture['fieldUid'];
-    $id = 'extended-' . strtolower(StringHelper::randomString(6));
+    $id = $filename ?: 'extended-' . strtolower(StringHelper::randomString(6));
+    $expectedId = Vizy::$plugin->getEditorConfigs()->getFileConfigId($id . '.json');
     $fixture['fields'][$fieldUid]['settings']['vizyConfig'] = $id . '.json';
     $projectConfig = Craft::$app->getProjectConfig();
     $configs = Vizy::$plugin->getEditorConfigs();
@@ -497,7 +505,7 @@ it('upgrades selected JSON editor configs through fresh and resumed automatic mi
     $path = $dir . '/' . $id . '.json';
     $json = Json::encode(['buttons' => ['bold', 'italic', 'link']]);
     if (!$missing) {
-        file_put_contents($path, $json);
+        file_put_contents($path, $invalid ? '{"buttons":' : $json);
     }
 
     try {
@@ -511,7 +519,7 @@ it('upgrades selected JSON editor configs through fresh and resumed automatic mi
 
         if ($resume) {
             // Recreate an immutable plan saved by 4.0.0 with the legacy filename.
-            $plan['fields'][$fieldUid]['canonicalFieldSettings']['editorConfig'] = $id . '.json';
+            $plan['fields'][$fieldUid]['canonicalFieldSettings']['editorConfig'] = $stemPlan ? $id : $id . '.json';
             unset($plan['planHash']);
             $sort = static function(array $value) use (&$sort): array {
                 if (!array_is_list($value)) {
@@ -537,10 +545,10 @@ it('upgrades selected JSON editor configs through fresh and resumed automatic mi
             $record = SchemaPromotion::findOne(['runUid' => $failed['runUid']]);
             $storedPlan = $record->planJson;
         } else {
-            expect($plan['fields'][$fieldUid]['canonicalFieldSettings']['editorConfig'])->toBe($id);
+            expect($plan['fields'][$fieldUid]['canonicalFieldSettings']['editorConfig'])->toBe($expectedId);
         }
 
-        if ($missing) {
+        if ($missing || $invalid) {
             $failed = $orchestrator->apply($plan, ['complete' => true, 'jobs' => []]);
             expect($failed['status'])->toBe('failed')
                 ->and($failed['stage'])->toBe('provenance')
@@ -552,8 +560,8 @@ it('upgrades selected JSON editor configs through fresh and resumed automatic mi
         }
 
         expect((new m260921_000000_vizy3_upgrade())->up(true))->toBeTrue();
-        expect($projectConfig->get("fields.{$fieldUid}.settings.editorConfig"))->toBe($id)
-            ->and($configs->getConfig($id)['source'])->toBe(EditorConfigs::SOURCE_FILE)
+        expect($projectConfig->get("fields.{$fieldUid}.settings.editorConfig"))->toBe($expectedId)
+            ->and($configs->getConfig($expectedId)['source'])->toBe(EditorConfigs::SOURCE_FILE)
             ->and(file_get_contents($path))->toBe($json);
 
         if ($resume) {
@@ -573,7 +581,51 @@ it('upgrades selected JSON editor configs through fresh and resumed automatic mi
     'fresh' => [false, false],
     'resume 4.0.0 plan' => [true, false],
     'missing file restored' => [false, true],
+    'invalid JSON repaired' => [false, false, true],
+    'RK max fresh' => [false, false, false, 'RK max'],
+    'RK max original filename plan' => [true, false, false, 'RK max'],
+    'RK max stripped filename plan' => [true, false, false, 'RK max', true],
+    'reserved standard stripped filename plan' => [true, false, false, 'standard', true],
 ]);
+
+it('upgrades mixed field modes with shared and distinct JSON config files', function(bool $shared) {
+    $configs = Vizy::$plugin->getEditorConfigs();
+    $projectConfig = Craft::$app->getProjectConfig();
+    $dir = Craft::$app->getPath()->getConfigPath() . '/vizy';
+    FileHelper::createDirectory($dir);
+    $prefix = 'mixed-' . strtolower(StringHelper::randomString(8));
+    $fields = [];
+    $paths = [];
+    try {
+        foreach ([VizyField::MODE_BLOCKS, VizyField::MODE_COMBINED, VizyField::MODE_RICH_TEXT] as $index => $mode) {
+            $fixture = legacyPromotionFixture('mixedType' . $index . StringHelper::randomString(5), $mode);
+            $filename = $prefix . ($shared ? '' : '-' . $index) . '.json';
+            $path = $dir . '/' . $filename;
+            file_put_contents($path, Json::encode(['buttons' => ['italic', 'h2']]));
+            $paths[$path] = true;
+            foreach ($fixture['fields'] as $uid => $config) {
+                $config['handle'] .= $index;
+                if ($uid === $fixture['fieldUid']) {
+                    $config['settings']['vizyConfig'] = $filename;
+                    $fields[$uid] = ['id' => pathinfo($filename, PATHINFO_FILENAME), 'mode' => $mode];
+                }
+                $projectConfig->set("fields.{$uid}", $config);
+            }
+        }
+        $configs->invalidate();
+        Craft::$app->getFields()->refreshFields();
+        expect((new m260921_000000_vizy3_upgrade())->up(true))->toBeTrue();
+        foreach ($fields as $uid => $expected) {
+            expect($projectConfig->get("fields.{$uid}.settings.editorConfig"))->toBe($expected['id'])
+                ->and($projectConfig->get("fields.{$uid}.settings.rootContentType"))
+                ->toBe($expected['mode'] === VizyField::MODE_BLOCKS ? 'blocks' : 'rich')
+                ->and($configs->getConfig($expected['id'])['capabilities']['marks'])->toBe(['italic']);
+        }
+    } finally {
+        foreach (array_keys($paths) as $path) unlink($path);
+        $configs->invalidate();
+    }
+})->with(['shared file' => [true], 'separate files' => [false]]);
 
 it('rejects stale promotion plans before any new stage is recorded', function() {
     $fixture = legacyPromotionFixture('staleApply' . StringHelper::randomString(5));

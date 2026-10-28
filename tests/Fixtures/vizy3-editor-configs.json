@@ -1,0 +1,202 @@
+{
+  "source": {
+    "plugin": "3.2.16",
+    "craft": "5.11.1",
+    "baseline": "baseline-009-real-configs"
+  },
+  "cases": [
+    {
+      "handle": "q_config_default",
+      "settings": {
+        "configSelectionMode": "choose",
+        "vizyConfig": "",
+        "manualConfig": ""
+      },
+      "filename": "Default.json",
+      "contents": "{\"buttons\":[\"html\",\"bold\",\"italic\",\"underline\",\"strikethrough\",\"unordered-list\",\"ordered-list\",\"blockquote\",\"hr\",\"code-block\",\"h2\",\"h3\",\"link\",\"image\",\"iframe\",\"media-embed\",\"table\"],\"formatting\":[\"h2\",\"h3\",\"paragraph\"],\"toolbarFixed\":true}",
+      "effective": {
+        "buttons": [
+          "html",
+          "bold",
+          "italic",
+          "underline",
+          "strikethrough",
+          "unordered-list",
+          "ordered-list",
+          "blockquote",
+          "hr",
+          "code-block",
+          "h2",
+          "h3",
+          "link",
+          "image",
+          "iframe",
+          "media-embed",
+          "table"
+        ],
+        "formatting": [
+          "h2",
+          "h3",
+          "paragraph"
+        ],
+        "toolbarFixed": true
+      }
+    },
+    {
+      "handle": "q_config_dots",
+      "settings": {
+        "configSelectionMode": "choose",
+        "vizyConfig": "extended.editor.json",
+        "manualConfig": ""
+      },
+      "filename": "extended.editor.json",
+      "contents": "{\"buttons\":[\"bold\",\"h4\"]}",
+      "effective": {
+        "buttons": [
+          "bold",
+          "h4"
+        ]
+      }
+    },
+    {
+      "handle": "q_config_reserved",
+      "settings": {
+        "configSelectionMode": "choose",
+        "vizyConfig": "standard.json",
+        "manualConfig": ""
+      },
+      "filename": "standard.json",
+      "contents": "{\"buttons\":[\"italic\",\"h5\"]}",
+      "effective": {
+        "buttons": [
+          "italic",
+          "h5"
+        ]
+      }
+    },
+    {
+      "handle": "q_config_spaces",
+      "settings": {
+        "configSelectionMode": "choose",
+        "vizyConfig": "Extended Editor.json",
+        "manualConfig": ""
+      },
+      "filename": "Extended Editor.json",
+      "contents": "{\"buttons\":[\"strikethrough\",\"h3\"]}",
+      "effective": {
+        "buttons": [
+          "strikethrough",
+          "h3"
+        ]
+      }
+    },
+    {
+      "handle": "q_config_uppercase",
+      "settings": {
+        "configSelectionMode": "choose",
+        "vizyConfig": "Extended.json",
+        "manualConfig": ""
+      },
+      "filename": "Extended.json",
+      "contents": "{\"buttons\":[\"underline\",\"h2\"]}",
+      "effective": {
+        "buttons": [
+          "underline",
+          "h2"
+        ]
+      }
+    },
+    {
+      "handle": "v3m_vizy_file",
+      "settings": {
+        "configSelectionMode": "choose",
+        "vizyConfig": "migration-default.json",
+        "manualConfig": ""
+      },
+      "filename": "migration-default.json",
+      "contents": "{\n    \"buttons\": [\"html\", \"bold\", \"italic\", \"underline\", \"strikethrough\", \"unordered-list\", \"ordered-list\", \"blockquote\", \"h2\", \"h3\", \"link\", \"image\"],\n    \"formatting\": [\"h2\", \"h3\", \"paragraph\"],\n    \"toolbarFixed\": true\n}\n",
+      "effective": {
+        "buttons": [
+          "html",
+          "bold",
+          "italic",
+          "underline",
+          "strikethrough",
+          "unordered-list",
+          "ordered-list",
+          "blockquote",
+          "h2",
+          "h3",
+          "link",
+          "image"
+        ],
+        "formatting": [
+          "h2",
+          "h3",
+          "paragraph"
+        ],
+        "toolbarFixed": true
+      }
+    },
+    {
+      "handle": "v3m_vizy_manual",
+      "settings": {
+        "configSelectionMode": "manual",
+        "vizyConfig": "",
+        "manualConfig": "{\"buttons\":[\"bold\",\"italic\",\"h2\",\"unordered-list\",\"link\"],\"formatting\":[\"h2\",\"paragraph\"]}"
+      },
+      "filename": null,
+      "contents": null,
+      "effective": {
+        "buttons": [
+          "bold",
+          "italic",
+          "h2",
+          "unordered-list",
+          "link"
+        ],
+        "formatting": [
+          "h2",
+          "paragraph"
+        ]
+      }
+    },
+    {
+      "handle": "v3m_vizy_media",
+      "settings": {
+        "configSelectionMode": "manual",
+        "vizyConfig": "",
+        "manualConfig": "{\"buttons\":[\"html\",\"bold\",\"italic\",\"underline\",\"strikethrough\",\"unordered-list\",\"ordered-list\",\"blockquote\",\"hr\",\"code-block\",\"h2\",\"h3\",\"link\",\"image\",\"iframe\",\"media-embed\",\"table\"],\"formatting\":[\"h2\",\"h3\",\"paragraph\"],\"toolbarFixed\":true}"
+      },
+      "filename": null,
+      "contents": null,
+      "effective": {
+        "buttons": [
+          "html",
+          "bold",
+          "italic",
+          "underline",
+          "strikethrough",
+          "unordered-list",
+          "ordered-list",
+          "blockquote",
+          "hr",
+          "code-block",
+          "h2",
+          "h3",
+          "link",
+          "image",
+          "iframe",
+          "media-embed",
+          "table"
+        ],
+        "formatting": [
+          "h2",
+          "h3",
+          "paragraph"
+        ],
+        "toolbarFixed": true
+      }
+    }
+  ]
+}

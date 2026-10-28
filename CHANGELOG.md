@@ -4,6 +4,9 @@
 
 ### Fixed
 - Fixed Vizy 3 upgrades failing when fields selected JSON editor config files, including when retrying a failed upgrade.
+- Fixed upgrades losing editor configs named `Default.json` or using uppercase letters, spaces, dots, numeric names, or `standard.json`.
+- Fixed migrated images disappearing on sites added after the asset was created, and preserved explicit image site references.
+- Fixed content conversion failing when Craft created revisions referencing legacy Matrix anchors.
 
 ## 4.0.0 - 2026-10-28
 

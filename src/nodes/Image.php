@@ -57,6 +57,15 @@ class Image extends Node
                 $siteId,
             );
 
+            // Older assets may predate a secondary site's elements_sites row.
+            // The file is shared across sites; use an existing localization when
+            // current-site resolution is unavailable, while respecting fixed sites.
+            if (!$asset instanceof Asset && ($attrs['siteMode'] ?? 'current') === 'current') {
+                $asset = Asset::find()->uid($assetUid)->siteId('*')
+                    ->preferSites([$siteId ?? Craft::$app->getSites()->getPrimarySite()->id])
+                    ->unique()->status(null)->one();
+            }
+
             if (!$asset instanceof Asset) {
                 $asset = null;
             }
@@ -70,6 +79,7 @@ class Image extends Node
         if ((!is_string($transform) || $transform === '') && ($field = $ctx->fieldOrNull())) {
             $transform = FieldImageOptions::defaultTransformHandle($field);
         }
+
         ArrayHelper::remove($attrs, 'transform');
 
         $src = $attrs['src'] ?? null;
@@ -106,6 +116,7 @@ class Image extends Node
         } elseif ($altMode === 'missing') {
             unset($attrs['alt']);
         }
+
         // custom: keep attrs.alt as authored
 
         return $attrs;
@@ -179,6 +190,7 @@ class Image extends Node
             if ($value === '' && $key !== 'alt') {
                 continue;
             }
+
             $emitAttrs[$key] = $value;
         }
 

@@ -51,7 +51,9 @@ To build a config visually, open **Settings → Vizy → Editor Configs**. You c
 
 You can also define a config in `config/vizy/{id}.json`, using the same keys as the Advanced JSON tab. File configs appear in the control panel so you can inspect and select them, but you edit their contents in the file itself. Both approaches can be used in the same project.
 
-The filename stem is the Config ID (`minimal.json` → `minimal`). IDs must be lowercase letters, numbers, dashes and underscores, starting with a letter. Project Config and files share one ID namespace: if both claim the same ID, Project Config wins and the file is ignored with a warning. Creating a Project Config entry under a file's ID is refused until you rename or remove the file.
+Use lowercase letters, numbers, dashes and underscores, starting with a letter, for predictable file Config IDs (`minimal.json` → `minimal`). Existing filenames with uppercase letters, spaces, dots or an initial number are also supported: Vizy assigns them a stable ID and shows their readable name in the config selector. `standard.json` receives its own ID so it remains separate from the built-in Standard config.
+
+Project Config and files share one ID namespace: if both claim the same ID, Project Config wins and the file is ignored with a warning. Creating a Project Config entry under a file’s ID is refused until you rename or remove the file.
 
 :::tip
 Ensure file configs are valid JSON — no trailing commas, double quotes around properties.

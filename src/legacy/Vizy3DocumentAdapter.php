@@ -3,6 +3,8 @@ namespace verbb\vizy\legacy;
 
 use verbb\vizy\document\VizyDocument;
 
+use Craft;
+
 /**
  * Strictly converts Vizy 3 storage only after schema promotion is known.
  */
@@ -86,6 +88,7 @@ final class Vizy3DocumentAdapter
                 if (!is_array($mark)) {
                     throw new LegacyDocumentConversionException("Malformed legacy mark at {$path}.marks.{$index}.");
                 }
+
                 $node['marks'][$index] = $this->_convertMark($mark, "{$path}.marks.{$index}");
             }
         }
@@ -194,9 +197,18 @@ final class Vizy3DocumentAdapter
         $src = is_string($attrs['src'] ?? null) ? $attrs['src'] : '';
         $assetUid = null;
         $assetId = null;
+        $siteUid = null;
 
-        if (preg_match('/#asset:(\d+)(?::|$)/', $src, $m)) {
+        if (preg_match('/#asset:(\d+)(?:@(\d+))?(?::|$)/', $src, $m)) {
             $assetId = (int)$m[1];
+
+            if (!empty($m[2])) {
+                $siteUid = Craft::$app->getSites()->getSiteById((int)$m[2])?->uid;
+
+                if ($siteUid === null) {
+                    throw new LegacyDocumentConversionException("Legacy image at {$path} references an unknown site.");
+                }
+            }
         } elseif (isset($attrs['id']) && is_numeric($attrs['id'])) {
             $assetId = (int)$attrs['id'];
         }
@@ -218,13 +230,17 @@ final class Vizy3DocumentAdapter
 
         $node['attrs'] = [
             'assetUid' => $assetUid,
-            'siteMode' => 'current',
+            'siteMode' => $siteUid !== null ? 'fixed' : 'current',
             'altMode' => isset($attrs['alt']) && is_string($attrs['alt']) && $attrs['alt'] !== '' ? 'custom' : 'asset',
             'alt' => is_string($attrs['alt'] ?? null) ? $attrs['alt'] : '',
             'title' => is_string($attrs['title'] ?? null) ? $attrs['title'] : '',
             'size' => 'default',
             'transform' => is_string($attrs['transform'] ?? null) ? $attrs['transform'] : '',
         ];
+
+        if ($siteUid !== null) {
+            $node['attrs']['siteUid'] = $siteUid;
+        }
 
         // V3 stores the image's enclosing link separately from ordinary text marks.
         if (is_string($attrs['url'] ?? null) && $attrs['url'] !== '') {
@@ -236,6 +252,7 @@ final class Vizy3DocumentAdapter
             if (is_string($attrs['linkClass'] ?? null) && $attrs['linkClass'] !== '') {
                 $link['class'] = $attrs['linkClass'];
             }
+
             $node['attrs']['link'] = $link;
         }
 
@@ -252,11 +269,13 @@ final class Vizy3DocumentAdapter
         if (!is_string($blockUid) || $blockUid === '' || isset($seenBlockUids[$blockUid])) {
             throw new LegacyDocumentConversionException("Legacy Block at {$path} has a missing or duplicate instance ID.");
         }
+
         $seenBlockUids[$blockUid] = true;
 
         if (!is_string($legacyTypeId) || !isset($schemaMap[$legacyTypeId])) {
             throw new LegacyDocumentConversionException("No explicit Block Type mapping exists for '{$legacyTypeId}' at {$path}.");
         }
+
         $mapping = $schemaMap[$legacyTypeId];
 
         if (!is_string($mapping['blockTypeUid'] ?? null) || $mapping['blockTypeUid'] === '') {
@@ -296,6 +315,7 @@ final class Vizy3DocumentAdapter
                     "Multiple legacy placement keys claim canonical placement '{$canonicalPlacement}' on legacy Block Type '{$legacyTypeId}'."
                 );
             }
+
             // Nested Vizy bare lists / JSON strings pass through for runtime convert via the
             // nested field's Documents::normalizeValue + provenance (no bulk entry rewrite).
             // Matrix blobs are omitted from fieldSlots once an anchor exists (Entries live

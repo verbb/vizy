@@ -9,12 +9,13 @@ use Craft;
 use craft\helpers\Json;
 use craft\helpers\StringHelper;
 
+use RuntimeException;
 use Throwable;
 
 /**
  * Mints Project Config Editor Configs from Vizy 3 inline “Enter a custom config” JSON.
  *
- * File-backed `config/vizy/*.json` refs become filename-stem IDs. Dedupes by normalized
+ * File-backed `config/vizy/*.json` refs resolve to stable file IDs. Dedupes by normalized
  * authorable fingerprint so identical pastes share one config.
  */
 final class ManualEditorConfigMigrator
@@ -24,8 +25,31 @@ final class ManualEditorConfigMigrator
 
     public static function normalizeConfigId(string $id): string
     {
-        // Vizy 3 stored the filename; Vizy 4 indexes file configs by its stem.
-        return str_ends_with($id, '.json') ? substr($id, 0, -5) : $id;
+        // An empty Vizy 3 selection loaded Default.json when present.
+        if ($id === '' && is_file(Craft::$app->getPath()->getConfigPath() . '/vizy/Default.json')) {
+            $id = 'Default.json';
+        }
+
+        // The first upgrade fix saved filename stems in new promotion plans.
+        // A retry must also resolve legacy stems such as ‘RK max’.
+        if ($id !== '' && !str_ends_with($id, '.json')
+            && is_file(Craft::$app->getPath()->getConfigPath() . '/vizy/' . $id . '.json')
+        ) {
+            $id .= '.json';
+        }
+
+        if (!str_ends_with($id, '.json')) {
+            return $id;
+        }
+
+        $configs = Vizy::$plugin->getEditorConfigs();
+        $resolved = $configs->getFileConfigId($id);
+
+        if ($configs->fileOwnsId($resolved) && !$configs->isFileConfig($resolved)) {
+            throw new RuntimeException("Selected Editor Config file {$id} cannot be loaded or is shadowed by Project Config. Correct the file or resolve the conflicting ID before upgrading.");
+        }
+
+        return $resolved;
     }
 
 
@@ -48,8 +72,14 @@ final class ManualEditorConfigMigrator
         if (($settings['configSelectionMode'] ?? 'choose') !== 'manual') {
             $id = is_string($settings['vizyConfig'] ?? null) ? $settings['vizyConfig'] : '';
 
+            try {
+                $resolved = self::normalizeConfigId($id);
+            } catch (Throwable $exception) {
+                return $this->_fail($fieldUid, 'fileEditorConfigUnavailable', $exception->getMessage());
+            }
+
             return [
-                'editorConfig' => self::normalizeConfigId($id),
+                'editorConfig' => $resolved,
                 'mint' => null,
                 'fingerprint' => null,
                 'diagnostics' => [],

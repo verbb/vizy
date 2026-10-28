@@ -22,8 +22,8 @@ use Throwable;
  * Two sources, one ID namespace. Project Config holds the ones authored in the CP. JSON files under
  * `config/vizy/` hold the ones authored on disk, Vizy 3-style. Both are selectable on a field;
  * only Project Config is writable from the CP. A file never shadows a Project Config entry of the
- * same ID — deployable YAML you already saved wins — and a Project Config save refuses an ID a
- * file already owns, so the two cannot silently overwrite each other either way.
+ * same ID. Files with legacy names or the reserved standard name receive a stable
+ * filename-based ID, so upgrades retain the selected file without overwriting saved configs.
  */
 final class EditorConfigs extends Component
 {
@@ -54,11 +54,13 @@ final class EditorConfigs extends Component
         if ($this->configs !== null) {
             return $this->configs;
         }
+
         $raw = Craft::$app->getProjectConfig()->get(self::PROJECT_CONFIG_PATH) ?? [];
 
         if (!is_array($raw)) {
             $raw = [];
         }
+
         // Fresh installs persist this seed. The fallback keeps update requests
         // usable until the idempotent update migration has applied PC.
         $raw[self::DEFAULT_ID] ??= $this->_standardConfig();
@@ -74,15 +76,11 @@ final class EditorConfigs extends Component
             }
         }
 
-        // Files fill gaps only. Same ID in both is a developer mistake, not a merge — Project
-        // Config keeps the seat and the file is left on the shelf with a warning, rather than
-        // the CP silently losing an edit the next time the file is read.
+        // Project Config retains its IDs; an ambiguous filename cannot replace a saved config.
         foreach ($this->_readFileConfigs() as $id => $file) {
             if (isset($this->configs[$id])) {
-                Craft::warning(
-                    "Vizy Editor Config file `{$file['filename']}` is ignored because Project Config already owns “{$id}”.",
-                    __METHOD__,
-                );
+                Craft::warning("Vizy Editor Config file `{$file['filename']}` is ignored because Project Config already owns “{$id}”.", __METHOD__);
+
                 continue;
             }
 
@@ -100,9 +98,11 @@ final class EditorConfigs extends Component
                         "Vizy Editor Config file `{$file['filename']}` could not be loaded: {$exception->getMessage()} (V3 convert: {$conversionException->getMessage()})",
                         __METHOD__,
                     );
+
                     continue;
                 }
             }
+
             $normalized['source'] = self::SOURCE_FILE;
             $normalized['filename'] = $file['filename'];
             $this->configs[$id] = $normalized;
@@ -110,6 +110,7 @@ final class EditorConfigs extends Component
         }
 
         ksort($this->configs);
+
         return $this->configs;
     }
 
@@ -118,6 +119,7 @@ final class EditorConfigs extends Component
         if (!$id) {
             return null;
         }
+
         return $this->getAllConfigs()[$id] ?? null;
     }
 
@@ -126,9 +128,24 @@ final class EditorConfigs extends Component
         if (!$id) {
             return false;
         }
+
         $config = $this->getConfig($id);
 
         return ($config['source'] ?? null) === self::SOURCE_FILE;
+    }
+
+    public function getFileConfigId(string $filename): string
+    {
+        $stem = pathinfo($filename, PATHINFO_FILENAME);
+
+        if (preg_match('/^[a-z][a-z0-9_-]*$/', $stem)
+            && $stem !== self::DEFAULT_ID) {
+            return $stem;
+        }
+
+        // Vizy 3 allowed uppercase, spaces and dots. Hash the exact filename rather
+        // than slugifying it: Main.json and main.json must remain separate configs.
+        return 'file-' . hash('sha256', $filename);
     }
 
     /**
@@ -139,7 +156,13 @@ final class EditorConfigs extends Component
      */
     public function fileOwnsId(string $id): bool
     {
-        return isset($this->_readFileConfigs()[$id]);
+        foreach ($this->_readFileConfigs() as $fileId => $file) {
+            if ($fileId === $id || pathinfo($file['filename'], PATHINFO_FILENAME) === $id) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     /**
@@ -200,7 +223,9 @@ final class EditorConfigs extends Component
         if ($label === '') {
             $config['label'] = 'Imported manual config';
         }
+
         $normalized = $this->_normalize('fingerprint', $config, null);
+
         return hash('sha256', $this->_stableJson($this->authorablePayload($normalized)));
     }
 
@@ -215,6 +240,7 @@ final class EditorConfigs extends Component
                 "Vizy Editor Config “{$id}” is owned by a file in config/" . self::FILE_CONFIG_DIR . '/. Rename or remove the file before saving it in Project Config.',
             );
         }
+
         // Persist the authorable surface; getAllConfigs() re-normalizes on read.
         $normalized = $this->_normalize($id, $config, is_array($baseline) ? $baseline : null);
         Craft::$app->getProjectConfig()->set(
@@ -222,6 +248,7 @@ final class EditorConfigs extends Component
             $this->authorablePayload($normalized),
         );
         $this->invalidate();
+
         return true;
     }
 
@@ -232,6 +259,7 @@ final class EditorConfigs extends Component
                 "Vizy Editor Config “{$id}” lives in a file and cannot be deleted from the control panel.",
             );
         }
+
         Craft::$app->getProjectConfig()->remove(self::PROJECT_CONFIG_PATH . '.' . $id);
         $this->invalidate();
     }
@@ -292,6 +320,7 @@ final class EditorConfigs extends Component
                 $this->_standardConfig(),
             );
         }
+
         $this->invalidate();
     }
 
@@ -315,6 +344,7 @@ final class EditorConfigs extends Component
             if (!is_string($id) || !is_array($config)) {
                 throw new RuntimeException('Incoming Vizy Editor Config schema must be an ID-keyed map.');
             }
+
             $this->_normalize($id, $config, is_array($baseline[$id] ?? null) ? $baseline[$id] : null);
         }
     }
@@ -336,13 +366,16 @@ final class EditorConfigs extends Component
         if (is_string($baseline) && hash_equals($baseline, $id)) {
             return true;
         }
+
         $field->addError('editorConfig', "Unknown Vizy Editor Config: {$id}.");
+
         return false;
     }
 
     public function getFieldDiagnostics(VizyField $field): array
     {
         $id = $field->editorConfig !== '' ? $field->editorConfig : self::DEFAULT_ID;
+
         return $this->getConfig($id) ? [] : [['code' => 'missingEditorConfig', 'id' => $id]];
     }
 
@@ -394,15 +427,7 @@ final class EditorConfigs extends Component
 
         foreach ($paths as $path) {
             $filename = basename($path);
-            $id = pathinfo($filename, PATHINFO_FILENAME);
-
-            if (!preg_match('/^[a-z][a-z0-9_-]*$/', $id)) {
-                Craft::warning(
-                    "Vizy Editor Config file `{$filename}` is ignored because its name is not a valid Config ID.",
-                    __METHOD__,
-                );
-                continue;
-            }
+            $id = $this->getFileConfigId($filename);
 
             try {
                 $decoded = Json::decode((string)file_get_contents($path));
@@ -411,6 +436,7 @@ final class EditorConfigs extends Component
                     "Vizy Editor Config file `{$filename}` is not valid JSON: {$exception->getMessage()}",
                     __METHOD__,
                 );
+
                 continue;
             }
 
@@ -419,6 +445,7 @@ final class EditorConfigs extends Component
                     "Vizy Editor Config file `{$filename}` must contain a JSON object.",
                     __METHOD__,
                 );
+
                 continue;
             }
 
@@ -428,7 +455,11 @@ final class EditorConfigs extends Component
             }
 
             if (trim((string)($decoded['label'] ?? '')) === '') {
-                $decoded['label'] = StringHelper::toTitleCase(str_replace(['-', '_'], ' ', $id));
+                $decoded['label'] = StringHelper::toTitleCase(str_replace(['-', '_'], ' ', pathinfo($filename, PATHINFO_FILENAME)));
+            }
+
+            if (isset($files[$id])) {
+                throw new RuntimeException("Vizy Editor Config files share the reserved file ID {$id}.");
             }
 
             $files[$id] = [
@@ -445,16 +476,19 @@ final class EditorConfigs extends Component
         if (!preg_match('/^[a-z][a-z0-9_-]*$/', $id)) {
             throw new RuntimeException("Invalid Vizy Editor Config ID: {$id}.");
         }
+
         $unknownKeys = array_diff(array_keys($config), ['label', 'capabilities', 'extensionOptions', 'headings', 'toolbar', 'dropdowns', 'bubble', 'icons', 'gutterInsert', 'slashInsert', 'dateModified']);
 
         if ($unknownKeys !== []) {
             throw new RuntimeException("Unknown Vizy Editor Config keys for {$id}: " . implode(', ', $unknownKeys) . '.');
         }
+
         $label = trim((string)($config['label'] ?? ''));
 
         if ($label === '') {
             throw new RuntimeException("Vizy Editor Config {$id} requires a label.");
         }
+
         $capabilities = $config['capabilities'] ?? [];
 
         if (!is_array($capabilities)) {
@@ -464,6 +498,7 @@ final class EditorConfigs extends Component
         if ($keys = array_diff(array_keys($capabilities), ['nodes', 'marks', 'extensions'])) {
             throw new RuntimeException("Unknown Vizy Editor Config capability keys for {$id}: " . implode(', ', $keys) . '.');
         }
+
         $nodes = $this->_normalizeIds($capabilities['nodes'] ?? [], "{$id} node");
         $marks = $this->_normalizeIds($capabilities['marks'] ?? [], "{$id} mark");
         $capabilityExtensions = $this->_normalizeIds($capabilities['extensions'] ?? [], "{$id} extension");
@@ -510,6 +545,7 @@ final class EditorConfigs extends Component
         if ($keys = array_diff(array_keys($headings), ['levels', 'defaultLevel'])) {
             throw new RuntimeException("Unknown Vizy Editor Config heading keys for {$id}: " . implode(', ', $keys) . '.');
         }
+
         $levels = array_values(array_unique(array_map('intval', $headings['levels'] ?? [2, 3, 4])));
         sort($levels);
 
@@ -572,6 +608,7 @@ final class EditorConfigs extends Component
         unset($hashPayload['diagnostics']);
         $payload['hash'] = hash('sha256', $this->_stableJson($hashPayload));
         $payload['revision'] = '1:' . $payload['hash'];
+
         return $payload;
     }
 
@@ -622,6 +659,7 @@ final class EditorConfigs extends Component
             if ($controlId === '') {
                 throw new RuntimeException("Vizy Editor Config {$id} icon control IDs must be non-empty strings.");
             }
+
             $controlId = VizyToolbarTokenDeprecations::canonicalize($controlId, "Editor Config {$id} icon");
 
             if (str_starts_with($controlId, EditorConfigPresentation::DROPDOWN_PREFIX)) {
@@ -643,6 +681,7 @@ final class EditorConfigs extends Component
             if (!is_string($icon) || trim($icon) === '') {
                 throw new RuntimeException("Vizy Editor Config {$id} icon for {$controlId} must name an available icon.");
             }
+
             $icon = trim($icon);
 
             if (ToolbarIcons::glyph($icon) === null) {
@@ -652,10 +691,12 @@ final class EditorConfigs extends Component
             if (isset($normalized[$controlId])) {
                 throw new RuntimeException("Duplicate Vizy Editor Config {$id} icon control ID: {$controlId}.");
             }
+
             $normalized[$controlId] = $icon;
         }
 
         ksort($normalized);
+
         return $normalized;
     }
 
@@ -683,11 +724,13 @@ final class EditorConfigs extends Component
         if ($keys = array_diff(array_keys($characterCount), ['limit'])) {
             throw new RuntimeException("Unknown Vizy Editor Config characterCount option keys for {$id}: " . implode(', ', $keys) . '.');
         }
+
         $limit = $characterCount['limit'] ?? null;
 
         if ($limit !== null && (!is_int($limit) || $limit < 1 || $limit > 2000000)) {
             throw new RuntimeException("Vizy Editor Config {$id} characterCount limit must be null or an integer from 1 to 2,000,000.");
         }
+
         $normalized['characterCount']['limit'] = $limit;
 
         $placeholder = $options['placeholder'] ?? [];
@@ -699,11 +742,13 @@ final class EditorConfigs extends Component
         if ($keys = array_diff(array_keys($placeholder), ['text'])) {
             throw new RuntimeException("Unknown Vizy Editor Config placeholder option keys for {$id}: " . implode(', ', $keys) . '.');
         }
+
         $text = trim((string)($placeholder['text'] ?? $normalized['placeholder']['text']));
 
         if ($text === '' || mb_strlen($text) > 250) {
             throw new RuntimeException("Vizy Editor Config {$id} placeholder text must contain 1–250 characters.");
         }
+
         $normalized['placeholder']['text'] = $text;
 
         return $normalized;
@@ -722,11 +767,13 @@ final class EditorConfigs extends Component
         if (!is_array($values) || !array_is_list($values)) {
             throw new RuntimeException("Vizy Editor Config {$label} IDs must be a list.");
         }
+
         $normalized = array_map('strval', $values);
 
         if (count($normalized) !== count(array_unique($normalized))) {
             throw new RuntimeException("Duplicate Vizy Editor Config {$label} ID.");
         }
+
         return $normalized;
     }
 
@@ -771,6 +818,7 @@ final class EditorConfigs extends Component
             if (!is_string($item) || $item === '') {
                 throw new RuntimeException("Vizy Editor Config {$id} toolbar items must be strings.");
             }
+
             // Vizy 3 spellings (`h2`, `align-left`, …) → canonical before retired /
             // member-only checks so shims are not silently discarded as unknown.
             $item = VizyToolbarTokenDeprecations::canonicalize($item, "Editor Config {$id} toolbar");
@@ -787,6 +835,7 @@ final class EditorConfigs extends Component
             if (EditorConfigPresentation::isMemberOnlyToolbarId($item)) {
                 continue;
             }
+
             // As is a dropdown whose registration has gone away, along with the plugin that
             // registered it. Kept out here rather than left to render as nothing, so a toolbar
             // does not carry a token nothing can explain.
@@ -800,6 +849,7 @@ final class EditorConfigs extends Component
                 if (EditorConfigPresentation::dropdownRoster($name) === null) {
                     continue;
                 }
+
                 $item = $prefix . $name;
 
                 // A rename can collide with the new name already being present, and a toolbar
@@ -808,6 +858,7 @@ final class EditorConfigs extends Component
                     continue;
                 }
             }
+
             $normalized[] = $item;
         }
 
@@ -873,6 +924,7 @@ final class EditorConfigs extends Component
             if (!isset($placed[$name]) || $roster === null) {
                 continue;
             }
+
             $members = $this->_normalizeIds($members, "{$id} dropdown {$name} member");
 
             if ($members === []) {
@@ -886,6 +938,7 @@ final class EditorConfigs extends Component
                 if ($member === '') {
                     throw new RuntimeException("Vizy Editor Config {$id} dropdown {$name} members must be non-empty strings.");
                 }
+
                 // The registry's shorthand, which a hand-written config may reasonably copy from
                 // a registration and which one build did store. Expanded in place, so the levels
                 // land where the author had them.
@@ -897,6 +950,7 @@ final class EditorConfigs extends Component
                     if (!isset($allowed[$candidate]) || in_array($candidate, $kept, true)) {
                         continue;
                     }
+
                     $kept[] = $candidate;
                 }
             }
@@ -908,6 +962,7 @@ final class EditorConfigs extends Component
                 $normalized[$name] = $kept;
             }
         }
+
         // Sorted so the config hash does not depend on the order the keys were posted in, which
         // the toolbar's own order already carries anyway.
         ksort($normalized);
@@ -948,6 +1003,7 @@ final class EditorConfigs extends Component
             if (!is_string($item) || $item === '') {
                 throw new RuntimeException("Vizy Editor Config {$id} bubble items must be strings.");
             }
+
             $normalized[] = $item;
         }
 
@@ -982,6 +1038,7 @@ final class EditorConfigs extends Component
         if ($this->externalPreflightComplete || !$projectConfig->getIsApplyingExternalChanges()) {
             return;
         }
+
         $incoming = $projectConfig->get(self::PROJECT_CONFIG_PATH, true) ?? [];
         $this->preflightExternalConfigs(is_array($incoming) ? $incoming : []);
         $this->externalPreflightComplete = true;
@@ -993,6 +1050,7 @@ final class EditorConfigs extends Component
             if (array_is_list($item)) {
                 return array_map(static fn(mixed $value) => is_array($value) ? $normalize($value) : $value, $item);
             }
+
             ksort($item);
 
             foreach ($item as &$value) {
@@ -1000,9 +1058,12 @@ final class EditorConfigs extends Component
                     $value = $normalize($value);
                 }
             }
+
             unset($value);
+
             return $item;
         };
+
         return json_encode($normalize($value), JSON_THROW_ON_ERROR | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
     }
 }

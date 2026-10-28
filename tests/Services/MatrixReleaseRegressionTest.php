@@ -324,3 +324,30 @@ it('reports a rejected Matrix anchor save without masking it with a logging type
     }
     expect(Vizy::$plugin->getAnchors()->getAnchor($f->owner, $f->field, $uid))->toBeNull();
 });
+
+
+it('resolves an explicit revision source legacy anchor beside its replacement on a new site', function() {
+    [$primary, $secondary] = VizyFixtureFactory::ensureSites(2);
+    $f = new MatrixSupportFixture();
+    $uid = StringHelper::UUID();
+    $owner = $f->save([$f->block($uid, $f->payload(['Historical row']))]);
+    $anchors = Vizy::$plugin->getAnchors();
+    $legacy = $anchors->getAnchor($owner, $f->field, $uid);
+    $key = $legacy->documentKey;
+    Craft::$app->getDb()->createCommand()->update('{{%vizy_matrix_anchors}}', ['documentKey' => ''], ['id' => $legacy->id])->execute();
+    $sourceContent = (new Query())->select('content')->from(Table::ELEMENTS_SITES)
+        ->where(['elementId' => $owner->id, 'siteId' => $primary->id])->scalar();
+    Craft::$app->getDb()->createCommand()->update(Table::ELEMENTS_SITES, ['content' => is_string($sourceContent) ? Json::decode($sourceContent) : $sourceContent],
+        ['elementId' => $owner->id, 'siteId' => $secondary->id])->execute();
+    $replacement = $anchors->ensureAnchor($owner, $f->field, $uid, $f->blockType->getFieldLayout(), $legacy->uid, $key);
+    expect($replacement->id)->not->toBe($legacy->id);
+    Craft::$app->getDb()->createCommand()->delete(Table::ELEMENTS_SITES, ['elementId' => $legacy->id, 'siteId' => $secondary->id])->execute();
+
+    // Craft sets duplicateOf before serializing a new revision. Its source
+    // snapshot can still name the old anchor after a replacement was created.
+    $revision = new Entry(['id' => 2147483647, 'siteId' => $secondary->id, 'duplicateOf' => $owner]);
+    expect($anchors->getAnchor($revision, $f->field, $uid, $legacy->uid, $key)?->id)->toBe($legacy->id)
+        ->and($anchors->getAnchor($owner, $f->field, $uid, null, $key)?->id)->toBe($replacement->id);
+    $revision->duplicateOf = null;
+    expect($anchors->getAnchor($revision, $f->field, $uid, $legacy->uid, $key))->toBeNull();
+});
