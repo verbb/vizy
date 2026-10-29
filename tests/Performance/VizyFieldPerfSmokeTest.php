@@ -24,8 +24,12 @@ it('normalizes and exports small and large prose documents without per-node quer
 })->group('perf');
 
 it('saves changed content and reloads it within bounded database work', function() {
-    $field = VizyFixtureFactory::vizyField();
-    $entry = VizyFixtureFactory::entry('Save budget', VizyFixtureFactory::paragraphDocument('Before'));
+    // Keep the measured save independent of other tests enabling revisions/sites.
+    $field = new \verbb\vizy\fields\VizyField(['name' => 'Save budget', 'handle' => 'budget' . \craft\helpers\StringHelper::randomString(8)]);
+    expect(Craft::$app->getFields()->saveField($field))->toBeTrue();
+    $site = Craft::$app->getSites()->getPrimarySite();
+    $section = VizyFixtureFactory::multisiteSection($field, 1, [$site]);
+    $entry = VizyFixtureFactory::entryOnSite($section, $field, $site, 'Save budget', VizyFixtureFactory::paragraphDocument('Before'));
     $entry->setFieldValue($field->handle, VizyFixtureFactory::paragraphDocument('After'));
     $saved = false;
     $save = QueryProfiler::profile(static function() use ($entry, &$saved): bool {
@@ -37,7 +41,7 @@ it('saves changed content and reloads it within bounded database work', function
     });
     // Permit normal Craft bookkeeping while rejecting runaway query growth.
     expect($saved)->toBeTrue()
-        ->and($save['queries'])->toBeLessThanOrEqual(50)
+        ->and($save['queries'])->toBeLessThanOrEqual(50, json_encode($save))
         ->and($reload['queries'])->toBeGreaterThan(0)->toBeLessThanOrEqual(5)
         ->and($reloaded->getFieldValue($field->handle)->toArray())
         ->toBe(json_decode(VizyFixtureFactory::paragraphDocument('After'), true));

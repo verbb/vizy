@@ -1028,9 +1028,13 @@ function lifetimeHostedFixture(array $deepContent = []): array
     expect($response->getStatusCode())->toBe(200);
     $bootstraps = [];
     $extract = function(string $html) use (&$extract, &$bootstraps): void {
-        preg_match_all('/<template\b[^>]*data-vizy-bootstrap[^>]*>(.*?)<\/template>/s', $html, $matches);
-        foreach ($matches[1] as $json) {
-            $bootstrap = Json::decode(html_entity_decode($json, ENT_QUOTES | ENT_HTML5));
+        // Accumulated fixture options can make a valid bootstrap exceed PCRE's
+        // backtracking limit. Parse the HTML rather than treating no match as empty.
+        $document = new DOMDocument();
+        $document->loadHTML('<meta charset="utf-8">' . $html, LIBXML_NONET | LIBXML_NOERROR | LIBXML_NOWARNING);
+        $templates = (new DOMXPath($document))->query('//template[@data-vizy-bootstrap]');
+        foreach ($templates as $template) {
+            $bootstrap = Json::decode($template->textContent);
             $depth = $bootstrap['hosted']['depth'];
             $bootstraps[$depth] = $bootstrap;
             foreach ($bootstrap['initialFieldLayouts'] as $initial) {

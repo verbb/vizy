@@ -16,8 +16,12 @@ it('installs durable owner migration checkpoints', function() {
 });
 
 it('requires an actual canonical write before verifying a resumed migration', function(string $state) {
-    $field = VizyFixtureFactory::vizyField();
-    $owner = VizyFixtureFactory::entry('Resume storage ' . StringHelper::randomString(8));
+    // Provenance is immutable, so this migration must own its field and placement.
+    $field = new VizyField(['name' => 'Resume storage', 'handle' => 'resume' . StringHelper::randomString(8)]);
+    expect(Craft::$app->getFields()->saveField($field))->toBeTrue();
+    $site = Craft::$app->getSites()->getPrimarySite();
+    $section = VizyFixtureFactory::multisiteSection($field, 1, [$site]);
+    $owner = VizyFixtureFactory::entryOnSite($section, $field, $site, 'Resume storage', VizyFixtureFactory::paragraphDocument());
     Vizy::$plugin->getLegacySchemaMaps()->saveProvenance($field->uid, [
         'fieldUid' => $field->uid,
         'sourceFingerprint' => 'resume-storage-fixture',

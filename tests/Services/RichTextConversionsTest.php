@@ -200,8 +200,10 @@ namespace {
             $view->setTemplateMode($templateMode);
         }
 
-        expect($toVizy)->not->toBeNull()
-            ->and($fromVizy)->not->toBeNull();
+        // Exporting a Twig wrapper traverses the entire Craft application graph,
+        // even for this successful negated assertion. Check the compiled type.
+        expect($toVizy instanceof \Twig\TemplateWrapper)->toBeTrue()
+            ->and($fromVizy instanceof \Twig\TemplateWrapper)->toBeTrue();
     });
 
     it('converts content, checkpoints source HTML, and generates a deployable migration', function() {

@@ -11,6 +11,8 @@ use craft\elements\User as UserElement;
  */
 final class WebCapableConsoleUser extends \craft\console\User
 {
+    public string $idParam = '__id';
+
     public function getRemainingSessionTime(): int
     {
         return -1;
