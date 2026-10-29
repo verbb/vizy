@@ -3,6 +3,7 @@
 ## Unreleased
 
 ### Fixed
+- Fixed the Emoji picker exposing duplicate dialogs to assistive technology.
 - Fixed Vizy 3 upgrades failing when fields selected JSON editor config files, including when retrying a failed upgrade.
 - Fixed upgrades losing editor configs named `Default.json` or using uppercase letters, spaces, dots, numeric names, or `standard.json`.
 - Fixed migrated images disappearing on sites added after the asset was created, and preserved explicit image site references.

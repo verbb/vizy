@@ -1514,17 +1514,20 @@ test('Emoji opens a searchable toolbar dropdown and inserts without a modal', as
     await page.locator('vizy-toolbar').getByRole('button', { name: 'Emoji', exact: true }).click();
 
     await expect(page.locator('vizy-emoji-dialog')).toHaveCount(0);
+    const popover = page.locator('pk-popover.emoji-picker-popover');
     const picker = page.getByRole('dialog', { name: 'Emoji', exact: true });
+    await expect(picker).toHaveCount(1);
     await expect(picker).toBeVisible();
-    const searchField = picker.locator('pk-input');
-    const search = picker.getByRole('textbox', { name: 'Search emoji', exact: true });
+    // Popover content is slotted light DOM; it is not a descendant of its shadow panel.
+    const searchField = popover.locator('pk-input');
+    const search = popover.getByRole('textbox', { name: 'Search emoji', exact: true });
     await expect(searchField.locator('[part="header"]')).toHaveCSS('position', 'absolute');
     await expect(searchField.locator('[part="header"]')).toHaveCSS('width', '1px');
     await expect(search).toHaveAttribute('type', 'text');
     await expect(search).toBeFocused();
     await search.fill('rocket');
     await expect(searchField.locator('[part="clear-button"]')).toHaveCount(1);
-    await picker.getByRole('option', { name: 'rocket', exact: true }).click();
+    await popover.getByRole('option', { name: 'rocket', exact: true }).click();
 
     const emoji = await page.evaluate(() => (
         document.querySelector('vizy-editor') as any

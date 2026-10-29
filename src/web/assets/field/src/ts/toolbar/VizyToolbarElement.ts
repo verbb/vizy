@@ -737,7 +737,7 @@ export class VizyToolbarElement extends LitElement {
                     aria-label=${control.label}
                     @mousedown=${this.#onToolbarMouseDown}
                 >${controlIcon(control)}${menuChevronIcon()}</button>
-                <div class="emoji-picker" role="dialog" aria-label=${t('Emoji')}>
+                <div class="emoji-picker">
                     <pk-input
                         class="emoji-picker__search"
                         type="text"
