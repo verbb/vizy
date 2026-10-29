@@ -48,3 +48,5 @@
 /test-results/
 /playwright-report/
 /.ddev/config.zz-ci.yaml
+
+/.ddev/docker-compose.php-minimum.yaml

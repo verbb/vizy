@@ -82,8 +82,8 @@ try {
     if ($profile === 'minimum' && PHP_MAJOR_VERSION . '.' . PHP_MINOR_VERSION !== '8.2') {
         throw new RuntimeException('Minimum qualification must actually execute PHP 8.2.');
     }
-    if ($profile !== 'default' && $updateLock) {
-        throw new RuntimeException('Qualification profiles must not overwrite the default runtime lock.');
+    if (in_array($profile, ['hyper', 'matrix-integrations'], true) && $updateLock) {
+        throw new RuntimeException('Local integration profiles must not write distributable locks.');
     }
     $log = fopen($runtime . '/latest.log', 'w');
     $run = static function(array $command, ?string $cwd = null) use ($root, $log): void {
@@ -131,7 +131,7 @@ try {
         'repositories' => [['type' => 'path', 'url' => '../../..', 'options' => ['symlink' => true, 'reference' => 'config']]],
         'minimum-stability' => 'dev', 'prefer-stable' => true,
         'autoload-dev' => ['psr-4' => ['Tests\\' => '../../../tests/']],
-        'config' => ['allow-plugins' => ['craftcms/plugin-installer' => true, 'pestphp/pest-plugin' => true, 'yiisoft/yii2-composer' => true]],
+        'config' => ['platform' => ['php' => '8.2.0', 'php-64bit' => '8.2.0'], 'allow-plugins' => ['craftcms/plugin-installer' => true, 'pestphp/pest-plugin' => true, 'yiisoft/yii2-composer' => true]],
     ];
     if ($profile === 'hyper' || ($profile === 'matrix-integrations' && getenv('HYPER_SOURCE_PATH'))) {
         $source = getenv('HYPER_SOURCE_PATH');
@@ -139,16 +139,21 @@ try {
         $manifest['require']['verbb/hyper'] = '*';
         $manifest['repositories'][] = ['type' => 'path', 'url' => $source, 'options' => ['symlink' => true]];
     }
-    if ($profile === 'minimum') $manifest['config']['platform']['php'] = '8.2.0';
+    // The historical Craft floor has known advisories; this disposable profile
+    // records them below and does not change the normal dependency policy.
+    if ($profile === 'minimum') $manifest['config']['audit']['block-insecure'] = false;
     file_put_contents($app . '/composer.json', json_encode($manifest, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES) . "\n");
-    // Qualification profiles resolve independently without changing the retained default lock.
-    if ($profile !== 'default') @unlink($app . '/composer.lock');
-    if ($profile === 'default' && is_file(__DIR__ . '/composer.lock')) {
-        copy(__DIR__ . '/composer.lock', $app . '/composer.lock');
+    $retainedProfile = in_array($profile, ['default', 'minimum', 'feed-me'], true);
+    $profileLock = __DIR__ . ($profile === 'default' ? '/composer.lock' : '/composer.' . $profile . '.lock');
+    if ($retainedProfile && !$updateLock && !is_file($profileLock)) {
+        throw new RuntimeException('Missing profile lock. Refresh it explicitly with --update-lock.');
     }
-    // The exact historical floor has known Craft advisories. Only this disposable
-    // compatibility profile permits its installation; record the audit separately.
-    $run(['composer', ($updateLock || $profile !== 'default') ? 'update' : 'install', '--no-interaction', '--prefer-dist', '--no-progress', ...($profile === 'minimum' ? ['--no-security-blocking'] : [])], $app);
+    if ($retainedProfile && is_file($profileLock)) {
+        copy($profileLock, $app . '/composer.lock');
+    } else {
+        @unlink($app . '/composer.lock');
+    }
+    $run(['composer', ($updateLock || !$retainedProfile) ? 'update' : 'install', '--no-interaction', '--prefer-dist', '--no-progress'], $app);
     if ($profile === 'minimum') {
         $audit = proc_open(['composer', 'audit', '--format=json', '--no-interaction'],
             [0 => STDIN, 1 => ['file', $runtime . '/minimum-advisories.json', 'w'], 2 => STDERR], $auditPipes, $app);
@@ -158,7 +163,7 @@ try {
         }
     }
     if ($updateLock) {
-        copy($app . '/composer.lock', __DIR__ . '/composer.lock');
+        copy($app . '/composer.lock', $profileLock);
     }
     foreach (['config', 'storage', 'web'] as $name) {
         $remove($app . '/' . $name);
@@ -223,11 +228,11 @@ PHP
             unset($suiteArgs[$i]);
         }
     }
-    if ($excluded !== []) $suiteArgs[] = '--exclude-group=' . implode(',', $excluded);
+    foreach ($excluded as $group) $suiteArgs[] = '--exclude-group=' . $group;
     @unlink($runtime . '/junit.xml');
     if ($profile !== 'hyper') $suiteArgs[] = '--exclude-group=content-api-integration';
     if ($profile !== 'matrix-integrations') $suiteArgs[] = '--exclude-group=matrix-integrations';
-    $run(['php', '-d', 'memory_limit=1G', 'tests/runtime/pest.php', '--fail-on-empty-test-suite', '--fail-on-risky', '--enforce-time-limit', ...(array_filter($args, static fn($arg) => str_starts_with($arg, '--default-time-limit')) ? [] : ['--default-time-limit=60']), '--configuration', 'phpunit.craft.xml', '--log-junit', $runtime . '/junit.xml', ...array_values($suiteArgs), ...array_values($args)]);
+    $run(['php', '-d', 'memory_limit=1G', 'tests/runtime/pest.php', '--fail-on-empty-test-suite', '--fail-on-risky', '--enforce-time-limit', ...(array_filter($args, static fn($arg) => str_starts_with($arg, '--default-time-limit')) ? [] : ['--default-time-limit=60']), '--configuration', 'phpunit.craft.xml', '--log-events-text', $runtime . '/events.log', '--log-junit', $runtime . '/junit.xml', ...array_values($suiteArgs), ...array_values($args)]);
     // An application exit(0) inside a test must not masquerade as a completed suite.
     $report = is_file($runtime . '/junit.xml') ? simplexml_load_file($runtime . '/junit.xml') : false;
     if (!$report || (int)$report->testsuite['tests'] < 1) {
