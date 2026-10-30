@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use craft\elements\Entry;
 use craft\fieldlayoutelements\CustomField;
+use craft\fields\Dropdown;
 use craft\fields\Matrix;
 use craft\fields\PlainText;
 use craft\helpers\FileHelper;
@@ -107,6 +108,108 @@ it('builds stable field-local promotion plans and exact placement maps', functio
         ->and($mapping['placementUids']['heading'])->toBe($fixture['placementUid'])
         ->and($fieldPlan['blockTypes'][$fixture['legacyTypeId']]['config']['fieldLayout']['uid'])
         ->toBe($fixture['fields'][$fixture['fieldUid']]['settings']['fieldData'][0]['blockTypes'][0]['layoutUid']);
+});
+
+it('automatically upgrades reused Craft fields with distinct placement handles', function(string $mode, bool $modalFirst, bool $useUids) {
+    $fixture = legacyPromotionFixture('reusedFields' . StringHelper::randomString(5), $mode);
+    $legacyType = &$fixture['fields'][$fixture['fieldUid']]['settings']['fieldData'][0]['blockTypes'][0];
+    $headline = $legacyType['layoutConfig']['tabs'][0]['elements'][0];
+    $fixture['fields'][$headline['fieldUid']]['handle'] = 'headline';
+    $formatFieldUid = StringHelper::UUID();
+    $fixture['fields'][$formatFieldUid] = [
+        'type' => Dropdown::class,
+        'name' => 'Headline format',
+        'handle' => 'headlineFormat',
+        'translationMethod' => 'none',
+        'translationKeyFormat' => null,
+        'instructions' => null,
+        'settings' => ['options' => [
+            ['label' => 'H2', 'value' => 'h2', 'default' => true],
+            ['label' => 'H3', 'value' => 'h3', 'default' => false],
+        ]],
+    ];
+    $format = ['type' => CustomField::class, 'uid' => StringHelper::UUID(), 'fieldUid' => $formatFieldUid];
+    $modalHeadline = array_replace($headline, [
+        'uid' => StringHelper::UUID(), 'handle' => 'modalHeadline', 'label' => 'Modal Headline',
+    ]);
+    $modalFormat = array_replace($format, [
+        'uid' => StringHelper::UUID(), 'handle' => 'modalHeadlineFormat', 'label' => 'Modal Headline format',
+    ]);
+    $tabs = [
+        ['uid' => StringHelper::UUID(), 'name' => 'Content', 'elements' => [$headline, $format]],
+        ['uid' => StringHelper::UUID(), 'name' => 'Modal', 'elements' => [$modalHeadline, $modalFormat]],
+    ];
+    $legacyType['layoutConfig']['tabs'] = $modalFirst ? array_reverse($tabs) : $tabs;
+    unset($legacyType);
+
+    $projectConfig = Craft::$app->getProjectConfig();
+    foreach ($fixture['fields'] as $uid => $config) {
+        $projectConfig->set("fields.{$uid}", $config);
+    }
+    Craft::$app->getFields()->refreshFields();
+
+    // Exercise the automatic migration, then use its persisted map to convert both
+    // historical handle-keyed content and the newer placement-UID storage format.
+    expect((new m260921_000000_vizy3_upgrade())->up(true))->toBeTrue();
+    $field = Craft::$app->getFields()->getFieldByUid($fixture['fieldUid']);
+    $map = $field->getLegacySchemaMap();
+    $mapping = $map[$fixture['legacyTypeId']];
+    $handles = [
+        'headline' => $headline['uid'],
+        'headlineFormat' => $format['uid'],
+        'modalHeadline' => $modalHeadline['uid'],
+        'modalHeadlineFormat' => $modalFormat['uid'],
+    ];
+    $values = ['headline' => 'Main headline', 'headlineFormat' => 'h2', 'modalHeadline' => 'Modal headline', 'modalHeadlineFormat' => 'h3'];
+    $legacyValues = [];
+    $expectedSlots = [];
+    foreach ($handles as $handle => $uid) {
+        expect($mapping['placementUids'][$handle])->toBe($uid)
+            ->and($mapping['placementUids'][$uid])->toBe($uid);
+        $legacyValues[$useUids ? $uid : $handle] = $values[$handle];
+        $expectedSlots[$uid] = $values[$handle];
+    }
+    $legacy = [[
+        'type' => 'vizyBlock',
+        'attrs' => ['id' => 'reused-fields', 'values' => [
+            'type' => $fixture['legacyTypeId'],
+            'content' => ['fields' => $legacyValues],
+        ]],
+    ]];
+    $canonical = (new Vizy3DocumentAdapter())->convert($legacy, $map);
+    $global = ProjectConfigHelper::unpackAssociativeArrays(
+        $projectConfig->get("plugins.vizy.blockTypes.{$mapping['blockTypeUid']}"),
+    );
+
+    expect($canonical['content'][0]['attrs']['fieldSlots'])->toBe($expectedSlots)
+        ->and($global['fieldLayout']['tabs'])->toEqual($modalFirst ? array_reverse($tabs) : $tabs)
+        ->and($field->rootContentType)->toBe($mode === VizyField::MODE_BLOCKS ? VizyField::ROOT_CONTENT_BLOCKS : VizyField::ROOT_CONTENT_RICH);
+})->with([VizyField::MODE_BLOCKS, VizyField::MODE_COMBINED])
+    ->with(['content first' => false, 'modal first' => true])
+    ->with(['handle keys' => false, 'UID keys' => true]);
+
+it('uses the overridden placement handle instead of the global field handle', function() {
+    $fixture = legacyPromotionFixture();
+    $fixture['fields'][$fixture['fieldUid']]['settings']['fieldData'][0]['blockTypes'][0]['layoutConfig']['tabs'][0]['elements'][0]['handle'] = 'modalHeading';
+    $plan = (new Vizy3SchemaPromotion())->analyze($fixture['fields']);
+    $mapping = $plan['fields'][$fixture['fieldUid']]['schemaMap'][$fixture['legacyTypeId']]['placementUids'];
+
+    expect($plan['status'])->toBe('ready')
+        ->and($mapping)->toBe([
+            $fixture['placementUid'] => $fixture['placementUid'],
+            'modalHeading' => $fixture['placementUid'],
+        ]);
+});
+
+it('still blocks genuinely duplicate effective placement handles', function() {
+    $fixture = legacyPromotionFixture();
+    $elements = &$fixture['fields'][$fixture['fieldUid']]['settings']['fieldData'][0]['blockTypes'][0]['layoutConfig']['tabs'][0]['elements'];
+    $elements[] = array_replace($elements[0], ['uid' => StringHelper::UUID(), 'handle' => 'heading']);
+    unset($elements);
+    $plan = (new Vizy3SchemaPromotion())->analyze($fixture['fields']);
+
+    expect($plan['status'])->toBe('blocked')
+        ->and(array_column($plan['diagnostics'], 'code'))->toContain('ambiguousLegacyPlacementKey');
 });
 
 it('normalizes unambiguous array-wrapped layout identities through the supported upgrader', function(string $shape, string $source) {

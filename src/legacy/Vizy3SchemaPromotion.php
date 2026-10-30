@@ -36,6 +36,7 @@ final class Vizy3SchemaPromotion
             if (($fieldConfig['type'] ?? null) !== VizyField::class) {
                 continue;
             }
+
             $settings = is_array($fieldConfig['settings'] ?? null) ? $fieldConfig['settings'] : [];
 
             // Canonical Vizy 4 fields carry blockTypePickerGroups and no fieldData.
@@ -43,12 +44,14 @@ final class Vizy3SchemaPromotion
                 // Already-canonical fields are outside the legacy promotion set.
                 continue;
             }
+
             // Vizy 3 rich-text fields often omit fieldData entirely (Craft PC drops empty
             // arrays). Treat a missing key as an empty group list so prose-only fields promote.
             $fieldData = array_key_exists('fieldData', $settings) ? $settings['fieldData'] : [];
 
             if (!is_array($fieldData) || !array_is_list($fieldData)) {
                 $this->_diagnostic($diagnostics, 'invalidFieldData', 'error', $fieldUid, 'Vizy 3 fieldData must be a group list.');
+
                 continue;
             }
 
@@ -58,6 +61,7 @@ final class Vizy3SchemaPromotion
             foreach ($editorPlan['diagnostics'] as $diagnostic) {
                 $diagnostics[] = $diagnostic;
             }
+
             $fieldPlan = [
                 'fieldUid' => $fieldUid,
                 'sourceFingerprint' => $this->_fingerprint($fieldData),
@@ -79,13 +83,16 @@ final class Vizy3SchemaPromotion
             if ($editorPlan['fingerprint'] !== null) {
                 $fieldPlan['editorConfigFingerprint'] = $editorPlan['fingerprint'];
             }
+
             $legacyIds = [];
 
             foreach ($fieldData as $groupIndex => $group) {
                 if (!is_array($group) || !is_array($group['blockTypes'] ?? null) || !array_is_list($group['blockTypes'])) {
                     $this->_diagnostic($diagnostics, 'invalidBlockGroup', 'error', "{$fieldUid}.groups.{$groupIndex}", 'Block groups require a blockTypes list.');
+
                     continue;
                 }
+
                 $allowed = [];
                 $disabled = [];
 
@@ -94,19 +101,24 @@ final class Vizy3SchemaPromotion
 
                     if (!is_array($legacyType)) {
                         $this->_diagnostic($diagnostics, 'invalidBlockType', 'error', $location, 'Block Type data must be an object.');
+
                         continue;
                     }
+
                     $legacyId = $legacyType['id'] ?? null;
 
                     if (!is_string($legacyId) || $legacyId === '') {
                         $this->_diagnostic($diagnostics, 'missingLegacyTypeId', 'error', $location, 'A legacy Block Type ID is required.');
+
                         continue;
                     }
 
                     if (isset($legacyIds[$legacyId])) {
                         $this->_diagnostic($diagnostics, 'duplicateLegacyTypeId', 'error', $location, "Legacy Block Type ID {$legacyId} occurs more than once in the field.");
+
                         continue;
                     }
+
                     $legacyIds[$legacyId] = true;
 
                     $targetUid = $this->_claimUid(
@@ -125,6 +137,7 @@ final class Vizy3SchemaPromotion
                     if (!$this->_validHandle($targetHandle)) {
                         $this->_diagnostic($diagnostics, 'invalidTargetHandle', 'error', $location, "Block Type {$legacyId} requires an explicit valid target handle.");
                     }
+
                     $claimedHandles[strtolower($targetHandle)][] = $handleKey;
 
                     [$layoutConfig, $placementMap] = $this->_promoteLayout(
@@ -212,6 +225,7 @@ final class Vizy3SchemaPromotion
         foreach ($diagnostics as $diagnostic) {
             if ($diagnostic['severity'] === 'error') {
                 $blocked = true;
+
                 break;
             }
         }
@@ -282,6 +296,7 @@ final class Vizy3SchemaPromotion
         if ($outsideUid !== null && $insideUid !== null && $outsideUid !== $insideUid) {
             $this->_diagnostic($diagnostics, 'ambiguousLayoutUid', 'error', $location, 'layoutUid disagrees with layoutConfig.uid.');
         }
+
         $candidate = $outsideUid ?? $insideUid;
         $layout['uid'] = $this->_claimUid(
             $this->_validUuid($candidate) ? $candidate : null,
@@ -307,6 +322,7 @@ final class Vizy3SchemaPromotion
             $diagnostics,
             "{$location}.layout",
         );
+
         return [$layout, $placementMap];
     }
 
@@ -348,6 +364,7 @@ final class Vizy3SchemaPromotion
                 $location,
                 'Layout identity must be a UUID string or a one-value legacy UUID wrapper. Restore this Block Type’s layoutUid in Project Config, then re-run the upgrade.',
             );
+
             return null;
         }
 
@@ -358,6 +375,7 @@ final class Vizy3SchemaPromotion
             $location,
             "Normalized legacy layout identity from a {$shape} to its UUID.",
         );
+
         return $candidate;
     }
 
@@ -374,6 +392,7 @@ final class Vizy3SchemaPromotion
             if (!is_array($child)) {
                 continue;
             }
+
             $childLocation = "{$location}.{$key}";
 
             if (isset($child['elements']) && is_array($child['elements'])) {
@@ -404,8 +423,10 @@ final class Vizy3SchemaPromotion
                     $childLocation,
                 );
             }
+
             $this->_promoteLayoutNodes($child, $fieldConfigs, $factory, $claimedSchemaUids, $placementMap, $diagnostics, $childLocation);
         }
+
         unset($child);
     }
 
@@ -458,17 +479,21 @@ final class Vizy3SchemaPromotion
             // fieldData promotes as a normal Vizy field; nested payloads convert on load.
         }
 
+        // Craft replaces the global handle for renamed placements. Registering both
+        // would make reused fields collide and could route content to the wrong slot.
+        $handle = $placement['handle'] ?? $fieldConfig['handle'] ?? null;
         $acceptedKeys = array_filter([
             $legacyPlacement,
-            is_string($placement['handle'] ?? null) ? $placement['handle'] : null,
-            is_array($fieldConfig) && is_string($fieldConfig['handle'] ?? null) ? $fieldConfig['handle'] : null,
+            $handle,
         ], static fn(mixed $key) => is_string($key) && $key !== '');
 
         foreach (array_unique($acceptedKeys) as $key) {
             if (isset($placementMap[$key]) && $placementMap[$key] !== $canonical) {
                 $this->_diagnostic($diagnostics, 'ambiguousLegacyPlacementKey', 'error', $location, "Legacy placement key {$key} identifies multiple placements.");
+
                 continue;
             }
+
             $placementMap[$key] = $canonical;
         }
     }
@@ -484,18 +509,22 @@ final class Vizy3SchemaPromotion
     ): string {
         if ($candidate !== null && !isset($claimed[$candidate])) {
             $claimed[$candidate] = "{$kind}:{$location}";
+
             return $candidate;
         }
 
         if ($candidate !== null) {
             $this->_diagnostic($diagnostics, 'schemaUidCollisionRemapped', 'warning', $location, "Unsafe {$kind} UID {$candidate} was deterministically remapped.");
         }
+
         $uid = $factory->uid("{$key}:uid");
 
         if (isset($claimed[$uid])) {
             throw new \LogicException("Deterministic UID collision for {$key}.");
         }
+
         $claimed[$uid] = "{$kind}:{$location}";
+
         return $uid;
     }
 
@@ -511,6 +540,7 @@ final class Vizy3SchemaPromotion
     private function _invalidRootPolicy(string $fieldUid, array &$diagnostics): string
     {
         $this->_diagnostic($diagnostics, 'unsupportedRootPolicy', 'error', $fieldUid, 'The legacy editorMode is unsupported.');
+
         return VizyField::ROOT_CONTENT_RICH;
     }
 
@@ -549,6 +579,7 @@ final class Vizy3SchemaPromotion
         foreach ($value as $key => $child) {
             $value[$key] = $this->_stable($child);
         }
+
         return $value;
     }
 
