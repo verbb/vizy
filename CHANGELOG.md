@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 4.0.1 - 2026-11-01
 
 ### Fixed
 - Fixed editor JavaScript loading twice when Craft’s `buildId` setting is configured.
