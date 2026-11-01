@@ -234,6 +234,8 @@
                             {{ hiddenInput('editorConfig', selectedEditorConfig) }}
 
                             <div class="vizy-migration-confirmation">
+                                {# An unchecked pk-checkbox submits nothing, so post an explicit "off" value that the checkbox overrides when checked. #}
+                                {{ hiddenInput('createBackup', '') }}
                                 <pk-checkbox name="createBackup" checked>{{ 'Create a database backup before migrating' | t('vizy') }}</pk-checkbox>
 
                                 {% if analysis.status == 'requires-review' %}

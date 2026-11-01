@@ -10,6 +10,7 @@
 - Fixed upgrades losing editor configs named `Default.json` or using uppercase letters, spaces, dots, numeric names, or `standard.json`.
 - Fixed migrated images disappearing on sites added after the asset was created, and preserved explicit image site references.
 - Fixed content conversion failing when Craft created revisions referencing legacy Matrix anchors.
+- Fixed the rich-text field migration wizards creating a database backup when “Create a database backup” was unchecked.
 
 ## 4.0.0 - 2026-10-28
 
