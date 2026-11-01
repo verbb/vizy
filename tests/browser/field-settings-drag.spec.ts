@@ -133,7 +133,9 @@ test.describe('block type configurator drag', () => {
         // Drag Gamma above Alpha.
         await dragHandleTo(page, 2, first.y - 10);
 
-        const beforeDrop = await order(page, 'group-1');
+        // Collision updates run asynchronously and can lag on a busy CI runner, so
+        // wait for the projected order rather than releasing after a fixed delay.
+        await expect.poll(() => order(page, 'group-1')).toEqual(['c', 'a', 'b']);
         await page.mouse.up();
 
         // Sampled immediately: the row must already be at its final position.
@@ -147,7 +149,6 @@ test.describe('block type configurator drag', () => {
         const settledTops = await page.evaluate(() => [...document.querySelectorAll('[data-group-list="group-1"] [data-block-row]')]
             .map((row) => Math.round(row.getBoundingClientRect().y)));
 
-        expect(beforeDrop).toContain('c');
         expect(await order(page, 'group-1')).toEqual(['c', 'a', 'b']);
         expect(atDrop).toEqual(settledTops);
         expect(await posted(page)).toEqual(['0:c', '0:a', '0:b']);

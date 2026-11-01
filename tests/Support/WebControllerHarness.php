@@ -10,6 +10,7 @@ use craft\helpers\StringHelper;
 use craft\web\Request as WebRequest;
 use craft\web\Response as WebResponse;
 use craft\web\Session as WebSession;
+use craft\web\View;
 use RuntimeException;
 use Tests\Support\Fixtures\AssetSpikeFixture;
 use verbb\vizy\controllers\FieldLayoutController;
@@ -100,6 +101,12 @@ final class WebControllerHarness
         Craft::$app->set('user', $user);
         Craft::$app->set('session', Craft::createObject(['class' => WebSession::class]));
         Craft::$app->requestedRoute = $route;
+        // Twig resolves its globals once per environment. In this long-lived test
+        // process, an earlier render without a user would otherwise leave
+        // currentUser null for every later Craft template.
+        foreach ([View::TEMPLATE_MODE_CP, View::TEMPLATE_MODE_SITE] as $templateMode) {
+            Craft::$app->getView()->getTwig($templateMode)->addGlobal('currentUser', $identity);
+        }
         self::$active = true;
     }
 

@@ -33,6 +33,7 @@ namespace {
     use verbb\vizy\Vizy;
     use verbb\vizy\db\Table as VizyTable;
     use verbb\vizy\fields\VizyField;
+    use verbb\vizy\models\BlockType;
 
     function richTextConversionFixture(string $html, string $fieldClass = craft\ckeditor\Field::class): array
     {
@@ -89,11 +90,15 @@ namespace {
         $document = Vizy::$plugin->getHtmlImporter()->convert($html, $field)->document()->toArray();
 
         if ($withBlock) {
+            // This row outlives the test, and whole-site content scans reject a
+            // document whose Block Type does not exist, so it needs a real one.
+            $blockType = new BlockType(['name' => 'Discarded block', 'handle' => 'discardedBlock' . $suffix]);
+            expect(Vizy::$plugin->getBlockTypes()->saveBlockType($blockType))->toBeTrue();
             $document['content'][] = [
                 'type' => 'vizyBlock',
                 'attrs' => [
                     'blockUid' => StringHelper::UUID(),
-                    'blockTypeUid' => StringHelper::UUID(),
+                    'blockTypeUid' => $blockType->uid,
                     'enabled' => true,
                     'fieldSlots' => ['discarded' => 'Block data'],
                 ],

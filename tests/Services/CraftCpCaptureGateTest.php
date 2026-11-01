@@ -29,12 +29,19 @@ it('proves production asset registration defines vizy-editor on real field input
 
     $jsPath = $bundle->sourcePath . DIRECTORY_SEPARATOR . $bundle->js[0];
     $js = file_get_contents($jsPath);
-    expect($html)->toContain('<vizy-editor')
+    // The entry lazily imports the editor runtime, which registers the real element.
+    // Its boot-failure fallback defines the same tag, so check this exact chunk.
+    $manifest = Json::decode(file_get_contents($bundle->sourcePath . DIRECTORY_SEPARATOR . 'manifest.json'));
+    $runtimeKey = 'field/src/ts/editor-runtime.ts';
+    $runtimeJs = file_get_contents($bundle->sourcePath . DIRECTORY_SEPARATOR . $manifest[$runtimeKey]['file']);
+    expect($manifest['field/src/ts/vizy.ts']['dynamicImports'])->toContain($runtimeKey)
+        ->and($js)->toContain(basename($manifest[$runtimeKey]['file']))
+        ->and($html)->toContain('<vizy-editor')
         ->and(substr_count($html, 'data-vizy-document'))->toBe(1)
         ->and($html)->toContain('data-vizy-bootstrap')
         ->and($html)->not->toContain('bootstrapEditor(')
         ->and($html)->not->toContain('vizyHost[')
-        ->and($js)->toMatch("/customElements\\.define\\([`'\"]vizy-editor[`'\"]/")
+        ->and($runtimeJs)->toMatch("/customElements\\.define\\([`'\"]vizy-editor[`'\"]/")
         ->and($js)->toContain('bootstrapEditor')
         ->and(Json::encode($view->jsFiles))->toContain(basename($bundle->js[0]));
 });

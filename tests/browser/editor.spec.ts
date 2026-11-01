@@ -1610,6 +1610,13 @@ test('Block limits remove dead actions and explain a policy-rejected private pas
     await expect(block.locator('pk-dropdown-item[value="delete"]')).toHaveCount(0);
     await expect(page.locator('vizy-toolbar').locator('[data-vizy-toolbar-add-block]')).toHaveCount(0);
 
+    // Add Block follows the editor selection only while the editor has focus. An
+    // open menu returns focus to its trigger as it closes, which can land after
+    // the selection below and hide the button again.
+    await page.keyboard.press('Escape');
+    await expect(block.locator('[part="menu-trigger"]')).toBeEnabled();
+    await expect.poll(() => block.locator('pk-dropdown-menu').evaluate((menu: any) => menu.open)).toBe(false);
+
     await page.evaluate(() => {
         const editor = (document.querySelector('vizy-editor') as any).editor;
         let nestedPos: number | null = null;
