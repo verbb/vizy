@@ -89,6 +89,15 @@
       "_dismissible-stack-CwhtwAyo-hcp-3Qpk.js"
     ]
   },
+  "_partner-registry-COOEFBS9.js": {
+    "file": "assets/partner-registry-COOEFBS9.js",
+    "name": "partner-registry",
+    "imports": [
+      "_rolldown-runtime-XKyaHtl9.js",
+      "_pk-icon-BjE9eXYf.js",
+      "_w3c-keyname-BOAvb0qz.js"
+    ]
+  },
   "_pk-dialog-DxLi90RH-DwZ2e7C7.js": {
     "file": "assets/pk-dialog-DxLi90RH-DwZ2e7C7.js",
     "name": "pk-dialog-DxLi90RH",
@@ -225,7 +234,7 @@
     ]
   },
   "field/src/ts/editor-runtime.ts": {
-    "file": "assets/editor-runtime-CsV9hfGH.js",
+    "file": "assets/editor-runtime-C98y96kg.js",
     "name": "editor-runtime",
     "src": "field/src/ts/editor-runtime.ts",
     "isDynamicEntry": true,
@@ -234,10 +243,10 @@
       "_dismissible-stack-CwhtwAyo-hcp-3Qpk.js",
       "_unsafe-html-gc18YCOF.js",
       "_pk-icon-BjE9eXYf.js",
+      "_partner-registry-COOEFBS9.js",
       "_block-type-icon-MKeH7A0L.js",
       "_popup-DgtwjxXy.js",
       "_preload-helper-CRzLMJPS.js",
-      "field/src/ts/vizy.ts",
       "_icon-QRWtycT4.js",
       "_select-DMNBptwe.js",
       "_required-validator-I58oJGZ3-4YNEUxSQ.js",
@@ -252,7 +261,7 @@
     ]
   },
   "field/src/ts/vizy.ts": {
-    "file": "assets/vizy-Ceebjj98.js",
+    "file": "assets/vizy-D4PD_wHe.js",
     "name": "vizy",
     "src": "field/src/ts/vizy.ts",
     "isEntry": true,
@@ -261,10 +270,10 @@
       "_spinner-DP-UXqBC.js",
       "_dismissible-stack-CwhtwAyo-hcp-3Qpk.js",
       "_pk-icon-BjE9eXYf.js",
+      "_partner-registry-COOEFBS9.js",
       "_block-type-icon-MKeH7A0L.js",
       "_tooltip-C-EpDcfE.js",
       "_popup-DgtwjxXy.js",
-      "_w3c-keyname-BOAvb0qz.js",
       "_preload-helper-CRzLMJPS.js"
     ],
     "dynamicImports": [

@@ -5,13 +5,14 @@
     "type": "module",
     "scripts": {
         "dev": "vite --port 4001",
-        "build": "vite build",
+        "build": "vite build && npm run test:assets",
         "watch": "vite build --watch",
         "typecheck": "tsc --noEmit",
         "test": "vitest run",
         "test:browser": "playwright test",
         "test:cp": "npm run build && node tests/browser-cp/run.mjs",
-        "screenshots": "npm --prefix screenshots run screenshots --"
+        "screenshots": "npm --prefix screenshots run screenshots --",
+        "test:assets": "node tests/web/check-entry-imports.mjs src/web/assets/field/dist/manifest.json"
     },
     "devDependencies": {
         "@playwright/test": "1.62.1",

@@ -3,6 +3,7 @@
 ## Unreleased
 
 ### Fixed
+- Fixed editor JavaScript loading twice when Craft’s `buildId` setting is configured.
 - Fixed the Emoji picker exposing duplicate dialogs to assistive technology.
 - Fixed Vizy 3 upgrades failing when fields selected JSON editor config files, including when retrying a failed upgrade.
 - Fixed Vizy 3 upgrades failing when a Block Type reused the same Craft field with different placement handles.

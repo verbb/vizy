@@ -18,6 +18,8 @@ export default ({ command }) => ({
         manifest: 'manifest.json',
         sourcemap: true,
         rollupOptions: {
+            // Craft may append buildId to page URLs; keep shared exports out of those entries.
+            preserveEntrySignatures: 'strict',
             input: {
                 vizy: '/field/src/ts/vizy.ts',
                 'field-settings': '/fieldsettings/src/ts/field-settings.ts',
