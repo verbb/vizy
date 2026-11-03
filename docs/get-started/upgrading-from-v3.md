@@ -28,6 +28,22 @@ For example, update automatic output in an entry template by calling `render()` 
 ```
 :::
 
+Twig filters that work on strings need the rendered HTML too. A `VizyDocument` can’t be converted to a string, so passing the field directly to a filter such as `replace` throws an error like `str_replace(): Argument #3 ($subject) must be of type array|string`. Call `render()` before the filter.
+
+For example, this template adds a marker after every link in the field:
+
+::: code-group
+```twig [Vizy 3]
+{{ entry.vizyField|replace('</a>', '</a> <sup>Link</sup>')|raw }}
+```
+
+```twig [Vizy 4]
+{{ entry.vizyField.render()|replace('</a>', '</a> <sup>Link</sup>')|raw }}
+```
+:::
+
+`replace` returns a plain string, which Twig escapes on output. Keep `|raw` at the end of the chain so the result displays as HTML, unless a later filter already marks its output as safe.
+
 Block Type templates receive the current block as `block`. If a template used a field directly, read it through the block instead. For a Plain Text field named `text`, the change is:
 
 ::: code-group
