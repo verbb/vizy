@@ -3,6 +3,7 @@
 ## Unreleased
 
 ### Added
+- Added temporary browser error capture to diagnostics, with tab-local recording and the same report preview and export.
 - Added an admin-only diagnostics page with report previews and optional content exports for support requests.
 
 ### Fixed

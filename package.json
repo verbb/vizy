@@ -5,7 +5,8 @@
     "type": "module",
     "scripts": {
         "dev": "vite --port 4001",
-        "build": "vite build && npm run test:assets",
+        "build": "vite build && npm run build:diagnostics && npm run test:assets",
+        "build:diagnostics": "vite build --config vite.diagnostics.config.js",
         "watch": "vite build --watch",
         "typecheck": "tsc --noEmit",
         "test": "vitest run",

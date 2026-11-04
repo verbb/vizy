@@ -76,6 +76,7 @@ class Vizy extends Plugin
 
         if (Craft::$app->getRequest()->getIsCpRequest()) {
             $this->_registerCpRoutes();
+            Event::on(\craft\web\View::class, \craft\web\View::EVENT_BEGIN_PAGE, [\verbb\vizy\services\BrowserDiagnostics::class, 'registerAssets']);
         }
     }
 

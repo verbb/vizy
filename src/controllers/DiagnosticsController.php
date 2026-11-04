@@ -1,11 +1,13 @@
 <?php
 namespace verbb\vizy\controllers;
 
+use verbb\vizy\services\BrowserDiagnostics;
 use verbb\vizy\services\Diagnostics;
 
 use Craft;
 use craft\elements\Entry;
 use craft\helpers\Json;
+use craft\helpers\UrlHelper;
 use craft\web\Controller;
 
 use yii\web\BadRequestHttpException;
@@ -120,11 +122,18 @@ final class DiagnosticsController extends Controller
             }
 
             if ($preview) {
-                if (!isset($documents[$selection])) {
+                $browser = BrowserDiagnostics::readReport($this->request->getBodyParam('browserCapture'), $includeContent);
+
+                if (!isset($documents[$selection]) && ($selection !== '' || $browser === null)) {
                     throw new BadRequestHttpException('Choose a Vizy field from this entry.');
                 }
 
-                $report = $service->createReport($documents[$selection], $includeContent);
+                $report = $service->createReport($documents[$selection] ?? null, $includeContent);
+
+                if ($browser !== null) {
+                    $report['browser'] = $browser;
+                }
+
                 $json = $service->encodeReport($report);
                 $signed = base64_encode(Craft::$app->getSecurity()->hashData(Json::encode([
                     'userId' => Craft::$app->getUser()->getId(),
@@ -152,6 +161,7 @@ final class DiagnosticsController extends Controller
             'reportJson' => $json,
             'signedReport' => $signed,
             'error' => $error,
+            'diagnosticsUrl' => UrlHelper::cpUrl('vizy/diagnostics', array_filter(['entryId' => $entry?->id, 'siteId' => $siteId])),
         ]);
     }
 }

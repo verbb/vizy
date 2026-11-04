@@ -14,5 +14,5 @@
         "isolatedModules": true,
         "types": ["vite/client", "node"]
     },
-    "include": ["src/web/assets/field/src/ts/**/*.ts", "tests/frontend/**/*.ts"]
+    "include": ["src/web/assets/field/src/ts/**/*.ts", "src/web/assets/diagnostics/src/**/*.ts", "tests/frontend/**/*.ts"]
 }

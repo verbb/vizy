@@ -50,10 +50,8 @@ final class Diagnostics extends Component
         return $this->_documents;
     }
 
-    public function createReport(array $selection, bool $includeContent = false): array
+    public function createReport(?array $selection, bool $includeContent = false): array
     {
-        $field = $selection['field'];
-        $configId = $field->editorConfig ?: EditorConfigs::DEFAULT_ID;
         $report = [
             'format' => 'vizy-diagnostics',
             'formatVersion' => 1,
@@ -65,17 +63,25 @@ final class Diagnostics extends Component
                 'vizySchema' => Vizy::$plugin->schemaVersion,
                 'php' => PHP_VERSION,
             ],
-            'scope' => [
-                'entryId' => $selection['entryId'],
-                'siteId' => $selection['siteId'],
-                'path' => $selection['path'],
-                'fieldUid' => $field->uid,
-                'fieldHandle' => $field->handle,
-                'placementUid' => $selection['placementUid'],
-                'savedContentOnly' => true,
-            ],
+            'scope' => null,
             'browser' => ['captured' => false],
             'errors' => [],
+        ];
+
+        if ($selection === null) {
+            return $report;
+        }
+
+        $field = $selection['field'];
+        $configId = $field->editorConfig ?: EditorConfigs::DEFAULT_ID;
+        $report['scope'] = [
+            'entryId' => $selection['entryId'],
+            'siteId' => $selection['siteId'],
+            'path' => $selection['path'],
+            'fieldUid' => $field->uid,
+            'fieldHandle' => $field->handle,
+            'placementUid' => $selection['placementUid'],
+            'savedContentOnly' => true,
         ];
         $configs = Vizy::$plugin->getEditorConfigs();
         $config = null;

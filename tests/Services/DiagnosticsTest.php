@@ -234,3 +234,62 @@ it('lists repeated hosted fields separately and exports only the selected nested
     $json = $service->encodeReport($service->createReport($selected, true));
     expect($json)->toContain('Nested two')->not->toContain('Nested one');
 });
+
+it('previews browser-only reports and strips arbitrary data and unconsented details', function() {
+    $response = diagnosticsRequest('preview', [], function() {
+        $capture = [
+            'owner' => \verbb\vizy\services\BrowserDiagnostics::ownerKey(),
+            'startedAt' => time() * 1000,
+            'status' => 'stopped', 'includeDetails' => true, 'dropped' => 2,
+            'events' => [[
+                'kind' => 'error', 'errorType' => 'TypeError', 'elapsedMs' => 10,
+                'message' => 'PRIVATE-BROWSER-MESSAGE', 'stack' => 'PRIVATE-STACK',
+                'url' => 'https://private.example?token=secret', 'headers' => ['Authorization' => 'secret'],
+            ], ['kind' => 'PRIVATE-UNEXPECTED-KIND']],
+            'cookies' => 'PRIVATE-COOKIE',
+        ];
+        Craft::$app->getRequest()->setBodyParams(['browserCapture' => Json::encode($capture)]);
+    });
+    $variables = $response->getBehavior(\craft\web\TemplateResponseBehavior::NAME)->variables;
+    $report = Json::decode($variables['reportJson']);
+    expect($report['scope'])->toBeNull()
+        ->and($report['browser']['captured'])->toBeTrue()
+        ->and($report['browser']['includesDetails'])->toBeFalse()
+        ->and($report['browser']['events'])->toHaveCount(1)
+        ->and($variables['reportJson'])->not->toContain('PRIVATE-', 'private.example', 'Authorization', 'secret');
+    $download = diagnosticsRequest('download', ['report' => $variables['signedReport']]);
+    expect($download->content)->toBe($variables['reportJson']);
+});
+
+it('requires content consent both when recording and when exporting browser error details', function(bool $recorded, bool $exported) {
+    diagnosticsRequest('index', [], function() use ($recorded, $exported) {
+        $raw = Json::encode([
+            'owner' => \verbb\vizy\services\BrowserDiagnostics::ownerKey(),
+            'startedAt' => time() * 1000, 'status' => 'stopped', 'includeDetails' => $recorded,
+            'events' => [['kind' => 'console-error', 'message' => 'PRIVATE-MESSAGE', 'stack' => 'PRIVATE-STACK', 'body' => 'PRIVATE-BODY']],
+        ]);
+        $report = \verbb\vizy\services\BrowserDiagnostics::readReport($raw, $exported);
+        expect($report['includesDetails'])->toBe($recorded && $exported);
+        expect(isset($report['events'][0]['message']))->toBe($recorded && $exported);
+        expect(Json::encode($report))->not->toContain('PRIVATE-BODY');
+    });
+})->with([[false, false], [false, true], [true, false], [true, true]]);
+
+it('rejects expired, other-login, active, oversized and malformed browser captures', function(string $case) {
+    expect(fn() => diagnosticsRequest('preview', [], function() use ($case) {
+        $capture = [
+            'owner' => \verbb\vizy\services\BrowserDiagnostics::ownerKey(),
+            'startedAt' => time() * 1000, 'status' => 'stopped', 'events' => [],
+        ];
+        if ($case === 'expired') $capture['startedAt'] -= 3601000;
+        if ($case === 'other-login') $capture['owner'] = 'another-login';
+        if ($case === 'active') $capture['status'] = 'recording';
+        if ($case === 'too-many') $capture['events'] = array_fill(0, 101, ['kind' => 'page']);
+        $raw = match ($case) {
+            'oversized' => str_repeat('x', 524289),
+            'malformed' => '{not json',
+            default => Json::encode($capture),
+        };
+        Craft::$app->getRequest()->setBodyParams(['browserCapture' => $raw]);
+    }))->toThrow(BadRequestHttpException::class);
+})->with(['expired', 'other-login', 'active', 'too-many', 'oversized', 'malformed']);
