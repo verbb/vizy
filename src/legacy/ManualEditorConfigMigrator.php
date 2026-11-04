@@ -438,6 +438,8 @@ final class ManualEditorConfigMigrator
             }
         }
 
-        return $marks !== [] ? $marks : ['bold', 'italic', 'link'];
+        // Vizy 3 loaded TextStyle for every editor, independently of its buttons.
+        // Omitting it makes existing span-marked text opaque after conversion.
+        return [...($marks !== [] ? $marks : ['bold', 'italic', 'link']), 'textStyle'];
     }
 }

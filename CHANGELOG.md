@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+### Fixed
+- Fixed deprecation warnings when loading Vizy 3 field settings during upgrades.
+- Fixed converted Vizy 3 editor configs omitting text styles, leaving existing span-formatted text unsupported in the editor.
+
 ## 4.0.1 - 2026-11-01
 
 ### Fixed

@@ -20,6 +20,7 @@ trait VizyFieldLegacySettingsDeprecations
     private string $_legacyVizyConfig = '';
     private string $_legacyConfigSelectionMode = 'choose';
     private string $_legacyManualConfig = '';
+    private bool $_loadingLegacySettings = false;
     private static array $_legacySettingWarned = [];
 
 
@@ -29,6 +30,7 @@ trait VizyFieldLegacySettingsDeprecations
     public function getFieldData(): array
     {
         $this->_warnLegacySetting('getFieldData', 'VizyField::getFieldData() is deprecated. Vizy 3 migration tooling only; use global Block Types + blockTypePickerGroups. It will be removed in Vizy 5.');
+
         return $this->_legacyFieldData;
     }
 
@@ -42,6 +44,7 @@ trait VizyFieldLegacySettingsDeprecations
     public function getVizyConfig(): string
     {
         $this->_warnLegacySetting('getVizyConfig', 'VizyField::getVizyConfig() is deprecated. Use editorConfig. It will be removed in Vizy 5.');
+
         return $this->_legacyVizyConfig;
     }
 
@@ -54,6 +57,7 @@ trait VizyFieldLegacySettingsDeprecations
     public function getConfigSelectionMode(): string
     {
         $this->_warnLegacySetting('getConfigSelectionMode', 'VizyField::getConfigSelectionMode() is deprecated. Inline Editor Config is not canonical. It will be removed in Vizy 5.');
+
         return $this->_legacyConfigSelectionMode;
     }
 
@@ -66,6 +70,7 @@ trait VizyFieldLegacySettingsDeprecations
     public function getManualConfig(): string
     {
         $this->_warnLegacySetting('getManualConfig', 'VizyField::getManualConfig() is deprecated. Inline Editor Config is not canonical. It will be removed in Vizy 5.');
+
         return $this->_legacyManualConfig;
     }
 
@@ -81,9 +86,10 @@ trait VizyFieldLegacySettingsDeprecations
 
     private function _warnLegacySetting(string $method, string $message): void
     {
-        if (isset(self::$_legacySettingWarned[$method])) {
+        if ($this->_loadingLegacySettings || isset(self::$_legacySettingWarned[$method])) {
             return;
         }
+
         self::$_legacySettingWarned[$method] = true;
         Craft::$app->getDeprecator()->log("verbb\\vizy\\fields\\VizyField::{$method}", $message);
     }

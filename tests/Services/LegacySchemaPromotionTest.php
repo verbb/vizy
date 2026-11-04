@@ -722,7 +722,7 @@ it('upgrades mixed field modes with shared and distinct JSON config files', func
             expect($projectConfig->get("fields.{$uid}.settings.editorConfig"))->toBe($expected['id'])
                 ->and($projectConfig->get("fields.{$uid}.settings.rootContentType"))
                 ->toBe($expected['mode'] === VizyField::MODE_BLOCKS ? 'blocks' : 'rich')
-                ->and($configs->getConfig($expected['id'])['capabilities']['marks'])->toBe(['italic']);
+                ->and($configs->getConfig($expected['id'])['capabilities']['marks'])->toBe(['italic', 'textStyle']);
         }
     } finally {
         foreach (array_keys($paths) as $path) unlink($path);

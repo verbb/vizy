@@ -7,6 +7,22 @@ use craft\helpers\StringHelper;
 use verbb\vizy\legacy\ManualEditorConfigMigrator;
 use verbb\vizy\Vizy;
 
+it('keeps the always-loaded Vizy 3 text style mark without adding toolbar controls', function() {
+    $migrator = new ManualEditorConfigMigrator();
+    $payload = $migrator->toAuthorablePayload(['buttons' => ['italic']], 'legacy-text-style');
+    $config = Vizy::$plugin->getEditorConfigs()->normalizeRuntimeConfig('legacy-text-style', $payload);
+
+    expect($config['schema']['marks'])->toContain('textStyle', 'italic')
+        ->and($payload['toolbar'])->toBe(['italic']);
+
+    // Explicit Vizy 4 capability restrictions must remain authoritative.
+    $canonical = $migrator->toAuthorablePayload([
+        'capabilities' => ['nodes' => ['paragraph'], 'marks' => ['italic']],
+        'toolbar' => ['italic'],
+    ], 'canonical-text-style');
+    expect($canonical['capabilities']['marks'])->toBe(['italic']);
+});
+
 it('maps selected Vizy 3 config filenames to editor config IDs', function(string $selected, string $expected) {
     $plan = (new ManualEditorConfigMigrator())->plan([
         'configSelectionMode' => 'choose',

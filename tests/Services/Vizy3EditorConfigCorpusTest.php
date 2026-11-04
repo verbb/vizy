@@ -41,7 +41,8 @@ it('preserves source-authenticated Vizy 3 editor config selections', function(ar
                 expect($config['headings']['levels'])->toContain((int)$match[1]);
             }
         }
-        expect($config['capabilities']['marks'])->toBe($marks);
+        // VizyInput loaded TextStyle independently of the configured buttons.
+        expect($config['capabilities']['marks'])->toBe([...$marks, 'textStyle']);
     } finally {
         if ($path !== null) unlink($path);
         $service->invalidate();

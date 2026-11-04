@@ -202,7 +202,15 @@ class VizyField extends Field implements PreviewableFieldInterface
         // Vizy 3 Block picker hover/click behaviour — unused in Vizy 4 UI.
         unset($config['blockTypeBehaviour']);
 
-        parent::__construct($config);
+        // Craft hydrates Vizy 3 settings before promotion can replace them. This
+        // supported upgrade path must not report direct use of a deprecated API.
+        $this->_loadingLegacySettings = true;
+
+        try {
+            parent::__construct($config);
+        } finally {
+            $this->_loadingLegacySettings = false;
+        }
     }
 
     public function getSettings(): array
