@@ -1,0 +1,83 @@
+{% extends '_layouts/cp' %}
+{% import '_includes/forms' as forms %}
+{% set title = 'Vizy Diagnostics' | t('vizy') %}
+{% set selectedSubnavItem = null %}
+
+{% block content %}
+    <p>{{ 'Create a report for a Vizy support request. Preview what it contains, then download and attach it to your conversation with support. Nothing is sent automatically.' | t('vizy') }}</p>
+    <p class="light">{{ 'Reports inspect saved content. Unsaved edits and browser errors are not captured.' | t('vizy') }}</p>
+
+    {% if error %}<p class="error" role="alert">{{ error }}</p>{% endif %}
+
+    <form method="post" accept-charset="UTF-8">
+        {{ csrfInput() }}
+        {{ actionInput('vizy/diagnostics/index') }}
+        {{ forms.selectField({
+            label: 'Site' | t('app'), id: 'diagnostics-site', name: 'siteId',
+            options: sites, value: siteId,
+        }) }}
+        {{ forms.elementSelectField({
+            label: 'Entry' | t('app'), id: 'diagnostics-entry', name: 'entryIds',
+            elementType: entryType, sources: '*', limit: 1,
+            elements: entry ? [entry] : [], criteria: { siteId: siteId, status: null },
+        }) }}
+        <button class="btn" type="submit">{{ 'Find Vizy fields' | t('vizy') }}</button>
+    </form>
+
+    {% if entry and fields %}
+        <hr>
+        <form method="post" accept-charset="UTF-8">
+            {{ csrfInput() }}
+            {{ actionInput('vizy/diagnostics/preview') }}
+            {{ hiddenInput('entryId', entry.id) }}
+            {{ hiddenInput('siteId', siteId) }}
+            {{ forms.selectField({
+                label: 'Vizy field' | t('vizy'), id: 'diagnostics-field', name: 'field',
+                options: fields, value: selection,
+                instructions: 'Choose the affected field. Nested Vizy fields and Matrix entries are listed separately.' | t('vizy'),
+            }) }}
+            {{ forms.checkboxField({
+                label: 'Include content' | t('vizy'), id: 'diagnostics-include-content', name: 'includeContent',
+                value: '1', checked: includeContent,
+                instructions: 'Off by default. Includes the selected field’s saved JSON, normalized document and full Editor Config, including text, links and embedded field values. Review for sensitive information before sharing.' | t('vizy'),
+            }) }}
+            <button class="btn submit" type="submit">{{ 'Preview report' | t('vizy') }}</button>
+        </form>
+    {% elseif entry and not error %}
+        <p class="notice">{{ 'No Vizy fields were found on this entry. Choose the entry that contains the affected field.' | t('vizy') }}</p>
+    {% endif %}
+
+    {% if reportJson is not null %}
+        <hr>
+        <section aria-labelledby="diagnostics-preview-heading">
+            <h2 id="diagnostics-preview-heading">{{ 'Report preview' | t('vizy') }}</h2>
+            <p>{{ report.includesContent
+                ? 'Content is included in this preview. Check it before downloading and sharing.' | t('vizy')
+                : 'Content is excluded. This report contains versions, field and config identifiers, formatting capabilities, and upgrade status.' | t('vizy') }}</p>
+            {% set unsupported = [] %}
+            {% for item in report.stored.types ?? [] %}
+                {% if item.enabled is same as(false) %}{% set unsupported = unsupported | merge([item]) %}{% endif %}
+            {% endfor %}
+            {% if unsupported %}
+                <div class="warning">
+                    <p>{{ 'Formatting or content types that are not enabled in this field:' | t('vizy') }}</p>
+                    <ul>{% for item in unsupported %}<li><code>{{ item.type }}</code> ({{ item.kind }})</li>{% endfor %}</ul>
+                </div>
+            {% endif %}
+            {% if report.errors %}
+                <p class="warning">{{ 'Some checks could not complete. The report includes their diagnostic codes.' | t('vizy') }}</p>
+            {% endif %}
+            {{ forms.textareaField({
+                label: 'Report JSON' | t('vizy'), id: 'diagnostics-report',
+                value: reportJson, readonly: true, rows: 22, class: 'code fullwidth',
+            }) }}
+            <form method="post" accept-charset="UTF-8">
+                {{ csrfInput() }}
+                {{ actionInput('vizy/diagnostics/download') }}
+                {{ hiddenInput('report', signedReport) }}
+                <button class="btn submit" type="submit">{{ 'Download this report' | t('vizy') }}</button>
+                <p class="light">{{ 'Downloads exactly the preview above. To change the entry, field or content option, generate a new preview. The download expires after 15 minutes.' | t('vizy') }}</p>
+            </form>
+        </section>
+    {% endif %}
+{% endblock %}

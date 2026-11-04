@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+### Added
+- Added an admin-only diagnostics page with report previews and optional content exports for support requests.
+
 ### Fixed
 - Fixed deprecation warnings when loading Vizy 3 field settings during upgrades.
 - Fixed converted Vizy 3 editor configs omitting text styles, leaving existing span-formatted text unsupported in the editor.
