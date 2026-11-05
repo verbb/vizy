@@ -4,6 +4,7 @@
 
 ### Fixed
 - Fixed Vizy 3 editor config conversion disabling bold and other built-in formatting when their toolbar buttons were absent, leaving existing text unsupported in the editor.
+- Fixed Vizy 3 content failing to load when it contained null child nodes, including empty table cells and headers.
 
 ## 4.0.2 - 2026-11-05
 

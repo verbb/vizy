@@ -10,9 +10,13 @@ use Craft;
  */
 final class Vizy3DocumentAdapter
 {
+    // Constants
+    // =========================================================================
+
     private const LEGACY_NODE_TYPES = [
         'list_item' => 'listItem',
     ];
+
 
     // Public Methods
     // =========================================================================
@@ -68,8 +72,16 @@ final class Vizy3DocumentAdapter
                 throw new LegacyDocumentConversionException("Malformed legacy child content at {$path}.");
             }
 
+            $content = [];
+
             foreach ($node['content'] as $index => $child) {
-                $node['content'][$index] = $this->_convertNode(
+                // Vizy 3's NodeCollection removed null children before normalizing.
+                // Keep every real node and its original error path, then compact the list.
+                if ($child === null) {
+                    continue;
+                }
+
+                $content[] = $this->_convertNode(
                     $child,
                     $schemaMap,
                     $seenBlockUids,
@@ -77,6 +89,8 @@ final class Vizy3DocumentAdapter
                     $node['type'],
                 );
             }
+
+            $node['content'] = $content;
         }
 
         if (isset($node['marks'])) {
@@ -108,6 +122,12 @@ final class Vizy3DocumentAdapter
     {
         if (($node['type'] ?? null) !== 'text' && array_key_exists('text', $node)) {
             unset($node['text']);
+        }
+
+        // Vizy 3 restored a paragraph after filtering empty table cells/headers.
+        // TipTap requires block+ content here, including when the saved cell was [null].
+        if (in_array($node['type'] ?? null, ['tableCell', 'tableHeader'], true) && ($node['content'] ?? []) === []) {
+            $node['content'] = [['type' => 'paragraph']];
         }
 
         if (($node['type'] ?? null) !== 'listItem') {
