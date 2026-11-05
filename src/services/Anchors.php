@@ -18,6 +18,7 @@ use craft\base\Element;
 use craft\base\ElementInterface;
 use craft\db\Query;
 use craft\db\Table;
+use craft\elements\Entry;
 use craft\fields\Matrix;
 use craft\helpers\Json;
 use craft\models\FieldLayout;
@@ -158,6 +159,54 @@ class Anchors extends Component
         }
 
         return null;
+    }
+
+    /**
+     * Find the saved row a draft's Matrix row was submitted from.
+     *
+     * A draft's anchor holds independent rows, so a row posted under its saved UID
+     * is created as a new element with no canonical or duplicate link. That UID is
+     * only trusted inside the same block of the owner's own source, never by lookup
+     * alone, so a row and token borrowed from another element don't resolve here.
+     */
+    public function getSourceRow(ElementInterface $row): ?Entry
+    {
+        if (!$row instanceof Entry || !$row->fieldId || !$row->uid) {
+            return null;
+        }
+
+        $anchor = $row->getOwner();
+
+        if (!$anchor instanceof MatrixAnchor) {
+            return null;
+        }
+
+        $parent = $anchor->getParentOwner();
+        $vizyField = Craft::$app->getFields()->getFieldById($anchor->vizyFieldId);
+
+        if (!$parent || !$vizyField instanceof VizyField) {
+            return null;
+        }
+
+        $sourceOwner = $parent->duplicateOf ?? ($parent->getIsDerivative() ? $parent->getCanonical() : null);
+
+        if (!$sourceOwner || $sourceOwner->id === $parent->id) {
+            return null;
+        }
+
+        $sourceAnchor = $this->getAnchor($sourceOwner, $vizyField, $anchor->blockInstanceId, null, $anchor->documentKey ?: null);
+
+        if (!$sourceAnchor) {
+            return null;
+        }
+
+        return Entry::find()
+            ->ownerId($sourceAnchor->id)
+            ->fieldId($row->fieldId)
+            ->uid($row->uid)
+            ->siteId($row->siteId)
+            ->status(null)
+            ->one();
     }
 
     public function ensureAnchor(

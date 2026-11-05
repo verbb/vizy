@@ -7,6 +7,7 @@
 - Added an admin-only diagnostics page with report previews and optional content exports for support requests.
 
 ### Fixed
+- Fixed autosave failing with “The Vizy content version belongs to another owner” on entries with a Vizy field inside a Matrix row in a Vizy block, which left edits unsaved until the entry was saved.
 - Fixed deprecation warnings when loading Vizy 3 field settings during upgrades.
 - Fixed converted Vizy 3 editor configs omitting text styles, leaving existing span-formatted text unsupported in the editor.
 - Fixed previously upgraded, unchanged editor configs missing text styles by restoring support automatically during updates.

@@ -34,11 +34,13 @@ final class MatrixSupportFixture
     public Entry $owner;
     public ?VizyField $hostedField = null;
     public ?BlockType $hostType = null;
+    public ?VizyField $rowVizy = null;
 
     public function __construct(
         bool $nested = false,
         PropagationMethod $propagation = PropagationMethod::All,
         string $fieldTranslationMethod = Field::TRANSLATION_METHOD_SITE,
+        bool $rowVizy = false,
     )
     {
         $suffix = StringHelper::randomString(8);
@@ -56,6 +58,13 @@ final class MatrixSupportFixture
             $this->nestedMatrix->setEntryTypes([$nestedType]);
             expect(Craft::$app->getFields()->saveField($this->nestedMatrix))->toBeTrue();
             $placements[] = new CustomField($this->nestedMatrix);
+        }
+        if ($rowVizy) {
+            $this->rowVizy = new VizyField([
+                'name' => 'Row body', 'handle' => 'rowBody' . $suffix, 'editorConfig' => 'standard',
+            ]);
+            expect(Craft::$app->getFields()->saveField($this->rowVizy))->toBeTrue();
+            $placements[] = new CustomField($this->rowVizy);
         }
         $this->rowType = new EntryType(['name' => 'Matrix row', 'handle' => 'matrixRow' . $suffix]);
         $this->rowType->setFieldLayout($this->layout(Entry::class, $placements));

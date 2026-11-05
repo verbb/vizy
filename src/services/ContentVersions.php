@@ -42,6 +42,7 @@ final class ContentVersions extends Component
             'fieldUid' => $field->uid, 'placementUid' => $snapshot['placementUid'],
             'hash' => Vizy::$plugin->getContentRecovery()->hash($snapshot),
             'embeddedPlacementUid' => $embedded ? $embedded['path'][0]['placementUid'] : null];
+
         return rtrim(strtr(base64_encode(Craft::$app->getSecurity()->hashData(Json::encode($payload))), '+/', '-_'), '=');
     }
 
@@ -50,6 +51,7 @@ final class ContentVersions extends Component
         if (!$token) {
             return;
         }
+
         $embedded = EmbeddedOwners::scope($owner);
         $owner = $embedded['owner'] ?? $owner;
         $decoded = base64_decode(strtr($token, '-_', '+/'), true);
@@ -64,22 +66,28 @@ final class ContentVersions extends Component
         if (($version['embeddedPlacementUid'] ?? null) !== ($embedded ? $embedded['path'][0]['placementUid'] : null)) {
             throw new RuntimeException('The Vizy content version belongs to another embedded placement.');
         }
+
         $sourceId = (int)$version['ownerId'];
 
         if ($sourceId === 0 && $owner->firstSave) {
             return;
         }
 
+        // The first autosave recreates submitted Matrix rows on the draft's anchor.
+        // Their tokens still name the saved row, which the checks below compare against.
         if ($sourceId !== (int)$owner->id && $sourceId !== (int)$owner->getCanonicalId()
-            && $sourceId !== (int)($owner->duplicateOf?->id)) {
+            && $sourceId !== (int)($owner->duplicateOf?->id)
+            && $sourceId !== (int)Vizy::$plugin->getAnchors()->getSourceRow($owner)?->id) {
             throw new RuntimeException('The Vizy content version belongs to another owner.');
         }
+
         $db = Craft::$app->getDb();
         $transaction = $db->getTransaction();
 
         if (!$transaction?->getIsActive()) {
             throw new RuntimeException('Vizy version checks require the owner save transaction.');
         }
+
         $this->_checked ??= new WeakMap();
         $checked = $this->_checked[$transaction] ?? [];
 
@@ -98,8 +106,10 @@ final class ContentVersions extends Component
                 $checked[$scopeKey] = true;
                 $this->_checked[$transaction] = $checked;
             }
+
             return;
         }
+
         $db->createCommand('SELECT [[id]] FROM ' . Table::ELEMENTS . ' WHERE [[id]] = :id FOR UPDATE', [':id' => $sourceId])->queryScalar();
         $source = $sourceId === (int)$owner->id ? $owner
             : Craft::$app->getElements()->getElementById($sourceId, $owner::class, $version['siteId']);
@@ -107,16 +117,19 @@ final class ContentVersions extends Component
         if (!$source) {
             throw new RuntimeException('The original Vizy owner is no longer available. No submitted content has been discarded.');
         }
+
         $snapshot = $embedded ? $this->_embeddedSnapshot($source, $embedded['path'][0]['placementUid'], true) : Vizy::$plugin->getContentRecovery()->snapshot($source, $field, true);
 
         if (!hash_equals($version['hash'], Vizy::$plugin->getContentRecovery()->hash($snapshot))) {
             throw new ContentConflictException($source);
         }
+
         $checked[$token] = true;
 
         if (!$embedded) {
             $checked[$scopeKey] = true;
         }
+
         $this->_checked[$transaction] = $checked;
     }
 
@@ -137,6 +150,7 @@ final class ContentVersions extends Component
             $content = is_string($row['content']) ? Json::decode($row['content']) : $row['content'];
             $values[] = ['siteId' => (int)$row['siteId'], 'value' => $content[$placement] ?? null];
         }
+
         return ['placementUid' => $placement, 'values' => $values];
     }
 
