@@ -1,0 +1,95 @@
+{# Returned to the support page, which copies or saves exactly the report shown here. #}
+<div class="vizy-support-actions" style="justify-content: space-between">
+    <h2>{{ 'Here’s what we found' | t('vizy') }}</h2>
+    <pk-button variant="link" data-support-restart>{{ 'Start again' | t('vizy') }}</pk-button>
+</div>
+
+{% for finding in review.findings %}
+    <pk-alert variant="{{ { warning: 'warning', ok: 'success' }[finding.level] ?? 'info' }}" heading="{{ finding.title }}">{{ finding.detail }}</pk-alert>
+{% endfor %}
+
+<h3>{{ 'What’s in the report' | t('vizy') }}</h3>
+<div class="vizy-support-details">
+    <details data-key="versions">
+        <summary>{{ 'Versions' | t('vizy') }}</summary>
+        <div>Craft {{ report.environment.craft }}, Vizy {{ report.environment.vizy }}, {{ 'schema' | t('vizy') }} {{ report.environment.vizySchema }}, PHP {{ report.environment.php }}{% if report.browser.environment.browser is defined %}, {{ report.browser.environment.browser | capitalize }} {{ report.browser.environment.majorVersion ?? '' }}{% endif %}</div>
+    </details>
+    {% if review.setup %}
+        <details data-key="setup">
+            <summary>{{ 'How your fields are set up' | t('vizy') }}</summary>
+            <div><ul>
+                {% for field in review.setup %}
+                    <li>{{ '{field} uses the {config} config. Turned on: {types}.' | t('vizy', { field: field.label, config: field.config, types: field.turnedOn | join(', ') }) }}</li>
+                {% endfor %}
+            </ul></div>
+        </details>
+        <details data-key="counts">
+            <summary>{{ 'What your content contains' | t('vizy') }}</summary>
+            <div><ul>
+                {% for field in review.counts %}
+                    <li>{{ field.label }}: {% for type in field.types %}{{ type.type }} × {{ type.count }}{% if not loop.last %}, {% endif %}{% endfor %}</li>
+                {% endfor %}
+            </ul></div>
+        </details>
+    {% endif %}
+    {% if review.captured %}
+        <details data-key="events">
+            <summary>{{ 'What happened while we checked' | t('vizy') }}</summary>
+            <div>
+                {% if review.events %}
+                    <ul>{% for event in review.events %}<li>{{ event.at }} · {{ event.text }}</li>{% endfor %}</ul>
+                {% else %}
+                    {{ 'No errors, failed requests or warnings on the pages you visited.' | t('vizy') }}
+                {% endif %}
+            </div>
+        </details>
+    {% endif %}
+</div>
+
+<h3>{{ 'Share it' | t('vizy') }}</h3>
+
+{% if review.contentTooLarge %}
+    <pk-alert variant="warning" size="sm">{{ 'Your content was too large to include, so it’s been left out. Support can still use this report.' | t('vizy') }}</pk-alert>
+{% endif %}
+
+{% if canIncludeContent %}
+    <div class="vizy-support-option">
+        <pk-checkbox data-support-include with-hint{% if includeContent %} checked{% endif %}>
+            {{ 'Include my content' | t('vizy') }}
+            <span slot="hint">
+                {% if not includeContent %}
+                    {{ 'Your content and error messages will be left out. Support may need to ask for them later.' | t('vizy') }}
+                {% elseif review.contentLabels %}
+                    {{ 'This helps support answer without more questions. It adds the words in {fields}, any error messages and the field’s settings. Untick this if it’s private or not yours to share.' | t('vizy', { fields: review.contentLabels | join(', ') }) }}
+                {% else %}
+                    {{ 'This helps support answer without more questions. It adds the error messages from this check, which can quote text from the page. Untick this if it’s private or not yours to share.' | t('vizy') }}
+                {% endif %}
+            </span>
+        </pk-checkbox>
+        {% if includeContent %}
+            <details data-key="adds">
+                <summary>{{ 'See what this adds' | t('vizy') }}</summary>
+                {% if review.preview %}
+                    <div class="vizy-support-preview">
+                        {% for item in review.preview %}
+                            <strong>{{ item.label }}</strong>
+                            {% for paragraph in item.paragraphs %}<span>{{ paragraph }}</span>{% else %}<span>{{ 'This field has no text.' | t('vizy') }}</span>{% endfor %}
+                        {% endfor %}
+                    </div>
+                {% endif %}
+                {% if review.messages %}<pre>{{ review.messages | join("\n") }}</pre>{% endif %}
+            </details>
+        {% endif %}
+    </div>
+{% endif %}
+
+{% if report.includesContent %}
+    <pk-alert variant="warning" size="sm">{{ 'This report includes your content, which can include error messages. GitHub issues are public, so send it by email or through the Vizy support page.' | t('vizy') }}</pk-alert>
+{% endif %}
+
+<div class="vizy-support-actions">
+    <pk-button{% if not tooLongToPaste %} variant="primary"{% endif %} data-support-copy>{{ 'Copy report' | t('vizy') }}</pk-button>
+    <pk-button{% if tooLongToPaste %} variant="primary"{% endif %} data-support-download>{{ 'Download a file' | t('vizy') }}</pk-button>
+</div>
+<pk-alert size="sm" announce="polite" data-support-share-status hidden></pk-alert>
+<pre hidden data-support-report>{{ reportJson }}</pre>

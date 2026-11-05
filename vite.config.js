@@ -26,6 +26,7 @@ export default ({ command }) => ({
                 'editor-config-settings': '/editorconfigsettings/src/ts/editor-config-settings.ts',
                 'icon-picker': '/iconpicker/src/ts/icon-picker.ts',
                 migrations: '/migrations/src/ts/migrations.ts',
+                support: '/diagnostics/src/support.ts',
             },
             output: {
                 sourcemapExcludeSources: true,

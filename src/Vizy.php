@@ -12,6 +12,7 @@ use verbb\vizy\integrations\feedme\fields\Vizy as FeedMeVizyField;
 use verbb\vizy\models\Settings;
 use verbb\vizy\services\BlockTypes;
 use verbb\vizy\services\EditorConfigs;
+use verbb\vizy\utilities\SupportUtility;
 
 use Craft;
 use craft\base\Element;
@@ -32,6 +33,7 @@ use craft\services\Drafts;
 use craft\services\Fields;
 use craft\services\Gql;
 use craft\services\ProjectConfig;
+use craft\services\Utilities;
 use craft\web\Controller;
 use craft\web\Response;
 
@@ -136,6 +138,10 @@ class Vizy extends Plugin
 
     private function _registerEventHandlers(): void
     {
+        Event::on(Utilities::class, Utilities::EVENT_REGISTER_UTILITIES, function(RegisterComponentTypesEvent $event) {
+            $event->types[] = SupportUtility::class;
+        });
+
         Event::on(Elements::class, Elements::EVENT_INVALIDATE_CACHES, function(InvalidateElementCachesEvent $event) {
             // Raw migrations invalidate all element caches after their outer
             // commit. Reload persisted validation state in long-lived callers.

@@ -5,18 +5,15 @@ use verbb\vizy\services\BrowserDiagnostics;
 use verbb\vizy\services\Diagnostics;
 
 use Craft;
-use craft\elements\Entry;
-use craft\helpers\Json;
-use craft\helpers\UrlHelper;
+use craft\base\ElementInterface;
 use craft\web\Controller;
+use craft\web\View;
 
-use yii\web\BadRequestHttpException;
-use yii\web\NotFoundHttpException;
 use yii\web\Response;
 
 use Throwable;
 
-/** Admin-only support page, deliberately absent from normal CP navigation. */
+/** Support reports, reached through Utilities and kept out of normal editing UI. */
 final class DiagnosticsController extends Controller
 {
     // Public Methods
@@ -29,7 +26,7 @@ final class DiagnosticsController extends Controller
         }
 
         $this->requireCpRequest();
-        $this->requireAdmin(false);
+        $this->requirePermission(BrowserDiagnostics::PERMISSION);
 
         $this->response->getHeaders()->set('Cache-Control', 'no-store, private');
         $this->response->getHeaders()->set('X-Content-Type-Options', 'nosniff');
@@ -38,130 +35,125 @@ final class DiagnosticsController extends Controller
         return true;
     }
 
+    /** The direct route, which still works when `disabledUtilities` hides the utility. */
     public function actionIndex(): Response
     {
-        return $this->_page(false);
+        return $this->renderTemplate('vizy/diagnostics/index');
     }
 
-    public function actionPreview(): Response
+    /**
+     * Builds the report and its plain-language review. The page copies or saves
+     * exactly this text, so nothing about the report is kept on the server.
+     */
+    public function actionReview(): Response
     {
         $this->requirePostRequest();
+        $this->requireAcceptsJson();
 
-        return $this->_page(true);
-    }
+        // Only a posted value counts, so a link can't change what gets included.
+        $includeContent = $this->request->getBodyParam('includeContent') === '1';
+        $capture = BrowserDiagnostics::readCapture($this->request->getBodyParam('browserCapture'), $includeContent);
 
-    public function actionDownload(): Response
-    {
-        $this->requirePostRequest();
+        try {
+            $service = new Diagnostics();
+            $user = Craft::$app->getUser()->getIdentity();
+            $includeConfig = (bool)$user?->admin;
+            $context = $capture['context'] ?? null;
+            $trail = $context['trail'] ?? null;
+            $element = $context ? $this->_element($context['id'], $context['siteId']) : null;
+            $contentTooLarge = false;
+            $documents = [];
+            $target = null;
+            $savedOnly = false;
+            $collectionFailed = false;
 
-        $signed = $this->request->getBodyParam('report');
+            // One unreadable page must not lose what the customer just captured.
+            try {
+                $documents = $element ? $service->collectDocuments($element) : [];
+                $target = $service->findTarget($documents, $trail);
 
-        if (!is_string($signed) || strlen($signed) > Diagnostics::MAX_REPORT_BYTES * 3) {
-            throw new BadRequestHttpException('Invalid diagnostics preview.');
+                // Autosaved Matrix rows inside Vizy blocks aren't reachable from their
+                // owner, so fall back to the row's saved version and say so.
+                if ($target === null && $trail !== null && preg_match('#^.*/row:(\d+)/(.+)$#D', $trail, $match)) {
+                    $row = $this->_element((int)$match[1], $context['siteId']);
+                    $rowDocuments = $row ? $service->collectDocuments($row) : [];
+                    $rowTarget = $service->findTarget($rowDocuments, $match[2]);
+
+                    if ($rowTarget !== null) {
+                        $documents = [...$documents, ...$rowDocuments];
+                        $target = $rowTarget;
+                        $savedOnly = true;
+                    }
+                }
+            } catch (Throwable) {
+                $collectionFailed = true;
+            }
+
+            $browser = $capture['report'] ?? null;
+            $page = $element ? $service->pageSummary($element, $documents[$target] ?? null, $savedOnly) : null;
+            $report = $service->createReport($documents, $target, $includeContent, $includeConfig, $page, $browser);
+
+            try {
+                $json = $service->encodeReport($report);
+            } catch (Throwable $exception) {
+                if (!$includeContent) {
+                    throw $exception;
+                }
+
+                // Never lose the whole report to one oversized field.
+                $includeContent = false;
+                $contentTooLarge = true;
+                $strippedBrowser = $browser === null ? null : BrowserDiagnostics::withoutDetails($browser);
+                $report = $service->createReport($documents, $target, false, $includeConfig, $page, $strippedBrowser);
+                $json = $service->encodeReport($report);
+            }
+
+            $review = $service->review($report, $documents, $context !== null && !$element, $contentTooLarge, $collectionFailed);
+            $html = $this->getView()->renderTemplate('vizy/diagnostics/_review', [
+                'report' => $report,
+                'review' => $review,
+                'reportJson' => $json,
+                // Error messages are content too, even when the page had no Vizy fields.
+                'canIncludeContent' => $documents !== [] || BrowserDiagnostics::canHaveDetails($browser),
+                'includeContent' => $includeContent,
+                'tooLongToPaste' => mb_strlen($json) > Diagnostics::MAX_PASTE_CHARACTERS,
+            ], View::TEMPLATE_MODE_CP);
+
+            return $this->asJson([
+                'html' => $html,
+                'headline' => $review['findings'][0]['title'] ?? '',
+                'filename' => 'vizy-support-report-' . gmdate('Y-m-d') . '.json',
+            ]);
+        } catch (Throwable) {
+            // Internal exception messages can contain content, credentials or paths.
+            return $this->asFailure(Craft::t('vizy', 'The report could not be created. Tell support this happened, along with your Craft and Vizy versions.'));
         }
-
-        $decoded = base64_decode($signed, true);
-        $validated = $decoded === false ? false : Craft::$app->getSecurity()->validateData($decoded);
-
-        if ($validated === false) {
-            throw new BadRequestHttpException('Invalid diagnostics preview.');
-        }
-
-        $snapshot = Json::decode($validated);
-
-        if (($snapshot['userId'] ?? null) !== Craft::$app->getUser()->getId()
-            || ($snapshot['expires'] ?? 0) < time()
-            || !is_string($snapshot['json'] ?? null)
-        ) {
-            throw new BadRequestHttpException('This preview has expired. Generate a new preview.');
-        }
-
-        // Download the exact reviewed snapshot, even if the entry has changed.
-        // The signed form is bound to this administrator and expires in 15 minutes;
-        // this feature does not persist the report on the server.
-        return $this->response->sendContentAsFile($snapshot['json'], 'vizy-diagnostics.json', [
-            'mimeType' => 'application/json; charset=UTF-8',
-            'inline' => false,
-        ]);
     }
 
 
     // Private Methods
     // =========================================================================
 
-    private function _page(bool $preview): Response
+    /**
+     * Client-supplied IDs are only hints. Craft's service check adds site access and
+     * authorization events, which the element's own canView() doesn't cover.
+     */
+    private function _element(int $id, int $siteId): ?ElementInterface
     {
-        $siteId = (int)$this->request->getParam('siteId', Craft::$app->getSites()->getPrimarySite()->id);
+        $user = Craft::$app->getUser()->getIdentity();
 
-        if (!Craft::$app->getSites()->getSiteById($siteId)) {
-            throw new NotFoundHttpException('Site not found.');
+        if ($id <= 0 || !$user || !in_array($siteId, Craft::$app->getSites()->getEditableSiteIds())) {
+            return null;
         }
 
-        $ids = $this->request->getParam('entryIds', []);
-        $entryId = (int)(is_array($ids) && $ids !== [] ? reset($ids) : $this->request->getParam('entryId', 0));
-        $entry = $entryId ? Entry::find()->id($entryId)->siteId($siteId)->status(null)
-            ->drafts(null)->provisionalDrafts(null)->revisions(null)->one() : null;
-
-        if ($entryId && !$entry) {
-            throw new NotFoundHttpException('Entry not found in this site.');
-        }
-
-        $service = new Diagnostics();
-        $documents = [];
-        $error = null;
-        $json = null;
-        $signed = null;
-        $report = null;
-        $selection = (string)$this->request->getBodyParam('field', '');
-        // A query string can preselect an entry, never opt a user into content export.
-        $includeContent = $preview && $this->request->getBodyParam('includeContent') === '1';
-
-        try {
-            if ($entry) {
-                $documents = $service->collectDocuments($entry);
-            }
-
-            if ($preview) {
-                $browser = BrowserDiagnostics::readReport($this->request->getBodyParam('browserCapture'), $includeContent);
-
-                if (!isset($documents[$selection]) && ($selection !== '' || $browser === null)) {
-                    throw new BadRequestHttpException('Choose a Vizy field from this entry.');
-                }
-
-                $report = $service->createReport($documents[$selection] ?? null, $includeContent);
-
-                if ($browser !== null) {
-                    $report['browser'] = $browser;
-                }
-
-                $json = $service->encodeReport($report);
-                $signed = base64_encode(Craft::$app->getSecurity()->hashData(Json::encode([
-                    'userId' => Craft::$app->getUser()->getId(),
-                    'expires' => time() + 900,
-                    'json' => $json,
-                ])));
-            }
-        } catch (BadRequestHttpException $exception) {
-            throw $exception;
-        } catch (Throwable) {
-            // Internal exception messages can contain content, credentials or paths.
-            $error = Craft::t('vizy', 'The report could not be generated. Try a nested entry or turn off Include content. If this continues, send support this message and your Craft and Vizy versions.');
-        }
-
-        return $this->renderTemplate('vizy/diagnostics/index', [
-            'entry' => $entry,
-            'entryType' => Entry::class,
-            'siteId' => $siteId,
-            'sites' => array_map(static fn($site) => ['label' => $site->name, 'value' => $site->id], Craft::$app->getSites()->getAllSites()),
-            // Never put raw document values into the page just to populate a selector.
-            'fields' => array_map(static fn($key, $document) => ['value' => $key, 'label' => $document['label']], array_keys($documents), array_values($documents)),
-            'selection' => $selection,
-            'includeContent' => $includeContent,
-            'report' => $report,
-            'reportJson' => $json,
-            'signedReport' => $signed,
-            'error' => $error,
-            'diagnosticsUrl' => UrlHelper::cpUrl('vizy/diagnostics', array_filter(['entryId' => $entry?->id, 'siteId' => $siteId])),
+        $elements = Craft::$app->getElements();
+        $element = $elements->getElementById($id, null, $siteId, [
+            'status' => null,
+            'drafts' => null,
+            'provisionalDrafts' => null,
+            'revisions' => null,
         ]);
+
+        return $element && $elements->canView($element, $user) ? $element : null;
     }
 }

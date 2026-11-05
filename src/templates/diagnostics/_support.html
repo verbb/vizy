@@ -1,0 +1,39 @@
+{% do view.registerAssetBundle('verbb\\vizy\\web\\assets\\diagnostics\\SupportPageAsset') %}
+
+{# Everything starts in the tab. The report is only built after the customer presses Done. #}
+<div class="vizy-support" data-vizy-support data-review-action="{{ actionUrl('vizy/diagnostics/review') }}">
+    <form data-support-form hidden>{{ csrfInput() }}</form>
+
+    <section class="vizy-support-stack" data-screen="unavailable">
+        <pk-alert variant="warning">{{ 'Vizy Support needs JavaScript and session storage to check for errors.' | t('vizy') }}</pk-alert>
+    </section>
+
+    <section class="vizy-support-stack" data-screen="start" hidden>
+        <h2>{{ 'Vizy Support' | t('vizy') }}</h2>
+        <p>{{ 'You can use this utility to help diagnose an issue with Vizy. It watches for browser errors while you reproduce the issue, then creates a report with your versions and field setup that you can send to the Verbb support team.' | t('vizy') }}</p>
+        <p>{{ 'To get started, press Start and open the page with the issue in this tab. Once you’ve reproduced the issue, press Done. You’ll be able to review the report before you share it.' | t('vizy') }}</p>
+        <div><pk-button variant="primary" data-support-start>{{ 'Start' | t('vizy') }}</pk-button></div>
+        <ul class="vizy-support-list">
+            <li>{{ 'Takes about a minute' | t('vizy') }}</li>
+            <li>{{ 'Only runs in this tab, and stops by itself after 15 minutes' | t('vizy') }}</li>
+            <li>{{ 'Your work saves as a normal draft, so nothing goes live' | t('vizy') }}</li>
+            <li>{{ 'Nothing is sent to anyone' | t('vizy') }}</li>
+        </ul>
+    </section>
+
+    <section class="vizy-support-stack" data-screen="watching" hidden>
+        <h2>{{ 'Now go to the page with the problem' | t('vizy') }}</h2>
+        <p>{{ 'Use the sidebar as you normally would, and stay in this tab. The dark box follows you from page to page.' | t('vizy') }}</p>
+    </section>
+
+    <section class="vizy-support-stack" data-screen="loading" hidden>
+        <p role="status">{{ 'Putting your report together…' | t('vizy') }}</p>
+    </section>
+
+    <section class="vizy-support-stack" data-screen="error" hidden>
+        <pk-alert variant="error" announce="assertive" data-support-error></pk-alert>
+        <div><pk-button data-support-restart>{{ 'Start again' | t('vizy') }}</pk-button></div>
+    </section>
+
+    <section class="vizy-support-stack" data-screen="review" data-support-review hidden></section>
+</div>

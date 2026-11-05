@@ -19,7 +19,7 @@ trait Routes
             $event->rules = array_merge($event->rules, [
                 'vizy' => 'vizy/settings/index',
                 // Support shares this URL directly; keep it out of authoring navigation.
-                'vizy/diagnostics' => 'vizy/diagnostics/index',
+                'vizy/support' => 'vizy/diagnostics/index',
                 'vizy/settings' => 'vizy/settings/index',
                 'vizy/settings/block-types' => 'vizy/block-types/index',
                 'vizy/settings/block-types/new' => 'vizy/block-types/edit',

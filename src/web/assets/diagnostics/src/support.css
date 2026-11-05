@@ -1,0 +1,17 @@
+.vizy-support { display: grid; gap: 16px; max-width: 720px; }
+.vizy-support [hidden] { display: none !important; }
+.vizy-support h2 { margin: 0; }
+.vizy-support-stack { display: grid; gap: 12px; }
+.vizy-support-stack > p, .vizy-support-stack > h3 { margin: 0; }
+.vizy-support-list { margin: 0; padding: 0; list-style: none; display: grid; gap: 4px; color: var(--light-text-color); }
+.vizy-support-list li { display: flex; gap: 8px; }
+.vizy-support-list li::before { content: "✓"; color: var(--teal-600); font-weight: 700; }
+.vizy-support-details { border: 1px solid var(--hairline-color); border-radius: 6px; }
+.vizy-support-details details + details { border-top: 1px solid var(--hairline-color); }
+.vizy-support-details summary { padding: 9px 12px; cursor: pointer; }
+.vizy-support-details div { padding: 0 12px 11px 28px; overflow-wrap: anywhere; }
+.vizy-support-details ul { margin: 0; padding: 0; list-style: none; }
+.vizy-support-option { display: grid; gap: 8px; padding: 13px; border: 1px solid var(--hairline-color); border-radius: 6px; }
+.vizy-support-preview { display: grid; gap: 6px; margin-top: 8px; padding: 10px 12px; border: 1px dashed var(--hairline-color); border-radius: 5px; overflow-wrap: anywhere; }
+.vizy-support pre { margin: 8px 0 0; padding: 10px 12px; max-height: 320px; overflow: auto; border-radius: 5px; background: var(--gray-050); font-size: 12px; white-space: pre-wrap; overflow-wrap: anywhere; }
+.vizy-support-actions { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }

@@ -3,8 +3,8 @@
 ## Unreleased
 
 ### Added
-- Added temporary browser error capture to diagnostics, with tab-local recording and the same report preview and export.
-- Added an admin-only diagnostics page with report previews and optional content exports for support requests.
+- Added a Vizy Support utility that creates a support report in a guided flow. Press Start, go to the page with the problem, make it happen, then press Done to review a plain-language summary and copy or download the report. Nothing is sent automatically, and content can be left out before sharing.
+- Added a “Vizy Support” user permission for the new utility.
 
 ### Fixed
 - Fixed autosave failing with “The Vizy content version belongs to another owner” on entries with a Vizy field inside a Matrix row in a Vizy block, which left edits unsaved until the entry was saved.
