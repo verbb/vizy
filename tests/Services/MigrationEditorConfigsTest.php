@@ -29,7 +29,7 @@ it('preserves legacy filenames and default file selections without changing thei
             ->and($config['filename'])->toBe($filename)
             ->and($config['capabilities']['marks'])->toContain('italic', 'bold', 'underline', 'strike', 'textStyle')
             ->and($config['capabilities']['nodes'])->toContain('heading', 'blockquote')
-            ->and($config['headings']['levels'])->toBe([1])
+            ->and($config['headings']['levels'])->toBe([1, 2, 3, 4, 5, 6])
             ->and($configs->fileContents($id))->toBe($contents)
             ->and(file_get_contents($path))->toBe($contents);
         expect(fn() => $configs->saveConfig($id, $configs->authorablePayload($config)))

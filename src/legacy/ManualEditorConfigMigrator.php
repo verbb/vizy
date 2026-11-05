@@ -313,27 +313,14 @@ final class ManualEditorConfigMigrator
             }
         }
 
-        if ($headingLevels === [] && $formatting !== null) {
-            foreach (VizyToolbarTokenDeprecations::canonicalizeList(
-                array_values(array_filter($formatting, 'is_string')),
-                "manual Editor Config {$context} formatting",
-            ) as $member) {
-                if (preg_match('/^heading([1-6])$/', $member, $m)) {
-                    $headingLevels[] = (int)$m[1];
-                }
-            }
-        }
-
-        $headingLevels = array_values(array_unique($headingLevels ?: [2, 3, 4]));
-        sort($headingLevels);
-
         $payload = [
             'label' => trim((string)($legacy['label'] ?? '')) ?: 'Imported manual config',
             'capabilities' => [
-                'nodes' => $this->_inferNodes($toolbar, $dropdowns, $headingLevels),
+                'nodes' => $this->_legacyNodes($toolbar),
                 'marks' => $this->_legacyMarks(),
             ],
-            'headings' => ['levels' => $headingLevels],
+            // V3's heading extension allowed all levels; formatting only chose menu items.
+            'headings' => ['levels' => [1, 2, 3, 4, 5, 6]],
             'toolbar' => $toolbar !== [] ? $toolbar : EditorConfigPresentation::defaultToolbar(),
             'bubble' => EditorConfigPresentation::defaultBubble(),
         ];
@@ -399,30 +386,14 @@ final class ManualEditorConfigMigrator
         return $id;
     }
 
-    private function _inferNodes(array $toolbar, array $dropdowns, array $headingLevels): array
+    private function _legacyNodes(array $toolbar): array
     {
-        $nodes = ['paragraph'];
-        $add = static function(string $node) use (&$nodes): void {
-            if (!in_array($node, $nodes, true)) {
-                $nodes[] = $node;
-            }
-        };
+        // V3 loaded these core extensions independently of the visible controls.
+        // Keep content editable even when its insertion button was not configured.
+        $nodes = ['paragraph', 'heading', 'bulletList', 'orderedList', 'blockquote', 'codeBlock', 'horizontalRule', 'image', 'table', 'iframe', 'mediaEmbed'];
 
-        if ($headingLevels !== [] || isset($dropdowns['formatting']) || in_array('dropdown:formatting', $toolbar, true)) {
-            $add('heading');
-        }
-
-        $formattingMembers = $dropdowns['formatting'] ?? [];
-
-        foreach (['bulletList', 'orderedList', 'blockquote', 'codeBlock', 'horizontalRule', 'image', 'table', 'iframe', 'mediaEmbed', 'layout'] as $node) {
-            // Quote/code live in Formatting, not the flat toolbar — still enable the node.
-            if (in_array($node, $toolbar, true) || in_array($node, $formattingMembers, true)) {
-                $add($node);
-            }
-        }
-
-        if (in_array('dropdown:table', $toolbar, true)) {
-            $add('table');
+        if (in_array('layout', $toolbar, true)) {
+            $nodes[] = 'layout';
         }
 
         return $nodes;

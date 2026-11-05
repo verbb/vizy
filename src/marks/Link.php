@@ -248,7 +248,9 @@ class Link extends Mark
                     'email' => str_starts_with(strtolower($value), 'mailto:') ? $value : 'mailto:' . $value,
                     'tel' => str_starts_with(strtolower($value), 'tel:') ? $value : 'tel:' . $value,
                     'sms' => str_starts_with(strtolower($value), 'sms:') ? $value : 'sms:' . $value,
-                    default => preg_match('/(?:#|%23)(?:entry|asset|category):\d+(?:@\d+)?$/', $value)
+                    // V3 refs can include :url/transform suffixes or Craft's brace form.
+                    // Keep resolving them at render time after href becomes semantic value.
+                    default => preg_match('/(?:#|%23|\{)(?:entry|asset|category):\d+/', $value)
                         ? Vizy::$plugin->getRefTags()->parse($value, $siteId)
                         // Preserve old content while correcting the schemeless
                         // host form that browsers otherwise treat as relative.

@@ -94,3 +94,17 @@ it('preserves explicit legacy image sites and rejects unknown sites', function()
     expect(fn() => (new Vizy3DocumentAdapter())->convert($legacy, []))
         ->toThrow(\verbb\vizy\legacy\LegacyDocumentConversionException::class, 'unknown site');
 });
+
+it('converts encoded and brace image references and retains transform suffixes', function() {
+    $asset = migrationPublicAsset();
+    foreach ([
+        ['%23asset:' . $asset->id . ':url', ''],
+        ['{asset:' . $asset->id . ':url}', ''],
+        ['#asset:' . $asset->id . ':transform:thumb', 'thumb'],
+        ['%23asset:' . $asset->id . ':thumb', 'thumb'],
+    ] as [$src, $transform]) {
+        $canonical = (new Vizy3DocumentAdapter())->convert([['type' => 'image', 'attrs' => ['src' => $src]]], []);
+        expect($canonical['content'][0]['attrs']['assetUid'])->toBe($asset->uid)
+            ->and($canonical['content'][0]['attrs']['transform'])->toBe($transform);
+    }
+});

@@ -4,6 +4,7 @@ namespace verbb\vizy\legacy;
 use verbb\vizy\document\VizyDocument;
 
 use Craft;
+use craft\validators\HandleValidator;
 
 /**
  * Strictly converts Vizy 3 storage only after schema promotion is known.
@@ -68,7 +69,9 @@ final class Vizy3DocumentAdapter
         }
 
         if (isset($node['content'])) {
-            if (!is_array($node['content']) || !array_is_list($node['content'])) {
+            // V3 array_filter() could leave numeric gaps, encoded as a JSON object.
+            // Preserve iteration order, but do not reinterpret named object members.
+            if (!is_array($node['content']) || array_filter(array_keys($node['content']), static fn($key) => !is_int($key) || $key < 0) !== []) {
                 throw new LegacyDocumentConversionException("Malformed legacy child content at {$path}.");
             }
 
@@ -78,6 +81,12 @@ final class Vizy3DocumentAdapter
                 // Vizy 3's NodeCollection removed null children before normalizing.
                 // Keep every real node and its original error path, then compact the list.
                 if ($child === null) {
+                    continue;
+                }
+
+                // The V3 base Node removed genuinely empty text, but retained spaces
+                // between differently marked runs (and the meaningful string "0").
+                if (is_array($child) && ($child['type'] ?? null) === 'text' && ($child['text'] ?? null) === '') {
                     continue;
                 }
 
@@ -145,10 +154,35 @@ final class Vizy3DocumentAdapter
         $firstType = is_array($content[0] ?? null) ? ($content[0]['type'] ?? null) : null;
 
         if ($firstType !== 'paragraph') {
-            $node['content'] = [[
-                'type' => 'paragraph',
-                'content' => $content,
-            ]];
+            // V3 frontend serialization could flatten the leading paragraph beside
+            // a nested list. Wrap only inline runs, never block nodes inside a paragraph.
+            $shaped = [];
+            $inline = [];
+
+            foreach ($content as $child) {
+                if (in_array($child['type'] ?? null, ['text', 'hardBreak'], true)) {
+                    $inline[] = $child;
+
+                    continue;
+                }
+
+                if ($inline !== []) {
+                    $shaped[] = ['type' => 'paragraph', 'content' => $inline];
+                    $inline = [];
+                }
+
+                $shaped[] = $child;
+            }
+
+            if ($inline !== []) {
+                $shaped[] = ['type' => 'paragraph', 'content' => $inline];
+            }
+
+            if (($shaped[0]['type'] ?? null) !== 'paragraph') {
+                array_unshift($shaped, ['type' => 'paragraph']);
+            }
+
+            $node['content'] = $shaped;
         }
 
         return $node;
@@ -200,6 +234,13 @@ final class Vizy3DocumentAdapter
             'newWindow' => $newWindow,
         ];
 
+        // These were authored attributes in V3's Link extension, not derived URLs.
+        foreach (['class', 'title'] as $name) {
+            if (is_string($attrs[$name] ?? null)) {
+                $mark['attrs'][$name] = $attrs[$name];
+            }
+        }
+
         return $mark;
     }
 
@@ -218,9 +259,12 @@ final class Vizy3DocumentAdapter
         $assetUid = null;
         $assetId = null;
         $siteUid = null;
+        $referenceTransform = '';
 
-        if (preg_match('/#asset:(\d+)(?:@(\d+))?(?::|$)/', $src, $m)) {
+        // Match the reference spellings accepted by V3's Nodes::parseRefTags().
+        if (preg_match('/(?:#|%23|\{)asset:(\d+)(?:@(\d+))?(?=[:}|]|$)(?::(?:transform:)?(' . HandleValidator::$handlePattern . '))?/', $src, $m)) {
             $assetId = (int)$m[1];
+            $referenceTransform = isset($m[3]) && $m[3] !== 'url' ? $m[3] : '';
 
             if (!empty($m[2])) {
                 $siteUid = Craft::$app->getSites()->getSiteById((int)$m[2])?->uid;
@@ -255,7 +299,7 @@ final class Vizy3DocumentAdapter
             'alt' => is_string($attrs['alt'] ?? null) ? $attrs['alt'] : '',
             'title' => is_string($attrs['title'] ?? null) ? $attrs['title'] : '',
             'size' => 'default',
-            'transform' => is_string($attrs['transform'] ?? null) ? $attrs['transform'] : '',
+            'transform' => is_string($attrs['transform'] ?? null) && $attrs['transform'] !== '' ? $attrs['transform'] : $referenceTransform,
         ];
 
         if ($siteUid !== null) {

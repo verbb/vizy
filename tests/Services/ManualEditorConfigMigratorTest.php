@@ -23,6 +23,25 @@ it('keeps the always-loaded Vizy 3 text style mark without adding toolbar contro
     expect($canonical['capabilities']['marks'])->toBe(['italic']);
 });
 
+it('preserves built-in Vizy 3 nodes and headings without adding their controls', function() {
+    $migrator = new ManualEditorConfigMigrator();
+    $payload = $migrator->toAuthorablePayload([
+        'buttons' => ['italic'], 'formatting' => ['paragraph', 'heading2'],
+    ], 'legacy-core-nodes');
+    $config = Vizy::$plugin->getEditorConfigs()->normalizeRuntimeConfig('legacy-core-nodes', $payload);
+    expect($config['schema']['nodes'])->toContain('image', 'table', 'tableCell', 'blockquote', 'codeBlock', 'iframe', 'mediaEmbed', 'bulletList', 'orderedList')
+        ->and($payload['headings']['levels'])->toBe([1, 2, 3, 4, 5, 6])
+        ->and($payload['toolbar'])->toBe(['dropdown:formatting', 'italic'])
+        ->and($payload['dropdowns']['formatting'])->toBe(['paragraph', 'heading2']);
+
+    $canonical = $migrator->toAuthorablePayload([
+        'capabilities' => ['nodes' => ['paragraph'], 'marks' => []],
+        'headings' => ['levels' => [2]], 'toolbar' => [],
+    ], 'canonical-core-nodes');
+    expect($canonical['capabilities']['nodes'])->toBe(['paragraph'])
+        ->and($canonical['headings']['levels'])->toBe([2]);
+});
+
 it('maps selected Vizy 3 config filenames to editor config IDs', function(string $selected, string $expected) {
     $plan = (new ManualEditorConfigMigrator())->plan([
         'configSelectionMode' => 'choose',

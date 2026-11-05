@@ -56,7 +56,7 @@ it('preserves legacy formatting independently of toolbar buttons in file and man
             ->and($manifests->validateCapabilities($document, $field, null))->toBe([])
             ->and($manifests->build($field)['enabledMarks'])->toContain('bold', 'underline', 'strike', 'textStyle')
             ->and($document->toArray())->toBe($original)
-            ->and($config['headings']['levels'])->toBe([2, 3, 4]);
+            ->and($config['headings']['levels'])->toBe([1, 2, 3, 4, 5, 6]);
         if ($addedButtons) {
             expect($config['toolbar'])->toContain('bold', 'underline', 'strike');
         } else {
