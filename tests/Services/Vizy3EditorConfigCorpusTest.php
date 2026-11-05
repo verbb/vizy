@@ -32,17 +32,17 @@ it('preserves source-authenticated Vizy 3 editor config selections', function(ar
                 ->and($service->fileContents($plan['editorConfig']))->toBe($source['contents']);
         }
 
-        // Expectations come from the released source's loaded config, not the converter.
-        $marks = [];
+        // Heading controls come from the released source's loaded config.
         foreach ($source['effective']['buttons'] ?? [] as $button) {
-            $mark = ['strikethrough' => 'strike'][$button] ?? $button;
-            if (in_array($mark, ['bold', 'italic', 'underline', 'strike', 'link'], true)) $marks[] = $mark;
             if (preg_match('/^h([1-6])$/', $button, $match)) {
                 expect($config['headings']['levels'])->toContain((int)$match[1]);
             }
         }
-        // VizyInput loaded TextStyle independently of the configured buttons.
-        expect($config['capabilities']['marks'])->toBe([...$marks, 'textStyle']);
+        // Vizy 3's config/Extensions.js declares these core marks; VizyInput also
+        // loads TextStyle. Neither source gates them on the configured buttons.
+        expect($config['capabilities']['marks'])->toEqualCanonicalizing([
+            'bold', 'code', 'highlight', 'italic', 'strike', 'subscript', 'superscript', 'underline', 'link', 'textStyle',
+        ]);
     } finally {
         if ($path !== null) unlink($path);
         $service->invalidate();

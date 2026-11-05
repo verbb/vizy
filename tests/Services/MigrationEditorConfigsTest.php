@@ -27,7 +27,7 @@ it('preserves legacy filenames and default file selections without changing thei
             ->and($config)->not->toBeNull()
             ->and($config['source'])->toBe(EditorConfigs::SOURCE_FILE)
             ->and($config['filename'])->toBe($filename)
-            ->and($config['capabilities']['marks'])->toBe(['italic', 'textStyle'])
+            ->and($config['capabilities']['marks'])->toContain('italic', 'bold', 'underline', 'strike', 'textStyle')
             ->and($config['capabilities']['nodes'])->toContain('heading', 'blockquote')
             ->and($config['headings']['levels'])->toBe([1])
             ->and($configs->fileContents($id))->toBe($contents)
@@ -69,7 +69,7 @@ it('blocks ambiguous Project Config collisions without replacing either config',
                     ->and($plan['mint'])->toBeNull();
                 continue;
             }
-            expect($configs->getConfig($plan['editorConfig'])['capabilities']['marks'])->toBe([$mark, 'textStyle'])
+            expect($configs->getConfig($plan['editorConfig'])['capabilities']['marks'])->toContain($mark, 'bold', 'textStyle')
                 ->and($configs->getConfig($plan['editorConfig'])['filename'])->toBe($filename);
         }
         expect($configs->getFileConfigId('Extended.json'))->not->toBe($configs->getFileConfigId('extended.json'))

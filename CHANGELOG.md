@@ -1,5 +1,10 @@
 # Changelog
 
+## Unreleased
+
+### Fixed
+- Fixed Vizy 3 editor config conversion disabling bold and other built-in formatting when their toolbar buttons were absent, leaving existing text unsupported in the editor.
+
 ## 4.0.2 - 2026-11-05
 
 ### Added

@@ -331,7 +331,7 @@ final class ManualEditorConfigMigrator
             'label' => trim((string)($legacy['label'] ?? '')) ?: 'Imported manual config',
             'capabilities' => [
                 'nodes' => $this->_inferNodes($toolbar, $dropdowns, $headingLevels),
-                'marks' => $this->_inferMarks($toolbar),
+                'marks' => $this->_legacyMarks(),
             ],
             'headings' => ['levels' => $headingLevels],
             'toolbar' => $toolbar !== [] ? $toolbar : EditorConfigPresentation::defaultToolbar(),
@@ -428,18 +428,11 @@ final class ManualEditorConfigMigrator
         return $nodes;
     }
 
-    private function _inferMarks(array $toolbar): array
+    private function _legacyMarks(): array
     {
-        $marks = [];
-
-        foreach (['bold', 'italic', 'underline', 'strike', 'code', 'link', 'subscript', 'superscript', 'highlight'] as $mark) {
-            if (in_array($mark, $toolbar, true)) {
-                $marks[] = $mark;
-            }
-        }
-
-        // Vizy 3 loaded TextStyle for every editor, independently of its buttons.
-        // Omitting it makes existing span-marked text opaque after conversion.
-        return [...($marks !== [] ? $marks : ['bold', 'italic', 'link']), 'textStyle'];
+        // Vizy 3's core extensions and TextStyle loaded independently of its buttons.
+        // Preserve that schema without adding controls to the author's toolbar;
+        // inferring marks from buttons makes existing formatted text opaque.
+        return ['bold', 'italic', 'underline', 'strike', 'code', 'link', 'subscript', 'superscript', 'highlight', 'textStyle'];
     }
 }
