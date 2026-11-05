@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 4.0.2 - 2026-11-05
 
 ### Added
 - Added a Vizy Support utility that creates a support report in a guided flow. Press Start, go to the page with the problem, make it happen, then press Done to review a plain-language summary and copy or download the report. Nothing is sent automatically, and content can be left out before sharing.
