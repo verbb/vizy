@@ -5,7 +5,7 @@ import { resolveTrustedModules } from '../../src/web/assets/field/src/ts/modules
 import { adaptCanonicalForEditor, restoreCanonicalFromEditor, UnsupportedNode, UnsupportedInlineNode } from '../../src/web/assets/field/src/ts/transport/opaque';
 import type { CanonicalNode } from '../../src/web/assets/field/src/ts/types';
 
-const nodes = ['doc', 'text', 'paragraph', 'bulletList', 'orderedList', 'listItem', 'table', 'tableRow', 'tableCell', 'tableHeader', 'mediaEmbed'];
+const nodes = ['doc', 'text', 'paragraph', 'blockquote', 'bulletList', 'orderedList', 'listItem', 'table', 'tableRow', 'tableCell', 'tableHeader', 'mediaEmbed'];
 const marks = ['bold', 'link'];
 const schema = getSchema([
     ...resolveTrustedModules([

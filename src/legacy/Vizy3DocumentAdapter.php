@@ -1,6 +1,7 @@
 <?php
 namespace verbb\vizy\legacy;
 
+use verbb\vizy\Vizy;
 use verbb\vizy\document\VizyDocument;
 
 use Craft;
@@ -53,7 +54,8 @@ final class Vizy3DocumentAdapter
         string $path,
         ?string $parentType,
     ): array {
-        if (!is_array($node) || !is_string($node['type'] ?? null) || $node['type'] === '') {
+        // Root nodes stay strict; only malformed children are skipped by the caller.
+        if (!$this->_isNode($node)) {
             throw new LegacyDocumentConversionException("Malformed legacy node at {$path}.");
         }
 
@@ -90,6 +92,18 @@ final class Vizy3DocumentAdapter
                     continue;
                 }
 
+                // V3's NodeCollection skipped children without a usable type (with any
+                // nested content), so they never rendered. Skip them the same way, but
+                // log the path because the next save removes them from storage.
+                if (!$this->_isNode($child)) {
+                    Vizy::warning('Skipped malformed Vizy 3 node at {path} ({shape}) while converting legacy content.', [
+                        'path' => "{$path}.content.{$index}",
+                        'shape' => is_array($child) ? 'keys: ' . (implode(', ', array_keys($child)) ?: 'none') : get_debug_type($child),
+                    ]);
+
+                    continue;
+                }
+
                 $content[] = $this->_convertNode(
                     $child,
                     $schemaMap,
@@ -123,6 +137,11 @@ final class Vizy3DocumentAdapter
         return $this->_sanitizeProseNode($node);
     }
 
+    private function _isNode(mixed $node): bool
+    {
+        return is_array($node) && is_string($node['type'] ?? null) && $node['type'] !== '';
+    }
+
     /**
      * Vizy 3 TipTap often stamps empty `text` onto non-text nodes (esp. listItem) and stores
      * list items as bare inline text. Vizy 4 opaque transport + TipTap listItem schema reject both.
@@ -135,8 +154,14 @@ final class Vizy3DocumentAdapter
 
         // Vizy 3 restored a paragraph after filtering empty table cells/headers.
         // TipTap requires block+ content here, including when the saved cell was [null].
-        if (in_array($node['type'] ?? null, ['tableCell', 'tableHeader'], true) && ($node['content'] ?? []) === []) {
+        // Blockquotes and lists share the same block+ / listItem+ requirement, and
+        // can end up empty once null or malformed children have been skipped.
+        if (in_array($node['type'] ?? null, ['tableCell', 'tableHeader', 'blockquote'], true) && ($node['content'] ?? []) === []) {
             $node['content'] = [['type' => 'paragraph']];
+        }
+
+        if (in_array($node['type'] ?? null, ['bulletList', 'orderedList'], true) && ($node['content'] ?? []) === []) {
+            $node['content'] = [['type' => 'listItem', 'content' => [['type' => 'paragraph']]]];
         }
 
         if (($node['type'] ?? null) !== 'listItem') {

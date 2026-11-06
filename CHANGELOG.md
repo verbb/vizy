@@ -4,7 +4,7 @@
 
 ### Fixed
 - Fixed Vizy 3 editor config conversion disabling built-in content types, formatting, and heading levels when their toolbar controls were absent, leaving existing content unsupported in the editor.
-- Fixed Vizy 3 content failing to load when it contained null child nodes, including empty table cells and headers.
+- Fixed Vizy 3 content failing to load with “Malformed legacy node” when it contained null child nodes or child nodes without a type, which Vizy 3 skipped. Skipped nodes are now logged, and table cells, lists and blockquotes left empty remain editable.
 - Fixed Vizy 3 content conversion retaining empty text nodes, rejecting sparse child lists, and wrapping nested lists inside paragraphs.
 - Fixed Vizy 3 link conversion losing titles and classes, and legacy Craft reference links with URL suffixes or brace syntax failing to resolve.
 - Fixed Vizy 3 image conversion rejecting encoded or brace-style asset references and losing transforms stored in reference suffixes.

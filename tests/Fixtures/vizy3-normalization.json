@@ -380,6 +380,130 @@
         ]
     },
     {
+        "name": "malformed children without a node type",
+        "source": "models/NodeCollection.php::_populateNodes",
+        "legacy": [
+            {
+                "type": "bulletList",
+                "content": [
+                    {
+                        "type": "listItem",
+                        "content": [
+                            {
+                                "type": "paragraph",
+                                "content": [
+                                    {
+                                        "type": "text",
+                                        "text": "Kept"
+                                    }
+                                ]
+                            },
+                            {
+                                "text": "stray"
+                            }
+                        ]
+                    },
+                    {
+                        "content": [
+                            {
+                                "type": "paragraph",
+                                "content": [
+                                    {
+                                        "type": "text",
+                                        "text": "Dropped with its wrapper"
+                                    }
+                                ]
+                            }
+                        ]
+                    }
+                ]
+            },
+            {
+                "type": "orderedList",
+                "content": [
+                    {
+                        "text": "stray"
+                    }
+                ]
+            },
+            {
+                "type": "blockquote",
+                "content": [
+                    {}
+                ]
+            },
+            {
+                "type": "paragraph",
+                "content": [
+                    {
+                        "type": "text",
+                        "text": "A"
+                    },
+                    false,
+                    {
+                        "type": "text",
+                        "text": "B"
+                    }
+                ]
+            }
+        ],
+        "expected": [
+            {
+                "type": "bulletList",
+                "content": [
+                    {
+                        "type": "listItem",
+                        "content": [
+                            {
+                                "type": "paragraph",
+                                "content": [
+                                    {
+                                        "type": "text",
+                                        "text": "Kept"
+                                    }
+                                ]
+                            }
+                        ]
+                    }
+                ]
+            },
+            {
+                "type": "orderedList",
+                "content": [
+                    {
+                        "type": "listItem",
+                        "content": [
+                            {
+                                "type": "paragraph"
+                            }
+                        ]
+                    }
+                ]
+            },
+            {
+                "type": "blockquote",
+                "content": [
+                    {
+                        "type": "paragraph"
+                    }
+                ]
+            },
+            {
+                "type": "paragraph",
+                "content": [
+                    {
+                        "type": "text",
+                        "text": "A"
+                    },
+                    {
+                        "type": "text",
+                        "text": "B"
+                    }
+                ]
+            }
+        ]
+    },
+    {
         "name": "unknown extension content remains intact",
         "source": "models/NodeCollection.php (intentional preservation in V4)",
         "legacy": [

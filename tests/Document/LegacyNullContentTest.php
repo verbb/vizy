@@ -55,18 +55,6 @@ it('removes only null child nodes while retaining table structure and formatted 
     (new DocumentParser())->parse($canonical);
 });
 
-it('retains original error paths and rejects malformed non-null legacy children', function(mixed $invalid) {
-    $legacy = [['type' => 'tableCell', 'content' => [null, $invalid]]];
-    expect(fn() => (new Vizy3DocumentAdapter())->convert($legacy, []))
-        ->toThrow(LegacyDocumentConversionException::class, 'Malformed legacy node at content.0.content.1.');
-})->with([
-    'false' => [false],
-    'zero' => [0],
-    'empty string' => [''],
-    'empty object' => [[]],
-    'missing type' => [['text' => 'Do not discard me']],
-]);
-
 it('does not relax canonical content or root node validation', function() {
     expect(fn() => (new Vizy3DocumentAdapter())->convert([null], []))
         ->toThrow(LegacyDocumentConversionException::class, 'Malformed legacy node at content.0.')
