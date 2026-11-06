@@ -8,7 +8,7 @@ A powerful and flexible content editor that brings rich text and structured Craf
 Show, don’t tell, is often the best approach. Give Vizy a test-drive below, then switch between the rendered preview and the structured JSON document behind the field.
 <!-- vizy-demo-end -->
 
-<!-- feature-media -->
+<!-- feature-section media-size="large" -->
 ## WYSIWYG, but more
 
 Vizy has all the formatting authors expect — headings, lists, links, tables, images and more — without stopping at rich text. Add purpose-built blocks exactly where they belong, tailor the available tools to the field and keep the whole story in one editing surface.
@@ -16,37 +16,37 @@ Vizy has all the formatting authors expect — headings, lists, links, tables, i
 Blocks stay visible where they will matter in the finished piece. Move, collapse, enable or disable them without turning the document into a disconnected stack of fields.
 
 ![Rich text and coloured Callout and Pull Quote blocks inside the Vizy editor.](../screenshots/vizy-editor.png)
-<!-- feature-media-end -->
+<!-- feature-section-end -->
 
-<!-- feature-media media-size="small" -->
+<!-- feature-section media-size="large" -->
 ## Blocks are here
 
 Embed structured blocks directly between paragraphs — much like having Matrix blocks inline with your content. Each Block Type can reuse Craft fields, UI elements and tabs, then render through its own focused Twig template.
 
 Add one from the toolbar, the gutter beside the document or a `/` shortcut on a blank line. Available Block Types remain searchable and grouped so the choices stay approachable as the project grows.
 
-![The Vizy Block Type chooser grouped into Components and Editorial Block Types.](../screenshots/vizy-commands.png)
-<!-- feature-media-end -->
+![The toolbar insertion menu open inside a populated Vizy article, with grouped Block Types.](../screenshots/vizy-commands.png)
+<!-- feature-section-end -->
 
-<!-- feature-media -->
+<!-- feature-section media-size="large" -->
 ## Shape every editor for its job
 
 Named Editor Configs let a project define its toolbar, content capabilities, Bubble Menu and insertion controls once, then reuse that experience across fields. A short introduction can stay deliberately small while a long-form article gets tables, media, layouts and the full editorial toolkit.
 
 Build configs visually with the real toolbar in front of you, or keep them in `config/vizy/*.json` when they belong in code and deployment workflows.
 
-![The Editorial Editor Config showing available controls, its toolbar preview and Block insertion settings.](../screenshots/vizy-settings.png)
-<!-- feature-media-end -->
+![The Editorial Editor Config showing available controls and the full toolbar preview.](../screenshots/vizy-settings.png)
+<!-- feature-section-end -->
 
-<!-- feature-media -->
+<!-- feature-section media-size="large" -->
 ## Go deeper when the content model calls for it
 
 Hosted Vizy fields can live inside a Block Type alongside ordinary Craft fields. That gives genuinely nested content a focused editor of its own while keeping it part of the parent document.
 
 Use the extra level where it clarifies the model — for example, supporting copy inside a Latest News component — while simpler Blocks remain simple.
 
-![A rich-text Vizy editor nested inside a Latest News Block Type.](../screenshots/vizy-nested.png)
-<!-- feature-media-end -->
+![A Latest News block containing a hosted Vizy editor and a nested Callout, surrounded by the parent story.](../screenshots/vizy-nested.png)
+<!-- feature-section-end -->
 
 <!-- feature-section -->
 ## A block-based visual editor
