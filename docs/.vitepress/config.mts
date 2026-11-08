@@ -88,6 +88,16 @@ export default defineConfig({
     cleanUrls: true,
     appearance: false,
     lastUpdated: true,
+    markdown: {
+        config(md) {
+            // Inline code often holds Twig such as `{{ siteName }}`, which Vue would otherwise try to evaluate.
+            const renderInlineCode = md.renderer.rules.code_inline!;
+
+            md.renderer.rules.code_inline = (tokens, index, options, env, self) => {
+                return renderInlineCode(tokens, index, options, env, self).replace('<code', '<code v-pre');
+            };
+        },
+    },
     vite: {
         ssr: {
             // The theme imports mark.js source with extensionless imports; bundle it for SSR.
