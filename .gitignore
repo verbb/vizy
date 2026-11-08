@@ -50,3 +50,8 @@
 /.ddev/config.zz-ci.yaml
 
 /.ddev/docker-compose.php-minimum.yaml
+
+# DOCS (local VitePress preview only)
+/docs/node_modules
+/docs/.vitepress/cache
+/docs/.vitepress/dist
