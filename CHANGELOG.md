@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 4.0.3 - 2026-11-10
 
 ### Fixed
 - Fixed Vizy 3 editor config conversion disabling built-in content types, formatting, and heading levels when their toolbar controls were absent, leaving existing content unsupported in the editor.
