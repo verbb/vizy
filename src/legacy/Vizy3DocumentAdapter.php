@@ -21,6 +21,8 @@ final class Vizy3DocumentAdapter
         'list_item' => 'listItem',
     ];
 
+    private const UNRESOLVED_IMAGE_TYPE = 'vizy3Image';
+
 
     // Public Methods
     // =========================================================================
@@ -35,11 +37,7 @@ final class Vizy3DocumentAdapter
         $content = [];
 
         foreach ($legacyNodes as $index => $node) {
-            $converted = $this->_convertNode($node, $schemaMap, $seenBlockUids, "content.{$index}", null);
-
-            if ($converted !== null) {
-                $content[] = $converted;
-            }
+            $content[] = $this->_convertNode($node, $schemaMap, $seenBlockUids, "content.{$index}", null);
         }
 
         return [
@@ -59,7 +57,7 @@ final class Vizy3DocumentAdapter
         array &$seenBlockUids,
         string $path,
         ?string $parentType,
-    ): ?array {
+    ): array {
         // Root nodes stay strict; only malformed children are skipped by the caller.
         if (!$this->_isNode($node)) {
             throw new LegacyDocumentConversionException("Malformed legacy node at {$path}.");
@@ -110,17 +108,13 @@ final class Vizy3DocumentAdapter
                     continue;
                 }
 
-                $converted = $this->_convertNode(
+                $content[] = $this->_convertNode(
                     $child,
                     $schemaMap,
                     $seenBlockUids,
                     "{$path}.content.{$index}",
                     $node['type'],
                 );
-
-                if ($converted !== null) {
-                    $content[] = $converted;
-                }
             }
 
             $node['content'] = $content;
@@ -282,7 +276,7 @@ final class Vizy3DocumentAdapter
     /**
      * Vizy 3 images stored src (often `#asset:{id}:…`); Vizy 4 requires assetUid.
      */
-    private function _convertImage(array $node, string $path): ?array
+    private function _convertImage(array $node, string $path): array
     {
         $attrs = is_array($node['attrs'] ?? null) ? $node['attrs'] : [];
 
@@ -323,14 +317,17 @@ final class Vizy3DocumentAdapter
         }
 
         if ($assetUid === null) {
-            // Vizy 4 images must reference an Asset. Skip the image rather than failing the
-            // whole document, and log the src because the next save removes it from storage.
-            Vizy::warning('Skipped Vizy 3 image at {path} while converting legacy content, because no Asset matches its src “{src}”.', [
+            // Vizy 4 images must reference an Asset, but V3 still rendered this src. Keep the
+            // original node under a type V4 doesn't register, so it's preserved as unknown
+            // content (an editor placeholder, nothing on the front end) rather than lost.
+            Vizy::warning('Preserved Vizy 3 image at {path} as unsupported content, because no Asset matches its src “{src}”.', [
                 'path' => $path,
                 'src' => $src,
             ]);
 
-            return null;
+            $node['type'] = self::UNRESOLVED_IMAGE_TYPE;
+
+            return $this->_sanitizeProseNode($node);
         }
 
         $node['attrs'] = [

@@ -109,7 +109,7 @@ it('converts encoded and brace image references and retains transform suffixes',
     }
 });
 
-it('resolves bare Asset URLs pasted into Vizy 3 content and skips images without a matching Asset', function() {
+it('resolves bare Asset URLs pasted into Vizy 3 content and preserves images without a matching Asset', function() {
     $asset = migrationPublicAsset();
     $convert = static fn(string $src) => (new Vizy3DocumentAdapter())->convert([['type' => 'image', 'attrs' => [
         'id' => null, 'src' => $src, 'alt' => 'Pasted image',
@@ -120,15 +120,20 @@ it('resolves bare Asset URLs pasted into Vizy 3 content and skips images without
     expect($canonical['content'][0]['attrs']['assetUid'])->toBe($asset->uid)
         ->and($canonical['content'][0]['attrs']['alt'])->toBe('Pasted image');
 
-    // Images without a matching Asset are skipped, leaving surrounding content intact.
+    // Images without a matching Asset keep their V3 attrs as unsupported content, which
+    // renders nothing but survives parsing, so surrounding content still loads.
     $missing = 'https://example.test/images/missing-' . $asset->filename;
-    expect($convert($missing)['content'])->toBe([]);
-
     $nested = (new Vizy3DocumentAdapter())->convert([
         ['type' => 'paragraph', 'content' => [['type' => 'text', 'text' => 'Before']]],
-        ['type' => 'blockquote', 'content' => [['type' => 'image', 'attrs' => ['src' => $missing]]]],
+        ['type' => 'blockquote', 'content' => [['type' => 'image', 'attrs' => ['src' => $missing, 'alt' => 'Lost']]]],
     ], []);
-    expect($nested['content'][0]['content'][0]['text'])->toBe('Before')
-        ->and($nested['content'][1])->toBe(['type' => 'blockquote', 'content' => [['type' => 'paragraph']]]);
-    expect((string)(new DocumentParser())->parse($nested)->render())->toContain('Before');
+    expect($nested['content'][1]['content'][0])->toBe([
+        'type' => 'vizy3Image', 'attrs' => ['src' => $missing, 'alt' => 'Lost'],
+    ]);
+
+    $document = (new DocumentParser())->parse($nested);
+    $html = (string)$document->render();
+    expect($html)->toContain('Before')->not->toContain('<img')
+        ->and((new \verbb\vizy\document\DocumentSerializer())->serialize($document)['content'][1]['content'][0])
+        ->toBe(['type' => 'vizy3Image', 'attrs' => ['src' => $missing, 'alt' => 'Lost']]);
 });

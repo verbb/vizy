@@ -15,12 +15,13 @@ const schema = getSchema([
     UnsupportedNode, UnsupportedInlineNode,
 ]);
 
-it.each(cases)('loads normalized legacy content: $name', ({ name, expected }) => {
+it.each(cases)('loads normalized legacy content: $name', ({ expected, preserved }) => {
     // PHP verifies these same expectations against conversion of the legacy input.
     const document = { type: 'doc', attrs: { schemaVersion: 2 }, content: expected } as CanonicalNode;
     const adapted = adaptCanonicalForEditor(document, schema, { nodes, marks });
     schema.nodeFromJSON(adapted).check();
-    if (!name.startsWith('unknown extension')) {
+    // Preserved cases intentionally load as unsupported placeholders and restore exactly.
+    if (!preserved) {
         expect(JSON.stringify(adapted)).not.toContain('unsupportedInlineNode');
         expect(JSON.stringify(adapted)).not.toContain('unsupportedNode');
     }

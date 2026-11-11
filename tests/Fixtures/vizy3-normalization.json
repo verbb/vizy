@@ -557,6 +557,47 @@
                     }
                 ]
             }
+        ],
+        "preserved": true
+    },
+    {
+        "name": "image without a matching Asset remains intact",
+        "source": "nodes/Image.php::getTag (V3 rendered any src; preserved as unsupported content in V4)",
+        "preserved": true,
+        "legacy": [
+            {
+                "type": "blockquote",
+                "content": [
+                    {
+                        "type": "image",
+                        "attrs": {
+                            "src": "https://project.transforms.svdcdn.com/staging/vizy-unmatched-image.png?w=400&h=151&fit=crop&s=abc",
+                            "alt": "Pasted image",
+                            "url": "https://example.test/gallery",
+                            "target": "_blank",
+                            "transform": ""
+                        },
+                        "text": ""
+                    }
+                ]
+            }
+        ],
+        "expected": [
+            {
+                "type": "blockquote",
+                "content": [
+                    {
+                        "type": "vizy3Image",
+                        "attrs": {
+                            "src": "https://project.transforms.svdcdn.com/staging/vizy-unmatched-image.png?w=400&h=151&fit=crop&s=abc",
+                            "alt": "Pasted image",
+                            "url": "https://example.test/gallery",
+                            "target": "_blank",
+                            "transform": ""
+                        }
+                    }
+                ]
+            }
         ]
     }
 ]
