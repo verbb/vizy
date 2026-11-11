@@ -4,6 +4,7 @@
 
 ### Fixed
 - Fixed Vizy 3 content failing to load with “could not resolve an Asset UID” when an image was pasted into the editor as a plain asset or CDN URL rather than selected from Assets.
+- Fixed Vizy 3 content failing to load when an image no longer matches any Asset. The image is now skipped and logged.
 
 ## 4.0.3 - 2026-11-10
 
