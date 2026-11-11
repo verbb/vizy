@@ -5,6 +5,8 @@ use verbb\vizy\Vizy;
 use verbb\vizy\document\VizyDocument;
 
 use Craft;
+use craft\elements\Asset;
+use craft\helpers\Db;
 use craft\validators\HandleValidator;
 
 /**
@@ -300,6 +302,8 @@ final class Vizy3DocumentAdapter
             }
         } elseif (isset($attrs['id']) && is_numeric($attrs['id'])) {
             $assetId = (int)$attrs['id'];
+        } elseif ($src !== '') {
+            $assetId = $this->_assetIdFromUrl($src);
         }
 
         if ($assetId) {
@@ -346,6 +350,44 @@ final class Vizy3DocumentAdapter
         }
 
         return $node;
+    }
+
+    /**
+     * V3 accepted pasted `<img>` HTML, so markup copied from a rendered page could store a
+     * bare Asset URL (often a CDN transform URL) with no reference or ID. Match the URL path
+     * against Asset paths, and only accept a single unambiguous match.
+     */
+    private function _assetIdFromUrl(string $src): ?int
+    {
+        $path = parse_url($src, PHP_URL_PATH);
+
+        if (!is_string($path) || $path === '') {
+            return null;
+        }
+
+        $path = rawurldecode($path);
+        $filename = basename($path);
+
+        if ($filename === '') {
+            return null;
+        }
+
+        $matches = [];
+
+        $assets = Asset::find()
+            ->filename(Db::escapeParam($filename))
+            ->site('*')
+            ->unique()
+            ->status(null)
+            ->all();
+
+        foreach ($assets as $asset) {
+            if (str_ends_with($path, '/' . $asset->getPath())) {
+                $matches[] = $asset->id;
+            }
+        }
+
+        return count($matches) === 1 ? $matches[0] : null;
     }
 
     private function _convertBlock(array $node, array $schemaMap, array &$seenBlockUids, string $path): array

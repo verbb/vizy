@@ -108,3 +108,18 @@ it('converts encoded and brace image references and retains transform suffixes',
             ->and($canonical['content'][0]['attrs']['transform'])->toBe($transform);
     }
 });
+
+it('resolves bare Asset URLs pasted into Vizy 3 content and rejects unknown files', function() {
+    $asset = migrationPublicAsset();
+    $convert = static fn(string $src) => (new Vizy3DocumentAdapter())->convert([['type' => 'image', 'attrs' => [
+        'id' => null, 'src' => $src, 'alt' => 'Pasted image',
+    ]]], []);
+
+    // A CDN transform URL on another host, with its own path prefix and query string.
+    $canonical = $convert('https://project.transforms.svdcdn.com/staging/' . rawurlencode($asset->filename) . '?w=400&h=151&fit=crop&s=abc');
+    expect($canonical['content'][0]['attrs']['assetUid'])->toBe($asset->uid)
+        ->and($canonical['content'][0]['attrs']['alt'])->toBe('Pasted image');
+
+    expect(fn() => $convert('https://example.test/images/missing-' . $asset->filename))
+        ->toThrow(\verbb\vizy\legacy\LegacyDocumentConversionException::class, 'could not resolve an Asset UID');
+});
