@@ -5,6 +5,7 @@
 ### Fixed
 - Fixed Vizy 3 content failing to load with “could not resolve an Asset UID” when an image was pasted into the editor as a plain asset or CDN URL rather than selected from Assets.
 - Fixed Vizy 3 content failing to load when an image doesn’t match any Asset. The image is now kept as unsupported content, so it shows as a placeholder in the editor and isn’t lost when the entry is saved.
+- Fixed field instructions inside blocks using a line height too tight for Markdown, causing inline code to overlap neighbouring lines. ([#393](https://github.com/verbb/vizy/issues/393))
 
 ## 4.0.3 - 2026-11-10
 

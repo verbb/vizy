@@ -327,7 +327,7 @@
     ]
   },
   "field/src/ts/vizy.ts": {
-    "file": "assets/vizy-DCJYefZ4.js",
+    "file": "assets/vizy-BYyoG6pM.js",
     "name": "vizy",
     "src": "field/src/ts/vizy.ts",
     "isEntry": true,
@@ -347,7 +347,7 @@
       "field/src/ts/editor-runtime.ts"
     ],
     "css": [
-      "assets/vizy-DwtLG4Hp.css",
+      "assets/vizy-cln2aqRR.css",
       "assets/plugin-kit-Cvzm7hAh.css"
     ]
   },

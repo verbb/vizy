@@ -486,7 +486,7 @@ vizy-block .flex-fields > * .heading label {
 
 vizy-block .flex-fields > * .instructions {
     font-size: 12px;
-    line-height: 1;
+    line-height: var(--lh, 1.42em);
     margin-top: -0.2rem;
     margin-bottom: 0.5rem;
 }
