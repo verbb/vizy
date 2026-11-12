@@ -27,7 +27,7 @@ Visit the [Vizy Plugin page](https://verbb.io/craft-plugins/vizy) for all docume
 
 ## Support
 
-Get in touch with us via the [Vizy Support page](https://verbb.io/craft-plugins/vizy/support) or by [creating a Github issue](https://github.com/verbb/vizy/issues)
+Get in touch with us via the [Vizy Support page](https://verbb.io/craft-plugins/vizy/support) or by [creating a GitHub issue](https://github.com/verbb/vizy/issues).
 
 <h2></h2>
 

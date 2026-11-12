@@ -1,5 +1,5 @@
 <!-- feature-intro -->
-A powerful and flexible content editor that brings rich text and structured Craft content together in one visual editing experience.
+A content editor that brings rich text and structured Craft content together in one visual editing experience.
 <!-- feature-intro-end -->
 
 <!-- vizy-demo -->
@@ -11,7 +11,7 @@ Show, don’t tell, is often the best approach. Give Vizy a test-drive below, th
 <!-- feature-section media-size="large" media-shadow="false" -->
 ## WYSIWYG, but more
 
-Vizy has all the formatting authors expect — headings, lists, links, tables, images and more — without stopping at rich text. Add purpose-built blocks exactly where they belong, tailor the available tools to the field and keep the whole story in one editing surface.
+Vizy has all the formatting authors expect, from headings and lists to links, tables and images, without stopping at rich text. Add purpose-built blocks exactly where they belong, tailor the available tools to the field and keep the whole story in one editing surface.
 
 Blocks stay visible where they will matter in the finished piece. Move, collapse, enable or disable them without turning the document into a disconnected stack of fields.
 
@@ -19,9 +19,9 @@ Blocks stay visible where they will matter in the finished piece. Move, collapse
 <!-- feature-section-end -->
 
 <!-- feature-section media-size="large" media-shadow="false" -->
-## Blocks are here
+## Structured blocks between your paragraphs
 
-Embed structured blocks directly between paragraphs — much like having Matrix blocks inline with your content. Each Block Type can reuse Craft fields, UI elements and tabs, then render through its own focused Twig template.
+Embed structured blocks directly between paragraphs, much like having Matrix blocks inline with your content. Each Block Type can reuse Craft fields, UI elements and tabs, then render through its own focused Twig template.
 
 Add one from the toolbar, the gutter beside the document or a `/` shortcut on a blank line. Available Block Types remain searchable and grouped so the choices stay approachable as the project grows.
 
@@ -43,7 +43,7 @@ Build configs visually with the real toolbar in front of you, or keep them in `c
 
 Hosted Vizy fields can live inside a Block Type alongside ordinary Craft fields. That gives genuinely nested content a focused editor of its own while keeping it part of the parent document.
 
-Use the extra level where it clarifies the model — for example, supporting copy inside a Latest News component — while simpler Blocks remain simple.
+Use the extra level where it clarifies the model, such as supporting copy inside a Latest News component, while simpler Blocks remain simple.
 
 ![A Latest News block containing a hosted Vizy editor and a nested Callout, surrounded by the parent story.](../screenshots/vizy-nested.png)
 <!-- feature-section-end -->
@@ -51,7 +51,7 @@ Use the extra level where it clarifies the model — for example, supporting cop
 <!-- feature-section -->
 ## A block-based visual editor
 
-Rather than treating generated HTML as the source of truth, Vizy stores a structured JSON document. Let Vizy render the whole field, give every Block Type its own Twig template, take control node by node or expose the document through GraphQL for a headless front end.
+Rather than treating generated HTML as the source of truth, Vizy stores a structured JSON document. Let Vizy render the whole field, give every Block Type its own Twig template or take control node by node.
 <!-- feature-section-end -->
 
 <!-- feature-grid -->
