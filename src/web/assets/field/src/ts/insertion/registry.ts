@@ -9,7 +9,7 @@ import type {
 } from './types';
 import { buildInsertionContext, contextsMatchForExecution } from './context';
 import { isInsertionAvailable } from './availability';
-import { compareAvailable, scoreInsertionItem } from './search';
+import { blockGroupRanks, compareAvailable, scoreInsertionItem } from './search';
 import { executeBlockInsertion, executeNodeInsertion } from './executors';
 import { executeLayoutInsertion, isLayoutInsertionAvailable, LAYOUT_INSERTION_ID } from '../layout/insertion';
 import { getPartnerInsertionDefinitions } from './partner-registry';
@@ -47,6 +47,7 @@ export function createInsertionRegistry(
     manifestItems: readonly InsertionItemManifest[],
 ): InsertionRegistry {
     const definitions = new Map<string, InsertionDefinition>();
+    const groupRanks = blockGroupRanks(manifestItems);
     for (const item of manifestItems) {
         if (definitions.has(item.id)) {
             throw new Error(`duplicateInsertionItem:${item.id}`);
@@ -87,7 +88,7 @@ export function createInsertionRegistry(
                 score,
             });
         }
-        results.sort(compareAvailable);
+        results.sort((a, b) => compareAvailable(a, b, groupRanks));
         if (request.limit !== undefined) {
             return results.slice(0, request.limit);
         }

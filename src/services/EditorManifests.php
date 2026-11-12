@@ -60,6 +60,7 @@ final class EditorManifests extends Component
                 ...($config['diagnostics'] ?? []),
             ];
         }
+
         $diagnostics = [
             ...$editorConfigs->getFieldDiagnostics($field),
             ...\verbb\vizy\Vizy::$plugin->getBlockTypes()->getSchemaDiagnostics(),
@@ -100,6 +101,7 @@ final class EditorManifests extends Component
                     $layoutTabLabels[] = (string)$tab->name;
                 }
             }
+
             $projection = new BlockSummaryProjection();
             $inference = $projection->inferenceFor($type);
             $blockTypes[(string)$type->uid] = [
@@ -128,6 +130,7 @@ final class EditorManifests extends Component
                 'layoutTabLabels' => $layoutTabLabels,
             ];
         }
+
         ksort($blockTypes);
 
         $insertionItems = $this->_buildInsertionItems($field, $blockTypes, $enabled['nodes'], $enabled['internalNodes']);
@@ -201,6 +204,7 @@ final class EditorManifests extends Component
         // Request UID is an instance correlation token, so it is intentionally
         // excluded from the content hash and deterministic revision.
         $hash = hash('sha256', $this->_stableJson($payload));
+
         return $this->cache[$cacheKey] = [
             'uid' => \craft\helpers\StringHelper::UUID(),
             'revision' => '1:' . $hash,
@@ -229,6 +233,7 @@ final class EditorManifests extends Component
                 if (!is_array($node) || !is_string($node['type'] ?? null)) {
                     continue;
                 }
+
                 $nodeBlockUid = ($node['type'] === 'vizyBlock' && is_string($node['attrs']['blockUid'] ?? null))
                     ? $node['attrs']['blockUid']
                     : $blockUid;
@@ -242,9 +247,12 @@ final class EditorManifests extends Component
                     if (($used[$key] ?? 0) >= ($trusted[$key] ?? 0)) {
                         $violations[] = ['code' => 'disallowedNode', 'path' => $nodePath, 'kind' => 'node', 'name' => $type];
                     }
+
                     $used[$key] = ($used[$key] ?? 0) + 1;
+
                     continue;
                 }
+
                 // A heading at a level this config does not allow, judged exactly as a
                 // disallowed node is — including the trusted-baseline allowance, so tightening
                 // the levels never invalidates a document that already contained one. It is
@@ -262,6 +270,7 @@ final class EditorManifests extends Component
                             'name' => "heading{$level}",
                         ];
                     }
+
                     $used[$key] = ($used[$key] ?? 0) + 1;
                 }
 
@@ -269,11 +278,13 @@ final class EditorManifests extends Component
                     if (!is_array($mark) || !is_string($mark['type'] ?? null) || isset($allowedMarks[$mark['type']])) {
                         continue;
                     }
+
                     $key = "mark:{$mark['type']}:{$nodeBlockUid}:{$identity}";
 
                     if (($used[$key] ?? 0) >= ($trusted[$key] ?? 0)) {
                         $violations[] = ['code' => 'disallowedMark', 'path' => $nodePath, 'kind' => 'mark', 'name' => $mark['type']];
                     }
+
                     $used[$key] = ($used[$key] ?? 0) + 1;
                 }
 
@@ -284,6 +295,7 @@ final class EditorManifests extends Component
             }
         };
         $walk($candidate->toArray()['content'] ?? []);
+
         return $violations;
     }
 
@@ -349,8 +361,10 @@ final class EditorManifests extends Component
                     'icon' => ToolbarIcons::svgFor($item),
                     'presentation' => $item,
                 ], $config['icons'] ?? []);
+
                 continue;
             }
+
             // Buttons and dropdowns are both plain IDs, with a dropdown's members resolved from
             // its registration on the way through, so the client never has to know which it got.
             $control = EditorConfigPresentation::controlFor(
@@ -387,6 +401,7 @@ final class EditorManifests extends Component
             if (!is_string($item)) {
                 continue;
             }
+
             // Marks-first by convention, but any control advertised on the bubble surface
             // may resolve when its capability is enabled (partner nodes / extensions).
             $control = EditorConfigPresentation::controlFor($item, $marks, $nodes, [], [], $extensions);
@@ -394,6 +409,7 @@ final class EditorManifests extends Component
             if ($control === null) {
                 continue;
             }
+
             $control = $this->_applyIconOverrides($control, $config['icons'] ?? []);
             // Namespaced so the two surfaces cannot collide on a control ID.
             $control['id'] = "bubble:{$item}";
@@ -461,6 +477,7 @@ final class EditorManifests extends Component
                 if (!isset($blockTypes[$uid]) || isset($blockOrder[$uid])) {
                     continue;
                 }
+
                 $blockOrder[$uid] = $order++;
                 $blockGroups[$uid] = $groupName !== '' ? $groupName : 'Blocks';
             }
@@ -472,6 +489,7 @@ final class EditorManifests extends Component
             if (!isset($blockTypes[$uid]) || isset($blockOrder[$uid])) {
                 continue;
             }
+
             $blockOrder[$uid] = $order++;
             $blockGroups[$uid] = 'Blocks';
         }
@@ -548,6 +566,7 @@ final class EditorManifests extends Component
                 if ($definition === null || !($definition['installed'] ?? false)) {
                     continue;
                 }
+
                 $label = (string)($definition['label'] ?? $nodeName);
                 $group = 'Extensions';
             }
@@ -568,17 +587,35 @@ final class EditorManifests extends Component
             ];
         }
 
-        usort($items, static function(array $a, array $b): int {
+        // Block groups keep the order set in the field's settings, ranked by
+        // their first Block Type. Prose node groups have no configured order,
+        // so they follow alphabetically. A node group sharing a block group's
+        // name joins that block group.
+        $groupRanks = [];
+
+        foreach ($blockOrder as $uid => $itemOrder) {
+            $groupRanks[$blockGroups[$uid]] ??= $itemOrder;
+        }
+
+        usort($items, static function(array $a, array $b) use ($groupRanks): int {
+            $rank = ($groupRanks[$a['group']] ?? PHP_INT_MAX) <=> ($groupRanks[$b['group']] ?? PHP_INT_MAX);
+
+            if ($rank !== 0) {
+                return $rank;
+            }
+
             $group = strcmp((string)$a['group'], (string)$b['group']);
 
             if ($group !== 0) {
                 return $group;
             }
+
             $order = ((int)$a['order']) <=> ((int)$b['order']);
 
             if ($order !== 0) {
                 return $order;
             }
+
             return strcmp((string)$a['id'], (string)$b['id']);
         });
 
@@ -634,6 +671,7 @@ final class EditorManifests extends Component
                 if (!is_array($node) || !is_string($node['type'] ?? null)) {
                     continue;
                 }
+
                 $nodeBlockUid = ($node['type'] === 'vizyBlock' && is_string($node['attrs']['blockUid'] ?? null))
                     ? $node['attrs']['blockUid']
                     : $blockUid;
@@ -642,8 +680,10 @@ final class EditorManifests extends Component
                 if (!isset($allowedNodes[$node['type']])) {
                     $key = "node:{$node['type']}:{$nodeBlockUid}:{$identity}";
                     $inventory[$key] = ($inventory[$key] ?? 0) + 1;
+
                     continue;
                 }
+
                 // Counted on the same key the validating walk looks up, so a heading already in
                 // the trusted baseline is spent against itself rather than reported.
                 $level = $this->_headingLevel($node);
@@ -666,6 +706,7 @@ final class EditorManifests extends Component
             }
         };
         $walk($document['content'] ?? []);
+
         return $inventory;
     }
 
@@ -676,6 +717,7 @@ final class EditorManifests extends Component
                 return "{$key}:{$node['attrs'][$key]}";
             }
         }
+
         return 'shape:' . hash('sha256', $this->_stableJson($node));
     }
 
@@ -685,6 +727,7 @@ final class EditorManifests extends Component
             if (array_is_list($item)) {
                 return array_map(static fn(mixed $value) => is_array($value) ? $normalize($value) : $value, $item);
             }
+
             ksort($item);
 
             foreach ($item as &$value) {
@@ -692,9 +735,12 @@ final class EditorManifests extends Component
                     $value = $normalize($value);
                 }
             }
+
             unset($value);
+
             return $item;
         };
+
         return json_encode($normalize($value), JSON_THROW_ON_ERROR | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
     }
 }

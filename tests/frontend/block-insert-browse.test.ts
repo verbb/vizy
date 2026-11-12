@@ -6,7 +6,12 @@ import {
 } from '../../src/web/assets/field/src/ts/insertion/insert-view-storage';
 import { VizyInsertionListElement } from '../../src/web/assets/field/src/ts/components/VizyInsertionListElement';
 import { VizyBlockBrowseDialogElement } from '../../src/web/assets/field/src/ts/components/VizyBlockBrowseDialogElement';
-import type { AvailableInsertion, InsertionContext } from '../../src/web/assets/field/src/ts/insertion/types';
+import { blockGroupRanks, compareAvailable } from '../../src/web/assets/field/src/ts/insertion/search';
+import type {
+    AvailableInsertion,
+    InsertionContext,
+    InsertionItemManifest,
+} from '../../src/web/assets/field/src/ts/insertion/types';
 import { installElementInternalsShim } from './support/element-internals';
 
 installElementInternalsShim();
@@ -205,5 +210,63 @@ describe('block grid picker policy', () => {
         dialog.close({ notify: false });
 
         expect(onClose).not.toHaveBeenCalled();
+    });
+});
+
+describe('Block group order', () => {
+    function item(id: string, kind: 'block' | 'node', group: string, order: number): InsertionItemManifest {
+        return {
+            id,
+            kind,
+            label: id,
+            description: null,
+            icon: null,
+            group,
+            keywords: [],
+            aliases: [],
+            order,
+            surfaces: ['slash', 'inline', 'empty', 'browse', 'keyboard'],
+            requiresInput: false,
+        };
+    }
+
+    // The field puts Showcase before Content, and the manifest numbers Block
+    // Types in that order. Prose nodes have no configured group order.
+    const manifestItems = [
+        item('block:content', 'block', 'Content', 1),
+        item('block:showcase-b', 'block', 'Showcase', 2),
+        item('block:showcase-a', 'block', 'Showcase', 0),
+        item('node:vizy:paragraph', 'node', 'Text', 0),
+        item('node:vizy:bulletList', 'node', 'Lists', 1),
+    ];
+
+    function entries(items: readonly InsertionItemManifest[]): AvailableInsertion[] {
+        return items.map((entry) => ({ item: entry, context: stubContext, score: 1 }));
+    }
+
+    it('sorts Block groups by field order and other groups alphabetically after them', () => {
+        const ranks = blockGroupRanks(manifestItems);
+        const sorted = entries(manifestItems).sort((a, b) => compareAvailable(a, b, ranks));
+
+        expect(sorted.map((entry) => entry.item.id)).toEqual([
+            'block:showcase-a',
+            'block:showcase-b',
+            'block:content',
+            'node:vizy:bulletList',
+            'node:vizy:paragraph',
+        ]);
+    });
+
+    it('lists browse tabs in the order the registry returns them', async () => {
+        const dialog = new VizyBlockBrowseDialogElement();
+        dialog.items = entries([
+            item('block:showcase-a', 'block', 'Showcase', 0),
+            item('block:content', 'block', 'Content', 1),
+        ]);
+        document.body.append(dialog);
+        await dialog.updateComplete;
+
+        const tabs = [...dialog.shadowRoot!.querySelectorAll('pk-tab')].map((tab) => tab.textContent?.trim());
+        expect(tabs).toEqual(['All', 'Showcase', 'Content']);
     });
 });

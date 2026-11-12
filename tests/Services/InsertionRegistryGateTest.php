@@ -47,6 +47,43 @@ it('ships deterministic insertion items for blocks and enabled prose nodes', fun
         ]);
 });
 
+it('keeps Block groups in field order ahead of prose node groups', function() {
+    $types = [];
+
+    foreach (['Content', 'Showcase'] as $name) {
+        $type = new BlockType([
+            'uid' => StringHelper::UUID(),
+            'name' => $name,
+            'handle' => lcfirst($name) . StringHelper::randomString(5),
+        ]);
+        $layout = new FieldLayout(['uid' => StringHelper::UUID(), 'type' => Block::class]);
+        $layout->setTabs([]);
+        $type->setFieldLayout($layout);
+        expect(Vizy::$plugin->getBlockTypes()->saveBlockType($type))->toBeTrue();
+        $types[$name] = $type;
+    }
+
+    // Showcase is set first, so alphabetical order would put it second.
+    $field = new VizyField([
+        'uid' => StringHelper::UUID(),
+        'name' => 'Group order',
+        'handle' => 'groupOrder' . StringHelper::randomString(5),
+        'editorConfig' => 'standard',
+        'rootContentType' => VizyField::ROOT_CONTENT_RICH,
+        'blockTypePickerGroups' => [
+            ['name' => 'Showcase', 'blockTypeUids' => [$types['Showcase']->uid]],
+            ['name' => 'Content', 'blockTypeUids' => [$types['Content']->uid]],
+        ],
+    ]);
+
+    $service = Vizy::$plugin->getEditorManifests();
+    $service->invalidate();
+    $groups = collect($service->build($field)['insertionItems'])->pluck('group')->unique()->values()->all();
+
+    expect(array_slice($groups, 0, 2))->toBe(['Showcase', 'Content'])
+        ->and(array_slice($groups, 2))->toBe(collect(array_slice($groups, 2))->sort()->values()->all());
+});
+
 it('omits block insertion items for rich-text-only fields', function() {
     $field = new VizyField([
         'uid' => StringHelper::UUID(),

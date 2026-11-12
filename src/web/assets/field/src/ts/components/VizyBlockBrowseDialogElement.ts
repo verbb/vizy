@@ -389,12 +389,14 @@ export class VizyBlockBrowseDialogElement extends LitElement {
     }
 
     #tabs(): Array<{ id: string; label: string }> {
+        // Items arrive sorted by the insertion registry, so first appearance
+        // gives the field's configured group order.
         const groups = new Set<string>();
         for (const entry of this.items) {
             if (entry.item.group) groups.add(entry.item.group);
         }
         const tabs = [{ id: 'all', label: 'All' }];
-        for (const name of [...groups].sort((a, b) => a.localeCompare(b))) {
+        for (const name of groups) {
             tabs.push({ id: name, label: name });
         }
         return tabs;
