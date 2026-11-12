@@ -23,7 +23,9 @@ trait Routes
                 'vizy/settings' => 'vizy/settings/index',
                 'vizy/settings/block-types' => 'vizy/block-types/index',
                 'vizy/settings/block-types/new' => 'vizy/block-types/edit',
-                'vizy/settings/block-types/<uid:{uid}>' => 'vizy/block-types/edit',
+                // Craft's `{uid}` token only matches v4 UUIDs, but Block Types promoted
+                // from Vizy 3 have deterministic v5-shaped UIDs.
+                'vizy/settings/block-types/<uid:[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}>' => 'vizy/block-types/edit',
                 'vizy/settings/editor-configs' => 'vizy/editor-configs/index',
                 'vizy/settings/editor-configs/new' => 'vizy/editor-configs/edit',
                 'vizy/settings/editor-configs/<id:[\\w\\-]+>' => 'vizy/editor-configs/edit',
