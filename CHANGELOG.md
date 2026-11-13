@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 4.0.4 - 2026-11-14
 
 ### Fixed
 - Fixed Block Types upgraded from Vizy 3 returning a 404 when edited from the Block Types settings page. ([#392](https://github.com/verbb/vizy/issues/392))
