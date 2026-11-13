@@ -46,10 +46,73 @@ Save the field and open an entry that uses it. Check the toolbar, select text to
 
 A Vizy field nested inside a block selects its own Editor Config. This lets a Callout Body offer a smaller set of tools than the surrounding Article Body without changing the parent field.
 
+Modules can adjust a field's selected config at runtime with `EditorManifests::EVENT_MODIFY_EDITOR_CONFIG`. Vizy normalizes and hashes the effective config without writing those changes back to Project Config or its JSON file. See [Events](docs:developers/events#the-modifyeditorconfig-event).
+
 ## Store a Config in a JSON File
 
-You can define an Editor Config in `config/vizy/{id}.json` when its source should live in the project repository. For example, `config/vizy/article.json` provides the ID `article`. File configs appear in the control panel for inspection and selection, but their contents must be edited in the file.
+You can define an Editor Config in `config/vizy/{id}.json` when its source should live in the project repository, using the same keys as the Advanced JSON tab. For example, `config/vizy/article.json` provides the ID `article`. File configs appear in the control panel for inspection and selection, but their contents must be edited in the file. Both approaches can be used in the same project.
 
-Control-panel configs are stored in Craft’s Project Config. File configs and control-panel configs share the same ID namespace; when both define the same ID, the Project Config version takes precedence. Use distinct IDs when both should remain available.
+Use lowercase letters, numbers, dashes and underscores, starting with a letter, for predictable IDs (`minimal.json` → `minimal`). Filenames with uppercase letters, spaces, dots or an initial number are also supported, and Vizy assigns them a stable ID and shows their readable name in the config selector. `standard.json` receives its own ID so it remains separate from the built-in Standard config.
 
-[Configuration](docs:get-started/configuration#editor-configuration) provides the JSON structure and supported keys. After changing a file config, reload an entry using it and verify the effective toolbar, menus, capabilities, and insertion controls.
+Control-panel configs are stored in Craft’s Project Config. File configs and control-panel configs share the same ID namespace. When both define the same ID, the Project Config version takes precedence and the file is ignored with a warning. Creating a control-panel config under a file’s ID is refused until you rename or remove the file.
+
+:::tip
+Ensure file configs are valid JSON, with no trailing commas and double quotes around property names.
+:::
+
+### File Example
+
+Create `config/vizy/minimal.json`:
+
+```json
+{
+    "label": "Minimal",
+    "capabilities": {
+        "nodes": ["heading", "blockquote"],
+        "marks": ["bold", "italic", "link"]
+    },
+    "headings": {
+        "levels": [2, 3]
+    },
+    "toolbar": [
+        "dropdown:formatting",
+        "separator",
+        "bold",
+        "italic",
+        "link"
+    ],
+    "dropdowns": {
+        "formatting": ["heading2", "heading3", "paragraph"]
+    },
+    "bubble": {
+        "enabled": true,
+        "items": ["bold", "italic", "link"]
+    },
+    "icons": {
+        "bold": "star-solid",
+        "dropdown:formatting": "custom-formatting"
+    }
+}
+```
+
+`label` may be omitted, in which case it is derived from the filename. Omit `dropdowns` (or leave it empty) to keep each dropdown's registered roster.
+
+### Available Keys
+
+| Key | Description |
+| --- | --- |
+| `label` | Display name in the CP and field select. |
+| `capabilities` | Allowed content: `nodes` and `marks` lists. |
+| `headings` | `{ "levels": [2, 3, 4] }`, the heading levels the schema allows. |
+| `toolbar` | Flat list of control IDs (`bold`, `dropdown:formatting`, `separator`, …). |
+| `dropdowns` | Optional map of dropdown name → member IDs, trimming/reordering a registered roster. |
+| `bubble` | `{ "enabled": true, "items": ["bold", "italic", "link"] }`. |
+| `icons` | Optional map of control ID → icon name. The same override follows a control across the toolbar, dropdowns, and Bubble Menu. |
+| `gutterInsert` | `true` (default) shows the `+` control beside the content. Independent of toolbar `addBlock`. |
+| `slashInsert` | `true` (default) lets `/` on a blank line open the Add Block list. |
+
+Toolbar and dropdown IDs use the Editor Config vocabulary (`heading2`, `bulletList`, `alignLeft`, `dropdown:formatting`, …). The full control catalogue is what the Editor Configs screen offers under Available items, and [Editor Capabilities](docs:feature-tour/editor-capabilities) lists the built-in control IDs. Your own controls are registered in PHP (see [Extensibility](docs:developers/extending-vizy)), not declared as free-form objects inside the JSON.
+
+Icon values come from Vizy’s icon catalogue, including SVG files under the configured [`iconsPath`](docs:get-started/configuration#iconspath). Use the visual Editor Config screen to search that catalogue and preview the result. Inline SVG markup and arbitrary filesystem paths are not accepted in an Editor Config.
+
+After changing a file config, reload an entry using it and verify the effective toolbar, menus, capabilities, and insertion controls.

@@ -314,7 +314,7 @@ Event::on(EditorManifests::class, EditorManifests::EVENT_MODIFY_EDITOR_CONFIG, f
 ```
 :::
 
-The event starts with the selected named config's authorable values. Vizy normalizes the result, resolves its dependencies, and uses the effective config for manifest caching and server-side validation. It does not write the runtime changes to Project Config or the source JSON file. See [Events](docs:developers/events#the-modifyeditorconfig-event) for the complete contract and [Configuration](docs:get-started/configuration#editor-configuration) for the available settings.
+The event starts with the selected named config's authorable values. Vizy normalizes the result, resolves its dependencies, and uses the effective config for manifest caching and server-side validation. It does not write the runtime changes to Project Config or the source JSON file. See [Events](docs:developers/events#the-modifyeditorconfig-event) for the complete contract and [Editor Configs](docs:feature-tour/editor-configs#store-a-config-in-a-json-file) for the available keys.
 
 #### Removed Hooks
 
