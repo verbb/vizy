@@ -22,7 +22,7 @@ Keep the resulting control-panel experience in view. Even when a structure remai
 
 Feed Me can accept a complete Vizy document with `type: "doc"` and `attrs.schemaVersion`, or wrap a list of nodes as a document. Blocks need the destination project’s Block Type identities and field placement keys. A block’s display name or arbitrary JSON is not enough to establish that structure.
 
-Use a document created by the destination configuration as the basis for an import involving blocks. Test with a copy of representative content, then open the imported entry and check both its fields and frontend output. Existing installations importing older block data should also follow [Upgrading from v3](docs:get-started/upgrading-from-v3#known-limitations).
+Use a document created by the destination configuration as the basis for an import involving blocks. Test with a copy of representative content, then open the imported entry and check both its fields and frontend output.
 
 ## Treat Editor Previews as Authoring Aids
 
@@ -32,4 +32,4 @@ Block preview images serve a similar editorial purpose. They help an editor reco
 
 ## Review Headless Access
 
-GraphQL can expose rendered HTML, typed document content, and raw stored values. Raw document, node, mark, and block values follow access to the enclosing Vizy field rather than separate permissions for every embedded value. Grant schema access only to clients allowed to read the complete document. [GraphQL](docs:developers/graphql#data-access-and-permissions) explains the supported fields and access boundary.
+GraphQL can expose rendered HTML, typed document content, and raw stored values. Raw document, node, mark, and block values follow access to the enclosing Vizy field rather than separate permissions for every embedded value. Grant schema access only to clients allowed to read the complete document. [GraphQL](docs:graphql/queries#data-access-and-permissions) explains the supported fields and access boundary.

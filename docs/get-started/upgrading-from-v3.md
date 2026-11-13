@@ -149,7 +149,7 @@ When updating a file, do not treat the change as a list of renamed keys. In Vizy
 
 Identifiers such as `h2`, `unordered-list`, and `align-left` are accepted as temporary aliases for `heading2`, `bulletList`, and `alignLeft`. Vizy reports their use through Craft’s Deprecator; replace them with the current IDs when rewriting the file.
 
-Vizy 3’s `toolbarFixed` and `commands` settings have no Vizy 4 config equivalent. Remove them. JSON objects that defined custom buttons or Formatting items must be rebuilt with the [Extensions APIs](docs:developers/extending-vizy); they cannot be represented by a Vizy 4 Editor Config alone.
+Vizy 3’s `toolbarFixed` and `commands` settings have no Vizy 4 config equivalent. Remove them. JSON objects that defined custom buttons or Formatting items must be rebuilt with the [Extensions APIs](docs:developers/custom-extensions); they cannot be represented by a Vizy 4 Editor Config alone.
 
 ### Extensibility APIs
 
@@ -204,7 +204,7 @@ if (window.Craft?.Vizy?.registerModule) {
 ```
 :::
 
-The `acme/mark/abbr` module ID must match the PHP extension's `moduleId()`. There is deliberately no `registerButtons()` replacement in the Vizy 4 example: the standard abbreviation control is enabled and positioned through the Editor Config below. Use `Craft.Vizy.registerControl()` only when the control needs a custom action such as a dialog or multi-step flow. The PHP registration is covered under [Registering Nodes and Marks](#registering-nodes-and-marks); see [Extending Vizy](docs:developers/extending-vizy) for the complete extension contract.
+The `acme/mark/abbr` module ID must match the PHP extension's `moduleId()`. There is deliberately no `registerButtons()` replacement in the Vizy 4 example: the standard abbreviation control is enabled and positioned through the Editor Config below. Use `Craft.Vizy.registerControl()` only when the control needs a custom action such as a dialog or multi-step flow. The PHP registration is covered under [Registering Nodes and Marks](#registering-nodes-and-marks); see [Custom Extensions](docs:developers/custom-extensions) for the complete extension contract.
 
 #### Replacing Whole-Document HTML Round-Trips
 
@@ -318,7 +318,7 @@ The event starts with the selected named config's authorable values. Vizy normal
 
 #### Removed Hooks
 
-Remove listeners for `VizyField::EVENT_MODIFY_PURIFIER_CONFIG`; the event does not fire. Use the rendering hooks in [Events](docs:developers/events#customising-rendered-html) for output changes. PHP calls to `VizyField::registerPlugin()` also do not register editor behaviour. Register the extension through the PHP event and JavaScript module described above, then check both the editor and rendered output.
+Remove listeners for `VizyField::EVENT_MODIFY_PURIFIER_CONFIG`; the event does not fire. Use the rendering hooks in [Events](docs:developers/events#rendering-events) for output changes. PHP calls to `VizyField::registerPlugin()` also do not register editor behaviour. Register the extension through the PHP event and JavaScript module described above, then check both the editor and rendered output.
 
 ### GraphQL Queries
 
@@ -384,7 +384,7 @@ The `tagName` field has been removed; use `type` or your templates when the elem
 
 New structural types: `VizyLayout` (`stack`, `columns`), `VizyColumn` (`span`, `proportion`, `children`). Nested composition uses Vizy fields on Blocks (nested `VizyDocument`), not Content Areas.
 
-Full current contract: [GraphQL](docs:developers/graphql).
+Full current contract: [GraphQL](docs:graphql/queries).
 
 ## Deprecated Changes
 

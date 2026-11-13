@@ -117,4 +117,4 @@ List Keymap is loaded automatically when an Editor Config permits lists. It prov
 
 Find and Replace works within the Vizy editor whose toolbar opened it. Its options include case-sensitive, whole-word, and regular-expression matching, and its temporary match highlights are cleared when the dialog closes.
 
-Plugins and modules can register more nodes, marks, extensions, controls, and dropdowns. [Extending Vizy](docs:developers/extending-vizy) describes that registration contract and shows how to add an official TipTap extension.
+Plugins and modules can register more nodes, marks, extensions, controls, and dropdowns. [Custom Extensions](docs:developers/custom-extensions) describes that registration contract and shows how to add an official TipTap extension.

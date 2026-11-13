@@ -6,6 +6,29 @@ The example assumes a Vizy field rendered with `{{ entry.vizyField.render() }}` 
 
 ## Read the Layout Attributes
 
+Layouts need no Twig of their own. Rendering the field outputs them along with the rest of its content, so this entry template, with `articleBody` as the Vizy field's handle, is all the markup the styles below need:
+
+```twig
+{% if not entry.articleBody.isEmpty() %}
+    <div class="article-body">
+        {{ entry.articleBody.render() }}
+    </div>
+{% endif %}
+```
+
+A two-column layout with equal columns renders like this inside the wrapper:
+
+```html
+<div class="vizy-layout" data-stack="small" style="--vizy-cols:12">
+    <div class="vizy-column" data-span="6" style="--vizy-col:6">
+        <p>Text in the first column.</p>
+    </div>
+    <div class="vizy-column" data-span="6" style="--vizy-col:6">
+        <p>Text in the second column.</p>
+    </div>
+</div>
+```
+
 Rendered layouts use a `.vizy-layout` wrapper around `.vizy-column` elements. The wrapper provides `data-stack` and the `--vizy-cols` CSS variable. Each column provides `data-span` and `--vizy-col`, describing its width within the 12-column grid.
 
 A two-column layout with equal spans therefore provides two columns whose `--vizy-col` value is `6`. The stored stacking value indicates when those columns should return to document order, but it does not impose a CSS breakpoint.
@@ -42,4 +65,4 @@ The breakpoint and gap are design choices rather than dimensions imposed by Vizy
 
 Create a layout containing long text and a large image, then check the page above and below the breakpoint. The columns should use their configured proportions on a wide screen, stack in document order on a narrow screen, and avoid horizontal overflow.
 
-To change the generated elements or attributes rather than styling them, use the rendering events described in [Events](docs:developers/events#customising-rendered-html).
+To change the generated elements or attributes rather than styling them, use the rendering events described in [Events](docs:developers/events#rendering-events).

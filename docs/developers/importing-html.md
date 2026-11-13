@@ -85,30 +85,7 @@ The caller owns downloads, Asset creation, deduplication and permission decision
 
 ## Register Custom Import Rules
 
-A module can map an HTML tag to a custom Vizy node or mark with `HtmlImporter::EVENT_REGISTER_RULES`. The target extension must already be registered and enabled in the destination field’s Editor Config.
-
-The following listener imports `<abbr>` as a registered `abbr` mark and maps its `title` attribute:
-
-```php
-use verbb\vizy\events\RegisterHtmlImportRulesEvent;
-use verbb\vizy\importers\HtmlImportRule;
-use verbb\vizy\services\HtmlImporter;
-use yii\base\Event;
-
-Event::on(HtmlImporter::class, HtmlImporter::EVENT_REGISTER_RULES, function(RegisterHtmlImportRulesEvent $event) {
-    $event->rules[] = HtmlImportRule::mark(
-        ['abbr'],
-        'abbr',
-        static fn(\DOMElement $element): array => [
-            'title' => $element->getAttribute('title'),
-        ],
-    );
-});
-```
-
-Use `HtmlImportRule::node()` for custom nodes. Choose block or inline placement and whether the rule converts block children, inline children, or no children. Rules only describe HTML-to-document conversion; they do not register editor extensions or rendering behaviour.
-
-Pass a `matcher` callback when a tag alone is not specific enough. The callback receives the source `DOMElement` and returns whether that rule applies. A caller can also pass a list of request-local rules through `HtmlImportOptions(rules: [...])` instead of registering a global event listener. Validate any stored rule configuration before conversion and reject overlapping selectors when more than one rule could assign different semantics to the same element.
+The importer converts standard HTML elements on its own. To import markup for one of your own nodes or marks, such as `<abbr>` for an Abbreviation mark, register an HTML import rule. [Custom HTML Import Rules](docs:developers/custom-html-import-rules) explains how to create and register one.
 
 ## Bound Untrusted Input
 

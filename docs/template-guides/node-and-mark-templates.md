@@ -73,7 +73,7 @@ To add project-owned markup to every rendered heading, create `templates/_vizy/n
 <{{ tag }} class="section-heading">{{ content }}</{{ tag }}>
 ```
 
-Vizy stores schema-validated JSON rather than arbitrary HTML, so source markup and undeclared attributes are not a persistence extension point. Use a node template for project-owned frontend markup, a [rendering event](docs:developers/events#customising-rendered-html) for a focused server-side change, or a registered custom node when authors need to choose an attribute that must be stored in the document.
+Vizy stores schema-validated JSON rather than arbitrary HTML, so source markup and undeclared attributes are not a persistence extension point. Use a node template for project-owned frontend markup, a [rendering event](docs:developers/events#rendering-events) for a focused server-side change, or a registered custom node when authors need to choose an attribute that must be stored in the document.
 
 ## Render a Mark
 
@@ -108,4 +108,4 @@ Per-render maps take precedence over `renderTemplatesPath`. Types not listed in 
 
 ## Choose Templates or Events
 
-Use a template when the project owns the complete markup for a particular type. Use [rendering events](docs:developers/events#customising-rendered-html) when a module needs to make a focused change while retaining Vizy’s generated structure. Templates and the `modifyRenderedNode` event compose for nodes; tag events belong to the PHP fallback path and do not run when a Twig template replaces that type’s tag structure.
+Use a template when the project owns the complete markup for a particular type. Use [rendering events](docs:developers/events#rendering-events) when a module needs to make a focused change while retaining Vizy’s generated structure. Templates and the `modifyRenderedNode` event compose for nodes; tag events belong to the PHP fallback path and do not run when a Twig template replaces that type’s tag structure.

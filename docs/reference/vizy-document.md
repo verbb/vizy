@@ -1,4 +1,4 @@
-# VizyDocument
+# Vizy Document
 
 Reading a Vizy field in Twig returns a **`VizyDocument`**, which represents that field’s saved content. It provides methods for rendering HTML, checking whether content exists, and reading individual nodes or blocks.
 

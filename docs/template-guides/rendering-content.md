@@ -27,8 +27,8 @@ Start with `render()` unless the page needs a more specialised result:
 - Assign a [Block Type Template](docs:template-guides/block-type-templates) when a structured Vizy Block needs its own markup.
 - Add [Node and Mark Templates](docs:template-guides/node-and-mark-templates) when a site needs Twig markup for built-in or custom rich-text types.
 - Use [Querying Nodes](docs:template-guides/querying-nodes) when you need selected root content separately, such as a list of callouts or headings.
-- Use [Events](docs:developers/events#customising-rendered-html) when a module or plugin needs to change the HTML generated for a built-in node or mark.
-- Use [GraphQL](docs:developers/graphql) when another application will render the document.
+- Use [Events](docs:developers/events#rendering-events) when a module or plugin needs to change the HTML generated for a built-in node or mark.
+- Use [GraphQL](docs:graphql/queries) when another application will render the document.
 
 Avoid manually recreating Vizy’s complete renderer from raw node arrays. Doing so means handling nested nodes, marks, asset resolution, sanitisation, layouts and custom extensions yourself.
 

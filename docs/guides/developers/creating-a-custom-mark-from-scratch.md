@@ -304,4 +304,4 @@ Confirm that **Abbreviation** is allowed under **Content schema → Inline forma
 
 Confirm that `Abbr::tag()` returns `abbr` and that the frontend template calls `render()` on the Vizy field. If the formatting disappears after reopening the entry, inspect the browser console for a module registration error before changing the renderer.
 
-For the underlying extension contracts and optional APIs, read [Extending Vizy](docs:developers/extending-vizy). If you need an inline object with its own attributes rather than formatting around text, continue with [Creating a Custom Node from Scratch](docs:guides/developers/creating-a-custom-node-from-scratch).
+For the underlying extension contracts and optional APIs, read [Custom Extensions](docs:developers/custom-extensions). If you need an inline object with its own attributes rather than formatting around text, continue with [Creating a Custom Node from Scratch](docs:guides/developers/creating-a-custom-node-from-scratch).

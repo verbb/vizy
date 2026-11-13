@@ -4,7 +4,7 @@ These guides take you from a Craft project to working Vizy extensions, including
 
 Start with [Creating a Custom Mark from Scratch](docs:guides/developers/creating-a-custom-mark-from-scratch) when you want a complete first extension. It creates an Abbreviation mark from an empty `modules/` folder and includes Composer autoloading, `config/app.php`, a CLI-safe AssetBundle, JavaScript registration, and end-to-end testing. A matching copyable module is available at `examples/vizy-abbr-module/` in the Vizy repository.
 
-[Extending Vizy](docs:developers/extending-vizy) is the shorter API overview to use once you understand the complete module structure.
+[Custom Extensions](docs:developers/custom-extensions) is the shorter API overview to use once you understand the complete module structure.
 
 ## [Creating a Custom Mark from Scratch](docs:guides/developers/creating-a-custom-mark-from-scratch)
 

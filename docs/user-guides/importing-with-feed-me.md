@@ -57,7 +57,7 @@ The importer handles the core prose structures that Vizy can represent, includin
 
 Unsupported elements, attributes, link targets, and formatting produce diagnostics. Semantic containers such as `<section>` are flattened, while readable descendant content is retained. Table captions are moved before the table because Vizy’s table schema does not contain a caption node.
 
-Custom Vizy extensions can participate in Feed Me imports through the shared importer. The extension’s module must register a corresponding HTML import rule and enable its node or mark in the destination Editor Config. See [Register Custom Import Rules](docs:developers/importing-html#register-custom-import-rules) for the event and attribute-mapping example.
+Custom Vizy extensions can participate in Feed Me imports through the shared importer. The extension’s module must register a corresponding HTML import rule and enable its node or mark in the destination Editor Config. See [Custom HTML Import Rules](docs:developers/custom-html-import-rules) for the event and attribute-mapping example.
 
 HTML conversion never infers a Vizy Block from its display name or handle. Configure an explicit HTML-to-Block mapping when a source element should become a Block, or use canonical JSON with the destination project’s Block Type and placement identities.
 

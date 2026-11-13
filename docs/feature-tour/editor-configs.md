@@ -111,7 +111,7 @@ Create `config/vizy/minimal.json`:
 | `gutterInsert` | `true` (default) shows the `+` control beside the content. Independent of toolbar `addBlock`. |
 | `slashInsert` | `true` (default) lets `/` on a blank line open the Add Block list. |
 
-Toolbar and dropdown IDs use the Editor Config vocabulary (`heading2`, `bulletList`, `alignLeft`, `dropdown:formatting`, …). The full control catalogue is what the Editor Configs screen offers under Available items, and [Editor Capabilities](docs:feature-tour/editor-capabilities) lists the built-in control IDs. Your own controls are registered in PHP (see [Extensibility](docs:developers/extending-vizy)), not declared as free-form objects inside the JSON.
+Toolbar and dropdown IDs use the Editor Config vocabulary (`heading2`, `bulletList`, `alignLeft`, `dropdown:formatting`, …). The full control catalogue is what the Editor Configs screen offers under Available items, and [Editor Capabilities](docs:feature-tour/editor-capabilities) lists the built-in control IDs. Your own controls are registered in PHP (see [Extensibility](docs:developers/custom-extensions)), not declared as free-form objects inside the JSON.
 
 Icon values come from Vizy’s icon catalogue, including SVG files under the configured [`iconsPath`](docs:get-started/configuration#iconspath). Use the visual Editor Config screen to search that catalogue and preview the result. Inline SVG markup and arbitrary filesystem paths are not accepted in an Editor Config.
 

@@ -339,4 +339,4 @@ Open the browser console and check for an error from `registerControl()` or `ins
 
 Confirm the JavaScript node uses the `label` attribute and that `Badge::renderOccurrenceHtml()` reads the same key. Reopen the entry to distinguish a persistence problem from a frontend template problem, and confirm the template calls the field's `render()` method.
 
-For custom formatting around existing text, follow [Creating a Custom Mark from Scratch](docs:guides/developers/creating-a-custom-mark-from-scratch). The broader [Extending Vizy](docs:developers/extending-vizy) page documents behaviour-only extensions, module replacement, and custom toolbar controls.
+For custom formatting around existing text, follow [Creating a Custom Mark from Scratch](docs:guides/developers/creating-a-custom-mark-from-scratch). The broader [Custom Extensions](docs:developers/custom-extensions) page documents behaviour-only extensions, module replacement, and custom toolbar controls.

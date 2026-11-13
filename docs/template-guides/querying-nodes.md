@@ -4,7 +4,7 @@ Use a query when you need particular pieces of a Vizy field. For example, you ca
 
 The examples belong in an entry’s Twig template. They assume a Vizy field with the handle `vizyField`; replace it with your field’s handle. `query()` selects root nodes, including paragraphs and blocks. It does not search inside layouts or nested Vizy fields.
 
-Use `query().where(...)` to select content. Queries keep their enabled scope when you add or replace ordinary filters. See [Node Query](docs:developers/node-query) for combining conditions.
+Use `query().where(...)` to select content. Queries keep their enabled scope when you add or replace ordinary filters. See [Node Query](docs:reference/node-query) for combining conditions.
 
 ## Display a Heading Outline
 
@@ -169,10 +169,10 @@ On each Block result, field handles work like Matrix:
 <a id="available-methods"></a>
 <a id="available-params"></a>
 
-See [Node Query](docs:developers/node-query) for the full method and operator reference.
+See [Node Query](docs:reference/node-query) for the full method and operator reference.
 
 ## Reading Content Without a Query
 
 Use `blocks()` for enabled blocks throughout the outer node tree, including layouts. Use `blocks(false)` for disabled blocks or `blocks(null)` for both states. `findBlock(uid)` is an identity lookup and can return a disabled block. To read the root nodes as arrays, use `content().nodes()`; `traverse()` follows node children. These methods do not enter fields nested inside blocks. Read an inner Vizy field through its block field handle, as explained in [Nested Content](docs:feature-tour/nested-content#add-a-vizy-field-to-a-block).
 
-See [Rendering Content](docs:template-guides/rendering-content) for guidance on choosing between full-document rendering and selected output. GraphQL’s `nodes` and `blocks` fields also support filtering, limits, and ordering; see [GraphQL](docs:developers/graphql).
+See [Rendering Content](docs:template-guides/rendering-content) for guidance on choosing between full-document rendering and selected output. GraphQL’s `nodes` and `blocks` fields also support filtering, limits, and ordering; see [GraphQL](docs:graphql/queries).
