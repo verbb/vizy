@@ -93,6 +93,7 @@ final class AssetUploads extends Component
         foreach (array_keys($this->registrations) as $key) {
             unset($this->results[$key]);
         }
+
         $this->registrations = [];
     }
 
@@ -107,11 +108,13 @@ final class AssetUploads extends Component
 
         if ($this->_hasActiveTransaction()) {
             $this->defer($owner, $field, $persistedSnapshot);
+
             return $this->results[$this->_scopeKey($owner, $field)];
         }
 
         $result = $this->_finalizeSnapshot($persistedSnapshot);
         $this->results[$this->_scopeKey($owner, $field)] = $result;
+
         return $result;
     }
 
@@ -126,6 +129,7 @@ final class AssetUploads extends Component
         if (str_starts_with((string)$batch->derivativeKey, 'draft:') || $batch->derivativeKey === 'livePreview') {
             return $this->_result('pending', (int)$batch->id, (int)$batch->attempts, [], (string)$batch->lastError);
         }
+
         return $this->_execute($batch);
     }
 
@@ -171,6 +175,7 @@ final class AssetUploads extends Component
         if (!$owner->id || !$owner->siteId || !$field->uid) {
             return [];
         }
+
         return array_map(static fn(AssetUploadBatch $batch) => [
             'batchId' => (int)$batch->id,
             'status' => (string)$batch->status,
@@ -207,7 +212,7 @@ final class AssetUploads extends Component
 
         $snapshotHash = hash('sha256', $snapshot);
         $workJson = Json::encode($work);
-        $workFingerprint = hash('sha256', $workJson);
+        $workFingerprint = $this->_workFingerprint($persistedSnapshot);
         $identity = [
             'snapshotHash' => $snapshotHash,
             'workFingerprint' => $workFingerprint,
@@ -240,6 +245,7 @@ final class AssetUploads extends Component
             $batch->status = 'pending';
             $batch->lastError = $reason;
             $batch->save(false);
+
             return $this->_result('pending', (int)$batch->id, (int)$batch->attempts, [], $reason);
         }
 
@@ -248,15 +254,27 @@ final class AssetUploads extends Component
             $batch->status = 'failed';
             $batch->lastError = implode("\n", $preflightErrors);
             $batch->save(false);
+
             return $this->_result('failed', (int)$batch->id, (int)$batch->attempts, $preflightErrors);
         }
 
         return $this->_execute($batch);
     }
 
-    private function _discoverWork(VizyDocument $document): array
+    /**
+     * Fingerprints every referenced Asset and its policy, including ones that
+     * can stay in place, so a retry still matches after a partial move.
+     */
+    private function _workFingerprint(VizyDocument $document): string
+    {
+        return hash('sha256', Json::encode($this->_discoverWork($document, true)));
+    }
+
+    private function _discoverWork(VizyDocument $document, bool $includeRetained = false): array
     {
         $work = [];
+        $requiresWork = [];
+        $owner = $document->owner();
 
         // TipTap + Hosted Blocks — DocumentWalk enters Hosted Vizy placements.
         foreach (\verbb\vizy\document\DocumentWalk::blocks($document, true) as $block) {
@@ -265,6 +283,7 @@ final class AssetUploads extends Component
             if (!$layout) {
                 continue;
             }
+
             $doc = $block->document();
 
             foreach ($layout->getCustomFieldElements() as $placement) {
@@ -273,19 +292,27 @@ final class AssetUploads extends Component
                 if (!$assetField instanceof Assets || !$block->hasRawFieldValue($placement->uid)) {
                     continue;
                 }
+
                 $serialized = $assetField->serializeValue(
                     $doc->blockElement($block)->getFieldValue($assetField->handle),
                     $doc->blockElement($block),
                 );
 
                 foreach (is_array($serialized) ? $serialized : [] as $assetId) {
-                    if (is_numeric($assetId)) {
-                        $this->_addWork($work, (int)$assetId, null, $this->_fieldPolicy($assetField), [
-                            'kind' => 'fieldPlacement',
-                            'blockUid' => $block->uid(),
-                            'placementUid' => $placement->uid,
-                            'path' => $block->path(),
-                        ]);
+                    if (!is_numeric($assetId)) {
+                        continue;
+                    }
+
+                    $policy = $this->_fieldPolicy($assetField);
+                    $this->_addWork($work, (int)$assetId, null, $policy, [
+                        'kind' => 'fieldPlacement',
+                        'blockUid' => $block->uid(),
+                        'placementUid' => $placement->uid,
+                        'path' => $block->path(),
+                    ]);
+
+                    if (!$includeRetained && (!$owner || !$this->_canRetainExistingAsset((int)$assetId, $policy, $owner))) {
+                        $requiresWork[(int)$assetId] = true;
                     }
                 }
             }
@@ -297,6 +324,7 @@ final class AssetUploads extends Component
             if (($node['type'] ?? null) !== 'image' || !is_string($node['attrs']['assetUid'] ?? null)) {
                 continue;
             }
+
             $asset = Craft::$app->getElements()->getElementByUid(
                 $node['attrs']['assetUid'],
                 Asset::class,
@@ -309,14 +337,39 @@ final class AssetUploads extends Component
                 if (!$isTemporary) {
                     continue;
                 }
+
                 $this->_addWork($work, (int)$asset->id, $asset->uid, [
                     'kind' => 'semanticPending',
                 ], ['kind' => 'semanticImage', 'path' => $visit['path']]);
+                $requiresWork[(int)$asset->id] = true;
             }
         }
 
+        // An existing Asset that every placement can keep where it is needs no
+        // finalization, so it neither registers a batch nor defers a draft.
+        if (!$includeRetained) {
+            $work = array_intersect_key($work, $requiresWork);
+        }
+
         ksort($work);
+
         return array_values($work);
+    }
+
+    private function _canRetainExistingAsset(int $assetId, array $policy, ElementInterface $owner): bool
+    {
+        $asset = Craft::$app->getAssets()->getAssetById($assetId);
+
+        if (!$asset || Craft::$app->getAssets()->createTempAssetQuery()->id($assetId)->exists()) {
+            return false;
+        }
+
+        try {
+            return $this->_canRetainLocation($asset, $policy, $owner);
+        } catch (Throwable) {
+            // Unresolvable dynamic subpaths stay as work so execution reports them.
+            return false;
+        }
     }
 
     private function _addWork(array &$work, int $assetId, ?string $assetUid, array $policy, array $source): void
@@ -329,6 +382,7 @@ final class AssetUploads extends Component
         } elseif ($work[$key]['fingerprint'] !== $fingerprint) {
             $work[$key]['conflictingFingerprint'] = $fingerprint;
         }
+
         $work[$key]['sources'][] = $source;
     }
 
@@ -360,11 +414,10 @@ final class AssetUploads extends Component
         try {
             [$owner, $currentDocument] = $this->_loadCurrentSnapshot($batch);
             $currentSnapshot = Vizy::$plugin->getDocuments()->serializeValue($currentDocument);
-            $currentWork = $this->_discoverWork($currentDocument);
 
             if (
                 !hash_equals((string)$batch->snapshotHash, hash('sha256', $currentSnapshot))
-                || !hash_equals((string)$batch->workFingerprint, hash('sha256', Json::encode($currentWork)))
+                || !hash_equals((string)$batch->workFingerprint, $this->_workFingerprint($currentDocument))
             ) {
                 $errors[] = 'staleSnapshot: the owner, field value, or trusted destination policy changed after registration.';
             }
@@ -392,6 +445,7 @@ final class AssetUploads extends Component
         $batch->status = $errors === [] ? 'complete' : 'failed';
         $batch->lastError = $errors === [] ? null : implode("\n", $errors);
         $batch->save(false);
+
         return [
             'status' => (string)$batch->status,
             'batchId' => (int)$batch->id,
@@ -418,6 +472,7 @@ final class AssetUploads extends Component
             if (!$isTemporary) {
                 return;
             }
+
             throw new RuntimeException('semanticImagePolicyPending: semantic Image finalization requires a server-owned Image policy.');
         }
 
@@ -443,6 +498,7 @@ final class AssetUploads extends Component
             if (!$field instanceof Assets) {
                 throw new RuntimeException('Assets field policy is no longer resolvable.');
             }
+
             $this->_assertActorCanSaveToSource((string)$policy['volumeSource']);
             $folder = Craft::$app->getAssets()->getFolderById($field->resolveDynamicPathToFolderId($owner));
         } else {
@@ -451,6 +507,7 @@ final class AssetUploads extends Component
             if (!$volume) {
                 throw new RuntimeException('Destination volume is unavailable.');
             }
+
             [$subpath, $folder] = AssetsHelper::resolveSubpath($volume, $policy['subpath'], $owner);
             $folder ??= Craft::$app->getAssets()->ensureFolderByFullPathAndVolume($subpath, $volume, false);
         }
@@ -458,6 +515,7 @@ final class AssetUploads extends Component
         if (!$folder) {
             throw new RuntimeException('Destination folder is unavailable.');
         }
+
         $volume = $folder->getVolume();
 
         if ($actor && !$actor->can("saveAssets:{$volume->uid}")) {
@@ -474,6 +532,7 @@ final class AssetUploads extends Component
             if (!$volume) {
                 throw new RuntimeException('Restricted Asset volume is unavailable.');
             }
+
             [$basePath, $restrictionFolder] = AssetsHelper::resolveSubpath(
                 $volume,
                 $policy['restrictedBaseSubpath'] ?? '',
@@ -481,6 +540,7 @@ final class AssetUploads extends Component
             );
             $restrictionFolder ??= Craft::$app->getAssets()->ensureFolderByFullPathAndVolume($basePath, $volume, false);
         }
+
         $mustEnforceRestricted = (bool)$policy['restrictLocation'] && (
             $asset->volumeId !== $restrictionFolder->volumeId
             || (!$policy['allowSubfolders'] && $asset->folderId !== $restrictionFolder->id)
@@ -512,11 +572,13 @@ final class AssetUploads extends Component
         if ($kind !== 'volume' || !$uid) {
             throw new RuntimeException('Trusted Asset destination volume is invalid.');
         }
+
         $volume = Craft::$app->getVolumes()->getVolumeByUid($uid);
 
         if (!$volume) {
             throw new RuntimeException('Trusted Asset destination volume is unavailable.');
         }
+
         $actor = Craft::$app->getUser()->getIdentity();
 
         if ($actor && !$actor->can("saveAssets:{$volume->uid}")) {
@@ -529,12 +591,14 @@ final class AssetUploads extends Component
         if (!$policy['restrictLocation']) {
             return true;
         }
+
         [$kind, $uid] = array_pad(explode(':', (string)$policy['volumeSource'], 2), 2, null);
         $volume = $kind === 'volume' && $uid ? Craft::$app->getVolumes()->getVolumeByUid($uid) : null;
 
         if (!$volume || $asset->volumeId !== $volume->id) {
             return false;
         }
+
         // This only resolves/looks up the path; it never creates folders before
         // authorization. Upload subfolders do not narrow an allowed base tree.
         [, $folder] = AssetsHelper::resolveSubpath(
@@ -542,6 +606,7 @@ final class AssetUploads extends Component
             $policy['allowSubfolders'] ? $policy['restrictedBaseSubpath'] : $policy['subpath'],
             $owner,
         );
+
         return $folder && ($policy['allowSubfolders']
             ? str_starts_with($asset->folderPath, $folder->path)
             : $asset->folderId === $folder->id);
@@ -550,6 +615,7 @@ final class AssetUploads extends Component
     private function _isLivePreview(): bool
     {
         $request = Craft::$app->getRequest();
+
         return method_exists($request, 'getIsLivePreview') && $request->getIsLivePreview();
     }
 
@@ -564,16 +630,19 @@ final class AssetUploads extends Component
         if (!$owner) {
             throw new RuntimeException("Asset upload batch {$batch->id} owner is unavailable.");
         }
+
         $field = FieldPlacements::field($owner, (string)$batch->fieldUid, $batch->ownerPlacementUid);
 
         if (!$field instanceof VizyField) {
             throw new RuntimeException("Asset upload batch {$batch->id} Vizy field is unavailable.");
         }
+
         $document = $owner->getFieldValue($field->handle);
 
         if (!$document instanceof VizyDocument) {
             $document = $field->normalizeValue($document, $owner);
         }
+
         return [$owner, $document];
     }
 
@@ -596,6 +665,7 @@ final class AssetUploads extends Component
                 if (!$registration) {
                     continue;
                 }
+
                 $result = $this->_finalizeSnapshot($registration['document'], $preflightErrors[$key] ?? []);
                 $this->results[$key] = $result;
 
@@ -634,6 +704,7 @@ final class AssetUploads extends Component
                 if (($item['policy']['kind'] ?? null) !== 'field') {
                     continue;
                 }
+
                 $field = Craft::$app->getFields()->getFieldByUid($item['policy']['fieldUid']);
 
                 if (!$field instanceof Assets) {
@@ -649,6 +720,7 @@ final class AssetUploads extends Component
                     // conflicts between otherwise resolvable destinations.
                     continue;
                 }
+
                 $claims[(int)$item['assetId']][] = [
                     'key' => $key,
                     'destination' => (int)$folderId,
@@ -669,6 +741,7 @@ final class AssetUploads extends Component
                 $errors[$claim['key']][] = "Asset {$assetId} has conflicting multisite destination contexts.";
             }
         }
+
         return $errors;
     }
 
@@ -680,6 +753,7 @@ final class AssetUploads extends Component
             (string)$owner->siteId,
             $this->_derivativeKey($owner),
         ]) . '|';
+
         return array_values(array_filter(
             array_keys($this->registrations),
             static fn(string $key): bool => str_starts_with($key, $prefix),
@@ -701,6 +775,7 @@ final class AssetUploads extends Component
     private function _placementCondition(ElementInterface $owner, VizyField $field): array
     {
         $condition = ['ownerPlacementUid' => FieldPlacements::uid($owner, $field)];
+
         return FieldPlacements::field($owner, $field->uid, null) !== null
             ? ['or', $condition, ['ownerPlacementUid' => null]]
             : $condition;
@@ -715,6 +790,7 @@ final class AssetUploads extends Component
         if ($owner->getIsDraft()) {
             return 'draft:' . (string)$owner->draftId;
         }
+
         return $this->_isLivePreview() ? 'livePreview' : 'canonical';
     }
 

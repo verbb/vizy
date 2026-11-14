@@ -1,5 +1,10 @@
 # Changelog
 
+## Unreleased
+
+### Fixed
+- Fixed drafts showing “Files will finish uploading when you publish this draft.” when a block’s Assets field only held existing assets that wouldn’t be moved. ([#394](https://github.com/verbb/vizy/issues/394))
+
 ## 4.0.4 - 2026-11-14
 
 ### Fixed

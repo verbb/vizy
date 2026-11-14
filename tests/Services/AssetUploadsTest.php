@@ -178,10 +178,12 @@ it('finalizes the exact canonical Assets placement snapshot durably with public 
     expect($retry['status'])->toBe('complete')
         ->and($retry['attempts'])->toBe(1);
 
+    // Once the file is in place, saving the same content has nothing to register.
     $repeat = Vizy::$plugin->getAssetUploads()->finalizeDocument(
         $owner->getFieldValue($vizyField->handle)
     );
-    expect($repeat['batchId'])->toBe($result['batchId'])
+    expect($repeat['status'])->toBe('complete')
+        ->and($repeat['batchId'])->toBeNull()
         ->and(Vizy::$plugin->getAssetUploads()->statusForOwner($owner, $vizyField))->toHaveCount(1);
 });
 
@@ -372,6 +374,48 @@ it('reports draft work as pending and revisions as explicitly non-finalizable', 
         ->and($bootstrapStatus['finalizationDeferredReason'])->toBe('draftDeferredUntilCanonicalPublish')
         ->and($bootstrapStatus['retryToken'])->toBeNull();
 });
+
+it('does not defer drafts that only reference existing Assets in an allowed location', function(bool $restricted, bool $inAllowedFolder) {
+    $context = assetUploadTestContext('ExistingDraft');
+    $asset = AssetSpikeFixture::createTempAsset('existing-draft.txt', 'existing draft');
+    $volume = AssetSpikeFixture::volume();
+    $folder = Craft::$app->getAssets()->getRootFolderByVolumeId($volume->id);
+    $draft = clone $context['owner'];
+    $draft->draftId = 987656;
+    if ($restricted) {
+        $field = $context['type']->getFieldLayout()->getCustomFieldElements()[0]->getField();
+        $field->restrictLocation = true;
+        $field->restrictedLocationSource = 'volume:' . $volume->uid;
+        $field->restrictedLocationSubpath = 'existing-draft/{id}';
+        expect(Craft::$app->getFields()->saveField($field))->toBeTrue();
+        if ($inAllowedFolder) {
+            $folder = Craft::$app->getAssets()->getFolderById($field->resolveDynamicPathToFolderId($draft));
+        }
+    }
+    expect(Craft::$app->getAssets()->moveAsset($asset, $folder))->toBeTrue();
+    $batchCount = (int)(new \craft\db\Query())->from(\verbb\vizy\db\Table::ASSET_UPLOAD_BATCHES)->count();
+
+    $result = Vizy::$plugin->getAssetUploads()->finalizeDocument(
+        assetPlacementDocument([...$context, 'owner' => $draft], (int)$asset->id, 'existing-draft-block')
+    );
+    $newBatches = (int)(new \craft\db\Query())->from(\verbb\vizy\db\Table::ASSET_UPLOAD_BATCHES)->count() - $batchCount;
+
+    if ($inAllowedFolder) {
+        expect($result['status'])->toBe('complete')
+            ->and($result['batchId'])->toBeNull()
+            ->and($result['deferredReason'])->toBeNull()
+            ->and($newBatches)->toBe(0);
+    } else {
+        expect($result['status'])->toBe('pending')
+            ->and($result['deferredReason'])->toBe('draftDeferredUntilCanonicalPublish')
+            ->and($newBatches)->toBe(1);
+    }
+    expect(Craft::$app->getAssets()->getAssetById($asset->id)->folderId)->toBe($folder->id);
+})->with([
+    'unrestricted' => [false, true],
+    'restricted in allowed folder' => [true, true],
+    'restricted outside allowed folder' => [true, false],
+]);
 
 it('fails semantic Image finalization closed and ignores malicious JSON destinations', function() {
     $context = assetUploadTestContext('Semantic');
