@@ -147,6 +147,38 @@ it('grandfathers counted historical references but checks copied occurrences', f
         ->toContain('unavailable for this field or user');
 });
 
+it('keeps a historical link grandfathered when formatting splits its text', function() {
+    $field = semanticReferenceField(StringHelper::UUID());
+    $owner = semanticReferenceOwner();
+    $siteId = Craft::$app->getSites()->getPrimarySite()->id;
+    $link = ['type' => 'link', 'attrs' => [
+        'type' => 'url',
+        'value' => "https://example.test/report.pdf#asset:2147483646@$siteId:url",
+        'siteMode' => 'current',
+        'newWindow' => true,
+    ]];
+    $paragraph = static fn(array $content) => ['type' => 'paragraph', 'content' => $content];
+    $baseline = semanticReferenceDocument($field, $owner, [$paragraph([
+        ['type' => 'text', 'text' => 'Read the report', 'marks' => [$link]],
+    ])]);
+    $split = $paragraph([
+        ['type' => 'text', 'text' => 'Read the ', 'marks' => [$link]],
+        ['type' => 'text', 'text' => 'report', 'marks' => [$link, ['type' => 'italic']]],
+    ]);
+
+    Craft::$app->getUser()->setIdentity(semanticReferenceActor());
+    $owner->testFieldValue = semanticReferenceDocument($field, $owner, [$split]);
+    $field->validateBlocks($owner, $baseline);
+    expect($owner->getErrors($field->handle))->toBe([]);
+
+    $owner->testFieldValue = semanticReferenceDocument($field, $owner, [$split, $paragraph([
+        ['type' => 'text', 'text' => 'Copied report', 'marks' => [$link]],
+    ])]);
+    $field->validateBlocks($owner, $baseline);
+    expect(implode(' ', $owner->getErrors($field->handle)))
+        ->toContain('unavailable for this field or user');
+});
+
 it('requires each Asset permission override independently', function() {
     [$asset, $volume] = semanticReferenceAsset('override-image.txt');
     $field = semanticReferenceField($volume->uid);

@@ -74,6 +74,7 @@ final class SemanticReferences extends Component
         if (!$field->availableVolumes) {
             return false;
         }
+
         $volume = $asset->getVolume();
 
         if (is_array($field->availableVolumes) && !in_array($volume->uid, $field->availableVolumes, true)) {
@@ -109,10 +110,28 @@ final class SemanticReferences extends Component
 
     private function _references(VizyDocument $document): iterable
     {
+        $previousLinks = null;
+
         foreach (DocumentWalk::tipTapNodes($document, true) as $visit) {
             $node = $visit['node'];
             $owningDocument = $visit['document'];
             $field = $owningDocument->field();
+            $links = [];
+
+            foreach ($node['marks'] ?? [] as $mark) {
+                if (is_array($mark) && ($mark['type'] ?? null) === 'link' && is_array($mark['attrs'] ?? null)) {
+                    $links[] = $mark['attrs'];
+                }
+            }
+
+            // Formatting part of a link's text splits it across sibling text
+            // nodes. Count that run as one link so it stays grandfathered.
+            $continuedLinks = $previousLinks !== null
+                && $previousLinks['document'] === $owningDocument
+                && $previousLinks['path'] === $this->_previousSiblingPath($visit['path'])
+                ? $previousLinks['links']
+                : [];
+            $previousLinks = ['document' => $owningDocument, 'path' => $visit['path'], 'links' => $links];
 
             if (!$field instanceof VizyField) {
                 continue;
@@ -142,12 +161,23 @@ final class SemanticReferences extends Component
                 }
             }
 
-            foreach ($node['marks'] ?? [] as $mark) {
-                if (is_array($mark) && ($mark['type'] ?? null) === 'link' && is_array($mark['attrs'] ?? null)) {
-                    yield from $this->_linkReferences($field, $owningDocument, $mark['attrs']);
+            foreach ($links as $attrs) {
+                if (in_array($attrs, $continuedLinks, true)) {
+                    continue;
                 }
+
+                yield from $this->_linkReferences($field, $owningDocument, $attrs);
             }
         }
+    }
+
+    private function _previousSiblingPath(string $path): ?string
+    {
+        if (!preg_match('/^(.*\.)(\d+)$/', $path, $matches) || $matches[2] === '0') {
+            return null;
+        }
+
+        return $matches[1] . ((int)$matches[2] - 1);
     }
 
     private function _linkReferences(VizyField $field, VizyDocument $document, array $attrs): iterable
@@ -342,6 +372,7 @@ final class SemanticReferences extends Component
         if (!Craft::$app->has('user')) {
             return null;
         }
+
         $identity = Craft::$app->getUser()->getIdentity();
 
         return $identity instanceof User ? $identity : null;
