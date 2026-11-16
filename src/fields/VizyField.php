@@ -403,7 +403,7 @@ class VizyField extends Field
                             $fields = $translatableFields[$blockTypeId] ?? [];
 
                             foreach ($fields as $fieldHandle) {
-                                // For some fields, they control their own propagation settings. 
+                                // For some fields, they control their own propagation settings.
                                 // Check those, and only proceed with swapping content if not managing per-site.
                                 $field = Craft::$app->getFields()->getFieldByHandle($fieldHandle);
 
@@ -588,7 +588,9 @@ class VizyField extends Field
             $blockType = $blockTypesById[$blockTypeId];
 
             if ($blockType->minBlocks > 0 && $blockTypeCount < $blockType->minBlocks) {
-                $element->addError($this->handle, Craft::t('vizy', '{attribute} should contain at least {minBlockTypeBlocks, number} {minBlockTypeBlocks, plural, one{block} other{blocks}} of type {blockType}.', [
+                $element->addError(
+                    $this->handle,
+                    Craft::t('vizy', '{attribute} should contain at least {minBlockTypeBlocks, number} {minBlockTypeBlocks, plural, one{block} other{blocks}} of type {blockType}.', [
                         'attribute' => Craft::t('site', $this->name),
                         'minBlockTypeBlocks' => $blockType->minBlocks,
                         'blockType' => $blockType->name,
@@ -597,7 +599,9 @@ class VizyField extends Field
             }
 
             if ($blockType->maxBlocks > 0 && $blockTypeCount > $blockType->maxBlocks) {
-                $element->addError($this->handle, Craft::t('vizy', '{attribute} should contain at most {maxBlockTypeBlocks, number} {maxBlockTypeBlocks, plural, one{block} other{blocks}} of type {blockType}.', [
+                $element->addError(
+                    $this->handle,
+                    Craft::t('vizy', '{attribute} should contain at most {maxBlockTypeBlocks, number} {maxBlockTypeBlocks, plural, one{block} other{blocks}} of type {blockType}.', [
                         'attribute' => Craft::t('site', $this->name),
                         'maxBlockTypeBlocks' => $blockType->maxBlocks,
                         'blockType' => $blockType->name,
@@ -689,7 +693,7 @@ class VizyField extends Field
                 $settings['transforms'] = $this->_transforms();
 
                 $settings['allSiteOptions'][] = ['label' => Craft::t('vizy', 'Link to the current site'), 'value' => ''];
-                
+
                 foreach (Craft::$app->getSites()->getAllSites(false) as $site) {
                     $settings['allSiteOptions'][] = ['label' => $site->name, 'value' => $site->id];
                 }
@@ -750,7 +754,9 @@ class VizyField extends Field
 
                             $fieldData = $block->getFieldValue($field->handle);
 
-                            $keywords[] = $field->searchKeywords($fieldData, $element);
+                            // Nested fields like Matrix read their content from the element they're given,
+                            // so pass the block element that owns the field rather than the parent element.
+                            $keywords[] = $field->searchKeywords($fieldData, $block->getBlockElement($element));
                         }
                     }
                 }
@@ -938,8 +944,7 @@ JS, [
         ?string $matrixAnchorUid = null,
         ?string $blockTypeId = null,
         ?ElementInterface $parentOwner = null,
-    ): void
-    {
+    ): void {
         if ($parentOwner) {
             $parentOwner = Vizy::$plugin->getAnchors()->resolvePersistableParentOwner($parentOwner);
         }
@@ -1023,7 +1028,7 @@ JS, [
 
         return true;
     }
-    
+
     private function _getNestedValues($value, $key, &$items = []): array
     {
         foreach ($value as $k => $v) {
@@ -1146,14 +1151,14 @@ JS, [
                         // Ensure nested fields like Matrix aren't left in a static state from a previous render.
                         $this->_resetFieldLayoutFieldStatic($fieldLayout);
                     }
-                    
+
                     // Disregard the namespace of parent fields, or even using `fields`. This keeps our field data separate to Craft.
                     // Also add a unique key to store data, to play nicely with slide-outs and their own namespace (that we don't use).
                     $view->setNamespace("vizyData[__VIZY_BLOCK_{$placeholderKey}__][{$placeholderKey}]");
 
                     $form = $fieldLayout->createForm($blockElement, false);
                     $blockTypeArray['tabs'] = $form->getTabMenu();
-                    
+
                     $fieldsHtml = $view->namespaceInputs($form->render());
                     $footHtml = $view->clearJsBuffer(false);
                     $scriptHtml = $view->clearScriptBuffer();
@@ -1304,6 +1309,7 @@ JS, [
                 // Try again with Default
                 return $this->_getConfig($dir);
             }
+
             return false;
         }
 
@@ -1407,7 +1413,7 @@ JS, [
         foreach ($sections as $section) {
             if ($section->type === Section::TYPE_SINGLE) {
                 $showSingles = true;
-            } else if ($element) {
+            } elseif ($element) {
                 $sectionSiteSettings = $section->getSiteSettings();
 
                 foreach ($sites as $site) {
@@ -1458,7 +1464,7 @@ JS, [
 
         // Include custom sources
         $customSources = $this->_getCustomSources(Category::class);
-        
+
         if (!empty($customSources)) {
             $sources = array_merge($sources, $customSources);
         }
@@ -1552,7 +1558,7 @@ JS, [
     {
         $customSources = [];
         $elementSources = Craft::$app->getElementSources()->getSources($elementType, 'modal');
-        
+
         foreach ($elementSources as $elementSource) {
             if ($elementSource['type'] === ElementSources::TYPE_CUSTOM && isset($elementSource['key'])) {
                 $customSources[] = $elementSource['key'];
