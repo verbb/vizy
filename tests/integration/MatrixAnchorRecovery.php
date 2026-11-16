@@ -243,6 +243,10 @@ try {
     $archivedTitle = rows($afterTrash, $matrix)[0]->title;
     $anchors->deleteAnchor($afterTrash, true);
     check(!MatrixAnchor::find()->uid($archivedUid)->trashed(null)->exists(), 'test anchor is permanently deleted');
+    $recovery->captureField($rootField, $restoredOwner, 'unresolved-reference');
+    $unresolvedPayload = (new craft\db\Query())->select('payload')->from('{{%vizy_matrix_recovery}}')
+        ->where(['kind' => 'field', 'ownerUid' => $restoredOwner->uid, 'reason' => 'unresolved-reference'])->scalar();
+    check($unresolvedPayload && str_contains($unresolvedPayload, $archivedUid), 'an unresolved anchor reference is archived as stored instead of blocking saves');
     $recovery->restore($hardDeleteSnapshot);
     $recreated = MatrixAnchor::find()->uid($archivedUid)->siteId($afterTrash->siteId)->one();
     check($recreated && rows($recreated, $matrix)[0]->title === $archivedTitle, 'journal restores permanently deleted anchor content and its UID');

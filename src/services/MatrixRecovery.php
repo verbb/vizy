@@ -52,12 +52,14 @@ class MatrixRecovery extends Component
         if ($this->_hasActiveAncestor($element)) {
             return;
         }
+
         $visited = [];
 
         while ($element instanceof Entry && $element->primaryOwnerId) {
             if (isset($visited[$element->primaryOwnerId])) {
                 throw new RuntimeException('Cyclic nested ownership cannot be safely archived.');
             }
+
             $visited[$element->primaryOwnerId] = true;
 
             try {
@@ -70,6 +72,7 @@ class MatrixRecovery extends Component
 
             if ($element instanceof MatrixAnchor) {
                 $this->captureAnchor($element, $reason);
+
                 return;
             }
         }
@@ -104,11 +107,13 @@ class MatrixRecovery extends Component
             if (!is_array($siteContent) || !array_key_exists($field->layoutElement->uid, $siteContent)) {
                 continue;
             }
+
             $localized = clone $owner;
             $localized->siteId = (int)$siteRow['siteId'];
             $rawSites[$localized->siteId] = $siteContent[$field->layoutElement->uid];
             $values[$localized->siteId] = $this->_exportVizy($field, $rawSites[$localized->siteId], $localized);
         }
+
         $this->_store($owner->uid, $owner->siteId, $field->uid, 'field', $reason, [
             'ownerType' => $owner::class,
             'placementUid' => $field->layoutElement->uid,
@@ -143,6 +148,7 @@ class MatrixRecovery extends Component
                     $fields[$matrix->uid] = $this->_exportMatrix($matrix, $localized);
                 }
             }
+
             $sites[$siteId] = $fields;
         }
 
@@ -162,11 +168,13 @@ class MatrixRecovery extends Component
         if (!$snapshot || !hash_equals($snapshot['contentHash'], hash('sha256', $snapshot['payload']))) {
             throw new RuntimeException('Recovery snapshot is missing or failed its integrity check.');
         }
+
         $snapshot['payload'] = Json::decode($snapshot['payload']);
 
         if (($snapshot['payload']['version'] ?? null) !== 1) {
             throw new RuntimeException('Unsupported recovery snapshot version.');
         }
+
         return $snapshot;
     }
 
@@ -186,6 +194,7 @@ class MatrixRecovery extends Component
                 if (!$owner || !$field instanceof VizyField || $field->uid !== $snapshot['fieldUid']) {
                     throw new RuntimeException('The original owner and Vizy field placement must exist before restoring.');
                 }
+
                 $this->captureField($field, $owner);
 
                 foreach ($payload['values'] as $siteId => $value) {
@@ -194,6 +203,7 @@ class MatrixRecovery extends Component
                     if (!$localized) {
                         throw new RuntimeException('An archived owner site is no longer available.');
                     }
+
                     $localized->setFieldValue($field->handle, $this->_restoreValue($value));
                     $localized->setDirtyFields([$field->handle]);
 
@@ -240,11 +250,13 @@ class MatrixRecovery extends Component
                 } elseif ($anchor->parentOwnerId !== $parent->id || $anchor->vizyFieldId !== $field->id || $anchor->blockInstanceId !== $payload['blockInstanceId']) {
                     throw new RuntimeException('The current anchor no longer matches the archived ownership.');
                 }
+
                 $anchor->setFieldLayout($layout);
 
                 if ($anchor->trashed && !$elements->restoreElement($anchor)) {
                     throw new RuntimeException('Unable to restore the trashed anchor.');
                 }
+
                 $this->captureAnchor($anchor, 'before-restore');
 
                 foreach ($payload['sites'] as $siteId => $fields) {
@@ -253,6 +265,7 @@ class MatrixRecovery extends Component
                     if (!$localized) {
                         $localized = $elements->propagateElement($anchor, (int)$siteId);
                     }
+
                     $localized->setFieldLayout($layout);
 
                     foreach ($fields as $uid => $value) {
@@ -261,6 +274,7 @@ class MatrixRecovery extends Component
                         foreach ($layout->getCustomFields() as $candidate) {
                             if ($candidate instanceof Matrix && $candidate->uid === $uid) {
                                 $matrix = $candidate;
+
                                 break;
                             }
                         }
@@ -268,23 +282,28 @@ class MatrixRecovery extends Component
                         if (!$matrix) {
                             throw new RuntimeException('An archived Matrix field is no longer present on this block layout.');
                         }
+
                         $normalized = $matrix->normalizeValueFromRequest($this->_restoreValue($value), $localized);
                         Vizy::$plugin->getAnchors()->saveMatrixField($matrix, $localized, $normalized, false, true);
                     }
                 }
+
                 $verifiedId = $this->captureAnchor($anchor, 'after-restore');
                 $verified = $this->getSnapshot($verifiedId)['payload']['sites'];
 
                 if ($this->_contentFingerprint($verified) != $this->_contentFingerprint($payload['sites'])) {
                     throw new RuntimeException('Restored Matrix content does not match the archive; recovery was rolled back.');
                 }
+
                 $elements->invalidateCachesForElement($parent);
             } else {
                 throw new RuntimeException('Unknown recovery snapshot format.');
             }
+
             $transaction->commit();
         } catch (\Throwable $e) {
             $transaction->rollBack();
+
             throw $e;
         }
     }
@@ -298,6 +317,7 @@ class MatrixRecovery extends Component
         if (isset($seen[$field->uid])) {
             return false;
         }
+
         $seen[$field->uid] = true;
 
         foreach ($field->getBlockTypes() as $blockType) {
@@ -307,6 +327,7 @@ class MatrixRecovery extends Component
                 }
             }
         }
+
         return false;
     }
 
@@ -319,6 +340,7 @@ class MatrixRecovery extends Component
                 if (isset($this->_activeAnchors[$element->id])) {
                     return true;
                 }
+
                 $element = $element->getParentOwner();
             } elseif ($element->primaryOwnerId) {
                 if (isset($this->_activeAnchors[$element->primaryOwnerId])) {
@@ -328,6 +350,7 @@ class MatrixRecovery extends Component
                 if (isset($seen[$element->primaryOwnerId])) {
                     throw new RuntimeException('Cyclic nested ownership cannot be safely archived.');
                 }
+
                 $seen[$element->primaryOwnerId] = true;
 
                 try {
@@ -340,6 +363,7 @@ class MatrixRecovery extends Component
                 break;
             }
         }
+
         return false;
     }
 
@@ -348,12 +372,14 @@ class MatrixRecovery extends Component
         if (!Craft::$app->getDb()->tableExists('{{%vizy_matrix_recovery}}')) {
             throw new RuntimeException('Run Craft migrations before saving Matrix content: the Vizy recovery archive is missing.');
         }
+
         $json = Json::encode(['version' => 1] + $payload);
         Craft::$app->getDb()->createCommand()->upsert('{{%vizy_matrix_recovery}}', [
             'ownerUid' => $ownerUid, 'siteId' => $siteId, 'fieldUid' => $fieldUid,
             'kind' => $kind, 'reason' => $reason, 'contentHash' => hash('sha256', $json),
             'payload' => $json, 'dateCreated' => gmdate('Y-m-d H:i:s'),
         ], false)->execute();
+
         return (int)(new Query())->select('id')->from('{{%vizy_matrix_recovery}}')->where([
             'ownerUid' => $ownerUid, 'siteId' => $siteId, 'fieldUid' => $fieldUid,
             'kind' => $kind, 'contentHash' => hash('sha256', $json),
@@ -367,6 +393,7 @@ class MatrixRecovery extends Component
         if (isset($this->_exporting[$key])) {
             throw new RuntimeException('Cyclic Matrix content cannot be safely archived.');
         }
+
         $this->_exporting[$key] = true;
 
         try {
@@ -387,6 +414,7 @@ class MatrixRecovery extends Component
                             ? $this->_exportVizy($inner, $inner->serializeValue($value, $row), $row)
                             : $inner->serializeValue($value, $row));
                 }
+
                 $result[] = [
                     'sourceId' => $row->id, 'sourceUid' => $row->uid,
                     'typeId' => $row->typeId, 'typeUid' => $row->getType()->uid,
@@ -394,6 +422,7 @@ class MatrixRecovery extends Component
                     'collapsed' => $row->collapsed, 'fields' => $values, 'fieldDefinitions' => $fieldDefinitions,
                 ];
             }
+
             return ['_vizyRecoveryMatrix' => $result];
         } finally {
             unset($this->_exporting[$key]);
@@ -415,6 +444,7 @@ class MatrixRecovery extends Component
                 if (!$layout) {
                     throw new RuntimeException('A Vizy block layout is missing; its content has been preserved without saving.');
                 }
+
                 $uid = $node['attrs']['values']['matrixAnchorUid'] ?? null;
                 $anchor = $uid ? Craft::$app->getElements()->getElementByUid($uid, MatrixAnchor::class, $owner->siteId) : null;
 
@@ -422,10 +452,7 @@ class MatrixRecovery extends Component
                     $values = &$node['attrs']['values']['content']['fields'];
                     $key = array_key_exists($inner->handle, $values ?? []) ? $inner->handle : $inner->layoutElement?->uid;
 
-                    if ($inner instanceof Matrix && $uid) {
-                        if (!$anchor) {
-                            throw new RuntimeException('Referenced Matrix content is unavailable; refusing to replace it.');
-                        }
+                    if ($inner instanceof Matrix && $anchor) {
                         $values[$inner->handle] = $this->_exportMatrix($inner, $anchor);
 
                         if ($key !== $inner->handle) {
@@ -434,15 +461,23 @@ class MatrixRecovery extends Component
                     } elseif ($inner instanceof VizyField && isset($values[$key])) {
                         $values[$key] = $this->_exportVizy($inner, $values[$key], $owner);
                     }
+
                     unset($values);
                 }
-                unset($node['attrs']['values']['matrixAnchorUid']);
+
+                // An anchor that was deleted, trashed or never localized for this site has no
+                // Matrix content here to export. Keep the reference as stored, so the snapshot
+                // and any restore match the current document instead of blocking every save.
+                if ($anchor) {
+                    unset($node['attrs']['values']['matrixAnchorUid']);
+                }
             }
 
             if (isset($node['content'])) {
                 $node['content'] = $this->_exportVizy($field, $node['content'], $owner);
             }
         }
+
         return $nodes;
     }
 
@@ -456,12 +491,14 @@ class MatrixRecovery extends Component
             foreach ($value['_vizyRecoveryMatrix'] as &$row) {
                 unset($row['sourceId'], $row['sourceUid']);
             }
+
             unset($row);
         }
 
         foreach ($value as &$child) {
             $child = $this->_contentFingerprint($child);
         }
+
         return $value;
     }
 
@@ -489,6 +526,7 @@ class MatrixRecovery extends Component
                         throw new RuntimeException('An archived Matrix field has changed or is missing; restore its schema before recovering content.');
                     }
                 }
+
                 $uid = $this->_restoredEntryUids[$row['sourceId']] ??= StringHelper::UUID();
                 $entries['uid:' . $uid] = [
                     'type' => $type->handle, 'title' => $row['title'], 'slug' => $row['slug'],
@@ -497,12 +535,14 @@ class MatrixRecovery extends Component
                 ];
                 $sortOrder[] = $uid;
             }
+
             return ['entries' => $entries, 'sortOrder' => $sortOrder];
         }
 
         foreach ($value as &$item) {
             $item = $this->_restoreValue($item);
         }
+
         return $value;
     }
 }

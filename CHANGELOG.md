@@ -1,5 +1,10 @@
 # Changelog
 
+## Unreleased
+
+### Fixed
+- Fixed entries and drafts failing to save or open with a “Referenced Matrix content is unavailable” error when a Vizy block references Matrix content that was deleted, trashed or never created for a site.
+
 ## 3.2.16 - 2026-10-17
 
 ### Fixed
