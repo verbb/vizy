@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 4.0.5 - 2026-11-17
 
 ### Fixed
 - Fixed entries failing to save with “A new or changed Vizy link references an element that is unavailable for this field or user.” after formatting part of an existing link’s text, when the link pointed to an element the author couldn’t select, such as a deleted asset in a Vizy 3 link.
