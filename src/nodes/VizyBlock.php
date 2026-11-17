@@ -9,6 +9,7 @@ use verbb\vizy\helpers\Matrix;
 
 use Craft;
 use craft\base\ElementInterface;
+use craft\db\Query;
 use craft\elements\ContentBlock;
 use craft\elements\Entry;
 use craft\errors\InvalidFieldException;
@@ -273,6 +274,7 @@ class VizyBlock extends Node
         $block = $this->getBlockElement($element);
         $this->_syncBlockElementAnchor($element, $block, true);
         $this->_syncBlockElementMatrixValues($block);
+        $this->_replaceDeletedAnchorReference($value, $block);
 
         // Trigger the before-save event (on the element service) to prep the element. Preparse requires this to work.
         Craft::$app->getElements()->trigger(Elements::EVENT_BEFORE_SAVE_ELEMENT, new ElementEvent([
@@ -792,6 +794,7 @@ class VizyBlock extends Node
         if ($anchor) {
             $block->setMatrixAnchor($anchor);
             $block->id = $anchor->id;
+
             if ($create) {
                 $this->setMatrixAnchorUid($anchor->uid);
             }
@@ -821,6 +824,22 @@ class VizyBlock extends Node
                 // anchor query used by front-end access.
                 $block->setFieldValue($field->handle, Matrix::nestedEntryQuery($field, $anchor));
             }
+        }
+    }
+
+    private function _replaceDeletedAnchorReference(array &$value, BlockElement $block): void
+    {
+        $storedUid = $value['attrs']['values']['matrixAnchorUid'] ?? null;
+        $anchorUid = $block->getMatrixAnchor()?->uid;
+
+        if (!$storedUid || !$anchorUid || $storedUid === $anchorUid) {
+            return;
+        }
+
+        // Only a permanently deleted anchor is replaced. Foreign references keep their UID
+        // until their content has been copied, and the recovery archive keeps the old one.
+        if (!(new Query())->from('{{%elements}}')->where(['uid' => $storedUid])->exists()) {
+            $value['attrs']['values']['matrixAnchorUid'] = $anchorUid;
         }
     }
 

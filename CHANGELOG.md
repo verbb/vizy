@@ -4,6 +4,7 @@
 
 ### Fixed
 - Fixed entries and drafts failing to save or open with a “Referenced Matrix content is unavailable” error when a Vizy block references Matrix content that was deleted, trashed or never created for a site.
+- Fixed entries failing to save or apply drafts with an “Unable to resolve the referenced Vizy matrix anchor” error when a Vizy block references Matrix content that was permanently deleted. The block now continues with its own Matrix content.
 - Fixed an “Invalid field handle” error when creating drafts or updating search indexes for searchable Vizy fields containing Matrix fields, and Matrix content in Vizy blocks not being indexed for search.
 
 ## 3.2.16 - 2026-10-17

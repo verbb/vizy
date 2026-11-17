@@ -247,6 +247,13 @@ try {
     $unresolvedPayload = (new craft\db\Query())->select('payload')->from('{{%vizy_matrix_recovery}}')
         ->where(['kind' => 'field', 'ownerUid' => $restoredOwner->uid, 'reason' => 'unresolved-reference'])->scalar();
     check($unresolvedPayload && str_contains($unresolvedPayload, $archivedUid), 'an unresolved anchor reference is archived as stored instead of blocking saves');
+    $savepoint = Craft::$app->getDb()->beginTransaction();
+    $deletedReferenceOwner = Craft::$app->getElements()->getElementById($restoredOwner->id, $restoredOwner::class, $restoredOwner->siteId);
+    $deletedReferenceOwner->setDirtyFields([$vizy->handle]);
+    check(Craft::$app->getElements()->saveElement($deletedReferenceOwner, false), 'an owner referencing a permanently deleted anchor still saves');
+    $replacement = $anchors->getAnchor($deletedReferenceOwner, $vizy, $source->blockInstanceId);
+    check($replacement && !str_contains((string)(new craft\db\Query())->select('content')->from('{{%elements_sites}}')->where(['elementId' => $deletedReferenceOwner->id, 'siteId' => $deletedReferenceOwner->siteId])->scalar(), $archivedUid), 'the deleted anchor reference is replaced by the block\'s own anchor');
+    $savepoint->rollBack();
     $recovery->restore($hardDeleteSnapshot);
     $recreated = MatrixAnchor::find()->uid($archivedUid)->siteId($afterTrash->siteId)->one();
     check($recreated && rows($recreated, $matrix)[0]->title === $archivedTitle, 'journal restores permanently deleted anchor content and its UID');

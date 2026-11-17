@@ -153,6 +153,7 @@ class Anchors extends Component
             return $anchor;
         } catch (\Throwable $e) {
             $transaction?->rollBack();
+
             throw $e;
         } finally {
             $mutex->release($lockName);
@@ -194,6 +195,7 @@ class Anchors extends Component
         $transaction = Craft::$app->getDb()->beginTransaction();
         $recovery = Vizy::$plugin->getMatrixRecovery();
         $recovery->beginAnchorWrite($anchor);
+
         try {
             $recovery->captureAnchor($anchor, 'before-matrix-save');
             $anchor->setFieldValue($field->handle, $fieldValue);
@@ -203,10 +205,12 @@ class Anchors extends Component
             if ($expected > 0) {
                 $this->_assertMatrixFieldPersisted($field, $anchor, $expected);
             }
+
             Vizy::$plugin->getMatrixRecovery()->captureAnchor($anchor, 'after-matrix-save');
             $transaction->commit();
         } catch (\Throwable $e) {
             $transaction->rollBack();
+
             throw $e;
         } finally {
             $recovery->endAnchorWrite($anchor);
@@ -218,26 +222,32 @@ class Anchors extends Component
         $transaction = Craft::$app->getDb()->beginTransaction();
         $recovery = Vizy::$plugin->getMatrixRecovery();
         $recovery->beginAnchorWrite($anchor);
+
         try {
             $recovery->captureAnchor($anchor, 'before-delete');
             $anchor->hardDelete = $hardDelete;
+
             // Matrix queries take their site from their owner. Preserve and delete each
             // locale explicitly, including rows on independently translated sites.
             foreach (Craft::$app->getSites()->getAllSiteIds() as $siteId) {
                 $localized = clone $anchor;
                 $localized->siteId = $siteId;
+
                 foreach ($localized->getFieldLayout()?->getCustomFields() ?? [] as $field) {
                     if ($field instanceof Matrix && !$field->beforeElementDelete($localized)) {
                         throw new \RuntimeException('Unable to delete Matrix content; the operation was rolled back.');
                     }
                 }
             }
+
             if (!Craft::$app->getElements()->deleteElement($anchor, $hardDelete)) {
                 throw new \RuntimeException('Unable to delete the Matrix anchor; the operation was rolled back.');
             }
+
             $transaction->commit();
         } catch (\Throwable $e) {
             $transaction->rollBack();
+
             throw $e;
         } finally {
             $recovery->endAnchorWrite($anchor);
@@ -249,15 +259,19 @@ class Anchors extends Component
         if (!$owner->id || !$this->_tableExists()) {
             return;
         }
+
         $query = MatrixAnchor::find();
         $query->parentOwnerId = $owner->id;
         $anchors = $query->site('*')->unique()->trashed(null)->status(null)->all();
+
         if (!$anchors) {
             return;
         }
+
         foreach ($anchors as $anchor) {
             $anchor->setParentOwner($owner);
         }
+
         // Other plugins can cancel deletion after BEFORE_DELETE. Only modify the
         // anchors once Craft has actually deleted their owner, inside its transaction.
         $owner->off(Element::EVENT_AFTER_DELETE, [$this, 'handleOwnerDeleted']);
@@ -268,10 +282,12 @@ class Anchors extends Component
     {
         $owner = $event->sender;
         $owner->off(Element::EVENT_AFTER_DELETE, [$this, __FUNCTION__]);
+
         foreach ($event->data as $anchor) {
             if (!$owner->hardDelete && $anchor->trashed) {
                 continue;
             }
+
             $anchor->deletedWithOwner = true;
             $this->deleteAnchor($anchor, $owner->hardDelete);
         }
@@ -282,9 +298,11 @@ class Anchors extends Component
         if ($anchor->trashed && !Craft::$app->getElements()->restoreElement($anchor)) {
             throw new \RuntimeException('Unable to restore the Matrix anchor.');
         }
+
         foreach (Craft::$app->getSites()->getAllSiteIds() as $siteId) {
             $localized = clone $anchor;
             $localized->siteId = $siteId;
+
             foreach ($localized->getFieldLayout()?->getCustomFields() ?? [] as $field) {
                 if ($field instanceof Matrix) {
                     $field->afterElementRestore($localized);
@@ -297,6 +315,7 @@ class Anchors extends Component
     {
         $query = MatrixAnchor::find();
         $query->parentOwnerId = $owner->id;
+
         foreach ($query->site('*')->unique()->trashed(true)->andWhere(['elements.deletedWithOwner' => true])->all() as $anchor) {
             $this->restoreAnchor($anchor);
         }
@@ -816,8 +835,14 @@ class Anchors extends Component
         }
 
         if (!$anchor instanceof MatrixAnchor) {
+            // A permanently deleted anchor has no content left to copy. The recovery archive
+            // keeps the stored reference, so let the block continue with its own anchor.
+            if (!(new Query())->from('{{%elements}}')->where(['uid' => $anchorUid])->exists()) {
+                return null;
+            }
+
             // Do not replace a broken reference with an empty anchor. Its content may
-            // still exist on another site or in a backup and needs explicit recovery.
+            // still exist on another site or in the trash and needs explicit recovery.
             throw new \RuntimeException('Unable to resolve the referenced Vizy matrix anchor for this site.');
         }
 
@@ -954,6 +979,7 @@ class Anchors extends Component
                     throw $e;
                 }
             }
+
             $recovery->captureAnchor($target, 'after-copy');
         } finally {
             $recovery->endAnchorWrite($target);
@@ -1123,6 +1149,7 @@ class Anchors extends Component
             foreach ($fieldLayout->getCustomFields() as $layoutField) {
                 if ($layoutField instanceof Matrix && (int)$layoutField->id === (int)$field->id) {
                     $field = $layoutField;
+
                     break;
                 }
             }
