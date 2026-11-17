@@ -99,6 +99,7 @@ final class Renderer extends Component
     ): string {
         $extensions = Vizy::$plugin->getExtensions();
         $html = '';
+        $textRun = [];
 
         foreach ($nodes as $index => $node) {
             if (!is_array($node)) {
@@ -117,11 +118,15 @@ final class Renderer extends Component
             }
 
             // Text is omit at the definition level; the renderer owns encoding + marks.
+            // Adjacent text nodes render together so a shared mark opens once.
             if ($type === 'text') {
-                $html .= $this->_renderText($node, $ctx, $config);
+                $textRun[] = $node;
+
                 continue;
             }
 
+            $html .= $this->_renderTextRun($textRun, $ctx, $config);
+            $textRun = [];
             $render = $extensions->getRender('node', $type);
 
             if ($render === null) {
@@ -136,7 +141,77 @@ final class Renderer extends Component
             };
         }
 
+        return $html . $this->_renderTextRun($textRun, $ctx, $config);
+    }
+
+    private function _renderTextRun(array $nodes, RenderContext $ctx, array $config): string
+    {
+        if ($nodes === []) {
+            return '';
+        }
+
+        $extensions = Vizy::$plugin->getExtensions();
+
+        foreach ($nodes as &$node) {
+            $marks = [];
+
+            foreach ($node['marks'] ?? [] as $mark) {
+                $markType = is_array($mark) ? ($mark['type'] ?? null) : null;
+
+                if (!is_string($markType) || $markType === '') {
+                    continue;
+                }
+
+                $render = $extensions->getRender('mark', $markType);
+
+                if (($render['strategy'] ?? null) === 'type') {
+                    $marks[] = ['mark' => $mark, 'render' => $render];
+                }
+            }
+
+            $node['marks'] = $marks;
+        }
+
+        unset($node);
+
+        return $this->_renderMarkedText($nodes, 0, $ctx, $config);
+    }
+
+    /**
+     * Matches the editor and Vizy 3: the first stored mark is the outermost tag,
+     * and each mark wraps the whole run of neighbours that share it.
+     */
+    private function _renderMarkedText(array $nodes, int $depth, RenderContext $ctx, array $config): string
+    {
+        $html = '';
+        $count = count($nodes);
+
+        for ($i = 0; $i < $count; $i = $next) {
+            $next = $i + 1;
+            $mark = $nodes[$i]['marks'][$depth] ?? null;
+
+            if ($mark === null) {
+                $html .= Html::encode((string)($nodes[$i]['text'] ?? ''));
+
+                continue;
+            }
+
+            while ($next < $count && $this->_isSameMark($nodes[$next]['marks'][$depth] ?? null, $mark['mark'])) {
+                $next++;
+            }
+
+            $inner = $this->_renderMarkedText(array_slice($nodes, $i, $next - $i), $depth + 1, $ctx, $config);
+            $html .= $this->_renderTypeMark($inner, $mark['mark'], $mark['render'], $ctx, $config);
+        }
+
         return $html;
+    }
+
+    private function _isSameMark(?array $candidate, array $mark): bool
+    {
+        return $candidate !== null
+            && ($candidate['mark']['type'] ?? null) === ($mark['type'] ?? null)
+            && ($candidate['mark']['attrs'] ?? []) === ($mark['attrs'] ?? []);
     }
 
     private function _renderTypeNode(
@@ -212,37 +287,6 @@ final class Renderer extends Component
         }
 
         return true;
-    }
-
-    private function _renderText(array $node, RenderContext $ctx, array $config): string
-    {
-        $text = Html::encode((string)($node['text'] ?? ''));
-        $extensions = Vizy::$plugin->getExtensions();
-
-        foreach ($node['marks'] ?? [] as $mark) {
-            if (!is_array($mark)) {
-                continue;
-            }
-            $markType = $mark['type'] ?? null;
-
-            if (!is_string($markType) || $markType === '') {
-                continue;
-            }
-
-            $render = $extensions->getRender('mark', $markType);
-
-            if ($render === null) {
-                continue;
-            }
-
-            $text = match ($render['strategy']) {
-                'omit' => $text,
-                'type' => $this->_renderTypeMark($text, $mark, $render, $ctx, $config),
-                default => $text,
-            };
-        }
-
-        return $text;
     }
 
     private function _renderTypeMark(string $html, array $mark, array $render, RenderContext $ctx, array $config): string

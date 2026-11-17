@@ -32,7 +32,9 @@ it('renders bold via class statics without Craft::createObject per span', functi
                 'type' => 'paragraph',
                 'content' => [
                     ['type' => 'text', 'text' => 'A', 'marks' => [['type' => 'bold']]],
+                    ['type' => 'text', 'text' => ' '],
                     ['type' => 'text', 'text' => 'B', 'marks' => [['type' => 'bold']]],
+                    ['type' => 'text', 'text' => ' '],
                     ['type' => 'text', 'text' => 'C', 'marks' => [['type' => 'bold']]],
                 ],
             ]],

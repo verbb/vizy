@@ -85,7 +85,7 @@ For `templates/_vizy/marks/customMark.twig`:
 </span>
 ```
 
-A mark template receives the same context variables as a node template, with `mark` instead of `node`. Its `content` is the encoded text or markup produced by marks applied earlier in the stored mark order.
+A mark template receives the same context variables as a node template, with `mark` instead of `node`. Its `content` is the encoded text and markup inside it. Marks nest in their stored order, so the first mark is the outermost tag and later marks render inside its `content`. When neighbouring text shares a mark, such as a link that is bold for only some of its words, the mark renders once and its `content` covers all of that text.
 
 This contract also applies to marks registered by a module or plugin. The PHP class still defines the type, editor capability and resolved attributes; the Twig partial owns the final site markup.
 

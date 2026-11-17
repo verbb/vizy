@@ -44,11 +44,14 @@ it('renders hundreds of bold spans without constructing Bold instances', functio
     try {
         $content = [];
         for ($i = 0; $i < $spanCount; $i++) {
+            // Plain separators keep each bold span distinct, since adjacent
+            // text sharing a mark renders as one tag.
             $content[] = [
                 'type' => 'text',
                 'text' => 'x',
                 'marks' => [['type' => 'bold']],
             ];
+            $content[] = ['type' => 'text', 'text' => ' '];
         }
 
         $document = (new DocumentParser())->parse([

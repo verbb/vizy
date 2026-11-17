@@ -83,6 +83,35 @@ it('renders prose marks and layout column wrappers from Extensions strategies', 
         ->and($html)->toContain('--vizy-col:');
 });
 
+it('nests marks in stored order and keeps a shared mark open across neighbouring text', function() {
+    Vizy::$plugin->getExtensions()->reset();
+
+    $link = static fn(string $value) => ['type' => 'link', 'attrs' => ['type' => 'url', 'value' => $value]];
+    $text = static fn(string $text, array $marks = []) => ['type' => 'text', 'text' => $text, 'marks' => $marks];
+    $document = (new DocumentParser())->parse([
+        'type' => 'doc',
+        'attrs' => ['schemaVersion' => VizyDocument::CURRENT_SCHEMA_VERSION],
+        'content' => [[
+            'type' => 'paragraph',
+            'content' => [
+                $text('Read the '),
+                $text('statement', [$link('https://example.test/a'), ['type' => 'bold'], ['type' => 'italic']]),
+                $text(' now', [$link('https://example.test/a'), ['type' => 'bold']]),
+                $text(' and', [$link('https://example.test/a')]),
+                $text(' other', [$link('https://example.test/b')]),
+                $text(' end', [['type' => 'italic']]),
+            ],
+        ]],
+    ], new Entry(['title' => 'Owner']), new VizyField(['name' => 'Body', 'handle' => 'body']));
+
+    expect((string)$document->render())->toBe(
+        '<p>Read the '
+        . '<a href="https://example.test/a"><strong><em>statement</em> now</strong> and</a>'
+        . '<a href="https://example.test/b"> other</a>'
+        . '<em> end</em></p>',
+    );
+});
+
 it('renders paired footnotes with accessible reference and backlink semantics', function() {
     $uid = StringHelper::UUID();
     $document = (new DocumentParser())->parse([
