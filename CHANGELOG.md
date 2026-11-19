@@ -3,6 +3,7 @@
 ## Unreleased
 
 ### Fixed
+- Fixed an “Invalid field handle” error when saving or updating search indexes for entries with searchable Matrix fields inside Vizy blocks, and that Matrix content not being indexed for search. ([#395](https://github.com/verbb/vizy/issues/395))
 - Fixed formatted links rendering with the link as the innermost tag (such as `<strong><a>`) and splitting into several `<a>` tags when only part of their text was formatted. Marks now nest in their stored order and neighbouring text shares one tag, matching the editor and Vizy 3. Check any site CSS written against the 4.0 nesting.
 
 ## 4.0.5 - 2026-11-17

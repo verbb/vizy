@@ -351,3 +351,18 @@ it('resolves an explicit revision source legacy anchor beside its replacement on
     $revision->duplicateOf = null;
     expect($anchors->getAnchor($revision, $f->field, $uid, $legacy->uid, $key))->toBeNull();
 });
+
+it('indexes searchable Matrix rows inside Blocks for search', function() {
+    $f = new MatrixSupportFixture(searchable: true);
+    $uid = StringHelper::UUID();
+    $owner = $f->save([$f->block($uid, $f->payload(['Creditsrowkeyword']))]);
+
+    // Matrix reads its rows from the element it's given, which must be the Block rather than the owner.
+    expect(Craft::$app->getSearch()->indexElementAttributes($owner, [$f->field->handle]))->toBeTrue();
+
+    $keywords = (new Query())->select('keywords')->from(Table::SEARCHINDEX)
+        ->where(['elementId' => $owner->id, 'siteId' => $owner->siteId, 'fieldId' => $f->field->id])
+        ->scalar();
+
+    expect($keywords)->toContain('creditsrowkeyword');
+});

@@ -1240,7 +1240,10 @@ class VizyField extends Field implements PreviewableFieldInterface
                 if ($fieldLayout = $block->blockType()?->getFieldLayout()) {
                     foreach ($fieldLayout->getCustomFields() as $field) {
                         if ($field->searchable) {
-                            $parts[] = $field->searchKeywords($block->fieldValue($field->handle), $element);
+                            // Nested fields like Matrix read their content from the element they're given,
+                            // so pass the Block element that owns the field rather than the parent element.
+                            $blockElement = $block->document()->blockElement($block);
+                            $parts[] = $field->searchKeywords($blockElement->getFieldValue($field->handle), $blockElement);
                         }
                     }
                 }

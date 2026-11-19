@@ -41,12 +41,13 @@ final class MatrixSupportFixture
         PropagationMethod $propagation = PropagationMethod::All,
         string $fieldTranslationMethod = Field::TRANSLATION_METHOD_SITE,
         bool $rowVizy = false,
+        bool $searchable = false,
     )
     {
         $suffix = StringHelper::randomString(8);
         $this->text = new PlainText([
             'name' => 'Matrix text', 'handle' => 'matrixText' . $suffix,
-            'translationMethod' => Field::TRANSLATION_METHOD_SITE,
+            'translationMethod' => Field::TRANSLATION_METHOD_SITE, 'searchable' => $searchable,
         ]);
         expect(Craft::$app->getFields()->saveField($this->text))->toBeTrue();
         $placements = [new CustomField($this->text)];
@@ -71,7 +72,7 @@ final class MatrixSupportFixture
         expect(Craft::$app->getEntries()->saveEntryType($this->rowType))->toBeTrue();
         $this->matrix = new Matrix([
             'name' => 'Matrix rows', 'handle' => 'matrixRows' . $suffix,
-            'propagationMethod' => $propagation,
+            'propagationMethod' => $propagation, 'searchable' => $searchable,
         ]);
         $this->matrix->setEntryTypes([$this->rowType]);
         expect(Craft::$app->getFields()->saveField($this->matrix))->toBeTrue();
@@ -85,7 +86,7 @@ final class MatrixSupportFixture
         $this->field = new VizyField([
             'name' => 'Matrix article', 'handle' => 'matrixArticle' . $suffix,
             'editorConfig' => 'standard', 'rootContentType' => VizyField::ROOT_CONTENT_BLOCKS,
-            'translationMethod' => $fieldTranslationMethod,
+            'translationMethod' => $fieldTranslationMethod, 'searchable' => $searchable,
             'blockTypePickerGroups' => [['name' => 'Content', 'blockTypeUids' => [$this->blockType->uid]]],
         ]);
         expect(Craft::$app->getFields()->saveField($this->field))->toBeTrue();
