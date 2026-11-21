@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 4.0.6 - 2026-11-21
 
 ### Fixed
 - Fixed an “Invalid field handle” error when saving or updating search indexes for entries with searchable Matrix fields inside Vizy blocks, and that Matrix content not being indexed for search. ([#395](https://github.com/verbb/vizy/issues/395))

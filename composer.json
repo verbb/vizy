@@ -2,7 +2,7 @@
     "name": "verbb/vizy",
     "description": "A Craft CMS visual editor for rich text and structured content.",
     "type": "craft-plugin",
-    "version": "4.0.5",
+    "version": "4.0.6",
     "keywords": [
         "craft",
         "cms",
