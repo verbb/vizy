@@ -435,6 +435,8 @@ return [
   'Missing: {id}' => 'Missing: {id}',
   'Missing: {uid}' => 'Missing: {uid}',
   'New Block Type' => 'New Block Type',
+  'No block types yet' => 'No block types yet',
+  'Block Types are reusable sets of fields that editors can insert into Vizy content.' => 'Block Types are reusable sets of fields that editors can insert into Vizy content.',
   'New Editor Config' => 'New Editor Config',
   'Preview Images' => 'Preview Images',
   'The standard Editor Config cannot be deleted.' => 'The standard Editor Config cannot be deleted.',

@@ -3,14 +3,31 @@
 {% set selectedTab = 'block-types' %}
 {% set title = 'Block Types' | t('vizy') %}
 
+{# With no Block Types the table is replaced by an empty state, which carries the
+   New Block Type button itself, so the header button only shows alongside the table. #}
+{% set isEmpty = blockTypes is empty %}
+
+{% if isEmpty %}
+    {% do view.registerAssetBundle('verbb\\vizy\\web\\assets\\blocktypes\\BlockTypesAsset') %}
+{% endif %}
+
 {% block actionButton %}
-    <a href="{{ url('vizy/settings/block-types/new') }}" class="btn submit add icon">{{ 'New Block Type' | t('vizy') }}</a>
+    {% if not isEmpty %}
+        <a href="{{ url('vizy/settings/block-types/new') }}" class="btn submit add icon">{{ 'New Block Type' | t('vizy') }}</a>
+    {% endif %}
 {% endblock %}
 
 {# Overrides the CP `content` block (not `blockContent`) so the table runs to the
    pane edges, as the Icon Picker index does. #}
 {% block content %}
-    <div id="block-types-vue-admin-table"></div>
+    {% if isEmpty %}
+        <pk-state-panel heading="{{ 'No block types yet' | t('vizy') }}">
+            <p>{{ 'Block Types are reusable sets of fields that editors can insert into Vizy content.' | t('vizy') }}</p>
+            <pk-button slot="actions" variant="primary" href="{{ url('vizy/settings/block-types/new') }}">{{ 'New Block Type' | t('vizy') }}</pk-button>
+        </pk-state-panel>
+    {% else %}
+        <div id="block-types-vue-admin-table"></div>
+    {% endif %}
 {% endblock %}
 
 {% set tableData = [] %}
@@ -24,6 +41,7 @@
     }]) %}
 {% endfor %}
 
+{% if not isEmpty %}
 {% js %}
 
 var columns = [
@@ -34,6 +52,7 @@ var columns = [
 new Craft.VueAdminTable({
     columns: columns,
     container: '#block-types-vue-admin-table',
+    {# Shown only after the last row is deleted in place, until the page reloads into the empty state. #}
     emptyMessage: Craft.t('vizy', 'No Block Types exist yet.'),
     tableData: {{ tableData | json_encode | raw }},
 
@@ -44,3 +63,4 @@ new Craft.VueAdminTable({
 });
 
 {% endjs %}
+{% endif %}
