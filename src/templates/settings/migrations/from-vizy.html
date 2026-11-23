@@ -96,10 +96,10 @@
                             announce="assertive"
                             tabindex="-1"
                             heading="{{ not analysis.scope.includedLayouts
-                                ? ('The selected fields do not share a field layout.' | t('vizy'))
+                                ? ('The selected fields do not share a field layout' | t('vizy'))
                                 : (analysis.scope.ambiguousLayouts
-                                    ? ('Some field layouts need attention.' | t('vizy'))
-                                    : ('Some content could not be converted.' | t('vizy')))
+                                    ? ('Some field layouts need attention' | t('vizy'))
+                                    : ('Some content could not be converted' | t('vizy')))
                             }}"
                         >
                             {% if not analysis.scope.includedLayouts %}

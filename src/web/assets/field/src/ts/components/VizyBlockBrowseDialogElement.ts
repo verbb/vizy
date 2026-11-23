@@ -368,7 +368,7 @@ export class VizyBlockBrowseDialogElement extends LitElement {
                     class="empty"
                     variant="empty"
                     size="sm"
-                    heading=${this.query ? 'No matching Blocks' : 'No Blocks available'}
+                    heading=${this.query ? 'No matching blocks' : 'No blocks available'}
                 >${this.query ? 'Try a different search.' : 'There are no Block types available in this field.'}</pk-state-panel>
             `;
         }
