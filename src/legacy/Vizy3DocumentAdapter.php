@@ -24,10 +24,20 @@ final class Vizy3DocumentAdapter
     private const UNRESOLVED_IMAGE_TYPE = 'vizy3Image';
 
 
+    // Properties
+    // =========================================================================
+
+    private string $_location = '';
+
+
     // Public Methods
     // =========================================================================
 
-    public function convert(array $legacyNodes, array $schemaMap): array
+    /**
+     * `$location` names the field value being converted (such as its field, element and site)
+     * in warnings, so content written as a bare node list can be traced back to its owner.
+     */
+    public function convert(array $legacyNodes, array $schemaMap, ?string $location = null): array
     {
         if (!array_is_list($legacyNodes)) {
             throw new LegacyDocumentConversionException('Legacy Vizy content must be a bare root node list.');
@@ -36,8 +46,15 @@ final class Vizy3DocumentAdapter
         $seenBlockUids = [];
         $content = [];
 
-        foreach ($legacyNodes as $index => $node) {
-            $content[] = $this->_convertNode($node, $schemaMap, $seenBlockUids, "content.{$index}", null);
+        // Documents reuses one adapter, so the location only lives for this conversion.
+        $this->_location = $location !== null && $location !== '' ? " in {$location}" : '';
+
+        try {
+            foreach ($legacyNodes as $index => $node) {
+                $content[] = $this->_convertNode($node, $schemaMap, $seenBlockUids, "content.{$index}", null);
+            }
+        } finally {
+            $this->_location = '';
         }
 
         return [
@@ -100,8 +117,9 @@ final class Vizy3DocumentAdapter
                 // nested content), so they never rendered. Skip them the same way, but
                 // log the path because the next save removes them from storage.
                 if (!$this->_isNode($child)) {
-                    Vizy::warning('Skipped malformed Vizy 3 node at {path} ({shape}) while converting legacy content.', [
+                    Vizy::warning('Skipped malformed Vizy 3 node at {path}{location} ({shape}) while converting legacy content.', [
                         'path' => "{$path}.content.{$index}",
+                        'location' => $this->_location,
                         'shape' => is_array($child) ? 'keys: ' . (implode(', ', array_keys($child)) ?: 'none') : get_debug_type($child),
                     ]);
 
@@ -320,8 +338,9 @@ final class Vizy3DocumentAdapter
             // Vizy 4 images must reference an Asset, but V3 still rendered this src. Keep the
             // original node under a type V4 doesn't register, so it's preserved as unknown
             // content (an editor placeholder, nothing on the front end) rather than lost.
-            Vizy::warning('Preserved Vizy 3 image at {path} as unsupported content, because no Asset matches its src “{src}”.', [
+            Vizy::warning('Preserved Vizy 3 image at {path}{location} as unsupported content, because no Asset matches its src “{src}”.', [
                 'path' => $path,
+                'location' => $this->_location,
                 'src' => $src,
             ]);
 

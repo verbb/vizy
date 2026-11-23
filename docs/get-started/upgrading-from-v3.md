@@ -398,6 +398,8 @@ The following aliases continue to work while you update your code. Use the suppo
 | `entry.vizyField.getField()` | `entry.vizyField.field()` |
 | GraphQL `renderHtml` | GraphQL `renderedHtml` |
 
+`content().toArray()` returns the root nodes only, like `getRawNodes()` did. Vizy 4 reads a bare node list as Vizy 3 content, so don’t save one back to the field. To change content from PHP, set the complete document as described in [Saving Content From PHP](docs:reference/vizy-document#saving-content-from-php).
+
 GraphQL `rawNodes` is also deprecated, but its alternatives return different structures and are covered under [Root Fields](#root-fields) rather than presented as a direct replacement. Older editor toolbar tokens have compatibility conversions; update the JSON file as described under Editor Config Files. Both `renderHtml()` and `renderStaticHtml()` reject non-empty configuration arguments. Those calls require an update; the no-argument forms continue to work with a deprecation warning.
 
 ## Changes at a Glance

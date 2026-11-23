@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+### Changed
+- Warnings logged while converting Vizy 3 content, such as an image that doesn’t match an asset, now name the field, element and site they came from.
+- The Vizy Support utility’s diagnostics now explain Vizy 3 images that couldn’t be matched to an asset, instead of suggesting a plugin or module is missing.
+
 ## 4.0.6 - 2026-11-21
 
 ### Fixed

@@ -74,3 +74,40 @@ For a content fragment, `content().blocks(recursive, enabled)` keeps the recursi
 ```
 
 This exposes stored data rather than rendered HTML. For changes to embedded custom fields from a module or migration, see [Embedded Content](docs:developers/embedded-content).
+
+## Saving Content From PHP
+
+To change a Vizy field’s content from a module or migration, read the complete document with `toArray()`, change the nodes you need, and set the whole document back on the element. The following example belongs in a module’s console action or a migration. It replaces “Colour” with “Color” in every text node of a News entry and leaves Vizy blocks unchanged. Replace `vizyField` with your Vizy field’s handle and `123` with an entry ID:
+
+```php
+use craft\elements\Entry;
+
+$entry = Entry::find()->id(123)->status(null)->one();
+
+// The complete document, including `type`, `attrs` and every block.
+$document = $entry->getFieldValue('vizyField')->toArray();
+
+$updateText = function(array $nodes) use (&$updateText): array {
+    foreach ($nodes as &$node) {
+        if ($node['type'] === 'text') {
+            $node['text'] = str_replace('Colour', 'Color', $node['text']);
+        } elseif ($node['type'] !== 'vizyBlock' && isset($node['content'])) {
+            // Paragraphs, lists, tables and layouts hold their children in `content`.
+            $node['content'] = $updateText($node['content']);
+        }
+    }
+
+    return $nodes;
+};
+
+$document['content'] = $updateText($document['content']);
+
+$entry->setFieldValue('vizyField', $document);
+Craft::$app->getElements()->saveElement($entry);
+```
+
+The entry saves through Craft as it would from the control panel, so the field is validated and the change propagates to other sites according to the field’s translation method.
+
+Always set the complete `doc`, including its `type` and `attrs`. Vizy reads a bare list of nodes, such as the result of `content().toArray()` or `content().nodes()`, as content saved by Vizy 3. On a field that wasn’t upgraded from Vizy 3, saving one fails. On an upgraded field, Vizy converts it the way the upgrade does, so an image that doesn’t reference an asset becomes unsupported content and Vizy 4 blocks can’t be converted.
+
+Keep `vizyBlock` nodes intact as well. Their `fieldSlots` hold the values of the fields inside each block, which you can change with the [Embedded Content](docs:developers/embedded-content) API. Don’t rebuild a document by rendering it to HTML and parsing the result. HTML doesn’t carry block data, and images come back as URLs that no longer reference their assets. To bring in HTML from another source, see [Importing HTML](docs:developers/importing-html).

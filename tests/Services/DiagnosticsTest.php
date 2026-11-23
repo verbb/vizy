@@ -126,6 +126,18 @@ it('does not flag retired Content Areas, which are dropped when a document loads
     expect(implode(' ', array_column($service->review($report, [])['findings'], 'title')))->not->toContain('recognize', 'turned off');
 });
 
+it('explains unmatched Vizy 3 images instead of suggesting a missing plugin', function() {
+    $service = new Diagnostics();
+    $report = $service->createReport([]);
+    $report['fields'] = [['path' => 'p', 'fieldHandle' => 'body', 'stored' => ['types' => [
+        ['kind' => 'node', 'type' => 'vizy3Image', 'count' => 2, 'registered' => false, 'enabled' => false],
+    ]]]];
+    $findings = $service->review($report, [])['findings'];
+
+    expect(array_column($findings, 'title'))->toBe(['body has Vizy 3 images that don’t match an asset'])
+        ->and($findings[0]['detail'])->toStartWith('2 images couldn’t be matched to an asset by URL, so Vizy kept them as unsupported content.');
+});
+
 it('captures effective runtime capabilities but excludes sensitive exception messages', function() {
     $f = diagnosticsFixture();
     $service = new Diagnostics();

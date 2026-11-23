@@ -291,12 +291,21 @@ final class Diagnostics extends Component
             $label = $labels[$field['path']] ?? $field['fieldHandle'];
             $turnedOff = [];
             $unknown = [];
+            $legacyImages = 0;
 
             foreach ($field['stored']['types'] ?? [] as $type) {
                 // Early Vizy 4 builds stored retired Content Areas inside blocks. A block is
                 // a leaf, so loading drops them and they can't be causing a problem. They
                 // stay in the report's inventory for support.
                 if ($type['type'] === 'vizySlot') {
+                    continue;
+                }
+
+                // The Vizy 3 converter keeps images it can't match to an Asset under this
+                // type. No plugin is missing, so it gets its own finding.
+                if ($type['type'] === 'vizy3Image') {
+                    $legacyImages += (int)$type['count'];
+
                     continue;
                 }
 
@@ -313,6 +322,10 @@ final class Diagnostics extends Component
 
             if ($unknown) {
                 $findings[] = ['level' => 'warning', 'title' => Craft::t('vizy', '{field} uses formatting Vizy doesn’t recognize', ['field' => $label]), 'detail' => Craft::t('vizy', '{types} isn’t registered on this site. A plugin or module that provided it may be missing.', ['types' => $this->_typeList($unknown)])];
+            }
+
+            if ($legacyImages > 0) {
+                $findings[] = ['level' => 'warning', 'title' => Craft::t('vizy', '{field} has Vizy 3 images that don’t match an asset', ['field' => $label]), 'detail' => Craft::t('vizy', '{count, plural, =1{One image} other{# images}} couldn’t be matched to an asset by URL, so Vizy kept {count, plural, =1{it} other{them}} as unsupported content. This comes from Vizy 3 content, either saved before the upgrade or saved in the Vizy 3 format by a plugin or module. Replace {count, plural, =1{it} other{them}} with an image or block in the editor.', ['count' => $legacyImages])];
             }
         }
 

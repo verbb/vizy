@@ -130,7 +130,23 @@ final class Documents extends Component
             );
         }
 
-        $canonical = $this->legacyAdapter->convert($value, $legacySchemaMap);
+        $canonical = $this->legacyAdapter->convert($value, $legacySchemaMap, $this->_legacyLocation($owner, $field));
+
         return $this->parser->parse($canonical, $owner, $field);
+    }
+
+    /**
+     * Bare node lists are read as Vizy 3 content whether they came from storage or were just
+     * set on the element, so conversion warnings name the owner to help trace the writer.
+     */
+    private function _legacyLocation(?ElementInterface $owner, ?VizyField $field): ?string
+    {
+        if (!$owner || !$field) {
+            return null;
+        }
+
+        $element = $owner->id ? "element {$owner->id}" : 'an unsaved element';
+
+        return "the “{$field->handle}” field of {$element} on site {$owner->siteId}";
     }
 }

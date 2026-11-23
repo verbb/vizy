@@ -137,3 +137,35 @@ it('resolves bare Asset URLs pasted into Vizy 3 content and preserves images wit
         ->and((new \verbb\vizy\document\DocumentSerializer())->serialize($document)['content'][1]['content'][0])
         ->toBe(['type' => 'vizy3Image', 'attrs' => ['src' => $missing, 'alt' => 'Lost']]);
 });
+
+it('names the field, element and site when an owner’s Vizy 3 image has no matching Asset', function() {
+    $entry = \Tests\Support\Fixtures\VizyFixtureFactory::entry('Legacy image warning owner');
+    $src = 'https://example.test/images/unmatched-' . uniqid() . '.jpg';
+    $bare = [['type' => 'image', 'attrs' => ['src' => $src]]];
+
+    // An upgraded field accepts bare node lists. Use a copy with its own UID so the
+    // shared fixture field keeps rejecting Vizy 3 content in other tests.
+    $field = clone \Tests\Support\Fixtures\VizyFixtureFactory::vizyField();
+    $field->uid = \craft\helpers\StringHelper::UUID();
+    $maps = \verbb\vizy\Vizy::$plugin->getLegacySchemaMaps();
+    $maps->saveProvenance($field->uid, ['fieldUid' => $field->uid, 'sourceFingerprint' => 'legacy-image-warning', 'schemaMap' => []]);
+    $logged = count(Craft::getLogger()->messages);
+
+    try {
+        expect(\verbb\vizy\Vizy::$plugin->getDocuments()->normalizeDetached($bare, [])->toArray()['content'][0]['type'])->toBe('vizy3Image')
+            // A bare node list set on an element, as a module writing Vizy 3-shaped content would.
+            ->and($field->normalizeValue($bare, $entry)->toArray()['content'][0]['type'])->toBe('vizy3Image');
+    } finally {
+        Craft::$app->getProjectConfig()->remove($maps::PROJECT_CONFIG_PATH . '.' . $field->uid);
+    }
+
+    $warnings = array_values(array_filter(
+        array_map(static fn(array $message) => (string)$message[0], array_slice(Craft::getLogger()->messages, $logged)),
+        static fn(string $message) => str_contains($message, 'Preserved Vizy 3 image'),
+    ));
+
+    expect($warnings)->toBe([
+        "Preserved Vizy 3 image at content.0 as unsupported content, because no Asset matches its src “{$src}”.",
+        "Preserved Vizy 3 image at content.0 in the “{$field->handle}” field of element {$entry->id} on site {$entry->siteId} as unsupported content, because no Asset matches its src “{$src}”.",
+    ]);
+});
