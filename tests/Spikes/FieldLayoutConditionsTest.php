@@ -169,3 +169,70 @@ it('preserves field values even when a conditional layout element is hidden', fu
 
     expect($block->getFieldValue('secretSpike' . $suffix))->toBe('keep-me');
 });
+
+it('evaluates owner rules against the durable owner for Blocks in nested Vizy fields', function() {
+    $entry = VizyFixtureFactory::entry();
+    // The fixture entry type generates its title, so set one for the Title rule.
+    $entry->title = 'Nested condition owner';
+    $title = new TitleConditionRule();
+    $title->value = 'Nested condition owner';
+    $type = new TypeConditionRule();
+    $type->setValues([$entry->getType()->uid]);
+    $otherType = new TypeConditionRule();
+    $otherType->operator = 'ni';
+    $otherType->setValues([craft\helpers\StringHelper::UUID()]);
+    $condition = VizyBlockElement::createCondition();
+    $condition->setConditionRules([$title, $type, $otherType]);
+
+    // A Block in a Hosted Vizy field is owned by its parent Block projection.
+    $parent = new VizyBlockElement();
+    $parent->setOwner($entry);
+    $nested = new VizyBlockElement();
+    $nested->setOwner($parent);
+    $deeper = new VizyBlockElement();
+    $deeper->setOwner($nested);
+
+    expect($condition->matchElement($parent))->toBeTrue()
+        ->and($condition->matchElement($nested))->toBeTrue()
+        ->and($condition->matchElement($deeper))->toBeTrue();
+
+    $entry->title = 'Other owner';
+    expect($condition->matchElement($nested))->toBeFalse()
+        ->and($condition->matchElement($deeper))->toBeFalse();
+});
+
+it('validates Entry-conditioned required fields on Blocks in nested Vizy fields', function() {
+    $suffix = (string)mt_rand(100000, 999999);
+    $text = new PlainText(['name' => 'CTA label', 'handle' => 'ctaLabelSpike' . $suffix]);
+    expect(Craft::$app->getFields()->saveField($text))->toBeTrue(json_encode($text->getErrors()));
+    craft\behaviors\CustomFieldBehavior::$fieldHandles[$text->handle] = true;
+
+    $entry = VizyFixtureFactory::entry('Nested validation owner');
+    $rule = new TypeConditionRule();
+    $rule->setValues([$entry->getType()->uid]);
+    $condition = VizyBlockElement::createCondition();
+    $condition->setConditionRules([$rule]);
+    $placement = new CustomField($text, ['required' => true]);
+    $placement->setElementCondition($condition);
+    $layout = new FieldLayout(['type' => VizyBlockElement::class]);
+    $layout->setTabs([new FieldLayoutTab(['layout' => $layout, 'name' => 'Content', 'elements' => [$placement]])]);
+    expect(Craft::$app->getFields()->saveLayout($layout))->toBeTrue();
+    $layout = Craft::$app->getFields()->getLayoutById($layout->id);
+
+    $block = static function(craft\base\ElementInterface $owner) use ($layout, $entry): VizyBlockElement {
+        $block = new VizyBlockElement(['siteId' => $entry->siteId]);
+        $block->setOwner($owner);
+        $block->setField(VizyFixtureFactory::vizyField());
+        $block->setFieldLayout($layout);
+        $block->setScenario(Entry::SCENARIO_LIVE);
+
+        return $block;
+    };
+    $root = $block($entry);
+    $nested = $block($block($entry));
+
+    expect($root->validate())->toBeFalse()
+        ->and($root->getErrors($text->handle))->not->toBeEmpty();
+    expect($nested->validate())->toBeFalse()
+        ->and($nested->getErrors($text->handle))->not->toBeEmpty();
+});

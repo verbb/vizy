@@ -6,6 +6,7 @@
 - Fixed every editor config failing to load, breaking all Vizy fields and the Editor Configs settings, when an editor config’s icon override pointed to a custom icon that had since been removed, or to a toolbar control from a plugin that’s no longer installed. The control now uses its default icon.
 - Fixed pages failing to render with “Invalid transform handle” when content upgraded from Vizy 3 has an image using an image transform that has since been renamed or deleted. These images now use the field’s default transform or the original image.
 - Fixed entries failing to restore from the trash when a Vizy block with a Matrix field had searchable fields, including when the Matrix field itself is searchable.
+- Fixed field and tab conditions using entry or element rules not applying to blocks inside a nested Vizy field when saving, which let conditionally shown required fields be left blank.
 
 ## 4.0.7 - 2026-11-24
 

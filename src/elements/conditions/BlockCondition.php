@@ -22,6 +22,8 @@ use craft\elements\conditions\entries\TypeConditionRule;
 use craft\elements\conditions\entries\ViewableConditionRule;
 use craft\fields\conditions\FieldConditionRuleInterface;
 
+use LogicException;
+
 /**
  * Craft-native condition for Vizy Block field layouts.
  *
@@ -69,6 +71,18 @@ class BlockCondition extends ElementCondition
 
         $owner = $element->getOwner();
 
+        // A Block in a nested Vizy field is owned by its parent Block projection.
+        // Walk up to the durable owner so rules match the same way at any depth,
+        // as they do in the control panel form. An ownerless parent keeps the
+        // previous behaviour rather than throwing.
+        while ($owner instanceof Block) {
+            try {
+                $owner = $owner->getOwner();
+            } catch (LogicException) {
+                break;
+            }
+        }
+
         foreach ($this->getConditionRules() as $rule) {
             if (
                 str_starts_with($rule::class, 'craft\\elements\\conditions\\entries\\')
@@ -76,6 +90,7 @@ class BlockCondition extends ElementCondition
             ) {
                 return false;
             }
+
             $target = $rule instanceof FieldConditionRuleInterface ? $element : $owner;
 
             if (!$rule->matchElement($target)) {
