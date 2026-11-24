@@ -33,7 +33,7 @@ final class MultisiteDocuments extends Component
         $this->propagationProbe = $probe;
     }
 
-    public function mergeForCraftPropagation(VizyDocument $source, VizyDocument $target): VizyDocument
+    public function mergeForCraftPropagation(VizyDocument $source, VizyDocument $target, bool $ignoreTranslation = false): VizyDocument
     {
         $sourceOwner = $source->owner();
         $targetOwner = $target->owner();
@@ -42,6 +42,7 @@ final class MultisiteDocuments extends Component
         if (!$sourceOwner || !$targetOwner || !$field) {
             throw new RuntimeException('Craft propagation guard requires exact source, target, and field context.');
         }
+
         $key = implode(':', [
             $sourceOwner::class,
             (string)$sourceOwner->id,
@@ -60,13 +61,20 @@ final class MultisiteDocuments extends Component
             if ($this->propagationProbe) {
                 ($this->propagationProbe)($source, $target);
             }
-            return $this->mergeForPropagation($source, $target);
+
+            return $this->mergeForPropagation($source, $target, $ignoreTranslation);
         } finally {
             unset($this->activePropagations[$key]);
         }
     }
 
-    public function mergeForPropagation(VizyDocument $source, VizyDocument $target): VizyDocument
+    /**
+     * Applies the source document's structure to the target site, keeping the
+     * target's own values for translated fields. `$ignoreTranslation` copies the
+     * whole source instead, which Craft's field propagation uses for fresh
+     * elements and empty required values.
+     */
+    public function mergeForPropagation(VizyDocument $source, VizyDocument $target, bool $ignoreTranslation = false): VizyDocument
     {
         $sourceOwner = $source->owner();
         $targetOwner = $target->owner();
@@ -74,6 +82,12 @@ final class MultisiteDocuments extends Component
 
         if (!$sourceOwner || !$targetOwner || !$field || $target->field() !== $field) {
             throw new RuntimeException('Multisite merge requires source and target documents for the same field with exact owner context.');
+        }
+
+        if ($ignoreTranslation) {
+            // Block UIDs stay shared across sites, so later merges still match
+            // each site's copy of a block.
+            return (new DocumentParser())->parse($source->toArray(), $targetOwner, $field);
         }
 
         if ($field->getTranslationKey($sourceOwner) !== $field->getTranslationKey($targetOwner)) {
@@ -103,6 +117,7 @@ final class MultisiteDocuments extends Component
             static fn() => true,
             new DeterministicUidFactory("owner-duplicate:{$seed}"),
         );
+
         return $builder->regenerateOwnerDuplicateIdentities($blockUidMap)
             ->commit()
             ->recontextualize($newOwner, $source->field());
@@ -140,8 +155,10 @@ final class MultisiteDocuments extends Component
             if (isset($indexed[$block->uid()])) {
                 throw new RuntimeException("Duplicate Vizy Block UID {$block->uid()} prevents multisite merge.");
             }
+
             $indexed[$block->uid()] = $block;
         }
+
         return $indexed;
     }
 
@@ -162,8 +179,10 @@ final class MultisiteDocuments extends Component
             if (is_array($node['content'] ?? null)) {
                 $node['content'] = $this->_mergeNodes($node['content'], $sourceBlocks, $targetBlocks);
             }
+
             $nodes[$index] = $node;
         }
+
         return $nodes;
     }
 
@@ -190,6 +209,7 @@ final class MultisiteDocuments extends Component
             // Differing translation keys: the target site owns this placement.
             if ($sourceKey !== $targetKey && $target->hasRawFieldValue($uid)) {
                 $merged[$uid] = $target->rawFieldValue($uid);
+
                 continue;
             }
 

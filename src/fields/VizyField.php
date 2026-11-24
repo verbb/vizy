@@ -712,9 +712,16 @@ class VizyField extends Field implements PreviewableFieldInterface
             $target = $target->recontextualize($to, $this);
         }
 
+        // Translated content normally stays with its own site. A fresh element
+        // has none to protect yet, and Craft only asks for required values when
+        // the target site's value is empty, so both copy the whole source the
+        // same way Craft's own fields do.
+        $ignoreTranslation = ($from->propagateAll && $from->getIsFresh())
+            || ($from->propagateRequired && $this->layoutElement?->required && $this->isValueEmpty($target, $to));
+
         $to->setFieldValue(
             $this->handle,
-            Vizy::$plugin->getMultisiteDocuments()->mergeForCraftPropagation($source, $target),
+            Vizy::$plugin->getMultisiteDocuments()->mergeForCraftPropagation($source, $target, $ignoreTranslation),
         );
     }
 

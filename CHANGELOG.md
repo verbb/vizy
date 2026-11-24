@@ -3,6 +3,7 @@
 ## Unreleased
 
 ### Fixed
+- Fixed new entries not copying the content of translatable Vizy fields to their other sites like Vizy 3 did, which also stopped entries from being created when the field was required.
 - Fixed every editor config failing to load, breaking all Vizy fields and the Editor Configs settings, when an editor config’s icon override pointed to a custom icon that had since been removed, or to a toolbar control from a plugin that’s no longer installed. The control now uses its default icon.
 - Fixed pages failing to render with “Invalid transform handle” when content upgraded from Vizy 3 has an image using an image transform that has since been renamed or deleted. These images now use the field’s default transform or the original image.
 - Fixed entries failing to restore from the trash when a Vizy block with a Matrix field had searchable fields, including when the Matrix field itself is searchable.
