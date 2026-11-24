@@ -63,10 +63,10 @@
         "@tiptap/extensions": "3.30.5",
         "@tiptap/pm": "3.30.5",
         "@tiptap/suggestion": "3.30.5",
-        "@verbb/plugin-kit-core": "file:../../../plugin-kit/plugin-kit/plugin-kit-core",
-        "@verbb/plugin-kit-icons": "file:../../../plugin-kit/plugin-kit/plugin-kit-icons",
-        "@verbb/plugin-kit-tiptap-core": "file:../../../plugin-kit/plugin-kit/plugin-kit-tiptap-core",
-        "@verbb/plugin-kit-web": "file:../../../plugin-kit/plugin-kit/plugin-kit-web",
+        "@verbb/plugin-kit-core": "^2.3.0",
+        "@verbb/plugin-kit-icons": "^2.3.0",
+        "@verbb/plugin-kit-tiptap-core": "^2.3.0",
+        "@verbb/plugin-kit-web": "^2.3.0",
         "lit": "3.3.3",
         "lowlight": "3.3.0"
     }
