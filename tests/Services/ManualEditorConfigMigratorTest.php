@@ -4,6 +4,9 @@ declare(strict_types=1);
 
 use craft\helpers\Json;
 use craft\helpers\StringHelper;
+use craft\services\Deprecator;
+use verbb\vizy\deprecations\VizyToolbarTokenDeprecations;
+use verbb\vizy\helpers\EditorConfigPresentation;
 use verbb\vizy\legacy\ManualEditorConfigMigrator;
 use verbb\vizy\Vizy;
 
@@ -101,6 +104,73 @@ it('keeps Vizy 3 quote and code-block buttons as Formatting members and node cap
         ->and($payload['toolbar'])->not->toContain('codeBlock')
         ->and($payload['toolbar'])->toContain('horizontalRule');
 });
+
+it('translates Vizy 3 line break, clear format and table menu IDs with deprecation warnings', function() {
+    $original = Craft::$app->getDeprecator();
+    $warned = new ReflectionProperty(VizyToolbarTokenDeprecations::class, 'warned');
+    $previousWarned = $warned->getValue();
+    $warned->setValue(null, []);
+    $deprecator = new class(['logTarget' => false]) extends Deprecator {
+        public array $keys = [];
+
+        public function log(string $key, string $message, ?string $file = null, ?int $line = null): void
+        {
+            $this->keys[] = $key;
+        }
+    };
+    Craft::$app->set('deprecator', $deprecator);
+
+    try {
+        // Button and option IDs from Vizy 3's Buttons.js.
+        $migrator = new ManualEditorConfigMigrator();
+        $configs = Vizy::$plugin->getEditorConfigs();
+        $payload = $migrator->toAuthorablePayload([
+            'buttons' => ['bold', 'clear-format', 'line-break', 'table', 'undo'],
+            'table' => ['insert-table', 'add-row-after', 'delete-row'],
+        ], 'legacy-table-buttons');
+        $config = $configs->normalizeRuntimeConfig('legacy-table-buttons', $payload);
+
+        expect($config['toolbar'])->toBe(['bold', 'clearFormatting', 'hardBreak', 'undo', 'dropdown:table'])
+            ->and($config['dropdowns']['table'])->toBe(['table', 'tableAddRowAfter', 'tableDeleteRow']);
+
+        // Without `insert-table` the menu keeps the configured subset instead of every operation.
+        $tableOnly = $configs->normalizeRuntimeConfig('legacy-table-only', $migrator->toAuthorablePayload([
+            'buttons' => ['table'],
+            'table' => ['add-row-after', 'delete-row', 'merge-cells'],
+        ], 'legacy-table-only'));
+
+        expect($tableOnly['dropdowns']['table'])->toBe(['tableAddRowAfter', 'tableDeleteRow', 'tableMergeCells']);
+
+        foreach (['clear-format', 'line-break', 'add-row-after', 'delete-row', 'merge-cells'] as $legacyId) {
+            expect($deprecator->keys)->toContain("verbb\\vizy\\toolbar\\{$legacyId}");
+        }
+    } finally {
+        Craft::$app->set('deprecator', $original);
+        $warned->setValue(null, $previousWarned);
+    }
+});
+
+it('translates every Vizy 3 table menu ID to a Vizy 4 table control', function(string $legacyId, string $expected) {
+    $controls = array_column(EditorConfigPresentation::toolbarCatalog(), 'id');
+
+    expect(VizyToolbarTokenDeprecations::canonicalize($legacyId))->toBe($expected)
+        ->and($controls)->toContain($expected)
+        ->and(EditorConfigPresentation::dropdownRoster('table'))->toContain($expected);
+})->with([
+    ['insert-table', 'table'],
+    ['delete-table', 'tableDelete'],
+    ['add-col-before', 'tableAddColumnBefore'],
+    ['add-col-after', 'tableAddColumnAfter'],
+    ['delete-col', 'tableDeleteColumn'],
+    ['add-row-before', 'tableAddRowBefore'],
+    ['add-row-after', 'tableAddRowAfter'],
+    ['delete-row', 'tableDeleteRow'],
+    ['merge-cells', 'tableMergeCells'],
+    ['split-cells', 'tableSplitCell'],
+    ['toggle-header-column', 'tableToggleHeaderColumn'],
+    ['toggle-header-row', 'tableToggleHeaderRow'],
+    ['toggle-header-cell', 'tableToggleHeaderCell'],
+]);
 
 it('plans identical manual configs onto one shared mint id', function() {
     $manual = Json::encode([

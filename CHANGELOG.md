@@ -10,6 +10,7 @@
 - Fixed Vizy 3 upgrades failing on environments with `allowAdminChanges` disabled when a field used a custom editor config, even though the upgrade had already created that config in the project config files being deployed.
 - Fixed the Vizy 3 upgrade, including `vizy/migrations/upgrade-from-v3` and `upgrade-analyze`, treating Vizy 4 fields without Block Types as Vizy 3 fields, which reset their Editor Config and switched Blocks fields to Combined when the upgrade was applied.
 - Fixed the Vizy 3 upgrade missing the Block Types of Vizy fields inside Matrix blocks when upgrading directly from Craft 4.
+- Fixed Vizy 3 editor configs losing their Line Break and Clear Format buttons after upgrading, and Table menus showing only Insert table or every table operation instead of the configured ones. These Vizy 3 IDs are now also reported as deprecated.
 
 ## 4.0.7 - 2026-11-24
 

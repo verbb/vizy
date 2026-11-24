@@ -37,11 +37,13 @@ final class VizyToolbarTokenDeprecations
             if (!is_string($id) || $id === '') {
                 continue;
             }
+
             $canonical = self::canonicalize($id, $context);
 
             if ($canonical === '' || in_array($canonical, $out, true)) {
                 continue;
             }
+
             $out[] = $canonical;
         }
 
@@ -55,6 +57,7 @@ final class VizyToolbarTokenDeprecations
         if (isset(self::$warned[$key])) {
             return;
         }
+
         self::$warned[$key] = true;
 
         $where = $context !== null && $context !== ''
@@ -96,10 +99,25 @@ final class VizyToolbarTokenDeprecations
         'horizontal-rule' => 'horizontalRule',
         'hr' => 'horizontalRule',
         'hard-break' => 'hardBreak',
+        'line-break' => 'hardBreak',
         'strikethrough' => 'strike',
         'media-embed' => 'mediaEmbed',
         'clear-formatting' => 'clearFormatting',
+        'clear-format' => 'clearFormatting',
+        // Vizy 3 Table dropdown members. `insert-table` is the insert operation itself.
         'insert-table' => 'table',
+        'delete-table' => 'tableDelete',
+        'add-col-before' => 'tableAddColumnBefore',
+        'add-col-after' => 'tableAddColumnAfter',
+        'delete-col' => 'tableDeleteColumn',
+        'add-row-before' => 'tableAddRowBefore',
+        'add-row-after' => 'tableAddRowAfter',
+        'delete-row' => 'tableDeleteRow',
+        'merge-cells' => 'tableMergeCells',
+        'split-cells' => 'tableSplitCell',
+        'toggle-header-column' => 'tableToggleHeaderColumn',
+        'toggle-header-row' => 'tableToggleHeaderRow',
+        'toggle-header-cell' => 'tableToggleHeaderCell',
     ];
 
 
