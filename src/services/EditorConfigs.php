@@ -569,7 +569,12 @@ final class EditorConfigs extends Component
         $toolbar = $this->_normalizeToolbar($id, $config['toolbar'] ?? null);
         $dropdowns = $this->_normalizeDropdowns($id, $config['dropdowns'] ?? null, $toolbar);
         $bubble = $this->_normalizeBubble($id, $config['bubble'] ?? null);
-        $icons = $this->_normalizeIcons($id, $config['icons'] ?? null);
+        $icons = $this->_normalizeIcons(
+            $id,
+            $config['icons'] ?? null,
+            is_array($baseline['icons'] ?? null) ? $baseline['icons'] : [],
+            $diagnostics,
+        );
         $extensionOptions = $this->_normalizeExtensionOptions($id, $config['extensionOptions'] ?? null);
 
         // Two different lists, and conflating them was a round-trip bug: `capabilities` is
@@ -619,8 +624,14 @@ final class EditorConfigs extends Component
      * Vizy's bundled/custom icon catalogue; inline SVG is deliberately not an authorable config
      * value. Resolving here means invalid references fail before Project Config is written and
      * every manifest receives server-sanitized markup rather than a filesystem path or raw SVG.
+     *
+     * An override that was valid when saved can stop resolving later, when its SVG leaves the
+     * icons folder or the plugin registering its control is removed. That stored override is
+     * dropped with a diagnostic rather than refused, as a missing capability is: the control
+     * falls back to its own glyph, and the override is cosmetic, so it isn't worth failing every
+     * config's load over. A new or changed override is still refused.
      */
-    private function _normalizeIcons(string $id, mixed $icons): array
+    private function _normalizeIcons(string $id, mixed $icons, array $baselineIcons, array &$diagnostics): array
     {
         if ($icons === null || $icons === []) {
             return [];
@@ -653,8 +664,9 @@ final class EditorConfigs extends Component
 
         $normalized = [];
 
-        foreach ($icons as $controlId => $icon) {
-            $controlId = trim((string)$controlId);
+        foreach ($icons as $storedControlId => $icon) {
+            $stored = array_key_exists($storedControlId, $baselineIcons) && $baselineIcons[$storedControlId] === $icon;
+            $controlId = trim((string)$storedControlId);
 
             if ($controlId === '') {
                 throw new RuntimeException("Vizy Editor Config {$id} icon control IDs must be non-empty strings.");
@@ -675,6 +687,12 @@ final class EditorConfigs extends Component
             }
 
             if (!isset($known[$controlId])) {
+                if ($stored) {
+                    $this->_dropMissingIcon($id, $controlId, $icon, $diagnostics);
+
+                    continue;
+                }
+
                 throw new RuntimeException("Unknown Vizy Editor Config icon control ID in {$id}: {$controlId}.");
             }
 
@@ -685,6 +703,12 @@ final class EditorConfigs extends Component
             $icon = trim($icon);
 
             if (ToolbarIcons::glyph($icon) === null) {
+                if ($stored) {
+                    $this->_dropMissingIcon($id, $controlId, $icon, $diagnostics);
+
+                    continue;
+                }
+
                 throw new RuntimeException("Unknown Vizy icon in Editor Config {$id}: {$icon}.");
             }
 
@@ -698,6 +722,17 @@ final class EditorConfigs extends Component
         ksort($normalized);
 
         return $normalized;
+    }
+
+    private function _dropMissingIcon(string $id, string $controlId, mixed $icon, array &$diagnostics): void
+    {
+        $icon = is_string($icon) ? $icon : '';
+        $diagnostics[] = ['code' => 'missingIcon', 'control' => $controlId, 'icon' => $icon];
+
+        Craft::warning(
+            "Vizy Editor Config “{$id}” icon override “{$icon}” for {$controlId} is ignored because the icon or its control is no longer available.",
+            __METHOD__,
+        );
     }
 
     private function _normalizeExtensionOptions(string $id, mixed $options): array

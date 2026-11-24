@@ -587,6 +587,48 @@ it('validates Editor Config icon override keys and catalogue values', function()
         ]))->toThrow(RuntimeException::class, 'Unknown Vizy icon');
 });
 
+it('drops a stored icon override that no longer resolves instead of failing every config', function() {
+    $service = Vizy::$plugin->getEditorConfigs();
+    $projectConfig = Craft::$app->getProjectConfig();
+    $id = 'iconstale' . strtolower(StringHelper::randomString(5));
+    $path = EditorConfigs::PROJECT_CONFIG_PATH . '.' . $id;
+    $config = [
+        'label' => 'Stale icons',
+        'capabilities' => ['nodes' => [], 'marks' => ['bold', 'italic']],
+        'toolbar' => ['bold', 'italic'],
+        'icons' => ['bold' => 'removed-project-icon', 'dropdown:removedplugin' => 'bold', 'italic' => 'bold'],
+    ];
+
+    try {
+        // Stored while the icon file and the dropdown's plugin were still installed.
+        $projectConfig->set($path, $config);
+        $service->invalidate();
+        $loaded = $service->getConfig($id);
+        expect($loaded['icons'])->toBe(['italic' => 'bold'])
+            ->and($loaded['diagnostics'])->toBe([
+                ['code' => 'missingIcon', 'control' => 'bold', 'icon' => 'removed-project-icon'],
+                ['code' => 'missingIcon', 'control' => 'dropdown:removedplugin', 'icon' => 'bold'],
+            ])
+            ->and($service->getConfig(EditorConfigs::DEFAULT_ID))->not->toBeNull();
+
+        // Incoming YAML may carry the same stored overrides, but not new ones.
+        $service->preflightExternalConfigs([$id => $config]);
+        expect(fn() => $service->preflightExternalConfigs([$id => [...$config, 'icons' => ['bold' => 'another-missing-icon']]]))
+            ->toThrow(RuntimeException::class, 'Unknown Vizy icon')
+            ->and(fn() => $service->preflightExternalConfigs([$id => [...$config, 'icons' => ['dropdown:otherplugin' => 'bold']]]))
+            ->toThrow(RuntimeException::class, 'Unknown Vizy Editor Config icon control ID')
+            ->and(fn() => $service->saveConfig('iconnew' . strtolower(StringHelper::randomString(5)), $config))
+            ->toThrow(RuntimeException::class, 'Unknown Vizy icon');
+
+        // Saving the loaded config keeps the working override and leaves the stale ones out.
+        expect($service->saveConfig($id, $service->authorablePayload($loaded)))->toBeTrue()
+            ->and($projectConfig->get($path . '.icons'))->toBe(['italic' => 'bold']);
+    } finally {
+        $projectConfig->remove($path);
+        $service->invalidate();
+    }
+});
+
 it('sanitizes project SVG icons before they enter a picker or editor manifest', function() {
     $directory = Craft::$app->getPath()->getTempPath() . DIRECTORY_SEPARATOR . 'vizy-icon-' . StringHelper::randomString(8);
     FileHelper::createDirectory($directory);

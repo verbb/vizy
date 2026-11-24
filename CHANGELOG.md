@@ -1,5 +1,10 @@
 # Changelog
 
+## Unreleased
+
+### Fixed
+- Fixed every editor config failing to load, breaking all Vizy fields and the Editor Configs settings, when an editor config’s icon override pointed to a custom icon that had since been removed, or to a toolbar control from a plugin that’s no longer installed. The control now uses its default icon.
+
 ## 4.0.7 - 2026-11-24
 
 ### Added
