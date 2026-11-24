@@ -12,6 +12,7 @@ use verbb\vizy\models\BlockSummaryTexts;
 use verbb\vizy\models\BlockSummaryTypePresentation;
 use verbb\vizy\models\BlockType;
 
+use Craft;
 use craft\base\Component;
 use craft\elements\Asset;
 
@@ -66,6 +67,7 @@ final class BlockSummaries extends Component
 
             if (isset($this->requestCache[$cacheKey])) {
                 $summaries[$block->uid()] = $this->requestCache[$cacheKey];
+
                 continue;
             }
 
@@ -74,6 +76,7 @@ final class BlockSummaries extends Component
             if (!$type) {
                 $summary = $this->_unresolvedSummary($block, $validationState);
                 $summaries[$block->uid()] = $this->_remember($cacheKey, $summary);
+
                 continue;
             }
 
@@ -125,16 +128,19 @@ final class BlockSummaries extends Component
             if ($summary->media !== null) {
                 continue;
             }
+
             $block = $this->_findBlockByUid($blockList, $uid);
 
             if (!$block) {
                 continue;
             }
+
             $type = $block->blockType();
 
             if (!$type) {
                 continue;
             }
+
             $definition = BlockSummaryDefinition::fromConfig($type->summary ?? null);
             $inference = $this->projection->inferenceFor($type);
             $media = $this->projection->mediaFromSlots(
@@ -148,6 +154,7 @@ final class BlockSummaries extends Component
             if ($media === null) {
                 continue;
             }
+
             $cacheKey = $this->_cacheKey($block, $validationState);
             $summaries[$uid] = $this->_remember($cacheKey, new BlockSummary(
                 blockUid: $summary->blockUid,
@@ -198,7 +205,9 @@ final class BlockSummaries extends Component
         foreach (Vizy::$plugin->getBlockTypes()->getAllBlockTypes() as $type) {
             $configs[(string)$type->uid] = $type->toConfig();
         }
+
         ksort($configs);
+
         return hash('sha256', json_encode($configs, JSON_THROW_ON_ERROR | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES));
     }
 
@@ -216,16 +225,19 @@ final class BlockSummaries extends Component
             if (!is_string($handle) || $handle === '' || !is_array($definition)) {
                 continue;
             }
+
             $callable = $definition['callable'] ?? null;
 
             if (!is_callable($callable)) {
                 continue;
             }
+
             $this->providers[$handle] = [
                 'callable' => $callable,
                 'requiresTargetMetadata' => (bool)($definition['requiresTargetMetadata'] ?? false),
             ];
         }
+
         return $this->providers;
     }
 
@@ -263,11 +275,13 @@ final class BlockSummaries extends Component
             if (!is_array($payload)) {
                 continue;
             }
+
             $existing = $summaries[$block->uid()] ?? null;
 
             if (!$existing) {
                 continue;
             }
+
             $title = isset($payload['title']) ? BlockSummaryTexts::boundTitle((string)$payload['title'], $existing->title) : $existing->title;
             $subtitle = array_key_exists('subtitle', $payload)
                 ? BlockSummaryTexts::boundSubtitle(is_string($payload['subtitle']) ? $payload['subtitle'] : null)
@@ -283,6 +297,7 @@ final class BlockSummaries extends Component
                     thumbnailUrl: isset($mediaPayload['thumbnailUrl']) ? (string)$mediaPayload['thumbnailUrl'] : null,
                 );
             }
+
             $cacheKey = $this->_cacheKey($block, $validationState);
             $summaries[$block->uid()] = $this->_remember($cacheKey, new BlockSummary(
                 blockUid: $existing->blockUid,
@@ -320,6 +335,7 @@ final class BlockSummaries extends Component
         if (!$layout || !$placementUid) {
             return null;
         }
+
         return $this->projection->placementExists($layout, $placementUid) ? $placementUid : null;
     }
 
@@ -328,6 +344,7 @@ final class BlockSummaries extends Component
         if (!array_key_exists($placementUid, $fieldSlots)) {
             return null;
         }
+
         $raw = $fieldSlots[$placementUid];
 
         if (is_int($raw)) {
@@ -341,11 +358,13 @@ final class BlockSummaries extends Component
         if (!is_array($raw)) {
             return null;
         }
+
         $ids = array_values(array_filter($raw, static fn(mixed $item) => is_int($item) || (is_string($item) && ctype_digit($item))));
 
         if (count($ids) !== 1) {
             return null;
         }
+
         return is_int($ids[0]) ? $ids[0] : (int)$ids[0];
     }
 
@@ -358,6 +377,7 @@ final class BlockSummaries extends Component
                 return $reference;
             }
         }
+
         return null;
     }
 
@@ -377,12 +397,15 @@ final class BlockSummaries extends Component
 
         $metadata = [];
 
+        // Like Craft's own element thumbnails, only images get a thumbnail URL.
+        // Other files report none rather than a file-type icon.
         foreach ($assets as $asset) {
             $metadata[(string)$asset->id] = [
                 'alt' => $asset->title ?: null,
-                'thumbnailUrl' => $asset->getThumbUrl(['width' => 80, 'height' => 80]) ?: null,
+                'thumbnailUrl' => Craft::$app->getAssets()->getThumbUrl($asset, 80, 80, false) ?: null,
             ];
         }
+
         return $metadata;
     }
 
@@ -393,7 +416,9 @@ final class BlockSummaries extends Component
         if (!is_array($state)) {
             return 0;
         }
+
         $key = $descendants ? 'descendantErrorCount' : 'errorCount';
+
         return max(0, (int)($state[$key] ?? 0));
     }
 
@@ -401,6 +426,7 @@ final class BlockSummaries extends Component
     {
         $revision = (string)($validationState['revision'] ?? 'none');
         $slots = json_encode($block->rawFieldValues(), JSON_THROW_ON_ERROR | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+
         return hash('sha256', implode('|', [
             $block->uid(),
             $block->blockTypeUid(),
@@ -423,6 +449,7 @@ final class BlockSummaries extends Component
                 return $block;
             }
         }
+
         return null;
     }
 }

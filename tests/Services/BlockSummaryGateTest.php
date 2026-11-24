@@ -3,11 +3,17 @@
 declare(strict_types=1);
 
 use craft\behaviors\CustomFieldBehavior;
+use craft\elements\Asset;
 use craft\fieldlayoutelements\CustomField;
+use craft\fields\Assets as AssetsField;
 use craft\fields\PlainText;
+use craft\fs\Local;
+use craft\helpers\FileHelper;
 use craft\helpers\StringHelper;
 use craft\models\FieldLayout;
 use craft\models\FieldLayoutTab;
+use craft\models\Volume;
+use Tests\Support\Fixtures\AssetSpikeFixture;
 use verbb\vizy\document\VizyDocument;
 use verbb\vizy\elements\Block;
 use verbb\vizy\events\RegisterBlockSummaryProvidersEvent;
@@ -215,6 +221,68 @@ it('overlays validation counts without changing authored enabled state', functio
     expect($summary->enabled)->toBeTrue();
     expect($summary->errorCount)->toBe(2);
     expect($summary->descendantErrorCount)->toBe(5);
+});
+
+it('resolves media metadata for Blocks with an asset in an Assets field', function() {
+    AssetSpikeFixture::ensureAdminUser();
+    $suffix = StringHelper::randomString(6);
+    $root = sys_get_temp_dir() . '/vizy-summary-media/' . $suffix;
+    FileHelper::createDirectory($root);
+    $fs = new Local([
+        'name' => 'Summary media ' . $suffix, 'handle' => 'summaryMedia' . $suffix,
+        'path' => $root, 'hasUrls' => true, 'url' => 'https://example.test/summary-media/',
+    ]);
+    expect(Craft::$app->getFs()->saveFilesystem($fs))->toBeTrue();
+    $volume = new Volume(['name' => 'Summary media ' . $suffix, 'handle' => 'summaryMedia' . $suffix, 'fsHandle' => $fs->handle]);
+    expect(Craft::$app->getVolumes()->saveVolume($volume))->toBeTrue();
+
+    // A real 1x1 PNG, so the thumbnail goes through Craft's image path rather than the file icon fallback.
+    $temp = Craft::$app->getPath()->getTempPath() . '/' . $suffix . '.png';
+    file_put_contents($temp, base64_decode('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII='));
+    $asset = new Asset([
+        'tempFilePath' => $temp, 'filename' => $suffix . '.png', 'title' => 'Summary image',
+        'newFolderId' => Craft::$app->getAssets()->getRootFolderByVolumeId($volume->id)->id,
+        'scenario' => Asset::SCENARIO_CREATE,
+    ]);
+    expect(Craft::$app->getElements()->saveElement($asset))->toBeTrue();
+
+    $heading = new PlainText(['name' => 'Heading', 'handle' => 'heading' . $suffix]);
+    $image = new AssetsField(['name' => 'Image', 'handle' => 'image' . $suffix]);
+    expect(Craft::$app->getFields()->saveField($heading))->toBeTrue();
+    expect(Craft::$app->getFields()->saveField($image))->toBeTrue();
+    CustomFieldBehavior::$fieldHandles[$heading->handle] = true;
+    CustomFieldBehavior::$fieldHandles[$image->handle] = true;
+    $layout = new FieldLayout(['uid' => StringHelper::UUID(), 'type' => Block::class]);
+    $layout->setTabs([new FieldLayoutTab([
+        'layout' => $layout,
+        'name' => 'Content',
+        'elements' => [
+            ['type' => CustomField::class, 'fieldUid' => $heading->uid],
+            ['type' => CustomField::class, 'fieldUid' => $image->uid],
+        ],
+    ])]);
+    $type = new BlockType(['uid' => StringHelper::UUID(), 'name' => 'Card', 'handle' => 'card' . $suffix]);
+    $type->setFieldLayout($layout);
+    expect(Vizy::$plugin->getBlockTypes()->saveBlockType($type))->toBeTrue();
+    $type = Vizy::$plugin->getBlockTypes()->getBlockTypeByUid($type->uid);
+    [$headingElement, $imageElement] = $type->getFieldLayout()?->getCustomFieldElements() ?? [null, null];
+
+    $document = VizyDocument::fromCanonicalData([
+        'type' => 'doc',
+        'attrs' => ['schemaVersion' => 2],
+        'content' => [
+            blockNode('block-a', $type, [
+                (string)$headingElement->uid => 'Card heading',
+                (string)$imageElement->uid => [$asset->id],
+            ]),
+        ],
+    ]);
+
+    $summary = Vizy::$plugin->getBlockSummaries()->getSummary($document->blocks()[0]);
+    expect($summary->title)->toBe('Card heading')
+        ->and($summary->media?->reference)->toBe($asset->id)
+        ->and($summary->media?->alt)->toBe('Summary image')
+        ->and($summary->media?->thumbnailUrl)->toBeString()->not->toBe('');
 });
 
 it('batches summaries for large documents without creating Block Elements', function(int $count) {
