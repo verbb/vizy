@@ -12,7 +12,9 @@ use verbb\vizy\marks\Link;
 
 use Craft;
 use craft\elements\Asset;
+use craft\errors\ImageTransformException;
 use craft\helpers\ArrayHelper;
+use craft\helpers\ImageTransforms as ImageTransformsHelper;
 
 class Image extends Node
 {
@@ -75,6 +77,17 @@ class Image extends Node
         // Honor a persisted handle for legacy content; otherwise the field's
         // default transform lets private originals render from a public transform FS.
         $transform = $attrs['transform'] ?? null;
+
+        // A legacy handle outlives its transform when an admin renames or deletes
+        // it, and Craft throws for an unknown handle. Treat it like no per-image
+        // transform, so the image falls back to the field default or original URL.
+        if (is_string($transform) && $transform !== '') {
+            try {
+                ImageTransformsHelper::normalizeTransform($transform);
+            } catch (ImageTransformException) {
+                $transform = null;
+            }
+        }
 
         if ((!is_string($transform) || $transform === '') && ($field = $ctx->fieldOrNull())) {
             $transform = FieldImageOptions::defaultTransformHandle($field);

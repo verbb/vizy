@@ -169,3 +169,57 @@ it('names the field, element and site when an owner’s Vizy 3 image has no matc
         "Preserved Vizy 3 image at content.0 in the “{$field->handle}” field of element {$entry->id} on site {$entry->siteId} as unsupported content, because no Asset matches its src “{$src}”.",
     ]);
 });
+
+it('renders converted images whose transform handle no longer exists from the original or field default URL', function() {
+    AssetSpikeFixture::ensureAdminUser();
+    $suffix = craft\helpers\StringHelper::randomString(8);
+    $root = sys_get_temp_dir() . '/vizy-migration-images/' . $suffix;
+    craft\helpers\FileHelper::createDirectory($root);
+    $fs = new craft\fs\Local([
+        'name' => 'Migration photos ' . $suffix, 'handle' => 'migrationPhotos' . $suffix,
+        'path' => $root, 'hasUrls' => true, 'url' => 'https://example.test/photos/',
+    ]);
+    expect(Craft::$app->getFs()->saveFilesystem($fs))->toBeTrue();
+    $volume = new craft\models\Volume([
+        'name' => 'Migration photos ' . $suffix, 'handle' => 'migrationPhotos' . $suffix,
+        'fsHandle' => $fs->handle,
+    ]);
+    expect(Craft::$app->getVolumes()->saveVolume($volume))->toBeTrue();
+
+    // Craft only resolves transform handles for manipulable images, so this needs a real PNG.
+    $temp = Craft::$app->getPath()->getTempPath() . '/' . $suffix . '.png';
+    file_put_contents($temp, base64_decode('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII='));
+    $asset = new craft\elements\Asset([
+        'tempFilePath' => $temp, 'filename' => $suffix . '.png',
+        'newFolderId' => Craft::$app->getAssets()->getRootFolderByVolumeId($volume->id)->id,
+        'scenario' => craft\elements\Asset::SCENARIO_CREATE,
+    ]);
+    expect(Craft::$app->getElements()->saveElement($asset))->toBeTrue();
+
+    $transforms = Craft::$app->getImageTransforms();
+    $kept = new craft\models\ImageTransform(['name' => 'Kept ' . $suffix, 'handle' => 'kept' . $suffix, 'width' => 10, 'height' => 10]);
+    $fallback = new craft\models\ImageTransform(['name' => 'Fallback ' . $suffix, 'handle' => 'fallback' . $suffix, 'width' => 20, 'height' => 20]);
+    expect($transforms->saveTransform($kept))->toBeTrue()
+        ->and($transforms->saveTransform($fallback))->toBeTrue();
+    $fallback = $transforms->getTransformByHandle($fallback->handle);
+
+    $convert = static fn(string $handle) => (new Vizy3DocumentAdapter())->convert([['type' => 'image', 'attrs' => [
+        'src' => '#asset:' . $asset->id . ':transform:' . $handle,
+    ]]], []);
+    $resolve = static fn(array $converted, ?verbb\vizy\fields\VizyField $field = null) => verbb\vizy\nodes\Image::resolveAttrs(
+        $converted['content'][0]['attrs'],
+        new verbb\vizy\base\RenderContext(field: $field, siteId: (int)$asset->siteId),
+    )['src'];
+
+    // A transform that still exists keeps applying.
+    expect($resolve($convert($kept->handle)))->toBe($asset->getUrl($kept->handle))
+        ->not->toBe($asset->getUrl());
+
+    // A renamed or deleted transform renders like an image without one: the field
+    // default transform when there is one, otherwise the original URL.
+    $retired = $convert('retired' . $suffix);
+    expect($resolve($retired))->toBe($asset->getUrl())
+        ->and($resolve($retired, new verbb\vizy\fields\VizyField(['defaultTransform' => $fallback->uid])))
+        ->toBe($asset->getUrl($fallback->handle))
+        ->and((string)(new DocumentParser())->parse($retired)->render())->toContain('<img');
+});
