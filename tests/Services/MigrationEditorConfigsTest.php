@@ -5,6 +5,7 @@ declare(strict_types=1);
 use craft\helpers\FileHelper;
 use craft\helpers\Json;
 use craft\helpers\StringHelper;
+use craft\models\ReadOnlyProjectConfigData;
 use verbb\vizy\legacy\ManualEditorConfigMigrator;
 use verbb\vizy\services\EditorConfigs;
 use verbb\vizy\Vizy;
@@ -127,5 +128,66 @@ it('requires admin changes only when a manual config needs to be created', funct
         $general->allowAdminChanges = true;
         if ($id !== null) Vizy::$plugin->getEditorConfigs()->removeConfig($id);
         $general->allowAdminChanges = $before;
+    }
+});
+
+it('reuses a manual config from the incoming YAML when a deploy has admin changes off', function() {
+    $general = Craft::$app->getConfig()->getGeneral();
+    $projectConfig = Craft::$app->getProjectConfig();
+    $configs = Vizy::$plugin->getEditorConfigs();
+    $before = [$general->allowAdminChanges, $projectConfig->readOnly];
+    $external = new ReflectionProperty($projectConfig, '_externalConfig');
+    $migrator = new ManualEditorConfigMigrator();
+    $settings = ['configSelectionMode' => 'manual', 'manualConfig' => Json::encode([
+        'label' => 'Deployed migration ' . StringHelper::randomString(8),
+        'buttons' => ['underline', 'h5'],
+    ])];
+    $path = EditorConfigs::PROJECT_CONFIG_PATH;
+    $id = null;
+    try {
+        // Mint where admin changes are allowed, as the dev upgrade does, then keep only the
+        // committed YAML copy so the loaded config matches a production database.
+        $minted = $migrator->plan($settings, StringHelper::UUID());
+        $migrator->applyMints([['editorConfigMint' => $minted['mint']]]);
+        $id = $minted['editorConfig'];
+        $yamlValue = $projectConfig->get("{$path}.{$id}");
+        $configs->removeConfig($id);
+        $incoming = $projectConfig->get();
+        $incoming['plugins']['vizy']['editorConfigs'][$id] = $yamlValue;
+        $external->setValue($projectConfig, new ReadOnlyProjectConfigData($incoming, $projectConfig));
+        expect($configs->getConfig($id))->toBeNull()
+            ->and($projectConfig->get("{$path}.{$id}", true))->toBe($yamlValue);
+
+        // Project Config stays read-only unless `craft up` lifts it for pending YAML.
+        $general->allowAdminChanges = false;
+        $projectConfig->readOnly = true;
+        $readOnly = $migrator->plan($settings, StringHelper::UUID());
+        expect($readOnly['diagnostics'][0]['code'])->toBe('manualEditorConfigRequiresAdminChanges')
+            ->and($readOnly['mint'])->toBeNull();
+
+        $projectConfig->readOnly = false;
+        $deployed = $migrator->plan($settings, StringHelper::UUID());
+        expect($deployed['diagnostics'])->toBe([])
+            ->and($deployed['editorConfig'])->toBe($id)
+            ->and($deployed['mint']['id'] ?? null)->toBe($id);
+
+        // The write matches the YAML, so applying it afterwards has nothing to change.
+        $migrator->applyMints([['editorConfigMint' => $deployed['mint']]]);
+        expect($projectConfig->get("{$path}.{$id}"))->toBe($yamlValue)
+            ->and($configs->getConfig($id))->not->toBeNull();
+
+        // A config the YAML doesn't hold still has to be created where admin changes are allowed.
+        $other = $migrator->plan(['configSelectionMode' => 'manual', 'manualConfig' => Json::encode([
+            'label' => 'Undeployed migration ' . StringHelper::randomString(8),
+            'buttons' => ['underline', 'h5'],
+        ])], StringHelper::UUID());
+        expect($other['diagnostics'][0]['code'])->toBe('manualEditorConfigRequiresAdminChanges')
+            ->and($other['mint'])->toBeNull();
+    } finally {
+        $external->setValue($projectConfig, null);
+        $projectConfig->readOnly = false;
+        $general->allowAdminChanges = true;
+        if ($id !== null && $configs->getConfig($id) !== null) $configs->removeConfig($id);
+        [$general->allowAdminChanges, $projectConfig->readOnly] = $before;
     }
 });

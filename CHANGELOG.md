@@ -7,6 +7,7 @@
 - Fixed pages failing to render with “Invalid transform handle” when content upgraded from Vizy 3 has an image using an image transform that has since been renamed or deleted. These images now use the field’s default transform or the original image.
 - Fixed entries failing to restore from the trash when a Vizy block with a Matrix field had searchable fields, including when the Matrix field itself is searchable.
 - Fixed field and tab conditions using entry or element rules not applying to blocks inside a nested Vizy field when saving, which let conditionally shown required fields be left blank.
+- Fixed Vizy 3 upgrades failing on environments with `allowAdminChanges` disabled when a field used a custom editor config, even though the upgrade had already created that config in the project config files being deployed.
 
 ## 4.0.7 - 2026-11-24
 

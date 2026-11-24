@@ -4,6 +4,7 @@ namespace verbb\vizy\legacy;
 use verbb\vizy\Vizy;
 use verbb\vizy\deprecations\VizyToolbarTokenDeprecations;
 use verbb\vizy\helpers\EditorConfigPresentation;
+use verbb\vizy\services\EditorConfigs;
 
 use Craft;
 use craft\helpers\Json;
@@ -116,7 +117,13 @@ final class ManualEditorConfigMigrator
                 ];
             }
 
-            if (!Craft::$app->getConfig()->getGeneral()->allowAdminChanges) {
+            // A deploy carries the config already minted where admin changes were allowed, and
+            // `craft up` lifts read-only mode while that YAML is pending. Writing the same entry
+            // then matches what Craft applies next, so only a config the YAML lacks needs them.
+            $incomingId = $this->_findIncomingId($fingerprint);
+            $readOnly = Craft::$app->getProjectConfig()->readOnly;
+
+            if ($readOnly || ($incomingId === null && !Craft::$app->getConfig()->getGeneral()->allowAdminChanges)) {
                 return $this->_fail(
                     $fieldUid,
                     'manualEditorConfigRequiresAdminChanges',
@@ -125,7 +132,7 @@ final class ManualEditorConfigMigrator
                 );
             }
 
-            $id = $this->_mintId($fingerprint);
+            $id = $incomingId ?? $this->_mintId($fingerprint);
 
             return [
                 'editorConfig' => $id,
@@ -369,6 +376,37 @@ final class ManualEditorConfigMigrator
         foreach ($configs->getAllConfigs() as $id => $config) {
             if (hash_equals($fingerprint, $configs->fingerprintAuthorable($configs->authorablePayload($config)))) {
                 return $id;
+            }
+        }
+
+        return null;
+    }
+
+    private function _findIncomingId(string $fingerprint): ?string
+    {
+        $configs = Vizy::$plugin->getEditorConfigs();
+        $incoming = Craft::$app->getProjectConfig()->get(EditorConfigs::PROJECT_CONFIG_PATH, true);
+
+        if (!is_array($incoming)) {
+            return null;
+        }
+
+        // Every environment mints the same ID, so prefer it over another entry with equal content.
+        $preferred = 'imported-' . substr($fingerprint, 0, 12);
+        uksort($incoming, static fn($a, $b) => ($b === $preferred) <=> ($a === $preferred));
+
+        foreach ($incoming as $id => $config) {
+            if (!is_string($id) || !is_array($config)) {
+                continue;
+            }
+
+            try {
+                if (hash_equals($fingerprint, $configs->fingerprintAuthorable($config))) {
+                    return $id;
+                }
+            } catch (Throwable) {
+                // An entry this install can't load can't be the config this field needs.
+                continue;
             }
         }
 
