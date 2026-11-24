@@ -60,6 +60,7 @@ final class MigrationsController extends Controller
 
         if (!$owner || !$field instanceof VizyField) {
             $this->stderr(Craft::t('vizy', 'Exact owner/site or Vizy field placement was not found. For repeated fields, pass --ownerPlacementUid.') . PHP_EOL, Console::FG_RED);
+
             return ExitCode::DATAERR;
         }
 
@@ -67,12 +68,15 @@ final class MigrationsController extends Controller
 
         if (!is_file($path) || !is_readable($path)) {
             $this->stderr(Craft::t('vizy', 'Mapping file is not readable: {path}', ['path' => $path]) . PHP_EOL, Console::FG_RED);
+
             return ExitCode::NOINPUT;
         }
+
         $mapping = Json::decode((string)file_get_contents($path));
 
         if (!is_array($mapping)) {
             $this->stderr(Craft::t('vizy', 'Mapping file must contain a JSON object.') . PHP_EOL, Console::FG_RED);
+
             return ExitCode::DATAERR;
         }
 
@@ -80,6 +84,7 @@ final class MigrationsController extends Controller
             if (!$this->_confirmWrite()) {
                 return ExitCode::USAGE;
             }
+
             $this->stdout(Craft::t('vizy', 'Owner migration: applying writes for element {id} / field {field}.', [
                 'id' => $elementId,
                 'field' => $field->handle,
@@ -100,6 +105,7 @@ final class MigrationsController extends Controller
             ? Console::FG_GREEN
             : Console::FG_YELLOW);
         $this->stdout(Json::encode($result, JSON_PRETTY_PRINT) . PHP_EOL);
+
         return in_array($result['state'], $this->apply ? ['verified'] : ['ready', 'verified', 'analyzed'], true)
             ? ExitCode::OK
             : ExitCode::UNSPECIFIED_ERROR;
@@ -113,8 +119,10 @@ final class MigrationsController extends Controller
         foreach ($rows as &$row) {
             $row['nextStep'] = PromotionOperatorMessages::nextStepForOwner($row, true);
         }
+
         unset($row);
         $this->stdout(Json::encode($rows, JSON_PRETTY_PRINT) . PHP_EOL);
+
         return ExitCode::OK;
     }
 
@@ -131,6 +139,7 @@ final class MigrationsController extends Controller
         $result['nextStep'] = PromotionOperatorMessages::nextStepForOwner($result, true);
         $this->_printOperatorLine($result['nextStep'], $result['state'] === 'verified' ? Console::FG_GREEN : Console::FG_YELLOW);
         $this->stdout(Json::encode($result, JSON_PRETTY_PRINT) . PHP_EOL);
+
         return $result['state'] === 'verified' ? ExitCode::OK : ExitCode::UNSPECIFIED_ERROR;
     }
 
@@ -151,6 +160,7 @@ final class MigrationsController extends Controller
                 'Multiple incomplete Vizy 3 upgrades need attention. Inspect them with: php craft vizy/migrations/upgrade-status',
             ) . PHP_EOL, Console::FG_RED);
             $this->stdout(Json::encode($incomplete, JSON_PRETTY_PRINT) . PHP_EOL);
+
             return ExitCode::DATAERR;
         }
 
@@ -164,16 +174,19 @@ final class MigrationsController extends Controller
             if ($this->dryRun) {
                 $this->_printOperatorLine((string)$run['nextStep'], Console::FG_YELLOW);
                 $this->stdout(Json::encode($run, JSON_PRETTY_PRINT) . PHP_EOL);
+
                 return ExitCode::OK;
             }
 
             if (!$this->_confirmWrite()) {
                 return ExitCode::USAGE;
             }
+
             $result = $orchestrator->resume((string)$run['runUid']);
             $this->_summarizePromotionRun($result);
             $this->_printOperatorLine((string)$result['nextStep'], ($result['status'] ?? '') === 'complete' ? Console::FG_GREEN : Console::FG_YELLOW);
             $this->stdout(Json::encode($result, JSON_PRETTY_PRINT) . PHP_EOL);
+
             return ($result['status'] ?? '') === 'complete' ? ExitCode::OK : ExitCode::UNSPECIFIED_ERROR;
         }
 
@@ -185,11 +198,13 @@ final class MigrationsController extends Controller
             $plan['nextStep'] = PromotionOperatorMessages::nextStepForAnalyze($plan);
             $this->_printOperatorLine($plan['nextStep'], Console::FG_YELLOW);
             $this->stdout(Json::encode($plan, JSON_PRETTY_PRINT) . PHP_EOL);
+
             return ExitCode::DATAERR;
         }
 
         if (($plan['fields'] ?? []) === []) {
             $this->_printOperatorLine(Craft::t('vizy', 'No Vizy 3 fields need upgrading.'), Console::FG_GREEN);
+
             return ExitCode::OK;
         }
 
@@ -200,9 +215,10 @@ final class MigrationsController extends Controller
         $this->stdout($readyMessage . PHP_EOL, Console::FG_YELLOW);
 
         if ($this->dryRun) {
-            $plan['nextStep'] = Craft::t('vizy', 'Dry run complete. Re-run without --dry-run to apply the Vizy 3 upgrade.');
-            $this->_printOperatorLine($plan['nextStep'], Console::FG_GREEN);
+            // Print the plan exactly as hashed, so it can be saved for upgrade-dry-run and upgrade-apply.
+            $this->_printOperatorLine(Craft::t('vizy', 'Dry run complete. Re-run without --dry-run to apply the Vizy 3 upgrade.'), Console::FG_GREEN);
             $this->stdout(Json::encode($plan, JSON_PRETTY_PRINT) . PHP_EOL);
+
             return ExitCode::OK;
         }
 
@@ -214,6 +230,7 @@ final class MigrationsController extends Controller
         $this->_summarizePromotionRun($result);
         $this->_printOperatorLine((string)$result['nextStep'], ($result['status'] ?? '') === 'complete' ? Console::FG_GREEN : Console::FG_YELLOW);
         $this->stdout(Json::encode($result, JSON_PRETTY_PRINT) . PHP_EOL);
+
         return ($result['status'] ?? '') === 'complete' ? ExitCode::OK : ExitCode::UNSPECIFIED_ERROR;
     }
 
@@ -225,10 +242,13 @@ final class MigrationsController extends Controller
         $handles = $targetHandlesFile ? $this->_readJsonObject($targetHandlesFile) : [];
         $this->stdout(Craft::t('vizy', 'Analyzing the Vizy 3 → 4 upgrade (no writes)…') . PHP_EOL, Console::FG_CYAN);
         $result = Vizy::$plugin->getPromotionOrchestrator()->analyze($handles);
-        $result['nextStep'] = PromotionOperatorMessages::nextStepForAnalyze($result);
+        // The printed JSON is the plan that upgrade-dry-run and upgrade-apply check
+        // against planHash, so the next step is printed above it rather than added to it.
+        $nextStep = PromotionOperatorMessages::nextStepForAnalyze($result);
         $this->_summarizeAnalyze($result);
-        $this->_printOperatorLine($result['nextStep'], ($result['status'] ?? '') === 'ready' ? Console::FG_GREEN : Console::FG_YELLOW);
+        $this->_printOperatorLine($nextStep, ($result['status'] ?? '') === 'ready' ? Console::FG_GREEN : Console::FG_YELLOW);
         $this->stdout(Json::encode($result, JSON_PRETTY_PRINT) . PHP_EOL);
+
         return $result['status'] === 'ready' ? ExitCode::OK : ExitCode::DATAERR;
     }
 
@@ -249,6 +269,7 @@ final class MigrationsController extends Controller
         );
         $this->_printOperatorLine($result['nextStep'], Console::FG_GREEN);
         $this->stdout(Json::encode($result, JSON_PRETTY_PRINT) . PHP_EOL);
+
         return ExitCode::OK;
     }
 
@@ -270,6 +291,7 @@ final class MigrationsController extends Controller
         $this->_summarizePromotionRun($result);
         $this->_printOperatorLine((string)$result['nextStep'], ($result['status'] ?? '') === 'complete' ? Console::FG_GREEN : Console::FG_YELLOW);
         $this->stdout(Json::encode($result, JSON_PRETTY_PRINT) . PHP_EOL);
+
         return $result['status'] === 'complete' ? ExitCode::OK : ExitCode::UNSPECIFIED_ERROR;
     }
 
@@ -292,7 +314,9 @@ final class MigrationsController extends Controller
                 $this->stdout('    → ' . $row['nextStep'] . PHP_EOL);
             }
         }
+
         $this->stdout(Json::encode($rows, JSON_PRETTY_PRINT) . PHP_EOL);
+
         return ExitCode::OK;
     }
 
@@ -310,6 +334,7 @@ final class MigrationsController extends Controller
         $this->_summarizePromotionRun($result);
         $this->_printOperatorLine((string)$result['nextStep'], ($result['status'] ?? '') === 'complete' ? Console::FG_GREEN : Console::FG_YELLOW);
         $this->stdout(Json::encode($result, JSON_PRETTY_PRINT) . PHP_EOL);
+
         return $result['status'] === 'complete' ? ExitCode::OK : ExitCode::UNSPECIFIED_ERROR;
     }
 
@@ -331,6 +356,7 @@ final class MigrationsController extends Controller
         }
 
         $this->stderr(PromotionOperatorMessages::forceRequiredMessage() . PHP_EOL, Console::FG_RED);
+
         return false;
     }
 
@@ -374,11 +400,13 @@ final class MigrationsController extends Controller
         if (!is_file($path) || !is_readable($path)) {
             throw new \RuntimeException(Craft::t('vizy', 'JSON file is not readable: {path}', ['path' => $path]));
         }
+
         $value = Json::decode((string)file_get_contents($path));
 
         if (!is_array($value)) {
             throw new \RuntimeException(Craft::t('vizy', 'JSON file must contain an object: {path}', ['path' => $path]));
         }
+
         return $value;
     }
 }
