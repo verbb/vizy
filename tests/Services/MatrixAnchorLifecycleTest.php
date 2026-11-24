@@ -8,6 +8,7 @@ use craft\elements\Entry;
 use craft\fieldlayoutelements\CustomField;
 use craft\fields\Matrix;
 use craft\fields\PlainText;
+use craft\helpers\Json;
 use craft\helpers\ProjectConfig;
 use craft\helpers\StringHelper;
 use craft\models\EntryType;
@@ -18,13 +19,14 @@ use craft\models\FieldLayoutTab;
 use Tests\Support\Fixtures\VizyFixtureFactory;
 use verbb\vizy\elements\Block;
 use verbb\vizy\elements\MatrixAnchor;
+use verbb\vizy\fields\VizyField;
 use verbb\vizy\models\BlockType;
 use verbb\vizy\services\BlockTypes;
 use verbb\vizy\Vizy;
 use yii\base\ModelEvent;
 use yii\base\Event;
 
-function matrixAnchorLifecycleFixture(bool $categoryOwner = false): array
+function matrixAnchorLifecycleFixture(bool $categoryOwner = false, bool $searchable = false, bool $searchableMatrix = false): array
 {
     $suffix = StringHelper::randomString(8);
     $plain = new PlainText(['name' => 'Row text', 'handle' => 'lifecycleText' . $suffix]);
@@ -37,20 +39,36 @@ function matrixAnchorLifecycleFixture(bool $categoryOwner = false): array
     ])]);
     $rowType->setFieldLayout($rowLayout);
     expect(Craft::$app->getEntries()->saveEntryType($rowType))->toBeTrue();
-    $matrix = new Matrix(['name' => 'Lifecycle rows', 'handle' => 'lifecycleRows' . $suffix]);
+    $matrix = new Matrix(['name' => 'Lifecycle rows', 'handle' => 'lifecycleRows' . $suffix, 'searchable' => $searchableMatrix]);
     $matrix->setEntryTypes([$rowType]);
     expect(Craft::$app->getFields()->saveField($matrix))->toBeTrue();
     CustomFieldBehavior::$fieldHandles[$matrix->handle] = true;
     $layout = new FieldLayout(['uid' => StringHelper::UUID(), 'type' => Block::class]);
     $placement = new CustomField($matrix);
     $placement->uid = StringHelper::UUID();
-    $layout->setTabs([new FieldLayoutTab(['layout' => $layout, 'name' => 'Content', 'elements' => [$placement]])]);
+    $placements = [$placement];
+    $fieldSlots = [];
+    if ($searchable) {
+        // Craft indexes the Block's searchable fields while it restores the owner.
+        $blockText = new PlainText(['name' => 'Block text', 'handle' => 'lifecycleBlockText' . $suffix, 'searchable' => true]);
+        expect(Craft::$app->getFields()->saveField($blockText))->toBeTrue();
+        CustomFieldBehavior::$fieldHandles[$blockText->handle] = true;
+        $textPlacement = new CustomField($blockText);
+        $textPlacement->uid = StringHelper::UUID();
+        $placements[] = $textPlacement;
+        $fieldSlots[$textPlacement->uid] = 'Lifecyclesearchtext';
+    }
+    $layout->setTabs([new FieldLayoutTab(['layout' => $layout, 'name' => 'Content', 'elements' => $placements])]);
     $type = new BlockType(['uid' => StringHelper::UUID(), 'name' => 'Lifecycle block', 'handle' => 'lifecycleBlock' . $suffix]);
     $type->setFieldLayout($layout);
     // Grandfather a layout that was already present before the V3 upgrade.
     Craft::$app->getProjectConfig()->set(BlockTypes::PROJECT_CONFIG_PATH . '.' . $type->uid, ProjectConfig::packAssociativeArrays($type->toConfig()));
     $field = VizyFixtureFactory::vizyField();
     $field->richTextOnly = false;
+    if ($searchable || $searchableMatrix) {
+        // The shared fixture field; the test that asks for this turns it off again.
+        $field->searchable = true;
+    }
     $field->blockTypePickerGroups = [['name' => 'Content', 'blockTypeUids' => [$type->uid]]];
     expect(Craft::$app->getFields()->saveField($field))->toBeTrue();
     Craft::$app->getFields()->refreshFields();
@@ -77,6 +95,7 @@ function matrixAnchorLifecycleFixture(bool $categoryOwner = false): array
         if ($element->getField()->uid === $field->uid) {
             $element->getField()->richTextOnly = $field->richTextOnly;
             $element->getField()->blockTypePickerGroups = $field->blockTypePickerGroups;
+            $element->getField()->searchable = $field->searchable;
         }
     }
     $blockUid = StringHelper::UUID();
@@ -89,7 +108,7 @@ function matrixAnchorLifecycleFixture(bool $categoryOwner = false): array
         'type' => 'doc', 'attrs' => ['schemaVersion' => 2], 'content' => [[
             'type' => 'vizyBlock', 'attrs' => [
                 'blockUid' => $blockUid, 'blockTypeUid' => $type->uid, 'enabled' => true,
-                'matrixAnchorUid' => $anchor->uid, 'fieldSlots' => [],
+                'matrixAnchorUid' => $anchor->uid, 'fieldSlots' => $fieldSlots,
             ],
         ]],
     ]);
@@ -112,6 +131,176 @@ it('restores Matrix block rows with a trashed owner', function() {
         ->and($rowVisibleInTrash)->toBeFalse()
         ->and($rows[0]->id)->toBe($row->id)
         ->and($rows[0]->getFieldValue($plain->handle))->toBe('Matrix survives restoration');
+});
+
+it('restores a trashed owner whose Block has searchable fields', function() {
+    $fixture = matrixAnchorLifecycleFixture(searchable: true);
+    extract($fixture);
+    $elements = Craft::$app->getElements();
+    try {
+        expect($elements->deleteElement($owner))->toBeTrue();
+
+        // The owner's anchor stays in the trash until Craft's after-restore event, after indexing.
+        $trashed = Entry::find()->id($owner->id)->trashed()->status(null)->one();
+        $document = $trashed->getFieldValue($field->handle);
+        expect($document->blockElement($document->findBlock($blockUid))->id)->toBe($anchor->id)
+            ->and($elements->restoreElement($trashed))->toBeTrue();
+
+        $keywords = (new \craft\db\Query())
+            ->select(['keywords'])
+            ->from(\craft\db\Table::SEARCHINDEX)
+            ->where(['elementId' => $owner->id, 'siteId' => $owner->siteId, 'fieldId' => $field->id])
+            ->scalar();
+        $restored = Vizy::$plugin->getAnchors()->getAnchor($owner, $field, $blockUid, $anchor->uid);
+        expect($keywords)->toContain('lifecyclesearchtext')
+            ->and($restored)->toBeInstanceOf(MatrixAnchor::class);
+        $restored->setFieldLayout($layout);
+        expect(array_map(static fn(Entry $row) => $row->id, $restored->getFieldValue($matrix->handle)->all()))->toBe([$row->id]);
+
+        // A live owner still refuses an anchor that is only in the trash.
+        \craft\helpers\Db::update(\craft\db\Table::ELEMENTS, [
+            'dateDeleted' => \craft\helpers\Db::prepareDateForDb(new DateTime()),
+        ], ['id' => $anchor->id]);
+        $live = Entry::find()->id($owner->id)->status(null)->one();
+        $liveDocument = $live->getFieldValue($field->handle);
+        expect(fn() => $liveDocument->blockElement($liveDocument->findBlock($blockUid)))
+            ->toThrow(LogicException::class, 'could not be resolved');
+    } finally {
+        $field->searchable = false;
+        Craft::$app->getFields()->saveField($field);
+
+        // The fixture also turned it on for the owner layout's copies of the shared field.
+        foreach ($owner->getFieldLayout()->getCustomFieldElements() as $element) {
+            if ($element->getField()->uid === $field->uid) {
+                $element->getField()->searchable = false;
+            }
+        }
+    }
+});
+
+it('restores a trashed owner whose Block’s only searchable field is a Matrix field', function() {
+    $fixture = matrixAnchorLifecycleFixture(searchableMatrix: true);
+    extract($fixture);
+    $elements = Craft::$app->getElements();
+    try {
+        expect($elements->deleteElement($owner))->toBeTrue();
+
+        // Indexing the Matrix field during the restore resolves the Block's still-trashed anchor.
+        $trashed = Entry::find()->id($owner->id)->trashed()->status(null)->one();
+        expect($elements->restoreElement($trashed))->toBeTrue();
+
+        $restored = Vizy::$plugin->getAnchors()->getAnchor($owner, $field, $blockUid, $anchor->uid);
+        expect($restored)->toBeInstanceOf(MatrixAnchor::class);
+        $restored->setFieldLayout($layout);
+        expect(array_map(static fn(Entry $row) => $row->id, $restored->getFieldValue($matrix->handle)->all()))->toBe([$row->id]);
+    } finally {
+        $field->searchable = false;
+        Craft::$app->getFields()->saveField($field);
+
+        foreach ($owner->getFieldLayout()->getCustomFieldElements() as $element) {
+            if ($element->getField()->uid === $field->uid) {
+                $element->getField()->searchable = false;
+            }
+        }
+    }
+});
+
+it('restores a trashed owner whose Hosted Vizy Block has searchable fields', function() {
+    $suffix = StringHelper::randomString(8);
+    $fields = Craft::$app->getFields();
+    $blockLayout = static function(array $elements): FieldLayout {
+        $layout = new FieldLayout(['uid' => StringHelper::UUID(), 'type' => Block::class]);
+        $layout->setTabs([new FieldLayoutTab(['layout' => $layout, 'name' => 'Content', 'elements' => $elements])]);
+
+        return $layout;
+    };
+    $plain = new PlainText(['name' => 'Row text', 'handle' => 'hostedRowText' . $suffix]);
+    // Craft indexes the nested Block's searchable fields while it restores the owner.
+    $text = new PlainText(['name' => 'Block text', 'handle' => 'hostedBlockText' . $suffix, 'searchable' => true]);
+    expect($fields->saveField($plain))->toBeTrue()
+        ->and($fields->saveField($text))->toBeTrue();
+    $rowType = new EntryType(['name' => 'Hosted row', 'handle' => 'hostedRow' . $suffix]);
+    $rowLayout = new FieldLayout(['type' => Entry::class]);
+    $rowLayout->setTabs([new FieldLayoutTab(['layout' => $rowLayout, 'name' => 'Content', 'elements' => [new CustomField($plain)]])]);
+    $rowType->setFieldLayout($rowLayout);
+    expect(Craft::$app->getEntries()->saveEntryType($rowType))->toBeTrue();
+    $matrix = new Matrix(['name' => 'Hosted rows', 'handle' => 'hostedRows' . $suffix]);
+    $matrix->setEntryTypes([$rowType]);
+    expect($fields->saveField($matrix))->toBeTrue();
+    $matrixPlacement = new CustomField($matrix);
+    $matrixPlacement->uid = StringHelper::UUID();
+    $textPlacement = new CustomField($text);
+    $textPlacement->uid = StringHelper::UUID();
+    $innerType = new BlockType(['uid' => StringHelper::UUID(), 'name' => 'Hosted card', 'handle' => 'hostedCard' . $suffix]);
+    $innerType->setFieldLayout($blockLayout([$matrixPlacement, $textPlacement]));
+    expect(Vizy::$plugin->getBlockTypes()->saveBlockType($innerType))->toBeTrue();
+    $hosted = new VizyField([
+        'name' => 'Hosted body', 'handle' => 'hostedBody' . $suffix, 'editorConfig' => 'standard',
+        'rootContentType' => VizyField::ROOT_CONTENT_BLOCKS, 'searchable' => true,
+        'blockTypePickerGroups' => [['name' => 'Content', 'blockTypeUids' => [$innerType->uid]]],
+    ]);
+    expect($fields->saveField($hosted))->toBeTrue();
+    $hostedPlacement = new CustomField($hosted);
+    $hostedPlacement->uid = StringHelper::UUID();
+    $hostType = new BlockType(['uid' => StringHelper::UUID(), 'name' => 'Host', 'handle' => 'hostedHost' . $suffix]);
+    $hostType->setFieldLayout($blockLayout([$hostedPlacement]));
+    expect(Vizy::$plugin->getBlockTypes()->saveBlockType($hostType))->toBeTrue();
+    $field = new VizyField([
+        'name' => 'Hosted article', 'handle' => 'hostedArticle' . $suffix, 'editorConfig' => 'standard',
+        'rootContentType' => VizyField::ROOT_CONTENT_BLOCKS, 'searchable' => true,
+        'blockTypePickerGroups' => [['name' => 'Content', 'blockTypeUids' => [$hostType->uid]]],
+    ]);
+    expect($fields->saveField($field))->toBeTrue();
+    $fields->refreshFields();
+
+    $site = Craft::$app->getSites()->getPrimarySite();
+    $rowKey = StringHelper::UUID();
+    $owner = VizyFixtureFactory::entryOnSite(VizyFixtureFactory::multisiteSection($field, 1, [$site]), $field, $site, 'Hosted restore ' . $suffix, Json::encode([
+        'type' => 'doc', 'attrs' => ['schemaVersion' => 2], 'content' => [[
+            'type' => 'vizyBlock', 'attrs' => [
+                'blockUid' => StringHelper::UUID(), 'blockTypeUid' => $hostType->uid, 'enabled' => true,
+                'fieldSlots' => [$hostedPlacement->uid => ['type' => 'doc', 'attrs' => ['schemaVersion' => 2], 'content' => [[
+                    'type' => 'vizyBlock', 'attrs' => [
+                        'blockUid' => StringHelper::UUID(), 'blockTypeUid' => $innerType->uid, 'enabled' => true,
+                        'fieldSlots' => [
+                            $matrixPlacement->uid => [
+                                'entries' => [$rowKey => ['type' => $rowType->handle, 'fields' => [$plain->handle => 'Hosted row survives']]],
+                                'sortOrder' => [$rowKey],
+                            ],
+                            $textPlacement->uid => 'Hostedsearchtext',
+                        ],
+                    ],
+                ]]]],
+            ],
+        ]],
+    ]));
+    $nestedRows = static function(Entry $owner) use ($field, $hosted, $matrix, $plain): array {
+        $nested = $owner->getFieldValue($field->handle)->blocks()[0]->fieldValue($hosted->handle);
+        $block = $nested->blocks()[0];
+
+        return [
+            $nested->blockElement($block)->id,
+            array_map(static fn(Entry $row) => $row->getFieldValue($plain->handle), $block->fieldValue($matrix->handle)->all()),
+        ];
+    };
+    [$anchorId, $rows] = $nestedRows(Entry::find()->id($owner->id)->status(null)->one());
+    expect($anchorId)->toBeInt()
+        ->and($rows)->toBe(['Hosted row survives']);
+
+    $elements = Craft::$app->getElements();
+    expect($elements->deleteElement($owner))->toBeTrue()
+        ->and(MatrixAnchor::find()->id($anchorId)->status(null)->exists())->toBeFalse();
+
+    // Restore an owner loaded from the Trash, as the CP does.
+    expect($elements->restoreElement(Entry::find()->id($owner->id)->trashed()->status(null)->one()))->toBeTrue();
+
+    $keywords = (new \craft\db\Query())
+        ->select(['keywords'])
+        ->from(\craft\db\Table::SEARCHINDEX)
+        ->where(['elementId' => $owner->id, 'siteId' => $owner->siteId, 'fieldId' => $field->id])
+        ->scalar();
+    expect($keywords)->toContain('hostedsearchtext')
+        ->and($nestedRows(Entry::find()->id($owner->id)->status(null)->one()))->toBe([$anchorId, ['Hosted row survives']]);
 });
 
 it('keeps Matrix blocks intact when owner deletion is cancelled', function(bool $hardDelete) {

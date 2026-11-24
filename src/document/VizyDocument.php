@@ -10,6 +10,7 @@ use verbb\vizy\helpers\FieldSlotValues;
 use verbb\vizy\helpers\Matrix as MatrixHelper;
 use verbb\vizy\models\BlockType;
 
+use craft\base\Element;
 use craft\base\ElementInterface;
 
 use LogicException;
@@ -130,6 +131,7 @@ final class VizyDocument
             if (!is_array($node)) {
                 continue;
             }
+
             $path = "content.{$index}";
             $items[] = ($node['type'] ?? null) === 'vizyBlock'
                 ? $this->blockFromNode($node, $path)
@@ -241,6 +243,7 @@ final class VizyDocument
 
         // Matrix-in-Block: hydrate Matrix values from MatrixAnchor (not fieldSlots).
         $anchor = null;
+        $cacheable = true;
         $embedded = \verbb\vizy\helpers\EmbeddedOwners::scope($this->owner) !== null;
 
         if ($embedded && $block->matrixAnchorUid()) {
@@ -271,6 +274,22 @@ final class VizyDocument
                 if ($storedAnchor?->dateDeleted === null) {
                     $anchor = $storedAnchor;
                 }
+
+                if (!$anchor && $trashedOwner = $this->_trashedRootOwner()) {
+                    // A trashed owner's anchors are trashed with it, and Craft indexes a restored
+                    // owner before its after-restore event brings them back. Read the owned anchor
+                    // from the trash, so its rows index as empty like a native Matrix field's do
+                    // at that point. The restore changes it straight after, so it isn't cached.
+                    // Hosted Blocks' anchors belong to the root owner, not the Block hosting them.
+                    $anchor = $trashedOwner === $this->owner ? $storedAnchor : Vizy::$plugin->getAnchors()->getStoredReferencedAnchor(
+                        $trashedOwner,
+                        $this->field,
+                        $block->uid(),
+                        $block->matrixAnchorUid(),
+                        $this->anchorDocumentKey(),
+                    );
+                    $cacheable = false;
+                }
             }
 
             if ($anchor) {
@@ -293,6 +312,7 @@ final class VizyDocument
                 } elseif ($anchor) {
                     $element->setFieldValue($craftField->handle, MatrixHelper::nestedEntryQuery($craftField, $anchor));
                 }
+
                 continue;
             }
 
@@ -305,6 +325,11 @@ final class VizyDocument
         }
 
         $this->blockElementCreationCount++;
+
+        if (!$cacheable) {
+            return $element;
+        }
+
         return $this->blockElements[$block->uid()] = $element;
     }
 
@@ -332,5 +357,18 @@ final class VizyDocument
         private ?ElementInterface $owner = null,
         private ?VizyField $field = null,
     ) {
+    }
+
+    private function _trashedRootOwner(): ?ElementInterface
+    {
+        $owner = $this->owner;
+
+        // Nested Blocks belong to the element whose trash holds the anchors.
+        while ($owner instanceof BlockElement) {
+            $owner = $owner->getOwner();
+        }
+
+        // Craft's delete sets dateDeleted but not trashed on the element it was given.
+        return $owner instanceof Element && ($owner->trashed || $owner->dateDeleted !== null) ? $owner : null;
     }
 }
