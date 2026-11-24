@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 4.0.7 - 2026-11-24
 
 ### Added
 - Added an empty state to the Block Types settings page, which explains what Block Types are for and offers a “New Block Type” button before any exist.
