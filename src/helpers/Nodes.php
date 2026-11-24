@@ -175,7 +175,7 @@ class Nodes
             return implode(array_map(function($tagName) {
                 return Html::endTag($tagName);
             }, array_reverse($tagNames)));
-        }, $tags));
+        }, array_reverse($tags)));
     }
 
     public static function parseRefTags($value, $siteId): array|string|null
