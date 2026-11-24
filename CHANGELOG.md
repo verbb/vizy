@@ -14,6 +14,7 @@
 - Fixed Vizy 3 editor configs losing their Line Break and Clear Format buttons after upgrading, and Table menus showing only Insert table or every table operation instead of the configured ones. These Vizy 3 IDs are now also reported as deprecated.
 - Fixed plans saved from `vizy/migrations/upgrade-analyze` or `upgrade-from-v3 --dry-run` always failing `upgrade-dry-run` and `upgrade-apply` with a plan hash error.
 - Fixed wrapper tags added through the `modifyTag` event closing in the wrong order, such as `<div><p>…</div></p>` for the documented paragraph wrapper example. Check any listener that returned different tags for closing tags to work around this.
+- Fixed attributes added to a Table node, such as a class from the `modifyTag` event or a stored `class` or `id`, also being added to its `<tbody>`. ([#355](https://github.com/verbb/vizy/issues/355))
 - Fixed `getBlockSummaries()->getSummary()` and `getSummaries()` throwing an error for blocks with an asset selected in an Assets field.
 
 ## 4.0.7 - 2026-11-24

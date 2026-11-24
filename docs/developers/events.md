@@ -112,7 +112,7 @@ Event::on(Mark::class, Mark::EVENT_MODIFY_TAG, function(ModifyMarkTagEvent $even
 
 #### Node Tags
 
-On a node, `tag` is a list because some nodes emit more than one HTML tag. Code Block, for example, uses both `<pre>` and `<code>`.
+On a node, `tag` is a list of rows, and a row’s `tag` can name more than one HTML tag. Table, for example, receives one row whose `tag` is `['table', 'tbody']`. Attributes on that row are added to the `<table>` only. To add attributes to the `<tbody>`, replace the row with separate `table` and `tbody` rows.
 
 This example wraps every paragraph:
 
