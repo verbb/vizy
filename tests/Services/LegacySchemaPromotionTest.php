@@ -750,6 +750,95 @@ it('rejects stale promotion plans before any new stage is recorded', function() 
     ))->toThrow(RuntimeException::class, 'changed after analysis');
 });
 
+it('leaves native Vizy 4 fields without Block Type groups out of the upgrade plan', function() {
+    // Project Config drops the empty blockTypePickerGroups list of these fields.
+    $fieldsService = Craft::$app->getFields();
+    $projectConfig = Craft::$app->getProjectConfig();
+    $suffix = StringHelper::randomString(5);
+    $native = [
+        new VizyField(['name' => 'Summary', 'handle' => 'nativeSummary' . $suffix, 'richTextOnly' => true]),
+        new VizyField(['name' => 'Combined', 'handle' => 'nativeCombined' . $suffix]),
+        new VizyField(['name' => 'Blocks', 'handle' => 'nativeBlocks' . $suffix, 'rootContentType' => VizyField::ROOT_CONTENT_BLOCKS]),
+    ];
+    // A genuine Vizy 3 prose field also arrives without fieldData, and must still upgrade.
+    $legacy = legacyPromotionFixture('nativeLegacy' . $suffix, VizyField::MODE_RICH_TEXT);
+    unset($legacy['fields'][$legacy['fieldUid']]['settings']['fieldData']);
+
+    try {
+        foreach ($native as $field) {
+            expect($fieldsService->saveField($field))->toBeTrue(Json::encode($field->getErrors()))
+                ->and($projectConfig->get("fields.{$field->uid}.settings"))->not->toHaveKey('blockTypePickerGroups');
+        }
+
+        foreach ($legacy['fields'] as $uid => $config) {
+            $projectConfig->set("fields.{$uid}", $config);
+        }
+        $fieldsService->refreshFields();
+
+        $plan = Vizy::$plugin->getPromotionOrchestrator()->analyze();
+
+        foreach ($native as $field) {
+            expect($plan['fields'])->not->toHaveKey($field->uid);
+        }
+
+        expect($plan['fields'])->toHaveKey($legacy['fieldUid'])
+            ->and($plan['fields'][$legacy['fieldUid']]['canonicalFieldSettings']['rootContentType'])->toBe(VizyField::ROOT_CONTENT_RICH);
+    } finally {
+        foreach ($native as $field) {
+            if ($field->id) {
+                $fieldsService->deleteField($field);
+            }
+        }
+
+        foreach (array_keys($legacy['fields']) as $uid) {
+            $projectConfig->remove("fields.{$uid}");
+        }
+        $fieldsService->refreshFields();
+    }
+});
+
+it('upgrades Vizy 3 fields whose Project Config Vizy 4 rewrote before the upgrade', function() {
+    $fieldsService = Craft::$app->getFields();
+    $projectConfig = Craft::$app->getProjectConfig();
+    $fixture = legacyPromotionFixture('reshaped' . StringHelper::randomString(5));
+    $fieldUid = $fixture['fieldUid'];
+
+    try {
+        foreach ($fixture['fields'] as $uid => $config) {
+            $projectConfig->set("fields.{$uid}", $config);
+        }
+        $fieldsService->refreshFields();
+
+        // Craft's entrify-Matrix migration rewrites nested fields this way and leaves their database rows alone.
+        $muteEvents = $projectConfig->muteEvents;
+        $projectConfig->muteEvents = true;
+        $projectConfig->set("fields.{$fieldUid}", $fieldsService->createFieldConfig($fieldsService->getFieldByUid($fieldUid)));
+        $projectConfig->muteEvents = $muteEvents;
+
+        expect($projectConfig->get("fields.{$fieldUid}.settings"))->not->toHaveKey('fieldData')
+            ->and($projectConfig->get("fields.{$fieldUid}.settings"))->toHaveKey('rootContentType');
+
+        $orchestrator = Vizy::$plugin->getPromotionOrchestrator();
+        $plan = $orchestrator->analyze();
+
+        expect($plan['status'])->toBe('ready', Json::encode($plan['diagnostics']))
+            ->and($plan['fields'])->toHaveKey($fieldUid)
+            ->and($plan['fields'][$fieldUid]['schemaMap'])->toHaveKey($fixture['legacyTypeId'])
+            ->and($plan['fields'][$fieldUid]['canonicalFieldSettings']['minBlocks'])->toBe(1);
+
+        $result = $orchestrator->apply($plan, ['complete' => true, 'jobs' => []]);
+
+        expect($result['status'])->toBe('complete', Json::encode($result))
+            ->and(Vizy::$plugin->getLegacySchemaMaps()->getProvenance($fieldUid)['schemaMap'])->toHaveKey($fixture['legacyTypeId'])
+            ->and($orchestrator->analyze()['fields'])->not->toHaveKey($fieldUid);
+    } finally {
+        foreach (array_keys($fixture['fields']) as $uid) {
+            $projectConfig->remove("fields.{$uid}");
+        }
+        $fieldsService->refreshFields();
+    }
+});
+
 it('rejects old dual keys that would overwrite one canonical placement', function() {
     $fixture = legacyPromotionFixture();
     $plan = (new Vizy3SchemaPromotion())->analyze($fixture['fields'])['fields'][$fixture['fieldUid']];

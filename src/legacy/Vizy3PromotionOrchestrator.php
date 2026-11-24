@@ -42,6 +42,15 @@ final class Vizy3PromotionOrchestrator extends Component
         'verified',
     ];
 
+    // Vizy 3 field settings that Vizy 4 no longer exports.
+    private const LEGACY_SETTINGS = [
+        'fieldData',
+        'vizyConfig',
+        'configSelectionMode',
+        'manualConfig',
+        'editorMode',
+    ];
+
 
     // Properties
     // =========================================================================
@@ -546,7 +555,35 @@ final class Vizy3PromotionOrchestrator extends Component
             $database[$field->uid] = $config;
         }
 
-        return $internal + $external + $database;
+        $configs = $internal + $external + $database;
+
+        foreach ($configs as $uid => $config) {
+            // Craft's entrify-Matrix migration and Project Config rebuilds rewrite a
+            // field's config from its Vizy 4 model, which drops the Vizy 3 settings
+            // its database row still holds.
+            $settings = $database[$uid]['settings'] ?? [];
+
+            if (!$this->_hasLegacySettings($config['settings'] ?? []) && $this->_hasLegacySettings($settings)) {
+                $configs[$uid]['settings'] = $settings;
+            }
+        }
+
+        return $configs;
+    }
+
+    private function _hasLegacySettings(mixed $settings): bool
+    {
+        if (!is_array($settings)) {
+            return false;
+        }
+
+        foreach (self::LEGACY_SETTINGS as $setting) {
+            if (array_key_exists($setting, $settings)) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     private function _hash(mixed $value): string

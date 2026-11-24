@@ -8,6 +8,8 @@
 - Fixed entries failing to restore from the trash when a Vizy block with a Matrix field had searchable fields, including when the Matrix field itself is searchable.
 - Fixed field and tab conditions using entry or element rules not applying to blocks inside a nested Vizy field when saving, which let conditionally shown required fields be left blank.
 - Fixed Vizy 3 upgrades failing on environments with `allowAdminChanges` disabled when a field used a custom editor config, even though the upgrade had already created that config in the project config files being deployed.
+- Fixed the Vizy 3 upgrade, including `vizy/migrations/upgrade-from-v3` and `upgrade-analyze`, treating Vizy 4 fields without Block Types as Vizy 3 fields, which reset their Editor Config and switched Blocks fields to Combined when the upgrade was applied.
+- Fixed the Vizy 3 upgrade missing the Block Types of Vizy fields inside Matrix blocks when upgrading directly from Craft 4.
 
 ## 4.0.7 - 2026-11-24
 

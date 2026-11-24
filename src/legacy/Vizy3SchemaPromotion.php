@@ -39,8 +39,12 @@ final class Vizy3SchemaPromotion
 
             $settings = is_array($fieldConfig['settings'] ?? null) ? $fieldConfig['settings'] : [];
 
-            // Canonical Vizy 4 fields carry blockTypePickerGroups and no fieldData.
-            if (!array_key_exists('fieldData', $settings) && array_key_exists('blockTypePickerGroups', $settings)) {
+            // Canonical Vizy 4 fields carry no fieldData. Project Config drops an empty
+            // blockTypePickerGroups list, so a field without Block Types is recognised by
+            // rootContentType instead, a Vizy 4 string setting that Vizy 3 never stored.
+            $canonical = array_key_exists('blockTypePickerGroups', $settings) || array_key_exists('rootContentType', $settings);
+
+            if (!array_key_exists('fieldData', $settings) && $canonical) {
                 // Already-canonical fields are outside the legacy promotion set.
                 continue;
             }
