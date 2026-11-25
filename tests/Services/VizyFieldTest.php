@@ -20,6 +20,7 @@ use verbb\vizy\fields\VizyField;
 use verbb\vizy\helpers\FieldImageOptions;
 use verbb\vizy\helpers\FieldImagePreviews;
 use verbb\vizy\nodes\Image;
+use verbb\vizy\services\BlockTypes;
 use verbb\vizy\Vizy;
 use yii\base\Event;
 
@@ -466,9 +467,18 @@ it('renders native user and Entry condition builders for referenced Block Types'
         ]],
     ]);
 
-    $html = WebControllerHarness::withWebRequest([], 'fields/edit',
-        static fn(): string => (string)$field->getSettingsHtml(),
-    );
+    // This missing-reference fixture needs one panel. The full suite creates hundreds of unrelated Block Types.
+    $originalTypes = Vizy::$plugin->getBlockTypes();
+    $types = new BlockTypes();
+    (new ReflectionProperty($types, 'all'))->setValue($types, []);
+    Vizy::$plugin->set('blockTypes', $types);
+    try {
+        $html = WebControllerHarness::withWebRequest([], 'fields/edit',
+            static fn(): string => (string)$field->getSettingsHtml(),
+        );
+    } finally {
+        Vizy::$plugin->set('blockTypes', $originalTypes);
+    }
 
     expect($html)
         ->toContain("data-vizy-block-availability-panel=\"{$uid}\"")

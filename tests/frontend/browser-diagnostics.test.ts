@@ -168,7 +168,8 @@ describe('capture', () => {
     });
     it('caps stored events', () => {
         setup(); start();
-        for (let i = 0; i < 150; i++) emit('x'.repeat(10000));
+        emit('x'.repeat(10000));
+        for (let i = 1; i < 150; i++) emit(`Error ${i}`);
         expect(state().events).toHaveLength(100);
         expect(state().dropped).toBe(51);
         expect(sessionStorage.getItem(STORAGE_KEY)!.length).toBeLessThan(524288);

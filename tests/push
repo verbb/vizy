@@ -1,0 +1,34 @@
+#!/usr/bin/env bash
+set -euo pipefail
+cd "$(dirname "$0")/.."
+
+source .github/scripts/push-runtime.sh
+
+frontend() {
+    check_npm_links
+    npm ci
+    npm run typecheck
+    npm test -- --maxWorkers=2
+    npm run build
+}
+
+integration() {
+    run_integration
+}
+
+browser() {
+    npx --no-install playwright install --with-deps chromium
+    npm run test:browser -- --project=chromium editor.spec.ts --grep 'applies each editor’s Enabled Link Settings'
+}
+
+case "${1:-all}" in
+    all)
+        minimum
+        frontend
+        start_runtime
+        integration
+        browser
+        ;;
+    minimum|frontend|integration|browser) "$1" ;;
+    *) echo "Unknown push check: $1" >&2; exit 2 ;;
+esac

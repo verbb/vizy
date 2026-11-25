@@ -1,5 +1,11 @@
 # Testing
 
+Run the push checks from the plugin checkout with Docker, DDEV, Python 3 and Node.js 22 installed. This rebuilds frontend assets and uses the plugin’s disposable test database.
+
+```sh
+./tests/push
+```
+
 Install [DDEV](https://docs.ddev.com/en/stable/users/install/ddev-installation/)
 and a supported Docker provider (OrbStack works on macOS). From this plugin's
 checkout, run:
@@ -78,11 +84,6 @@ do not run the PHP suite concurrently against that same DDEV project. The seeded
 accounts and public web entry point are only for this owned test application.
 
 The harness runs tests tagged `@performance` in separate browser projects after the functional tests, with one engine at a time. This keeps other test workers from distorting wall-clock budgets while retaining parallel functional coverage. To repeat a timing check in isolation, use `npm run test:browser -- --project=firefox-performance --no-deps --repeat-each=3`; avoid running other test workloads alongside it.
-
-CI runs the complete ordinary PHP suite (including slow and performance groups),
-frontend contracts, all three harness browsers, and the real Craft browser lane.
-The explicit `perf-large` and `migrate-plugins` groups remain separate workloads;
-a green default CI run does not certify those or additional runtime versions.
 
 Contract fixtures are reviewed expected outputs, not snapshots to refresh blindly.
 `block-hashes.json` is consumed by both PHP and TypeScript and includes independent
